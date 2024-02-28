@@ -1,0 +1,95 @@
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Carrito</h4>
+                <h6 class="card-subtitle">Lista de Productos</h6>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Cantidad</th>
+                                <th>Articulo</th>
+                                <th>Precio</th>
+                                <th>Eliminar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let item of this.itemsEnCarrito">
+                                <td>
+                                    <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad" (change)="calculoTotal()" min="1">
+                                </td>
+                                <td>{{item.nomart}}</td>
+                                <td>{{item.precio * item.cantidad}}</td>
+                                <td><button class="btn btn-danger" (click)="eliminarItem(item)">Eliminar</button></td>
+                               <!--  <td>{{item.cantidad}}</td>
+                                <td>{{item.nomart}}</td>
+                                <td>{{item.precio}}</td>
+                                <td><button class="btn btn-danger" (click)="eliminarItem(item)">Eliminar</button></td> -->
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-lg-6">
+                        <h3><strong>TOTAL:   {{this.suma}}</strong></h3>
+                    </div>
+                    <div class="col-lg-6 text-right">
+                        <button class="btn btn-warning" (click)="agregarProductos()">Agregar Productos</button>
+                        <!-- <button class="btn btn-info" (click)="guardar()">Finalizar Venta</button> -->
+                    </div>
+                </div>
+
+                <div class="row justify-content-center mt-5">
+                <div class="col-md-6 mt-5">
+                    <div class="form-group row">
+                        <label class="control-label text-right col-md-3">OP:</label>
+                        <div class="col-md-9">
+                            <select class="form-control custom-select"(change)="tipoDocChange($event)"><!-- <select class="form-control custom-select" [(ngModel)]="tipoDoc" (change)="tipoDocChange($event)"> -->
+                                <option value="FC">FACTURA</option>
+                                <option value="ND">NOTA DEBITO</option>
+                                <option value="NC">NOTA CREDITO</option>
+                                <option value="PR">PRESUPUESTO</option>
+                                <option value="CS">CONSULTA</option>
+                                <!-- <option value="MI+">MOVIMIENTO INTERNO +</option>
+                                <option value="MI-">MOVIMIENTO INTERNO -</option> -->
+
+                            </select>
+                            <small class="form-control-feedback"> Seleccionar Operacion. </small> 
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mt-5">
+                    <div class="form-group row">
+                       <!--  <label class="control-label text-right col-md-3">P.Venta:</label>
+                        <div class="col-md-9">
+                            <input type="number" class="form-control form-control-danger" [(ngModel)]="puntoventa" (ngModelChange)="validateValue($event)" placeholder="">
+                          
+                        </div> -->
+                        <label class="control-label text-right col-md-3">N.Comp:</label>
+                        <div class="col-md-9">
+                            <input  type="number" class="form-control form-control-danger" [(ngModel)]="numerocomprobante" (ngModelChange)="validateValue($event)" placeholder="" [disabled]="!inputOPFlag">
+                            <!-- <small class="form-control-feedback"> Seleccionar Operacion. </small>  -->
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div class="row mt-4 justify-content-end">
+                    <div >
+                        <!-- <button class="btn btn-warning mr-3" (click)="agregarProductos()">Agregar Productos</button> -->
+                        <button class="btn btn-info mr-3" (click)="finalizar()">Finalizar Venta</button>
+                        <!-- <button class="btn btn-info mr-3" (click)="imprimir()">Imprimir</button> -->
+                        <!-- <button class="btn btn-info mr-3" (click)="pendientes()">Guardar Pendiente</button> -->
+                    </div>
+                </div>
+                <!-- <div class="row mt-4 ">
+                    <h3><strong>TOTAL:   {{this.suma}}</strong></h3>
+                    <button class="btn btn-info float-right" (click)="guardar()">Guardar</button>
+                    
+                </div> -->
+                
+            </div>
+        </div>
+    </div>
+</div>

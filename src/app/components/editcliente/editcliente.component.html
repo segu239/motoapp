@@ -1,0 +1,209 @@
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card ">
+            <!--   <div class="card-header bg-info">
+                <h4 class="m-b-0 text-white">Edicion Cliente</h4>
+            </div> -->
+            <div class="card-body">
+                <form ngNativeValidate [formGroup]="editarclienteForm" (ngSubmit)="guardar(editarclienteForm)"
+                    class="form-horizontal">
+                    <div class="form-body">
+                        <h3 class="box-title">Edicion Cliente</h3>
+                        <hr class="m-t-0 m-b-40">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div *ngIf="this.nombreFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="nombre" placeholder="">
+                                        <small class="form-control-feedback"> Solo letras y mas de 2 de longitud</small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.nombreFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="nombre" placeholder="">
+                                        <small class="form-control-feedback"> Solo letras y mas de 2 de longitud</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div *ngIf="this.direccionFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">Direccion</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="direccion"
+                                            placeholder="">
+                                        <small class="form-control-feedback">Letras, numeros y mas de 2 de longitud
+                                        </small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.direccionFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">Direccion</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="direccion"
+                                            placeholder="">
+                                        <small class="form-control-feedback">Letras, numeros y mas de 2 de longitud
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--/span-->
+                            <!-- <div class="col-md-6">
+                                <div class="form-group has-danger row">
+                                    <label class="control-label text-right col-md-3">Apellido</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="apellido" placeholder="12n">
+                                        <small class="form-control-feedback"> This field has error. </small> </div>
+                                </div>
+                            </div> -->
+
+
+                            <!--/span-->
+                        </div>
+                        <!--/row-->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div *ngIf="this.cuitFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="cuit" placeholder="">
+                                        <small class="form-control-feedback"> 11 numeros con este formato: 20332451264
+                                        </small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.cuitFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="cuit" placeholder="">
+                                        <small class="form-control-feedback"> 11 numeros con este formato: 20332451264
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--  <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control custom-select">
+                                            <option value="">Male</option>
+                                            <option value="">Female</option>
+                                        </select>
+                                        <small class="form-control-feedback"> Select your gender. </small> </div>
+                                </div>
+                            </div> -->
+                            <!--/span-->
+                            <div class="col-md-6">
+                                <div *ngIf="this.dniFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">DNI</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="dni" placeholder="">
+                                        <small class="form-control-feedback">8 numeros con este formato: 31267853
+                                        </small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.dniFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">DNI</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="dni" placeholder="">
+                                        <small class="form-control-feedback">8 numeros con este formato: 31267853
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--   <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Date of Birth</label>
+                                    <div class="col-md-9">
+                                        <input type="date" class="form-control" placeholder="dd/mm/yyyy">
+                                    </div>
+                                </div>
+                            </div> -->
+                            <!--/span-->
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div *ngIf="this.telefonoFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">Telefono</label>
+                                    <div class="col-md-9">
+                                        <input type="number" formControlName="telefono" class="form-control"
+                                            placeholder="">
+                                        <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.telefonoFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">Telefono</label>
+                                    <div class="col-md-9">
+                                        <input type="number" formControlName="telefono" class="form-control"
+                                            placeholder="">
+                                        <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Cod. Iva</label>
+                                    <div class="col-md-9">
+                                        <select formControlName="tipoiva" class="form-control" (change)="onSelectionChange($event)">
+                                            <!-- <option >--Elegir--</option> -->
+                                            <option  value="Excento">Excento</option>
+                                            <option value="Monotributo">Monotributo</option>
+                                            <option value="Consumidor Final">Consumidor Final</option>
+                                            <option value="Responsable Inscripto">Responsable Inscripto</option>
+                                        </select>
+                                        <!-- <input type="number" formControlName="cod_iva" class="form-control"
+                                            placeholder=""> -->
+                                        <!-- <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small> -->
+                                    </div>
+                                </div>
+                               
+                            </div>
+                           
+                        </div>
+                        
+
+                        <div class="col-md-6">
+                            <div class="form-group row">
+                                <label class="control-label text-right col-md-3">Ingresos Brutos</label>
+                                <div class="col-md-9">
+                                    <select formControlName="ingresos_br" class="form-control">
+                                        <!-- <option >--Elegir--</option> -->
+                                        <option  value="no" >No</option>
+                                        <option value="si">Si</option>
+                                        
+                                    </select>
+                                    <!-- <input type="number" formControlName="cod_iva" class="form-control"
+                                        placeholder=""> -->
+                                    <!-- <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small> -->
+                                </div>
+                            </div>
+                           
+                        </div>
+
+                        <!--/row-->
+
+                        <!--/row-->
+                    </div>
+                    <hr>
+                    <div class="form-actions">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-offset-3 col-md-9">
+                                        <!-- <button type="submit"  [disabled]= "editarclienteForm.invalid" class="btn btn-success">Submit</button> -->
+                                        <button type="submit" class="btn btn-success" (click)="accion = 'guardar'">Guardar</button>
+                                        <button type="submit" class="btn btn-danger" (click)="accion = 'eliminar'">Eliminar</button>
+                                        <button type="button" class="btn btn-inverse" [routerLink]="['../puntoventa']">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6"> </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

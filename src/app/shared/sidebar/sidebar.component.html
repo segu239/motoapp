@@ -1,0 +1,157 @@
+<!-- ============================================================== -->
+      <!-- Left Sidebar - style you can find in sidebar.scss  -->
+      <!-- ============================================================== -->
+      <aside class="left-sidebar">
+        <!-- Sidebar scroll-->
+        <div class="scroll-sidebar">
+            <!-- Sidebar navigation-->
+            <nav class="sidebar-nav">
+                <ul id="sidebarnav">
+                    <li class="user-profile">
+                        <a class="has-arrow waves-effect waves-dark" href="#" aria-expanded="false"><span class="hide-menu">{{this.nombreCliente | uppercase}} </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                           
+                            <li><a routerLinkActive="active" (click)="salir()" [routerLink]="['login']">Logout</a></li>
+                        
+
+                        </ul>
+                    </li>
+
+                    <li class="nav-devider"></li>
+                    <li> <a class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-account-star"></i><span class="hide-menu">ADMINISTRADOR </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <!-- <li><a routerLinkActive="active" [routerLink]="['admin']">Generacion Puntos</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['adminusuarios']">Usuarios</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['dispositivos']">Analisis Dispositivos</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['dbmanager']">DB Manager</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['configuraciones']">Configuraciones</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['customimagenes']">Imagenes</a></li> -->
+
+                        </ul>
+                    </li>
+
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-collage"></i><span class="hide-menu">CLIENTES</span></a>
+                      <ul aria-expanded="false" class="collapse">
+
+                          <li><a routerLinkActive="active" [routerLink]="['puntoventa']">Ingresar</a></li>
+
+                      </ul>
+                    </li>
+
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-chart-areaspline"></i><span class="hide-menu">ANALISIS</span></a>
+                      <ul aria-expanded="false" class="collapse">
+
+                          <!-- <li><a routerLinkActive="active" [routerLink]="['chartanalisis']">chart</a></li> -->
+
+                      </ul>
+                    </li>
+
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-arrow-down-bold-circle"></i><span class="hide-menu">EXPORTAR</span></a>
+                      <ul aria-expanded="false" class="collapse">
+
+                          <!-- <li><a routerLinkActive="active" [routerLink]="['exportar']">Exportar</a></li> -->
+
+                      </ul>
+                    </li>
+
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class=" mdi mdi-alarm-multiple"></i><span class="hide-menu">ALARMAS</span></a>
+                      <ul aria-expanded="false" class="collapse">
+
+                          <!-- <li><a routerLinkActive="active" [routerLink]="['alarms']">Configurar</a></li> -->
+                          <!-- <li><a routerLinkActive="active" [routerLink]="['managealarms']">Administrar</a></li> -->
+
+                      </ul>
+                    </li>
+
+
+
+                    <!-- <li class="nav-devider"></li>
+                    <li> <a class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-account-star"></i><span class="hide-menu">ADMINISTRADOR </span></a>
+                        <ul aria-expanded="false" class="collapse">
+
+
+
+                        </ul>
+                    </li>
+                    <li class="nav-devider"></li>
+                    <li> <a class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-account-edit"></i><span class="hide-menu">EDITORES</span></a>
+                        <ul aria-expanded="false" class="collapse">
+
+                            <li><a routerLinkActive="active" [routerLink]="['altacliente']">ALTA CLIENTE</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['users']">USUARIOS REG. WEB</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['formempresa']">CONSULTAS EMPRESAS</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['consultas']">CONSULTAS USUARIOS</a></li>
+
+
+                        </ul>
+                    </li>
+                    <li class="nav-devider"></li>
+                    <li class="nav-small-cap">HERRAMIENTAS</li>
+
+
+                    <li> <a  class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-library-plus"></i><span class="hide-menu">ESTRUCTURA </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a routerLinkActive="active" [routerLink]="['estructura']">GENERAL </a></li>
+
+
+                        </ul>
+                    </li>
+
+                    <li> <a  class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-border-color"></i><span class="hide-menu">EDICION </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a routerLinkActive="active" [routerLink]="['edicion']">CLIENTE </a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['edicionrubro']">RUBRO </a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['edicionsubrubro']">SUBRUBRO </a></li>
+
+
+                        </ul>
+                    </li>
+
+                    <li> <a class="has-arrow waves-effect waves-dark" href="#" aria-expanded="false"><i class="mdi mdi-file-chart"></i><span class="hide-menu">HOME</span></a>
+                        <ul aria-expanded="false" class="collapse">
+
+                          <li><a routerLinkActive="active"  [routerLink]="['portadas']">PORTADAS</a></li>
+                          <li><a routerLinkActive="active"  [routerLink]="['especiales']">ESPECIALES</a></li>
+                          <li><a routerLinkActive="active"  [routerLink]="['promos']">PROMO1</a></li>
+
+
+                        </ul>
+                    </li>
+                    <li> <a  class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-send"></i><span class="hide-menu">NOTIFICACIONES </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a routerLinkActive="active" [routerLink]="['notificaciones']">ENVIAR </a></li>
+
+
+                        </ul>
+                    </li>
+                    <li> <a class="has-arrow waves-effect waves-dark" href='#' aria-expanded="false"><i class="mdi mdi-treasure-chest"></i><span class="hide-menu">UTILIDADES </span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a href="https://fontawesome.com/icons?d=gallery&p=1" target="_blank">ICONOS </a></li>
+                            <li *ngIf="visibleButton"><a href="https://analytics.google.com/analytics/web/#/p255500501/reports/defaulthome?params=_u..nav%3Ddefault%26_u.comparisonOption%3Ddisabled%26_u.date00%3D20210420%26_u.date01%3D20210421" target="_blank">ANALYTICS </a></li>
+                            <li><a href="https://www.google.com/maps/@-28.447175,-65.7439136,12z" target="_blank">GOOGLE MAPS </a></li>
+                            <li><a href="http://getemoji.com/" target="_blank">EMOJIS </a></li>
+                            <li><a href="https://www.evernote.com/shard/s225/sh/36fc54ee-3524-3842-f7b3-5015f69e0cf1/ad612ee565b85703f50c779e9452d679" target="_blank">REFERENCIA TAMAÑO DE IMAGENES </a></li>
+                        </ul>
+                    </li>
+
+                    <li> <a class="has-arrow waves-effect waves-dark"  aria-expanded="false"><i class="mdi mdi-delete"></i><span class="hide-menu">PAPELERA </span></a>
+                      <ul aria-expanded="false" class="collapse">
+                          <li><a routerLinkActive="active"  [routerLink]="['papelera']">PAPELERA</a></li>
+
+                      </ul>
+                    </li> -->
+
+
+
+
+                </ul>
+
+            </nav>
+            <!-- End Sidebar navigation -->
+        </div>
+        <!-- End Sidebar scroll-->
+    </aside>
+    <!-- ============================================================== -->
+    <!-- End Left Sidebar - style you can find in sidebar.scss  -->
+    <!-- ============================================================== -->
+

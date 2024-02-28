@@ -1,0 +1,109 @@
+<!-- <table datatable [dtOptions]="dtOptions" class="row-border hover"></table> -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Clientes</h4>
+                <p-table #dtable 
+                [value]="clientes" 
+                [tableStyle]="{ 'min-width': '50rem' }" 
+                [paginator]="true"
+                [rows]="10" 
+                [globalFilterFields]="['nombre', 'direccion', 'dni', 'cuit', 'tipoiva', 'vendedor', 'telefono']">
+                <div>
+
+                </div>
+             <!--    <ng-template pTemplate="caption">
+                    <div class="flex">
+                        <span class="p-input-icon-left ml-auto">
+                            <i class="pi pi-search"></i>
+                            <input pInputText type="text" (input)="dtable.filterGlobal($any($event.target).value, 'contains')" placeholder="Buscar.." />       
+                        </span>
+                    </div>
+                </ng-template> -->
+                <ng-template  pTemplate="caption">
+                    <div class="p-d-flex">           
+                        <!-- <button type="button" pButton pRipple icon="pi pi-file" (click)="dtable.exportCSV()" class="mr-2" pTooltip="CSV" tooltipPosition="bottom"></button> -->
+                        <span class="p-input-icon-left ml-auto">
+                            <!-- <i class="pi pi-search"></i> -->
+                            <input pInputText type="text" (input)="dtable.filterGlobal($any($event.target).value, 'contains')" placeholder="Buscar.." />       
+                        </span>
+                        <!-- <button type="button" pButton pRipple icon="pi pi-file-excel" (click)="exportExcel()" class="p-button-success ml-4" pTooltip="XLS" tooltipPosition="bottom"></button> -->
+                        <p-button icon="pi pi-file-excel" (click)="exportExcel()" styleClass="p-button-sm p-button-success ml-4" ></p-button>
+                        <p-button icon="pi pi-plus-circle"[routerLink]="['../newcliente']"styleClass="p-button-sm p-button-info ml-2" ></p-button>
+                        <!-- <button type="button" pButton pRipple icon="pi pi-plus-circle" (click)="exportExcel()" class="p-button-info ml-2" pTooltip="XLS" tooltipPosition="bottom"></button> -->
+                        <!-- <button type="button" pButton pRipple icon="pi pi-file-pdf" (click)="exportPdf()" class="p-button-warning mr-2" pTooltip="PDF" tooltipPosition="bottom"></button> -->
+                        <!-- <button type="button" pButton pRipple icon="pi pi-filter" (click)="dtable.exportCSV({ selectionOnly: true })" class="p-button-info ml-auto" pTooltip="Selection Only" tooltipPosition="bottom"></button>                -->
+                    </div>
+                </ng-template>
+                    <ng-template pTemplate="header">
+                        <tr>
+                         
+                            <th pSortableColumn="nombre" style="width:20%">Nombre<p-sortIcon field="nombre"></p-sortIcon></th>
+                            <!-- <th>nombre</th> -->
+                            <th pSortableColumn="direccion" style="width:20%">Direccion<p-sortIcon field="direccion"></p-sortIcon></th>
+                            <!-- <th>direccion</th> -->
+                            <th pSortableColumn="dni" style="width:20%">Dni<p-sortIcon field="dni"></p-sortIcon></th>
+                            <!-- <th>dni</th> -->
+                            <th pSortableColumn="cuit" style="width:20%">Cuit<p-sortIcon field="cuit"></p-sortIcon></th>
+                            <!-- <th>cuit</th> -->
+                            <!-- <th>cod_iva</th> -->
+                            <!-- <th>cod_ven</th> -->
+                            <!-- <th>cod_zona</th> -->
+                            <th pSortableColumn="tipoiva" style="width:20%">Iva<p-sortIcon field="tipoiva"></p-sortIcon></th>
+                            <!-- <th>tipoiva</th> -->
+                            <th pSortableColumn="vendedor" style="width:20%">Vendedor<p-sortIcon field="vendedor"></p-sortIcon></th>
+                            <!-- <th>vendedor</th> -->
+                            <!-- <th>zona</th> -->
+                            <th pSortableColumn="telefono" style="width:20%">Tel.<p-sortIcon field="telefono"></p-sortIcon></th>
+                            <!-- <th>telefono</th> -->
+                            <!-- <th>estado</th> -->
+                            <!-- <th>idcli</th> -->
+                            <!-- <th>id_cli</th> -->
+                            <!-- <th>fecha</th> -->
+                            <!-- <th>hora</th> -->
+                            
+                            <th>Select</th>
+                            <th>Edit</th>
+                            <th style="width: 5rem"></th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-cliente>
+                        <tr>
+                            <!-- <td>{{ cliente.cliente }}</td> -->
+                            <td>{{ cliente.nombre }}</td>
+                         
+                            <td>{{ cliente.direccion }}</td>
+                            <td>{{ cliente.dni }}</td>
+                            <td>{{ cliente.cuit }}</td>
+                            <!-- <td>{{ cliente.cod_iva }}</td> -->
+                            <!-- <td>{{ cliente.cod_ven }}</td> -->
+                            <!-- <td>{{ cliente.cod_zona }}</td> -->
+                            <td>{{ cliente.tipoiva }}</td>
+                            <td>{{ cliente.vendedor }}</td>
+                            <!-- <td>{{ cliente.zona }}</td> -->
+                            <td>{{ cliente.telefono }}</td>
+                            <!-- <td>{{ cliente.estado }}</td> -->
+                            <!-- <td>{{ cliente.idcli }}</td> -->
+                            <!-- <td>{{ cliente.id_cli }}</td> -->
+                            <!-- <td>{{ cliente.fecha }}</td> -->
+                            <!-- <td>{{ cliente.hora }}</td> -->
+                      
+                            <td>
+                                <p-button icon="pi pi-external-link" (click)="selectCliente(cliente)" styleClass="p-button-sm p-button-info"> </p-button>
+                               
+                            </td>
+                            <td>
+                                
+                                <p-button icon="pi pi-pencil"  styleClass="p-button-sm p-button-help" (click)="editCliente(cliente)"> </p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>
+        <!-- This is data table -->
+ 
+        

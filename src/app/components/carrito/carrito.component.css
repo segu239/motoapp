@@ -1,0 +1,14 @@
+.sin-bordes {
+    border: none;
+    outline: none;
+}
+
+.sin-bordes:focus {
+    outline: none;
+}
+
+.center-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
