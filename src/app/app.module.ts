@@ -5,6 +5,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { DatePipe } from '@angular/common';
 
 import { DynamicDialogModule } from 'primeng/dynamicdialog';
+import { DropdownModule } from 'primeng/dropdown';
 
 import { HttpClientModule } from '@angular/common/http';
 import {FormsModule,ReactiveFormsModule } from '@angular/forms';
@@ -31,6 +32,9 @@ import { PuntoventaComponent } from './components/puntoventa/puntoventa.componen
 
 import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
+import { CalendarModule } from 'primeng/calendar';
+import { MultiSelectModule } from 'primeng/multiselect';
+
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
 import { CondicionventaComponent } from './components/condicionventa/condicionventa.component';
@@ -38,6 +42,28 @@ import { ProductosComponent } from './components/productos/productos.component';
 import { CalculoproductoComponent } from './components/calculoproducto/calculoproducto.component';
 import { CarritoComponent } from './components/carrito/carrito.component';
 import { VentaComponent } from './components/venta/venta.component';
+import { FilterPipe } from './pipes/filter.pipe';
+import { AnalisispedidosComponent } from './components/analisispedidos/analisispedidos.component';
+import { CuentacorrienteComponent } from './components/cuentacorriente/cuentacorriente.component';
+import { CabecerasComponent } from './components/cabeceras/cabeceras.component';
+import { CondicionventacabComponent } from './components/condicionventacab/condicionventacab.component';
+import { AnalisiscajaComponent } from './components/analisiscaja/analisiscaja.component';
+import { PedidosComponent } from './components/pedidos/pedidos.component';
+import { RecibosComponent } from './components/recibos/recibos.component';
+import { GrillaComponent } from './components/grilla/grilla.component';
+import { DateFormatPipe } from './pipes/dateformat.pipe';
+import { AnalisiscajaprodComponent } from './components/analisiscajaprod/analisiscajaprod.component';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
+import { MovimientoComponent } from './components/movimiento/movimiento.component';
+import { StockpedidoComponent } from './components/stockpedido/stockpedido.component';
+import { StockreciboComponent } from './components/stockrecibo/stockrecibo.component';
+import { PedirStockComponent } from './components/pedir-stock/pedir-stock.component';
+import { StockproductopedidoComponent } from './components/stockproductopedido/stockproductopedido.component';
+import { StockenvioComponent } from './components/stockenvio/stockenvio.component';
+import { DialogService } from 'primeng/dynamicdialog';
+import { StockproductoenvioComponent } from './components/stockproductoenvio/stockproductoenvio.component';
+import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
+import { EnviodestockrealizadosComponent } from './components/enviodestockrealizados/enviodestockrealizados.component';
 //import { DataTablesModule } from 'angular-datatables';
 
 @NgModule({
@@ -46,7 +72,7 @@ import { VentaComponent } from './components/venta/venta.component';
     LoginComponent,
     PagesComponent,
     FooterComponent,
-    
+  
     HeaderComponent,
     SidebarComponent,
     PuntoventaComponent,
@@ -57,11 +83,34 @@ import { VentaComponent } from './components/venta/venta.component';
     CalculoproductoComponent,
     CarritoComponent,
     VentaComponent,
+    FilterPipe,
+    AnalisispedidosComponent,
+    CuentacorrienteComponent,
+    CabecerasComponent,
+    CondicionventacabComponent,
+    AnalisiscajaComponent,
+    PedidosComponent,
+    RecibosComponent,
+    GrillaComponent,
+    DateFormatPipe,
+    AnalisiscajaprodComponent,
+    DashboardComponent,
+    MovimientoComponent,
+    StockpedidoComponent,
+    StockreciboComponent,
+    PedirStockComponent,
+    StockproductopedidoComponent,
+    StockenvioComponent,
+    StockproductoenvioComponent,
+    EnviostockpendientesComponent,
+    EnviodestockrealizadosComponent,
 
   ],
   imports: [
     ButtonModule,
     TableModule,
+    CalendarModule,
+    MultiSelectModule,
     //DataTablesModule,
     FormsModule,
     ReactiveFormsModule,
@@ -70,7 +119,7 @@ import { VentaComponent } from './components/venta/venta.component';
     AppRoutingModule,
     HttpClientModule,
     DynamicDialogModule,
-    
+    DropdownModule,
     provideFirebaseApp(() => initializeApp(environment.firebase)),
     provideAuth(() => getAuth()),
     provideDatabase(() => getDatabase()),
@@ -80,7 +129,7 @@ import { VentaComponent } from './components/venta/venta.component';
    
 
   ],
-  providers: [  DatePipe, AngularFireAuthGuard, { provide: FIREBASE_OPTIONS, useValue: environment.firebase}],
+  providers: [DialogService,  DatePipe, AngularFireAuthGuard, { provide: FIREBASE_OPTIONS, useValue: environment.firebase}],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

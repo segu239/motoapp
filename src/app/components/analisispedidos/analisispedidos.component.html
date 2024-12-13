@@ -1,0 +1,74 @@
+<!-- <div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Pedidos</h4>
+                <p-table #dtable 
+                [value]="pedidos" 
+                [tableStyle]="{ 'min-width': '50rem' }" 
+                [paginator]="true"
+                [rows]="10" 
+                [globalFilterFields]="['nomart', 'cantidad', 'precio', 'fecha', 'hora','tipoprecio', 'tipodoc', 'puntoventa']">
+                <div>
+
+                </div>
+        
+                <ng-template  pTemplate="caption">
+                    <div class="p-d-flex">           
+                       
+                        <span class="p-input-icon-left ml-auto">
+                           
+                            <input pInputText type="text" (input)="dtable.filterGlobal($any($event.target).value, 'contains')" placeholder="Buscar.." />       
+                        </span>
+                        
+                        <p-button icon="pi pi-file-excel" (click)="exportExcel()" styleClass="p-button-sm p-button-success ml-4" ></p-button>
+                       
+                    </div>
+                </ng-template>
+                    <ng-template pTemplate="header">
+                        <tr>
+                         
+                            <th pSortableColumn="nomart" style="width:20%">Articulo<p-sortIcon field="nomart"></p-sortIcon></th>
+                       
+                            <th pSortableColumn="cantidad" style="width:20%">Cantidad<p-sortIcon field="cantidad"></p-sortIcon></th>
+                            
+                            <th pSortableColumn="precio" style="width:20%">Precio<p-sortIcon field="precio"></p-sortIcon></th>
+                          
+                            <th pSortableColumn="fecha" style="width:20%">Fecha<p-sortIcon field="fecha"></p-sortIcon></th>
+                           
+                            <th pSortableColumn="hora" style="width:20%">Hora<p-sortIcon field="hora"></p-sortIcon></th>
+                            <th pSortableColumn="tipoprecio" style="width:20%">Tipo P.<p-sortIcon field="tipoprecio"></p-sortIcon></th>
+                           
+                            <th pSortableColumn="tipodoc" style="width:20%">Tipo D.<p-sortIcon field="tipodoc"></p-sortIcon></th>
+                       
+                            <th pSortableColumn="puntoventa" style="width:20%">P.Venta<p-sortIcon field="puntoventa"></p-sortIcon></th>
+                         
+                       
+                            
+                      
+                            <th style="width: 5rem"></th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-pedido>
+                        <tr>
+                           
+                            <td>{{ pedido.nomart }}</td>
+                            <td>{{ pedido.cantidad }}</td>
+                            <td>{{ pedido.precio }}</td>
+                            <td>{{ pedido.fecha }}</td>
+                            <td>{{ pedido.hora }}</td>
+                            <td>{{ pedido.tipoprecio }}</td>
+                            <td>{{ pedido.tipodoc }}</td>
+                            <td>{{ pedido.puntoventa }}</td>
+                            
+                         
+                           
+                       
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>
+ -->

@@ -16,13 +16,11 @@ export class PagesComponent implements OnInit {
       console.log(resp.mensaje);
       localStorage.setItem('tarjetas', JSON.stringify(resp.mensaje));
       localStorage.setItem('lastSelectedValue', JSON.stringify({'tarjeta':'EFECTIVO'}));
-    }); */
-    
+    }); */  
   }
 
   ngOnInit(){
     console.log("PAGES COMPONENTS");
     init_plugins();
   }
-
 }

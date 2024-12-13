@@ -1,0 +1,35 @@
+<!-- pedidos-dialog.component.html -->
+<p-table #dtable  [value]="productos" [paginator]="true" [rows]="10"
+[globalFilterFields]="['nomart', 'marca', 'precon','prefi1','prefi2']">
+    <ng-template pTemplate="caption">
+        <div class="p-d-flex justify-content-between align-items-center">
+            <span class="p-input-icon-left ml-auto">
+                <input pInputText type="text"
+                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                    placeholder="Buscar.." />
+            </span>
+        </div>
+    </ng-template>
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Articulo</th>
+        <th>Marca</th>
+        <th>Prec. Contado</th>
+        <th>Prec. CC</th>
+        <th>Prec. Tarj.</th>
+      
+        <!-- Add more columns as needed -->
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-producto>
+      <tr>
+        <td>{{ producto.nomart }}</td>
+        <td>{{ producto.marca }}</td>
+        <td>{{ producto.precon }}</td>
+        <td>{{ producto.prefi1 }}</td>
+        <td>{{ producto.prefi2 }}</td>
+       
+        <!-- Add more columns as needed -->
+      </tr>
+    </ng-template>
+  </p-table>

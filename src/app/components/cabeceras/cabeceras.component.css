@@ -1,0 +1,7 @@
+.altura-boton {
+    height: 50px; /* Ajusta este valor según sea necesario */
+}
+.scroll_list {
+    max-height: 200px;
+    overflow-y: auto;
+}

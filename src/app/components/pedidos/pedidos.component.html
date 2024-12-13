@@ -1,0 +1,27 @@
+<!-- pedidos-dialog.component.html -->
+<p-table [value]="pedidos">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Fecha</th>
+        <th>Hora</th>
+        <th>Nomart</th>
+        <th>Tipo Doc.</th>
+        <th>Tarjeta</th>
+        <th>Cant.</th>
+        <th>Prec.</th>
+        <!-- Add more columns as needed -->
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-pedido>
+      <tr>
+        <td>{{ pedido.fecha }}</td>
+        <td>{{ pedido.hora }}</td>
+        <td>{{ pedido.nomart }}</td>
+        <td>{{ pedido.tipodoc }}</td>
+        <td>{{ pedido.tarjeta }}</td>
+        <td>{{ pedido.cantidad }}</td>
+        <td>{{ pedido.precio }}</td>
+        <!-- Add more columns as needed -->
+      </tr>
+    </ng-template>
+  </p-table>

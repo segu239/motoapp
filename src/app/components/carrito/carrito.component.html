@@ -10,85 +10,92 @@
                             <tr>
                                 <th>Cantidad</th>
                                 <th>Articulo</th>
+                                <th>Tipo Pago</th>
                                 <th>Precio</th>
                                 <th>Eliminar</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let item of this.itemsEnCarrito">
+                            <!-- <tr *ngFor="let item of this.itemsEnCarrito"> -->
+                            <tr *ngFor="let item of itemsConTipoPago">    
                                 <td>
-                                    <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad" (change)="calculoTotal()" min="1">
+                                    <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad"
+                                        (change)="calculoTotal()" min="1">
                                 </td>
                                 <td>{{item.nomart}}</td>
+                                <td>{{item.tipoPago}}</td>
                                 <td>{{item.precio * item.cantidad}}</td>
                                 <td><button class="btn btn-danger" (click)="eliminarItem(item)">Eliminar</button></td>
-                               <!--  <td>{{item.cantidad}}</td>
-                                <td>{{item.nomart}}</td>
-                                <td>{{item.precio}}</td>
-                                <td><button class="btn btn-danger" (click)="eliminarItem(item)">Eliminar</button></td> -->
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div class="row mt-4">
                     <div class="col-lg-6">
-                        <h3><strong>TOTAL:   {{this.suma}}</strong></h3>
+                        <h3><strong>TOTAL: {{this.suma}}</strong></h3>
                     </div>
                     <div class="col-lg-6 text-right">
                         <button class="btn btn-warning" (click)="agregarProductos()">Agregar Productos</button>
-                        <!-- <button class="btn btn-info" (click)="guardar()">Finalizar Venta</button> -->
                     </div>
                 </div>
-
-                <div class="row justify-content-center mt-5">
-                <div class="col-md-6 mt-5">
-                    <div class="form-group row">
-                        <label class="control-label text-right col-md-3">OP:</label>
-                        <div class="col-md-9">
-                            <select class="form-control custom-select"(change)="tipoDocChange($event)"><!-- <select class="form-control custom-select" [(ngModel)]="tipoDoc" (change)="tipoDocChange($event)"> -->
-                                <option value="FC">FACTURA</option>
-                                <option value="ND">NOTA DEBITO</option>
-                                <option value="NC">NOTA CREDITO</option>
-                                <option value="PR">PRESUPUESTO</option>
-                                <option value="CS">CONSULTA</option>
-                                <!-- <option value="MI+">MOVIMIENTO INTERNO +</option>
-                                <option value="MI-">MOVIMIENTO INTERNO -</option> -->
-
-                            </select>
-                            <small class="form-control-feedback"> Seleccionar Operacion. </small> 
+                <hr>
+                <div class="row justify-content-center mt-2">
+                    <div class="col-md-6 mt-5">
+                        <div class="form-group row">
+                            <label *ngIf="this.letras_flag" class="control-label text-right col-md-3">Fecha:</label>
+                            <div *ngIf="this.letras_flag" class="col-md-9">
+                                <p-calendar class="ml-0" [(ngModel)]="FechaCalend" [showIcon]="true"
+                                    dateFormat="dd/mm/yy"></p-calendar>
+                            </div>
+                            <label class="control-label text-right col-md-3 mt-1">OP:</label>
+                            <div class="col-md-9 mt-1">
+                                <select class="form-control custom-select" (change)="tipoDocChange($event)">
+                                    <option value="FC">FACTURA</option>
+                                    <option value="ND">NOTA DEBITO</option>
+                                    <option value="NC">NOTA CREDITO</option>
+                                    <option value="NV">DEVOLUCION</option>
+                                    <option value="PR">PRESUPUESTO</option>
+                                    <option value="CS">CONSULTA</option>
+                                </select>
+                            </div>
+                            <label class="control-label text-right col-md-3 mt-1">Vendedor:</label>
+                            <div class="col-md-9 mt-1 ">
+                                <select class="form-control form-control-danger" [(ngModel)]="vendedoresV">
+                                    <option *ngFor="let vendedor of vendedores" [value]="vendedor.cod_ven">
+                                        {{vendedor.vendedor}}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mt-5">
+                        <div class="form-group row">
+                            <!-- <label *ngIf="this.puntoVenta_flag"
+                                class="control-label text-right col-md-3">P.Venta:</label>
+                            <div *ngIf="this.puntoVenta_flag" class="col-md-9">
+                                <input type="number" class="form-control form-control-danger" [(ngModel)]="puntoventa"
+                                    (ngModelChange)="validateValue($event)" placeholder="">
+                            </div> -->
+                            <label *ngIf="this.letras_flag"
+                                class="control-label text-right col-md-3 mt-1">Letra:</label>
+                            <div *ngIf="this.letras_flag" class="col-md-9 mt-1">
+                                <select class="form-control form-control-danger" [(ngModel)]="letraValue">
+                                    <option *ngFor="let letra of letras" [value]="letra">{{letra}}</option>
+                                </select>
+                            </div>
+                            <label class="control-label text-right col-md-3 mt-1">N.Comp:</label>
+                            <div class="col-md-9 mt-1">
+                                <input type="number" class="form-control form-control-danger"
+                                    [(ngModel)]="numerocomprobante" (ngModelChange)="validateValue($event)"
+                                    placeholder="" [disabled]="!inputOPFlag">
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="col-md-6 mt-5">
-                    <div class="form-group row">
-                       <!--  <label class="control-label text-right col-md-3">P.Venta:</label>
-                        <div class="col-md-9">
-                            <input type="number" class="form-control form-control-danger" [(ngModel)]="puntoventa" (ngModelChange)="validateValue($event)" placeholder="">
-                          
-                        </div> -->
-                        <label class="control-label text-right col-md-3">N.Comp:</label>
-                        <div class="col-md-9">
-                            <input  type="number" class="form-control form-control-danger" [(ngModel)]="numerocomprobante" (ngModelChange)="validateValue($event)" placeholder="" [disabled]="!inputOPFlag">
-                            <!-- <small class="form-control-feedback"> Seleccionar Operacion. </small>  -->
-                        </div>
-                    </div>
-                </div>
-                </div>
-                <div class="row mt-4 justify-content-end">
-                    <div >
-                        <!-- <button class="btn btn-warning mr-3" (click)="agregarProductos()">Agregar Productos</button> -->
+                <div class="row mt-2 justify-content-end">
+                    <div>
                         <button class="btn btn-info mr-3" (click)="finalizar()">Finalizar Venta</button>
-                        <!-- <button class="btn btn-info mr-3" (click)="imprimir()">Imprimir</button> -->
-                        <!-- <button class="btn btn-info mr-3" (click)="pendientes()">Guardar Pendiente</button> -->
                     </div>
                 </div>
-                <!-- <div class="row mt-4 ">
-                    <h3><strong>TOTAL:   {{this.suma}}</strong></h3>
-                    <button class="btn btn-info float-right" (click)="guardar()">Guardar</button>
-                    
-                </div> -->
-                
             </div>
         </div>
     </div>

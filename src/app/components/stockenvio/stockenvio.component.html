@@ -1,0 +1,74 @@
+<div class="card">
+    <div class="card-body">
+     <!--    <div class="btn-group ml-2">
+            <button type="button" class="btn btn-info">{{tipoVal}}</button>
+            <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"
+                aria-haspopup="true" aria-expanded="false">
+            </button>
+            <div class="dropdown-menu scroll_list">
+                <input type="text" class="form-control" placeholder="Buscar..." [(ngModel)]="searchText">
+                <li *ngFor="let item of filteredTipo | filter: searchText">
+                    <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
+                </li>
+            </div>
+        </div> -->
+        <div>
+            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10"
+                [globalFilterFields]="['nomart', 'marca']">
+                <ng-template pTemplate="caption">
+                    <div class="p-d-flex">
+                        <span class="p-input-icon-left ml-auto">
+                            <input pInputText type="text"
+                                (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                placeholder="Buscar.." />
+                        </span>
+                       <!--  <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                            styleClass="p-button-sm p-button-success ml-4"></p-button> -->
+                    </div>
+                </ng-template>
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th pSortableColumn="nomart" style="width:30%">Nomart<p-sortIcon field="nomart"></p-sortIcon>
+                        </th>
+                        <th pSortableColumn="marca" style="width:15%">Marca<p-sortIcon field="marca"></p-sortIcon></th>
+                      <!--   <th *ngIf="prefi0" pSortableColumn="precon" style="width:10%">Precio<p-sortIcon
+                                field="precon"></p-sortIcon></th>
+                        <th *ngIf="prefi1" pSortableColumn="prefi1" style="width:10%">Precio<p-sortIcon
+                                field="prefi1"></p-sortIcon></th>
+                        <th *ngIf="prefi2" pSortableColumn="prefi2" style="width:10%">Precio<p-sortIcon
+                                field="prefi2"></p-sortIcon></th>
+                        <th *ngIf="prefi3" pSortableColumn="prefi3" style="width:10%">Precio<p-sortIcon
+                                field="prefi3"></p-sortIcon></th>
+                        <th *ngIf="prefi4" pSortableColumn="prefi4" style="width:10%">Precio<p-sortIcon
+                                field="prefi4"></p-sortIcon></th> -->
+                        <th pSortableColumn="exi1" style="width:10%">Stk Dep<p-sortIcon field="exi1"></p-sortIcon></th>
+                        <th pSortableColumn="exi2" style="width:10%">Stk CC<p-sortIcon field="exi2"></p-sortIcon></th>
+                        <th pSortableColumn="exi3" style="width:10%">Stk VV<p-sortIcon field="exi3"></p-sortIcon></th>
+                        <th pSortableColumn="exi4" style="width:10%">Stk GM<p-sortIcon field="exi4"></p-sortIcon></th>
+                        <th style="width:20%">Select</th>
+                        <th style="width: 5rem"></th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-producto>
+                    <tr>
+                        <td>{{ producto.nomart }}</td>
+                        <td>{{ producto.marca }}</td>
+                      <!--   <td *ngIf="prefi0">{{ producto.precon }}</td>
+                        <td *ngIf="prefi1">{{ producto.prefi1 }}</td>
+                        <td *ngIf="prefi2">{{ producto.prefi2 }}</td>
+                        <td *ngIf="prefi3">{{ producto.prefi3 }}</td>
+                        <td *ngIf="prefi4">{{ producto.prefi4 }}</td> -->
+                        <td>{{ producto.exi1 }}</td>
+                        <td>{{ producto.exi2 }}</td>
+                        <td>{{ producto.exi3 }}</td>
+                        <td>{{ producto.exi4 }}</td>
+                        <td>
+                            <p-button icon="pi pi-cart-plus" (click)="selectProducto(producto)"
+                                styleClass="p-button-sm p-button-info"> </p-button>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+</div>

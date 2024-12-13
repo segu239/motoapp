@@ -1,9 +1,6 @@
 <div class="row">
     <div class="col-lg-12">
         <div class="card ">
-            <!--   <div class="card-header bg-info">
-                <h4 class="m-b-0 text-white">Edicion Cliente</h4>
-            </div> -->
             <div class="card-body">
                 <form ngNativeValidate [formGroup]="nuevoclienteForm" (ngSubmit)="guardar(nuevoclienteForm)"
                     class="form-horizontal">
@@ -27,7 +24,6 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="col-md-6">
                                 <div *ngIf="this.direccionFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">Direccion</label>
@@ -48,18 +44,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <!--/span-->
-                            <!-- <div class="col-md-6">
-                                <div class="form-group has-danger row">
-                                    <label class="control-label text-right col-md-3">Apellido</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="apellido" placeholder="12n">
-                                        <small class="form-control-feedback"> This field has error. </small> </div>
-                                </div>
-                            </div> -->
-
-
-                            <!--/span-->
                         </div>
                         <!--/row-->
                         <div class="row">
@@ -81,18 +65,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <!--  <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control custom-select">
-                                            <option value="">Male</option>
-                                            <option value="">Female</option>
-                                        </select>
-                                        <small class="form-control-feedback"> Select your gender. </small> </div>
-                                </div>
-                            </div> -->
-                            <!--/span-->
                             <div class="col-md-6">
                                 <div *ngIf="this.dniFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">DNI</label>
@@ -111,17 +83,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <!--   <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Date of Birth</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" placeholder="dd/mm/yyyy">
-                                    </div>
-                                </div>
-                            </div> -->
-                            <!--/span-->
                         </div>
-
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.telefonoFlag" class="form-group row has-danger">
@@ -146,21 +108,15 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Cod. Iva</label>
                                     <div class="col-md-9">
-                                        <select formControlName="cod_iva" class="form-control" (change)="onSelectionChange($event)">
-                                            <!-- <option >--Elegir--</option> -->
+                                        <select formControlName="cod_iva" class="form-control"
+                                            (change)="onSelectionChange($event)">
                                             <option selected="true" value="4">Excento</option>
                                             <option value="3">Monotributo</option>
                                             <option value="2">Consumidor Final</option>
                                             <option value="1">Responsable Inscripto</option>
                                         </select>
-                                        <!-- <input type="number" formControlName="cod_iva" class="form-control"
-                                            placeholder=""> -->
-                                        <!-- <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small> -->
                                     </div>
                                 </div>
-
-                                
-                               
                             </div>
                         </div>
                         <div class="row">
@@ -169,37 +125,25 @@
                                     <label class="control-label text-right col-md-3">Ingresos Brutos</label>
                                     <div class="col-md-9">
                                         <select formControlName="ingresos_br" class="form-control">
-                                            <!-- <option >--Elegir--</option> -->
-                                            <option  value="no" selected="true">No</option>
+                                            <option value="no" selected="true">No</option>
                                             <option value="si">Si</option>
-                                            
                                         </select>
-                                        <!-- <input type="number" formControlName="cod_iva" class="form-control"
-                                            placeholder=""> -->
-                                        <!-- <small class="form-control-feedback"> De 5 a 15 numeros de longitud </small> -->
                                     </div>
                                 </div>
-                            </div>   
+                            </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Vendedor</label>
                                     <div class="col-md-9">
-                                     <!--  <select  class="form-control" formControlName="vendedor" (change)="onSelectionVendedorChange($event)">
-                                        <option *ngFor="let vendedor of vendedores" [value]="vendedor.cod_ven">{{vendedor.vendedor}}</option>
-                                      </select> -->
-                                      <select  class="form-control" formControlName="vendedor" (change)="onSelectionVendedorChange($event)">
-                                        <option *ngFor="let vendedor of vendedores; let i = index" [value]="i">{{vendedor.vendedor}}</option>
-                                    </select>
+                                        <select class="form-control" formControlName="vendedor"
+                                            (change)="onSelectionVendedorChange($event)">
+                                            <option *ngFor="let vendedor of vendedores; let i = index" [value]="i">
+                                                {{vendedor.vendedor}}</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
-                          
                         </div>
-
-
-                        <!--/row-->
-
-                        <!--/row-->
                     </div>
                     <hr>
                     <div class="form-actions">
@@ -207,7 +151,6 @@
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-offset-3 col-md-9">
-                                        <!-- <button type="submit"  [disabled]= "editarclienteForm.invalid" class="btn btn-success">Submit</button> -->
                                         <button type="submit" class="btn btn-success">Guardar</button>
                                         <button type="button" class="btn btn-inverse"
                                             [routerLink]="['../puntoventa']">Cancel</button>

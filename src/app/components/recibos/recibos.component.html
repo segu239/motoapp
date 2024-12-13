@@ -1,0 +1,25 @@
+<div *ngIf="errorMessage" class="error-message">
+  {{ errorMessage }}
+</div>
+<div *ngIf="!errorMessage">
+  <p-table [value]="recibos">
+    <ng-template pTemplate="header">
+      <tr>
+        <th>Fecha</th>
+        <th>Importe</th>
+        <th>Saldo</th>
+        <th>Bonificacion</th>
+        <th>Interes</th>
+      </tr>
+    </ng-template>
+    <ng-template pTemplate="body" let-recibo>
+      <tr>
+        <td>{{ recibo.fecha }}</td>
+        <td>{{ recibo.importe }}</td>
+        <td>{{ recibo.recibo_saldo }}</td>
+        <td>{{ recibo.bonifica }}</td>
+        <td>{{ recibo.interes }}</td>
+      </tr>
+    </ng-template>
+  </p-table>
+</div>

@@ -1,11 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CarritoService } from 'src/app/services/carrito.service';
-
+import { DialogService } from 'primeng/dynamicdialog';
+import { GrillaComponent } from 'src/app/components/grilla/grilla.component'; // Asegúrate de que la ruta sea correcta
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
-  styleUrls: ['./header.component.css']
+  styleUrls: ['./header.component.css'],
+  providers: [DialogService]
 })
 export class HeaderComponent implements OnInit {
 public sucursal: string = '';
@@ -13,7 +15,7 @@ public cantidad: number = 0;
 public sucursalNombre: string = '';
 
 
-constructor(private carritoService: CarritoService) {
+constructor(private dialogService: DialogService, private carritoService: CarritoService) {
   this.sucursal = localStorage.getItem('sucursal');
   if (this.sucursal == '1') {
     this.sucursalNombre = 'Casa Central';
@@ -34,6 +36,13 @@ ngOnInit(): void {
   this.carritoService.carritoObservable.subscribe((items: any[]) => {
     this.cantidad = items.length;
     console.log(items);
+  });
+}
+
+openGrilla() {
+  this.dialogService.open(GrillaComponent, {
+    header: 'Grilla',
+    width: '70%'
   });
 }
   }

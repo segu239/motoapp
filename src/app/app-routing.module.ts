@@ -16,6 +16,17 @@ import { ProductosComponent } from './components/productos/productos.component';
 import { CalculoproductoComponent } from './components/calculoproducto/calculoproducto.component';
 import { CarritoComponent } from './components/carrito/carrito.component';
 import { VentaComponent } from './components/venta/venta.component';
+import { CuentacorrienteComponent } from './components/cuentacorriente/cuentacorriente.component';
+import { CabecerasComponent } from './components/cabeceras/cabeceras.component';
+import { AnalisiscajaComponent } from './components/analisiscaja/analisiscaja.component';
+import { AnalisiscajaprodComponent } from './components/analisiscajaprod/analisiscajaprod.component';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
+import { MovimientoComponent } from './components/movimiento/movimiento.component';
+import { StockpedidoComponent } from './components/stockpedido/stockpedido.component';
+import { StockreciboComponent } from './components/stockrecibo/stockrecibo.component';
+import { PedirStockComponent } from './components/pedir-stock/pedir-stock.component';
+import { StockenvioComponent } from './components/stockenvio/stockenvio.component';
+import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
 
 import {LoginguardGuard} from './guards/loginguard.guard';
 import {SuperGuard} from './guards/super.guard';
@@ -35,7 +46,19 @@ children:[
     { path: 'calculoproducto', component: CalculoproductoComponent, data :{titulo:'Calculo de Producto'} },
     { path: 'carrito', component: CarritoComponent, data :{titulo:'Carrito'} },
     { path: 'venta', component: VentaComponent, data :{titulo:'Venta'} },
-    
+    { path: 'cuentacorriente', component: CuentacorrienteComponent, data: {titulo: 'Pagos CC'} },
+    { path: 'cabeceras', component: CabecerasComponent, data: {titulo: "CC"} }, 
+    {path: 'analisiscaja', component: AnalisiscajaComponent, data: {titulo: "Analisis Caja"} },
+    {path: 'analisiscajaprod', component: AnalisiscajaprodComponent, data: {titulo: "Analisis Caja Prod"} },
+    {path: 'dashboard', component: DashboardComponent, data: {titulo: "Dashboard"} },
+    {path: 'movimiento', component: MovimientoComponent, data: {titulo: "Movimiento"} },
+    {path: 'stockpedido', component: StockpedidoComponent, data: {titulo: "Stock Pedido"} },
+    {path: 'stockrecibo', component: StockreciboComponent, data: {titulo: "Stock Recibo"} },
+    {path: 'pedir-stock', component: PedirStockComponent, data: {titulo: "Pedir Stock"} },
+    {path: 'stockenvio', component: StockenvioComponent, data: {titulo: "Enviar Stock"} },
+    {path: 'enviostockpendientes', component: EnviostockpendientesComponent, data: {titulo: "Envios Pendientes"} },
+
+     
     
     
   //{ path: 'puntosmedicion', component: PuntosmedicionComponent, data:{titulo: "Puntos Medicion"} },

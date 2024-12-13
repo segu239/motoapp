@@ -45,7 +45,7 @@ export const UpdateArtsucxappWebManagedPHP= "https://droplet.segu239.com/APIAND/
 
 //motomatch local
 
-export const Urllogin="https://motomatch.segu239.com/APIAND/index.php/Login";
+/* export const Urllogin="https://motomatch.segu239.com/APIAND/index.php/Login";
 
 
 //CARGA------------------------------------------------------------------------------
@@ -54,11 +54,14 @@ export const Urlartsucursal= "https://motomatch.segu239.com/APIAND/index.php/Car
 export const Urltarjcredito="https://motomatch.segu239.com/APIAND/index.php/Carga/Tarjcredito";
 export const Urlvendedores="https://motomatch.segu239.com/APIAND/index.php/Carga/Vendedores";
 export const Urlclisucx="https://motomatch.segu239.com/APIAND/index.php/Carga/Clisucx"; //tarjeta tarjcredito
+export const Urlpedidox="https://motomatch.segu239.com/APIAND/index.php/Carga/Pedidox";
+export const Urlcabecerax="https://motomatch.segu239.com/APIAND/index.php/Carga/Cabecerax";
 
 //DESCARGA----------------------------------------------------------------------
 export const Urlclisucxapp= "https://motomatch.segu239.com/APIAND/index.php/Descarga/Clisucxapp";//
 export const UpdateClisucxappWeb= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateClisucxapp";//
 export const Urlpedidossucxapp="https://motomatch.segu239.com/APIAND/index.php/Descarga/Pedidossucxapp";
+export const UrlpedidossucxappCompleto="https://motomatch.segu239.com/APIAND/index.php/Descarga/PedidossucxappCompleto";
 export const Urlarticulossucxapp="https://motomatch.segu239.com/APIAND/index.php/Descarga/Articulossucxapp";
 export const Urlmixto="https://motomatch.segu239.com/APIAND/index.php/Descarga/Mixto";
 export const UrlclisucxappWeb= "https://motomatch.segu239.com/APIAND/index.php/Descarga/ClisucxappWeb";//
@@ -66,4 +69,46 @@ export const UrlclisucxappWeb= "https://motomatch.segu239.com/APIAND/index.php/D
 export const UrleliminarCliente= "https://motomatch.segu239.com/APIAND/index.php/Descarga/eliminarCliente";//
 
 export const UpdateArtsucxappWeb= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateArtsucxapp";//
-export const UpdateArtsucxappWebManagedPHP= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";//
+export const UpdateArtsucxappWebManagedPHP= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";// */
+
+//----------------------------------- tailscale
+export const Urllogin="http://100.65.39.89/APIAND/index.php/Login";
+
+//CARGA------------------------------------------------------------------------------
+export const Urlarconmov="http://100.65.39.89/APIAND/index.php/Carga/Arconmov";
+export const Urlartsucursal= "http://100.65.39.89/APIAND/index.php/Carga/Artsucursal";
+export const Urltarjcredito="http://100.65.39.89/APIAND/index.php/Carga/Tarjcredito";
+export const Urlvendedores="http://100.65.39.89/APIAND/index.php/Carga/Vendedores";
+export const Urlclisucx="http://100.65.39.89/APIAND/index.php/Carga/Clisucx";
+export const Urlpedidox="http://100.65.39.89/APIAND/index.php/Carga/Pedidox";
+export const UrlpedidoxComprobante="http://100.65.39.89/APIAND/index.php/Carga/PedidoxComprobante";
+export const UrlreciboxComprobante="http://100.65.39.89/APIAND/index.php/Carga/ReciboxComprobante";
+export const Urlcabecerax="http://100.65.39.89/APIAND/index.php/Carga/Cabecerax";
+export const Urlcabecerasuc="http://100.65.39.89/APIAND/index.php/Carga/Cabecerasuc";
+export const UrlcabecerasucNombreTarj="http://100.65.39.89/APIAND/index.php/Carga/CabecerasucNombreTarj";
+export const UrlpedidosucNombreTarj="http://100.65.39.89/APIAND/index.php/Carga/PedidosucNombreTarj";
+export const UrlcabeceraLastId="http://100.65.39.89/APIAND/index.php/Carga/LastIdnum";
+
+//DESCARGA----------------------------------------------------------------------
+export const Urlclisucxapp= "http://100.65.39.89/APIAND/index.php/Descarga/Clisucxapp";
+export const UpdateClisucxappWeb= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateClisucxapp";
+export const Urlpedidossucxapp="http://100.65.39.89/APIAND/index.php/Descarga/Pedidossucxapp";
+export const UrlpedidossucxappCompleto="http://100.65.39.89/APIAND/index.php/Descarga/PedidossucxappCompleto";
+export const Urlarticulossucxapp="http://100.65.39.89/APIAND/index.php/Descarga/Articulossucxapp";
+export const Urlmixto="http://100.65.39.89/APIAND/index.php/Descarga/Mixto";
+export const UrlclisucxappWeb= "http://100.65.39.89/APIAND/index.php/Descarga/ClisucxappWeb";
+export const UrlPagoCabecera= "http://100.65.39.89/APIAND/index.php/Descarga/PagoCabecera";
+
+export const UrlPedidoItemyCab= "http://100.65.39.89/APIAND/index.php/Descarga/PedidoItemyCab";
+export const UrlPedidoItemyCabId= "http://100.65.39.89/APIAND/index.php/Descarga/PedidoItemyCabId";
+export const UrlPedidoItemyCabIdEnvio= "http://100.65.39.89/APIAND/index.php/Descarga/PedidoItemyCabIdEnvio";
+
+export const UrlStockPorSucursal= "http://100.65.39.89/APIAND/index.php/Carga/Stockpedido";
+
+export const UrlPedidoItemPorSucursal= "http://100.65.39.89/APIAND/index.php/Carga/PedidoItemsPorSucursal";
+export const UrlPedidoItemPorSucursalh= "http://100.65.39.89/APIAND/index.php/Carga/PedidoItemsPorSucursalh";
+
+export const UrleliminarCliente= "http://100.65.39.89/APIAND/index.php/Descarga/eliminarCliente";
+
+export const UpdateArtsucxappWeb= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateArtsucxapp";
+export const UpdateArtsucxappWebManagedPHP= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";

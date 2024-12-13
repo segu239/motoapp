@@ -30,7 +30,7 @@
                         </ul>
                     </li>
 
-                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-collage"></i><span class="hide-menu">CLIENTES</span></a>
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-basket-fill"></i><span class="hide-menu">CLIENTES</span></a>
                       <ul aria-expanded="false" class="collapse">
 
                           <li><a routerLinkActive="active" [routerLink]="['puntoventa']">Ingresar</a></li>
@@ -38,11 +38,33 @@
                       </ul>
                     </li>
 
+                    <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-clipboard-outline"></i><span class="hide-menu">CUENTA CORRIENTE</span></a>
+                        <ul aria-expanded="false" class="collapse">
+  
+                            <li><a routerLinkActive="active" [routerLink]="['cuentacorriente']">Pagos</a></li>
+  
+                        </ul>
+                      </li>
+
+                      <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-clipboard-outline"></i><span class="hide-menu">MOV.STOCK</span></a>
+                        <ul aria-expanded="false" class="collapse">
+                            <li><a routerLinkActive="active" [routerLink]="['pedir-stock']">Pedir Stock</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['stockenvio']">Enviar Stock</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['stockpedido']">Pedidos de Stk. pendientes</a></li>   
+                            <li><a routerLinkActive="active" [routerLink]="['stockrecibo']">Pedidos de Stk. recibidos</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['enviostockpendientes']">Envios de Stk. pendientes</a></li>   
+                            <li><a routerLinkActive="active" >Envios de Stk. realizados</a></li>
+                            <li><a routerLinkActive="active" [routerLink]="['movimiento']">Movimientos</a></li>
+                        </ul>
+                      </li>  
+
+
                     <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-chart-areaspline"></i><span class="hide-menu">ANALISIS</span></a>
                       <ul aria-expanded="false" class="collapse">
 
-                          <!-- <li><a routerLinkActive="active" [routerLink]="['chartanalisis']">chart</a></li> -->
-
+                          <li><a routerLinkActive="active" [routerLink]="['analisiscaja']">Caja Fact.</a></li>
+                          <li><a routerLinkActive="active" [routerLink]="['analisiscajaprod']">Caja Prod.</a></li> 
+                          <li><a routerLinkActive="active" [routerLink]="['dashboard']">Dashboard</a></li>
                       </ul>
                     </li>
 

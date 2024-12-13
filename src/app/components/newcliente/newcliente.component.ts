@@ -14,136 +14,84 @@ import { first, take } from 'rxjs/operators';
 })
 export class NewclienteComponent {
   public nuevoclienteForm!: FormGroup;
-
-
   public clienteFrompuntoVenta: any;
   public sucursal: any;
-
   public nombreFlag: boolean;
   public cuitFlag: boolean;
   public dniFlag: boolean;
   public telefonoFlag: boolean;
   public direccionFlag: boolean;
   public cod_ivaFlag: boolean;
-
   public vendedores: any[];
   public vendedor: any;
-
   public codigoVendedor: any;
   public nombreVendedor: any;
- 
 
-  constructor(private _cargardata:CargardataService, private subirdata: SubirdataService, private router: Router, private activatedRoute: ActivatedRoute, private fb: FormBuilder) { 
-  this.cargarForm();
-  this.monitorFormChanges();
- this.cargarVendedor();
-  
+  constructor(private _cargardata: CargardataService, private subirdata: SubirdataService, private router: Router, private activatedRoute: ActivatedRoute, private fb: FormBuilder) {
+    this.cargarForm();
+    this.monitorFormChanges();
+    this.cargarVendedor();
   }
   cargarForm() {
     this.nuevoclienteForm = this.fb.group({
       nombre: new FormControl('', Validators.compose([Validators.required,
       Validators.pattern(/^([a-zA-Z0-9\sñÑ]{2,40}){1}$/)
       ])),
-
-      /* cuit: new FormControl(parseInt(this.clienteFrompuntoVenta.cuit),Validators.compose([conditionalValidator(() => {
-        if (this.editarclienteForm.get('cod_iva').value == "2")
-        {
-          return false;
-        }
-        else {return true;}
-      },
-                              Validators.required,
-                              'illuminatiError'),
-            Validators.pattern(/^([0-9]{11}){1}$/)
-        ])), */
-     /*  cuit: new FormControl('', Validators.compose([Validators.required,
-      Validators.pattern(/^([0-9]{11}){1}$/)
-      ])), */
-
       cuit: new FormControl('', Validators.compose([Validators.required,
-        Validators.pattern(/^(0|[0-9]{11})$/)
+      Validators.pattern(/^(0|[0-9]{11})$/)
       ])),
 
       dni: new FormControl('', Validators.compose([Validators.required,
       Validators.pattern(/^([0-9]{8}){1}$/)
       ])),
-
-     /*  telefono: new FormControl('', Validators.compose([Validators.required,
-      Validators.pattern(/^([0-9]{5,15}){1}$/)
-      ])), */
-
       telefono: new FormControl(0, Validators.compose([
         Validators.pattern(/^(0|[0-9]{5,15}){1}$/)
       ])),
-
       direccion: new FormControl('', Validators.compose([Validators.required,
       Validators.pattern(/^([a-zA-Z0-9°\.\-_\s,/ñÑªº]{2,60}){1}$/)
       ])),
       cod_iva: new FormControl('', Validators.required),
       ingresos_br: new FormControl('', Validators.required),
-     // vendedor: new FormControl(""),
-
-
-      // cod_iva: new FormControl('',Validators.required),
-
     },);
-    /* this.editarclienteForm.get('cod_iva').valueChanges
-      .subscribe(value => {
-          console.log(value);
-      }); */
   }
   onSelectionVendedorChange(event: any) {
-    //console.log(event.target.value);
-    //console.log(this.vendedores[event.target.value]);
     this.codigoVendedor = this.vendedores[event.target.value].cod_ven;
     this.nombreVendedor = this.vendedores[event.target.value].vendedor;
   }
- 
+
   onSelectionChange(event: any) {
     const selectedValue = event.target.value;
     console.log(selectedValue);
     if (selectedValue == "2") {
       this.nuevoclienteForm.controls['cuit'].setValue(0);
-      //this.nuevoclienteForm.controls['cuit'].disable();
     }
     else {
       this.nuevoclienteForm.controls['cuit'].setValue("");
-      //this.nuevoclienteForm.controls['cuit'].enable();
     }
     // Realiza acciones basadas en selectedValue
   }
-    guardar(form: FormGroup) 
-  {
+  guardar(form: FormGroup) {
     if (form.valid)  // si el formulario es valido
     {
-      const ivaArray:string[]=["","Responsable Inscripto", "Consumidor Final", "Monotributo", "Excento"];
-      let indexnuevocli:number=Math.floor((Math.random() * 9999999) + 10000);//genera un numero entre 10000 y 9999999 incluidos
-      let sucursal:any= localStorage.getItem('sucursal');
-      //let cod_ven:any= localStorage.getItem('cod_ven');
-      //let vendedor:any= localStorage.getItem('vendedor');
-      //let vendedorSucursal:any= localStorage.getItem('sucursal');
-      //let sucursalNombre:any= localStorage.getItem('sucursalNombre');
-      let nuevoclirandom:number=Math.floor((Math.random() * 99999) + 10000);
+      const ivaArray: string[] = ["", "Responsable Inscripto", "Consumidor Final", "Monotributo", "Excento"];
+      let indexnuevocli: number = Math.floor((Math.random() * 9999999) + 10000);//genera un numero entre 10000 y 9999999 incluidos
+      let sucursal: any = localStorage.getItem('sucursal');
+      let nuevoclirandom: number = Math.floor((Math.random() * 99999) + 10000);
       let date = new Date();
       let fecha = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();//let fecha= date.getDate() + "/"+ (date.getMonth()+ 1) + "/" +date.getFullYear();
       let hora = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-
       let nuevoCliente =
       {
         "cliente": (sucursal * 100000) + nuevoclirandom,//parseInt(form.value.cliente)
         "nombre": form.value.nombre,
-        // "apellido": value.value.apellido,
         "direccion": form.value.direccion,
         "dni": parseInt(form.value.dni),
         "cuit": form.value.cuit,
         "cod_iva": parseInt(form.value.cod_iva),
-
         "cod_ven": this.codigoVendedor,//this.vendedor.cod_ven,//parseInt(form.value.cod_ven),
         "cod_zona": sucursal,//parseInt(form.value.cod_zona),
         "tipoiva": ivaArray[form.value.cod_iva],// ""
         "vendedor": this.nombreVendedor,//this.vendedor.vendedor,
-
-
         "zona": "",//form.value.zona,//"",
         "telefono": form.value.telefono,
         "estado": "",//"",
@@ -153,52 +101,44 @@ export class NewclienteComponent {
         "hora": hora,
         "ingresos_br": form.value.ingresos_br,
         "n_sucursal": sucursal,
-        "id_suc":indexnuevocli,
-        "estado_act":""
+        "id_suc": indexnuevocli,
+        "estado_act": ""
       }
-      if(nuevoCliente.cuit == 0 && nuevoCliente.tipoiva != "Consumidor Final")
-        {
-          Swal.fire({
-            title: 'ERROR',
-            text: 'Se requiere un cuit para este tipo de IVA',
-            icon: 'error',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            //confirmButtonText: 'OK',
-            cancelButtonText: 'Cancelar'
-          });
-        }
-        else
-        {
-      console.log(nuevoCliente);
-      this.subirdata.subirDatosClientes(nuevoCliente, sucursal).subscribe((data: any) => {
-        console.log(data);
+      if (nuevoCliente.cuit == 0 && nuevoCliente.tipoiva != "Consumidor Final") {
         Swal.fire({
-          title: 'Guardando...',
-          timer: 300,
-          didOpen: () => {
-            Swal.showLoading()
-          }
-        }).then((result) => {
-          if (result.dismiss === Swal.DismissReason.timer) {
-            console.log('I was closed by the timer')
-            window.history.back();
-          }
-        })
-       
-
-      });
-        }
+          title: 'ERROR',
+          text: 'Se requiere un cuit para este tipo de IVA',
+          icon: 'error',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          cancelButtonText: 'Cancelar'
+        });
+      }
+      else {
+        console.log(nuevoCliente);
+        this.subirdata.subirDatosClientes(nuevoCliente, sucursal).subscribe((data: any) => {
+          console.log(data);
+          Swal.fire({
+            title: 'Guardando...',
+            timer: 300,
+            didOpen: () => {
+              Swal.showLoading()
+            }
+          }).then((result) => {
+            if (result.dismiss === Swal.DismissReason.timer) {
+              console.log('I was closed by the timer')
+              window.history.back();
+            }
+          })
+        });
+      }
     }
     else {
-
       this.monitorFormChanges();
       //mostrar en consola que input del formulario es invalido
       console.log(form.errors);
       console.log(form);
-
-
       Swal.fire({
         title: 'ERROR',
         text: 'Verifique los datos ingresados, hay campos invalidos o vacios o con formato incorrecto',
@@ -207,7 +147,6 @@ export class NewclienteComponent {
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
         confirmButtonText: 'OK',
-        //cancelButtonText: 'Cancelar'
       });
       console.log("invalido");
       // Marca los campos como tocados para que se muestren los errores
@@ -215,15 +154,11 @@ export class NewclienteComponent {
         form.get(control).markAsTouched();
       }
     }
-
-
   }
-
-  cargarVendedor()
-  {
-    this._cargardata.vendedores().pipe(take(1)).subscribe((resp:any)=>{
+  cargarVendedor() {
+    this._cargardata.vendedores().pipe(take(1)).subscribe((resp: any) => {
       console.log(resp);
-     this.vendedores=resp.mensaje;
+      this.vendedores = resp.mensaje;
     });
   }
 
@@ -232,7 +167,6 @@ export class NewclienteComponent {
       const control = this.nuevoclienteForm.get(field);
       control.valueChanges.pipe(debounceTime(1000)).subscribe(value => {
         console.log(`El campo ${field} cambió a: `, value);
-  
         this.nombreFlag = this.nuevoclienteForm.controls['nombre'].invalid;
         this.cuitFlag = this.nuevoclienteForm.controls['cuit'].invalid;
         this.dniFlag = this.nuevoclienteForm.controls['dni'].invalid;
@@ -241,5 +175,4 @@ export class NewclienteComponent {
       });
     });
   }
-  
 }
