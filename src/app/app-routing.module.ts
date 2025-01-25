@@ -27,6 +27,7 @@ import { StockreciboComponent } from './components/stockrecibo/stockrecibo.compo
 import { PedirStockComponent } from './components/pedir-stock/pedir-stock.component';
 import { StockenvioComponent } from './components/stockenvio/stockenvio.component';
 import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
+import { EnviodestockrealizadosComponent } from './components/enviodestockrealizados/enviodestockrealizados.component';
 
 import {LoginguardGuard} from './guards/loginguard.guard';
 import {SuperGuard} from './guards/super.guard';
@@ -57,7 +58,7 @@ children:[
     {path: 'pedir-stock', component: PedirStockComponent, data: {titulo: "Pedir Stock"} },
     {path: 'stockenvio', component: StockenvioComponent, data: {titulo: "Enviar Stock"} },
     {path: 'enviostockpendientes', component: EnviostockpendientesComponent, data: {titulo: "Envios Pendientes"} },
-
+    { path: 'enviodestockrealizados', component: EnviodestockrealizadosComponent, data: { titulo: "Envios Realizados" } },
      
     
     

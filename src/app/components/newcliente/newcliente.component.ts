@@ -14,7 +14,7 @@ import { first, take } from 'rxjs/operators';
 })
 export class NewclienteComponent {
   public nuevoclienteForm!: FormGroup;
-  public clienteFrompuntoVenta: any;
+  //public clienteFrompuntoVenta: any;
   public sucursal: any;
   public nombreFlag: boolean;
   public cuitFlag: boolean;
