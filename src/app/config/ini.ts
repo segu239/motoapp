@@ -71,7 +71,7 @@ export const UrleliminarCliente= "https://motomatch.segu239.com/APIAND/index.php
 export const UpdateArtsucxappWeb= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateArtsucxapp";//
 export const UpdateArtsucxappWebManagedPHP= "https://motomatch.segu239.com/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";// */
 
-//----------------------------------- tailscale
+/* //----------------------------------- tailscale
 export const Urllogin="http://100.65.39.89/APIAND/index.php/Login";
 
 //CARGA------------------------------------------------------------------------------
@@ -111,4 +111,66 @@ export const UrlPedidoItemPorSucursalh= "http://100.65.39.89/APIAND/index.php/Ca
 export const UrleliminarCliente= "http://100.65.39.89/APIAND/index.php/Descarga/eliminarCliente";
 
 export const UpdateArtsucxappWeb= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateArtsucxapp";
-export const UpdateArtsucxappWebManagedPHP= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";
+export const UpdateArtsucxappWebManagedPHP= "http://100.65.39.89/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP"; */
+
+
+//----------------------------------- tailscale
+export const Urllogin="https://motoapp.loclx.io/APIAND/index.php/Login";
+
+//CARGA------------------------------------------------------------------------------
+export const Urlarconmov="https://motoapp.loclx.io/APIAND/index.php/Carga/Arconmov";
+export const Urlartsucursal= "https://motoapp.loclx.io/APIAND/index.php/Carga/Artsucursal";
+export const Urltarjcredito="https://motoapp.loclx.io/APIAND/index.php/Carga/Tarjcredito";
+export const Urlvendedores="https://motoapp.loclx.io/APIAND/index.php/Carga/Vendedores";
+export const Urlclisucx="https://motoapp.loclx.io/APIAND/index.php/Carga/Clisucx";
+export const Urlpedidox="https://motoapp.loclx.io/APIAND/index.php/Carga/Pedidox";
+export const UrlpedidoxComprobante="https://motoapp.loclx.io/APIAND/index.php/Carga/PedidoxComprobante";
+export const UrlreciboxComprobante="https://motoapp.loclx.io/APIAND/index.php/Carga/ReciboxComprobante";
+export const Urlcabecerax="https://motoapp.loclx.io/APIAND/index.php/Carga/Cabecerax";
+export const Urlcabecerasuc="https://motoapp.loclx.io/APIAND/index.php/Carga/Cabecerasuc";
+export const UrlcabecerasucNombreTarj="https://motoapp.loclx.io/APIAND/index.php/Carga/CabecerasucNombreTarj";
+export const UrlpedidosucNombreTarj="https://motoapp.loclx.io/APIAND/index.php/Carga/PedidosucNombreTarj";
+export const UrlcabeceraLastId="https://motoapp.loclx.io/APIAND/index.php/Carga/LastIdnum";
+
+//DESCARGA----------------------------------------------------------------------
+export const Urlclisucxapp= "https://motoapp.loclx.io/APIAND/index.php/Descarga/Clisucxapp";
+export const UpdateClisucxappWeb= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateClisucxapp";
+export const Urlpedidossucxapp="https://motoapp.loclx.io/APIAND/index.php/Descarga/Pedidossucxapp";
+export const UrlpedidossucxappCompleto="https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidossucxappCompleto";
+export const Urlarticulossucxapp="https://motoapp.loclx.io/APIAND/index.php/Descarga/Articulossucxapp";
+export const Urlmixto="https://motoapp.loclx.io/APIAND/index.php/Descarga/Mixto";
+export const UrlclisucxappWeb= "https://motoapp.loclx.io/APIAND/index.php/Descarga/ClisucxappWeb";
+export const UrlPagoCabecera= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PagoCabecera";
+
+export const UrlPedidoItemyCab= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCab";
+export const UrlPedidoItemyCabId= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCabId";
+export const UrlPedidoItemyCabIdEnvio= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCabIdEnvio";
+
+export const UrlStockPorSucursal= "https://motoapp.loclx.io/APIAND/index.php/Carga/Stockpedido";
+
+export const UrlPedidoItemPorSucursal= "https://motoapp.loclx.io/APIAND/index.php/Carga/PedidoItemsPorSucursal";
+export const UrlPedidoItemPorSucursalh= "https://motoapp.loclx.io/APIAND/index.php/Carga/PedidoItemsPorSucursalh";
+
+export const UrleliminarCliente= "https://motoapp.loclx.io/APIAND/index.php/Descarga/eliminarCliente";
+
+export const UpdateArtsucxappWeb= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateArtsucxapp";
+export const UpdateArtsucxappWebManagedPHP= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateArtsucxappManagedPHP";
+
+export const UrlRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPrincipal';
+export const UrlRubro = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Rubro';
+
+export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
+
+export const UrlRubroPrincipalPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPrincipalPorId";
+
+export const UrlUpdateRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubroPrincipal";
+
+export const UrleliminarRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubroPrincipal";
+
+export const UrlSubirDatosRubro = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubro';
+
+export const UrlRubroPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPorId";
+
+export const UrleliminarRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubro";
+
+export const UrlUpdateRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubro";

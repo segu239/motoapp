@@ -64,6 +64,12 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { StockproductoenvioComponent } from './components/stockproductoenvio/stockproductoenvio.component';
 import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
 import { EnviodestockrealizadosComponent } from './components/enviodestockrealizados/enviodestockrealizados.component';
+import { RubroprincipalComponent } from './components/rubroprincipal/rubroprincipal.component';
+import { NewrubroprincipalComponent } from './components/newrubroprincipal/newrubroprincipal.component';
+import { EditrubroprincipalComponent } from './components/editrubroprincipal/editrubroprincipal.component';
+import { RubroComponent } from './components/rubro/rubro.component';
+import { NewrubroComponent } from './components/newrubro/newrubro.component';
+import { EditrubroComponent } from './components/editrubro/editrubro.component';
 //import { DataTablesModule } from 'angular-datatables';
 
 @NgModule({
@@ -104,6 +110,12 @@ import { EnviodestockrealizadosComponent } from './components/enviodestockrealiz
     StockproductoenvioComponent,
     EnviostockpendientesComponent,
     EnviodestockrealizadosComponent,
+    RubroprincipalComponent,
+    NewrubroprincipalComponent,
+    EditrubroprincipalComponent,
+    RubroComponent,
+    NewrubroComponent,
+    EditrubroComponent,
 
   ],
   imports: [

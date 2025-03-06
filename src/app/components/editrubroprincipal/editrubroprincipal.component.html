@@ -1,0 +1,73 @@
+<div class="container mt-4">
+    <h2>{{ currentRubro ? 'Edit' : 'Create' }} Rubro Principal</h2>
+    
+    <form [formGroup]="rubroForm" (ngSubmit)="onSubmit()" class="mt-3">
+      <div class="mb-3">
+        <label for="cod_rubro" class="form-label">Código Rubro</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="cod_rubro" 
+          formControlName="cod_rubro"
+          [ngClass]="{'is-invalid': rubroForm.get('cod_rubro')?.invalid && rubroForm.get('cod_rubro')?.touched}"
+        >
+        <div class="invalid-feedback" *ngIf="rubroForm.get('cod_rubro')?.invalid && rubroForm.get('cod_rubro')?.touched">
+          Código Rubro is required
+        </div>
+      </div>
+  
+      <div class="mb-3">
+        <label for="rubro" class="form-label">Rubro</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="rubro" 
+          formControlName="rubro"
+          [ngClass]="{'is-invalid': rubroForm.get('rubro')?.invalid && rubroForm.get('rubro')?.touched}"
+        >
+        <div class="invalid-feedback" *ngIf="rubroForm.get('rubro')?.invalid && rubroForm.get('rubro')?.touched">
+          Rubro is required
+        </div>
+      </div>
+  
+      <div class="mt-3">
+        <button type="submit" class="btn btn-primary me-2" [disabled]="!rubroForm.valid">
+          {{ currentRubro ? 'Update' : 'Create' }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="onCancel()">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+<!-- div class="container">
+    <div class="row mt-5">
+        <div class="col-md-4 mx-auto">
+            <div class="card">
+                <div class="card-header text-center">
+                    Editar Rubro Principal
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="cod_rubro" class="form-label">Código de Rubro:</label>
+                            <input type="text" class="form-control" id="cod_rubro" name="cod_rubro" 
+                                [(ngModel)]="cod_rubro" maxlength="2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="rubro" class="form-label">Rubro:</label>
+                            <input type="text" class="form-control" id="rubro" name="rubro" 
+                                [(ngModel)]="rubro" maxlength="30" required>
+                        </div>
+                        <div class="text-center">
+                            <button class="btn btn-success me-2" (click)="onUpdate()">Actualizar</button>
+                            <button class="btn btn-danger" (click)="onCancel()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+ -->

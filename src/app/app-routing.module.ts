@@ -28,6 +28,14 @@ import { PedirStockComponent } from './components/pedir-stock/pedir-stock.compon
 import { StockenvioComponent } from './components/stockenvio/stockenvio.component';
 import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
 import { EnviodestockrealizadosComponent } from './components/enviodestockrealizados/enviodestockrealizados.component';
+import { RubroprincipalComponent } from './components/rubroprincipal/rubroprincipal.component';
+import { NewrubroprincipalComponent } from './components/newrubroprincipal/newrubroprincipal.component';
+import { EditrubroprincipalComponent } from './components/editrubroprincipal/editrubroprincipal.component';
+import { RubroComponent } from './components/rubro/rubro.component';
+import { NewrubroComponent } from './components/newrubro/newrubro.component';
+import { EditrubroComponent } from './components/editrubro/editrubro.component';
+
+
 
 import {LoginguardGuard} from './guards/loginguard.guard';
 import {SuperGuard} from './guards/super.guard';
@@ -59,8 +67,12 @@ children:[
     {path: 'stockenvio', component: StockenvioComponent, data: {titulo: "Enviar Stock"} },
     {path: 'enviostockpendientes', component: EnviostockpendientesComponent, data: {titulo: "Envios Pendientes"} },
     { path: 'enviodestockrealizados', component: EnviodestockrealizadosComponent, data: { titulo: "Envios Realizados" } },
-     
-    
+    { path: 'rubroprincipal', component: RubroprincipalComponent, data: { titulo: "Rubro Principal" } },
+    { path: 'newrubroprincipal', component: NewrubroprincipalComponent, data: { titulo: "Nuevo Rubro Principal" } },
+    {path: 'editrubroprincipal', component: EditrubroprincipalComponent, data: { titulo: "Editar Rubro Principal" } },
+    {path: 'rubro', component: RubroComponent, data: { titulo: "Rubro" } },
+    {path: 'newrubro', component: NewrubroComponent, data: { titulo: "Nuevo Rubro" } },
+    {path: 'editrubro', component: EditrubroComponent, data: { titulo: "Editar Rubro" } }
     
   //{ path: 'puntosmedicion', component: PuntosmedicionComponent, data:{titulo: "Puntos Medicion"} },
   //{ path: 'chart/:keygrupo/:keymedicion/:nombregrupo/:nombrepunto', component: ChartComponent, data :{titulo:'Chart'} },

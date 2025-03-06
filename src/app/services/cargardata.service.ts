@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
+import {UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
 import { map } from "rxjs/operators";
 
 @Injectable({
@@ -29,6 +29,13 @@ export class CargardataService {
     return this.http.get(Urlvendedores);
   }
 
+  getRubroPrincipal() {
+    return this.http.get(UrlRubroPrincipal);
+  }
+
+  getRubro() {
+    return this.http.get(UrlRubro);
+  }
   clisucx(cod_sucursal:string) // asi es como funcionaba con una tabla de cliente por sucursal
   {
     return this.http.post(Urlclisucx,{
@@ -146,5 +153,19 @@ export class CargardataService {
   obtenerPedidoItemPorSucursalh(sucursal: string) {
     return this.http.post(UrlPedidoItemPorSucursalh, { 
       "sucursal": sucursal });
+  }
+
+  obtenerRubroPrincipalPorId(id_rubro_p:number) // asi es como funcionaba con una tabla de cliente por sucursal
+  {
+    return this.http.post(UrlRubroPrincipalPorId,{
+      "id_rubro_p": id_rubro_p
+    }) 
+  }
+
+  obtenerRubroPorId(id_rubro_p:number) // asi es como funcionaba con una tabla de cliente por sucursal
+  {
+    return this.http.post(UrlRubroPorId,{
+      "id_rubro_p": id_rubro_p
+    }) 
   }
 }
