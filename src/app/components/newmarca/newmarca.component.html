@@ -1,0 +1,64 @@
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-body">
+                <form ngNativeValidate [formGroup]="nuevomarcaForm" (ngSubmit)="guardar(nuevomarcaForm)"
+                    class="form-horizontal">
+                    <div class="form-body">
+                        <h3 class="box-title">Nueva Marca</h3>
+                        <hr class="m-t-0 m-b-40">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div *ngIf="this.codigoFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">Código</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="codigo" placeholder="">
+                                        <small class="form-control-feedback">Máximo 6 caracteres alfanuméricos</small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.codigoFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">Código</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="codigo" placeholder="">
+                                        <small class="form-control-feedback">Máximo 6 caracteres alfanuméricos</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div *ngIf="this.marcaFlag" class="form-group row has-danger">
+                                    <label class="control-label text-right col-md-3">Marca</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="marca" placeholder="">
+                                        <small class="form-control-feedback">Máximo 30 caracteres alfanuméricos</small>
+                                    </div>
+                                </div>
+                                <div *ngIf="!this.marcaFlag" class="form-group row">
+                                    <label class="control-label text-right col-md-3">Marca</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control" formControlName="marca" placeholder="">
+                                        <small class="form-control-feedback">Máximo 30 caracteres alfanuméricos</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="form-actions">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-offset-3 col-md-9">
+                                        <button type="submit" class="btn btn-success">Guardar</button>
+                                        <button type="button" class="btn btn-inverse"
+                                            [routerLink]="['../marca']">Cancelar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6"> </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

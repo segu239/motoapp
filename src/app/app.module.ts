@@ -70,6 +70,13 @@ import { EditrubroprincipalComponent } from './components/editrubroprincipal/edi
 import { RubroComponent } from './components/rubro/rubro.component';
 import { NewrubroComponent } from './components/newrubro/newrubro.component';
 import { EditrubroComponent } from './components/editrubro/editrubro.component';
+import { MarcaComponent } from './components/marca/marca.component';
+import { NewmarcaComponent } from './components/newmarca/newmarca.component';
+import { EditmarcaComponent } from './components/editmarca/editmarca.component';
+import { ArtivaComponent } from './components/artiva/artiva.component';
+import { NewartivaComponent } from './components/newartiva/newartiva.component';
+import { ProveedoresComponent } from './components/proveedores/proveedores.component';
+import { NewproveedorComponent } from './components/newproveedor/newproveedor.component';
 //import { DataTablesModule } from 'angular-datatables';
 
 @NgModule({
@@ -116,6 +123,13 @@ import { EditrubroComponent } from './components/editrubro/editrubro.component';
     RubroComponent,
     NewrubroComponent,
     EditrubroComponent,
+    MarcaComponent,
+    NewmarcaComponent,
+    EditmarcaComponent,
+    ArtivaComponent,
+    NewartivaComponent,
+    ProveedoresComponent,
+    NewproveedorComponent,
 
   ],
   imports: [

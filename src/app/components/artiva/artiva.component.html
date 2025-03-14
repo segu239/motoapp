@@ -1,0 +1,66 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">IVA</h4>
+                <p-table #dtable [value]="ivas" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
+                    [rows]="10"
+                    [globalFilterFields]="['cod_iva', 'descripcion', 'tipo_ali_1', 'alicuota1', 'tipo_ali_2', 'alicuota2', 'tipo_ali_3', 'alicuota3']">
+                    <ng-template pTemplate="caption">
+                        <div class="p-d-flex">
+                            <span class="p-input-icon-left ml-auto">
+                                <input pInputText type="text"
+                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                    placeholder="Buscar.." />
+                            </span>
+                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                styleClass="p-button-sm p-button-success ml-4"></p-button>
+                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newartiva']"
+                                styleClass="p-button-sm p-button-info ml-2"></p-button>
+                        </div>
+                    </ng-template>
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th pSortableColumn="cod_iva">Código Iva<p-sortIcon field="cod_iva"></p-sortIcon></th>
+                            <th pSortableColumn="descripcion">Descripción<p-sortIcon field="descripcion"></p-sortIcon></th>
+                            <th pSortableColumn="desde">Desde<p-sortIcon field="desde"></p-sortIcon></th>
+                            <th pSortableColumn="hasta">Hasta<p-sortIcon field="hasta"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_ali_1">Tipo Ali 1<p-sortIcon field="tipo_ali_1"></p-sortIcon></th>
+                            <th pSortableColumn="alicuota1">Alícuota 1<p-sortIcon field="alicuota1"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_ali_2">Tipo Ali 2<p-sortIcon field="tipo_ali_2"></p-sortIcon></th>
+                            <th pSortableColumn="alicuota2">Alícuota 2<p-sortIcon field="alicuota2"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_ali_3">Tipo Ali 3<p-sortIcon field="tipo_ali_3"></p-sortIcon></th>
+                            <th pSortableColumn="alicuota3">Alícuota 3<p-sortIcon field="alicuota3"></p-sortIcon></th>
+                            <th pSortableColumn="cuit">CUIT<p-sortIcon field="cuit"></p-sortIcon></th>
+                            <th>Editar</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-iva>
+                        <tr>
+                            <td>{{ iva.cod_iva }}</td>
+                            <td>{{ iva.descripcion }}</td>
+                            <td>{{ formatDate(iva.desde) }}</td>
+                            <td>{{ formatDate(iva.hasta) }}</td>
+                            <td>{{ iva.tipo_ali_1 }}</td>
+                            <td>{{ iva.alicuota1 }}</td>
+                            <td>{{ iva.tipo_ali_2 }}</td>
+                            <td>{{ iva.alicuota2 }}</td>
+                            <td>{{ iva.tipo_ali_3 }}</td>
+                            <td>{{ iva.alicuota3 }}</td>
+                            <td>{{ iva.cuit ? 'TRUE' : 'FALSE' }}</td>
+                            <td>
+                                <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                                    (click)="editIva(iva)"></p-button>
+                            </td>
+                            <td>
+                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
+                                (click)="confirmDelete(iva)"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -34,8 +34,13 @@ import { EditrubroprincipalComponent } from './components/editrubroprincipal/edi
 import { RubroComponent } from './components/rubro/rubro.component';
 import { NewrubroComponent } from './components/newrubro/newrubro.component';
 import { EditrubroComponent } from './components/editrubro/editrubro.component';
-
-
+import { MarcaComponent } from './components/marca/marca.component';
+import { NewmarcaComponent } from './components/newmarca/newmarca.component';
+import { EditmarcaComponent } from './components/editmarca/editmarca.component';
+import { ArtivaComponent } from './components/artiva/artiva.component';
+import { NewartivaComponent } from './components/newartiva/newartiva.component';
+import { ProveedoresComponent } from './components/proveedores/proveedores.component';
+import { NewproveedorComponent } from './components/newproveedor/newproveedor.component';
 
 import {LoginguardGuard} from './guards/loginguard.guard';
 import {SuperGuard} from './guards/super.guard';
@@ -72,7 +77,14 @@ children:[
     {path: 'editrubroprincipal', component: EditrubroprincipalComponent, data: { titulo: "Editar Rubro Principal" } },
     {path: 'rubro', component: RubroComponent, data: { titulo: "Rubro" } },
     {path: 'newrubro', component: NewrubroComponent, data: { titulo: "Nuevo Rubro" } },
-    {path: 'editrubro', component: EditrubroComponent, data: { titulo: "Editar Rubro" } }
+    {path: 'editrubro', component: EditrubroComponent, data: { titulo: "Editar Rubro" } },
+    {path: 'marca', component: MarcaComponent, data: { titulo: "Marca" }},
+    {path: 'newmarca', component: NewmarcaComponent, data: { titulo: "Nueva Marca" } },
+    {path: 'editmarca', component: EditmarcaComponent, data: { titulo: "Editar Marca" } },
+    {path: 'artiva', component: ArtivaComponent, data: { titulo: "Art Iva" } },
+    {path: 'newartiva', component: NewartivaComponent, data: { titulo: "Nuevo Art Iva" } },
+    {path: 'proveedores', component: ProveedoresComponent, data: { titulo: "Proveedores" } },
+    {path: 'newproveedor', component: NewproveedorComponent, data: { titulo: "Nuevo Proveedor" } },
     
   //{ path: 'puntosmedicion', component: PuntosmedicionComponent, data:{titulo: "Puntos Medicion"} },
   //{ path: 'chart/:keygrupo/:keymedicion/:nombregrupo/:nombrepunto', component: ChartComponent, data :{titulo:'Chart'} },

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
+import {UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
 import { map } from "rxjs/operators";
 
 @Injectable({
@@ -36,6 +36,18 @@ export class CargardataService {
   getRubro() {
     return this.http.get(UrlRubro);
   }
+
+  getArtIva() {
+    return this.http.get(UrlArtIva);
+  } 
+  getMarca() {
+    return this.http.get(UrlMarca);
+  }
+
+  getProveedor() {
+    return this.http.get(UrlProveedor);
+  }
+
   clisucx(cod_sucursal:string) // asi es como funcionaba con una tabla de cliente por sucursal
   {
     return this.http.post(Urlclisucx,{
@@ -167,5 +179,12 @@ export class CargardataService {
     return this.http.post(UrlRubroPorId,{
       "id_rubro_p": id_rubro_p
     }) 
+  }
+
+  obtenerMarcaPorId(marca:number)
+  {
+    return this.http.post(UrlRubroPorId,{
+      "id_marca": marca
+    })
   }
 }

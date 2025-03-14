@@ -158,6 +158,9 @@ export const UpdateArtsucxappWebManagedPHP= "https://motoapp.loclx.io/APIAND/ind
 
 export const UrlRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPrincipal';
 export const UrlRubro = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Rubro';
+export const UrlMarca = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Marca';
+export const UrlArtIva ='https://motoapp.loclx.io/APIAND/index.php/Carga/ArtIva';
+export const UrlProveedor ='https://motoapp.loclx.io/APIAND/index.php/Carga/Proveedor';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
 
@@ -166,11 +169,23 @@ export const UrlRubroPrincipalPorId= "https://motoapp.loclx.io/APIAND/index.php/
 export const UrlUpdateRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubroPrincipal";
 
 export const UrleliminarRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubroPrincipal";
+export  const UrlEliminarArtIva = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarArtIva';
+export  const UrlEliminarProveedor = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarProveedor';
+
 
 export const UrlSubirDatosRubro = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubro';
+export const UrlSubirDatosMarca = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosMarca';
+export const UrlSubirDatosArtIva = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosArtIva';
+export const UrlSubirDatosProveedor = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosProveedor';
 
 export const UrlRubroPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPorId";
 
+export const UrlMarcaPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/MarcaPorId";
+
 export const UrleliminarRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubro";
 
+export const UrleliminarMarca= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarMarca";
+
 export const UrlUpdateRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubro";
+
+export const UrlUpdateMarca= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateMarca";

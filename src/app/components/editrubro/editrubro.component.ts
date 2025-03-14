@@ -110,8 +110,14 @@ export class EditrubroComponent implements OnInit {
           }
         }).then((result) => {
           if (result.dismiss === Swal.DismissReason.timer) {
+            Swal.fire({
+              title: '¡Éxito!',
+              text: 'El rubro se actualizó correctamente',
+              icon: 'success',
+              confirmButtonText: 'Aceptar'
+            });
             console.log('Rubro actualizado correctamente');
-            this.router.navigate(['/rubro']);
+            this.router.navigate(['components/rubro']);
           }
         });
       }, error => {
