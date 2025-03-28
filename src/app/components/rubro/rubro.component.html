@@ -5,7 +5,7 @@
                 <h4 class="card-title">Rubros</h4>
                 <p-table #dtable [value]="rubros" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
                     [rows]="10"
-                    [globalFilterFields]="['cod_rubro', 'rubro', 'numerador', 'id_rubro']">
+                    [globalFilterFields]="['rubro_principal','cod_rubro', 'rubro', 'numerador', 'id_rubro']">
                     <ng-template pTemplate="caption">
                         <div class="p-d-flex">
                             <span class="p-input-icon-left ml-auto">
@@ -22,7 +22,8 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <th pSortableColumn="cod_rubro">Código<p-sortIcon field="cod_rubro"></p-sortIcon></th>
-                            <th pSortableColumn="rubro">Rubro<p-sortIcon field="rubro"></p-sortIcon></th>
+                            <th pSortableColumn="rubro">Rubro principal<p-sortIcon field="rubro"></p-sortIcon></th>
+                            <th pSortableColumn="rubro">Rubro<p-sortIcon field="rubro_secundario"></p-sortIcon></th>
                             <th pSortableColumn="numerador">Numerador<p-sortIcon field="numerador"></p-sortIcon></th>
                             <th pSortableColumn="modiprecio">Mod. Precio<p-sortIcon field="modiprecio"></p-sortIcon></th>
                             <th pSortableColumn="modidescri">Mod. Descri<p-sortIcon field="modidescri"></p-sortIcon></th>
@@ -36,7 +37,8 @@
                     <ng-template pTemplate="body" let-rubro>
                         <tr>
                             <td>{{ rubro.cod_rubro }}</td>
-                            <td>{{ rubro.rubro }}</td>
+                            <td>{{ rubro.rubro_principal }}</td>
+                            <td>{{ rubro.rubro}}</td>
                             <td>{{ rubro.numerador }}</td>
                             <td>{{ rubro.modiprecio }}</td>
                             <td>{{ rubro.modidescri }}</td>

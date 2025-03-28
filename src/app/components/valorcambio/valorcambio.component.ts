@@ -3,45 +3,41 @@ import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
-import { FormGroup, FormControl } from '@angular/forms';
-
 import Swal from 'sweetalert2';
 
-interface Rubro {
-  cod_rubro: string;
-  rubro: string;
-  numerador: number;
-  modiprecio: number;
-  modidescri: number;
-  cod_depo: number;
-  mustuni: number;
-  id_rubro: number;
- 
+interface ValorCambio {
+  codmone: number;
+  desvalor: string;
+  fecdesde: Date;
+  fechasta: Date;
+  vcambio: number;
+  id_valor: number;
 }
+
 @Component({
-  selector: 'app-rubro',
-  templateUrl: './rubro.component.html',
-  styleUrls: ['./rubro.component.css']
+  selector: 'app-valorcambio',
+  templateUrl: './valorcambio.component.html',
+  styleUrls: ['./valorcambio.component.css']
 })
-export class RubroComponent {
+export class ValorcambioComponent {
   
-  public rubros: Rubro[] = [];
-  
+  public valoresCambio: ValorCambio[] = [];
+
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
     private cargardataService: CargardataService
   ) {
-    this.loadRubroCompleto();//this.loadRubros();
+    this.loadValoresCambio();
   }
 
-  loadRubros() {
-    this.cargardataService.getRubro().subscribe({
+  loadValoresCambio() {
+    this.cargardataService.getValorCambio().subscribe({
       next: (response: any) => {
         if (!response.error) {
-          this.rubros = response.mensaje;
+          this.valoresCambio = response.mensaje;
         } else {
-          console.error('Error loading rubros:', response.mensaje);
+          console.error('Error loading valores de cambio:', response.mensaje);
         }
       },
       error: (error) => {
@@ -49,35 +45,20 @@ export class RubroComponent {
       }
     });
   }
-  loadRubroCompleto() {
-    this.cargardataService.getRubroCompleto().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          this.rubros = response.mensaje;
-          console.log(this.rubros);
-        } else {
-          console.error('Error loading rubros:', response.mensaje);
-        }
-      },
-      error: (error) => {
-        console.error('Error in API call:', error);
-      }
-    });
-  }
-  editRubro(rubro: Rubro) {
-    // Navigate to edit page with rubro data
-    console.log(rubro);
-    this.router.navigate(['components/editrubro'], {
+
+  editValorCambio(valorCambio: ValorCambio) {
+    // Navigate to edit page with valor cambio data
+    this.router.navigate(['components/editvalorcambio'], {
       queryParams: {
-        rubro: JSON.stringify(rubro)
+        valorCambio: JSON.stringify(valorCambio)
       }
     });
   }
 
-  confirmDelete(rubro: Rubro) {
+  confirmDelete(valorCambio: ValorCambio) {
     Swal.fire({
       title: '¿Está seguro?',
-      text: `¿Desea eliminar el rubro "${rubro.rubro}"?`,
+      text: `¿Desea eliminar el valor de cambio "${valorCambio.desvalor}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -86,36 +67,36 @@ export class RubroComponent {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.deleteRubro(rubro);
+        this.deleteValorCambio(valorCambio);
       }
     });
   }
 
-  deleteRubro(rubro: Rubro) {
-    this.subirdataService.eliminarRubro(rubro.id_rubro).subscribe({
+  deleteValorCambio(valorCambio: ValorCambio) {
+    this.subirdataService.eliminarValorCambio(valorCambio.id_valor).subscribe({
       next: (response: any) => {
         if (!response.error) {
           Swal.fire({
             title: '¡Éxito!',
-            text: 'El rubro se eliminó correctamente',
+            text: 'El valor de cambio se eliminó correctamente',
             icon: 'success',
             confirmButtonText: 'Aceptar'
           });
-          this.loadRubros(); // Reload the table after deletion
+          this.loadValoresCambio(); // Reload the table after deletion
         } else {
           Swal.fire({
             title: '¡Error!',
-            text: 'El rubro no se pudo eliminar',
+            text: 'El valor de cambio no se pudo eliminar',
             icon: 'error',
             confirmButtonText: 'Aceptar'
           });
-          console.error('Error deleting rubro:', response.mensaje);
+          console.error('Error deleting valor cambio:', response.mensaje);
         }
       },
       error: (error) => {
         Swal.fire({
           title: '¡Error!',
-          text: 'El rubro no se pudo eliminar',
+          text: 'El valor de cambio no se pudo eliminar',
           icon: 'error',
           confirmButtonText: 'Aceptar'
         });
@@ -126,10 +107,10 @@ export class RubroComponent {
 
   exportExcel() {
     import('xlsx').then((xlsx) => {
-      const worksheet = xlsx.utils.json_to_sheet(this.rubros);
+      const worksheet = xlsx.utils.json_to_sheet(this.valoresCambio);
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-      this.saveAsExcelFile(excelBuffer, 'rubros');
+      this.saveAsExcelFile(excelBuffer, 'valores_cambio');
     });
   }
 

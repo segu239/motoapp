@@ -40,7 +40,7 @@ export class EditrubroComponent implements OnInit {
       ])),
       rubro: new FormControl('', Validators.compose([
         Validators.required,
-        Validators.pattern(/^[a-zA-Z0-9\/-_,ñÑ\s]{1,30}$/)
+        Validators.pattern(/^[a-zA-Z0-9\/-_,ñÑ\s]{1,20}$/)
       ])),
       numerador: new FormControl(0, Validators.compose([
         Validators.required,
@@ -67,13 +67,13 @@ export class EditrubroComponent implements OnInit {
             console.log(this.id_rubro);
             this.currentRubro = rubroData;
             this.rubroForm.patchValue({
-              cod_rubro: this.currentRubro.cod_rubro,
-              rubro: this.currentRubro.rubro,
-              numerador: this.currentRubro.numerador,
-              modiprecio: this.currentRubro.modiprecio,
-              modidescri: this.currentRubro.modidescri,
-              cod_depo: this.currentRubro.cod_depo,
-              mustuni: this.currentRubro.mustuni
+              cod_rubro: this.currentRubro.cod_rubro.trim(),
+              rubro: this.currentRubro.rubro.trim(),
+              numerador: this.currentRubro.numerador.trim(),
+              modiprecio: this.currentRubro.modiprecio.trim(),
+              modidescri: this.currentRubro.modidescri.trim(),
+              cod_depo: this.currentRubro.cod_depo.trim(),
+              mustuni: this.currentRubro.mustuni.trim()
             });
           } catch (error) {
             console.error('Error parsing rubro data:', error);
@@ -141,7 +141,7 @@ export class EditrubroComponent implements OnInit {
   }
 
   onCancel(): void {
-    this.router.navigate(['/rubro']);
+    this.router.navigate(['components/rubro']);
   }
 
   monitorFormChanges(): void {

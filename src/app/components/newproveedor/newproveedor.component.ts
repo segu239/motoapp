@@ -27,6 +27,18 @@ export class NewproveedorComponent {
     this.cargarForm();
     this.monitorFormChanges();
   }
+  onSelectionIvaChange(event: any) {
+    const selectedValue = event.target.value;
+    console.log("Código IVA seleccionado:", selectedValue);
+    
+    // If "Consumidor Final" is selected, set CUIT to 0
+    if (selectedValue === "2") {
+      this.nuevoproveedorForm.controls['cuit'].setValue(0);
+    } else {
+      // For other IVA types, clear the CUIT field
+      this.nuevoproveedorForm.controls['cuit'].setValue("");
+    }
+  }
 
   cargarForm() {
     this.nuevoproveedorForm = this.fb.group({
@@ -61,9 +73,12 @@ export class NewproveedorComponent {
       rubro: new FormControl('', Validators.compose([
         Validators.pattern(/^[a-zA-Z0-9\/-_,ñÑ\s]{0,30}$/)
       ])),
-      cod_iva: new FormControl('', Validators.compose([
+     /*  cod_iva: new FormControl('', Validators.compose([
         Validators.required,
         Validators.pattern(/^[0-9]{1,2}$/)
+      ])), */
+      cod_iva: new FormControl('4', Validators.compose([
+        Validators.required
       ])),
       ganancias: new FormControl(0, Validators.compose([
         Validators.pattern(/^[0-9]{0,15}$/)

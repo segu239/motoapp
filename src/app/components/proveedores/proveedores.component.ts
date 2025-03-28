@@ -106,7 +106,7 @@ export class ProveedoresComponent implements OnInit {
   editProveedor(proveedor: Proveedor) {
     // Navigate to edit page with Proveedor data
     console.log(proveedor);
-    this.router.navigate(['components/editproveedor'], {
+    this.router.navigate(['components/editproveedores'], {
       queryParams: {
         proveedor: JSON.stringify(proveedor)
       }

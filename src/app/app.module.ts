@@ -77,6 +77,19 @@ import { ArtivaComponent } from './components/artiva/artiva.component';
 import { NewartivaComponent } from './components/newartiva/newartiva.component';
 import { ProveedoresComponent } from './components/proveedores/proveedores.component';
 import { NewproveedorComponent } from './components/newproveedor/newproveedor.component';
+import { EditproveedoresComponent } from './components/editproveedores/editproveedores.component';
+import { TipomonedaComponent } from './components/tipomoneda/tipomoneda.component';
+import { NewtipomonedaComponent } from './components/newtipomoneda/newtipomoneda.component';
+import { EdittipomonedaComponent } from './components/edittipomoneda/edittipomoneda.component';
+import { ValorcambioComponent } from './components/valorcambio/valorcambio.component';
+import { NewvalorcambioComponent } from './components/newvalorcambio/newvalorcambio.component';
+import { EditvalorcambioComponent } from './components/editvalorcambio/editvalorcambio.component';
+import { ConflistaComponent } from './components/conflista/conflista.component';
+import { NewconflistaComponent } from './components/newconflista/newconflista.component';
+import { EditconflistaComponent } from './components/editconflista/editconflista.component';
+import { ArticulosComponent } from './components/articulos/articulos.component';
+import { NewarticuloComponent } from './components/newarticulo/newarticulo.component';
+import { EditarticuloComponent } from './components/editarticulo/editarticulo.component';
 //import { DataTablesModule } from 'angular-datatables';
 
 @NgModule({
@@ -130,6 +143,19 @@ import { NewproveedorComponent } from './components/newproveedor/newproveedor.co
     NewartivaComponent,
     ProveedoresComponent,
     NewproveedorComponent,
+    EditproveedoresComponent,
+    TipomonedaComponent,
+    NewtipomonedaComponent,
+    EdittipomonedaComponent,
+    ValorcambioComponent,
+    NewvalorcambioComponent,
+    EditvalorcambioComponent,
+    ConflistaComponent,
+    NewconflistaComponent,
+    EditconflistaComponent,
+    ArticulosComponent,
+    NewarticuloComponent,
+    EditarticuloComponent,
 
   ],
   imports: [

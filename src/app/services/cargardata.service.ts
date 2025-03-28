@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
+import {UrlArticulos,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
 import { map } from "rxjs/operators";
 
 @Injectable({
@@ -36,7 +36,9 @@ export class CargardataService {
   getRubro() {
     return this.http.get(UrlRubro);
   }
-
+  getRubroCompleto() {
+    return this.http.get(UrlRubroCompleto);
+  }
   getArtIva() {
     return this.http.get(UrlArtIva);
   } 
@@ -47,7 +49,19 @@ export class CargardataService {
   getProveedor() {
     return this.http.get(UrlProveedor);
   }
+  getValorCambio() {
+    return this.http.get(UrlValorCambio);
+  }
 
+  getTipoMoneda() {
+    return this.http.get(UrlTipoMoneda);
+  }
+  getConflista() {
+    return this.http.get(UrlConflista);
+  }
+  getArticulos() {
+    return this.http.get(UrlArticulos);
+  }
   clisucx(cod_sucursal:string) // asi es como funcionaba con una tabla de cliente por sucursal
   {
     return this.http.post(Urlclisucx,{

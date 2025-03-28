@@ -41,6 +41,20 @@ import { ArtivaComponent } from './components/artiva/artiva.component';
 import { NewartivaComponent } from './components/newartiva/newartiva.component';
 import { ProveedoresComponent } from './components/proveedores/proveedores.component';
 import { NewproveedorComponent } from './components/newproveedor/newproveedor.component';
+import { EditproveedoresComponent } from './components/editproveedores/editproveedores.component';
+import { TipomonedaComponent } from './components/tipomoneda/tipomoneda.component';
+import { EdittipomonedaComponent } from './components/edittipomoneda/edittipomoneda.component'; 
+import { NewtipomonedaComponent } from './components/newtipomoneda/newtipomoneda.component';
+import { ValorcambioComponent } from './components/valorcambio/valorcambio.component';
+import { NewvalorcambioComponent } from './components/newvalorcambio/newvalorcambio.component';
+import { EditvalorcambioComponent } from './components/editvalorcambio/editvalorcambio.component';
+import { ConflistaComponent } from './components/conflista/conflista.component';
+import { NewconflistaComponent } from './components/newconflista/newconflista.component';
+import { EditconflistaComponent } from './components/editconflista/editconflista.component';
+import { ArticulosComponent } from './components/articulos/articulos.component';
+import { NewarticuloComponent } from './components/newarticulo/newarticulo.component';
+import { EditarticuloComponent } from './components/editarticulo/editarticulo.component';
+
 
 import {LoginguardGuard} from './guards/loginguard.guard';
 import {SuperGuard} from './guards/super.guard';
@@ -85,7 +99,20 @@ children:[
     {path: 'newartiva', component: NewartivaComponent, data: { titulo: "Nuevo Art Iva" } },
     {path: 'proveedores', component: ProveedoresComponent, data: { titulo: "Proveedores" } },
     {path: 'newproveedor', component: NewproveedorComponent, data: { titulo: "Nuevo Proveedor" } },
-    
+    { path: 'editproveedores', component: EditproveedoresComponent, data: { titulo: "Editar Proveedor" } },
+    { path: 'tipomoneda', component: TipomonedaComponent, data: { titulo: "Tipo Moneda" } },
+    { path: 'newtipomoneda', component: NewtipomonedaComponent, data: { titulo: "Nuevo Tipo Moneda" } },
+    { path: 'edittipomoneda', component: EdittipomonedaComponent, data: { titulo: "Editar Tipo Moneda" }},
+    { path: 'valorcambio', component: ValorcambioComponent, data: { titulo: "Valor Cambio" } },
+  { path: 'newvalorcambio', component: NewvalorcambioComponent, data: { titulo: "Nuevo Valor Cambio" } },
+  {path: 'editvalorcambio', component: EditvalorcambioComponent, data: { titulo: "Editar Valor Cambio" } },
+  {path: 'conflista', component: ConflistaComponent, data: { titulo: "Conflista" } },
+  { path: 'newconflista', component: NewconflistaComponent, data: { titulo: "Nuevo Conflista" } },
+  { path: 'editconflista', component: EditconflistaComponent, data: { titulo: "Editar Conflista" } },
+  {path: 'articulo', component: ArticulosComponent, data: { titulo: "Articulos" } },
+  { path: 'newarticulo', component: NewarticuloComponent, data: { titulo: "Nuevo Articulo" } },
+  { path: 'editarticulo', component: EditarticuloComponent, data: { titulo: "Editar Articulo" } },
+  
   //{ path: 'puntosmedicion', component: PuntosmedicionComponent, data:{titulo: "Puntos Medicion"} },
   //{ path: 'chart/:keygrupo/:keymedicion/:nombregrupo/:nombrepunto', component: ChartComponent, data :{titulo:'Chart'} },
   //{ path: 'admin', component: AdminComponent, data :{titulo:'Admin'} ,canActivate: [SuperGuard]},

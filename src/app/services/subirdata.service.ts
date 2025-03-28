@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from "@angular/common/http";
-import { UrlSubirDatosProveedor,UrlEliminarProveedor, UrlSubirDatosArtIva,UrlUpdateMarca,UrlSubirDatosMarca,UrleliminarMarca,UrlUpdateRubro, UrleliminarRubro,UrlSubirDatosRubro,UrleliminarRubroPrincipal,UrlUpdateRubroPrincipal, UrlSubirDatosRubroPrincipal,UpdateArtsucxappWebManagedPHP, UpdateArtsucxappWeb, Urlclisucxapp, Urlpedidossucxapp, UrlpedidossucxappCompleto, Urlarticulossucxapp, Urlmixto, UpdateClisucxappWeb, UrlclisucxappWeb, UrleliminarCliente, UrlEliminarArtIva } from '../config/ini';
+import { UrlUpdateArticulo,UrlEliminarArticulo,UrlSubirDatosArticulo,UrlUpdateConflista, UrlSubirDatosConflista, UrlEliminarConflista,UrlUpdateValorCambio,UrlUpdateTipoMoneda,UrlSubirDatosValorCambio,UrlEliminarValorCambio, UrlSubirDatosTipoMoneda,UrlEliminarTipoMoneda,UrlEditProveedor,UrlSubirDatosProveedor,UrlEliminarProveedor, UrlSubirDatosArtIva,UrlUpdateMarca,UrlSubirDatosMarca,UrleliminarMarca,UrlUpdateRubro, UrleliminarRubro,UrlSubirDatosRubro,UrleliminarRubroPrincipal,UrlUpdateRubroPrincipal, UrlSubirDatosRubroPrincipal,UpdateArtsucxappWebManagedPHP, UpdateArtsucxappWeb, Urlclisucxapp, Urlpedidossucxapp, UrlpedidossucxappCompleto, Urlarticulossucxapp, Urlmixto, UpdateClisucxappWeb, UrlclisucxappWeb, UrleliminarCliente, UrlEliminarArtIva } from '../config/ini';
 
 @Injectable({
   providedIn: 'root'
@@ -69,6 +69,31 @@ export class SubirdataService {
       });
   }
 
+  subirDatosTipoMoneda(data: any) {
+    return this.http.post(UrlSubirDatosTipoMoneda,
+      {
+        "cod_mone": data.cod_mone,
+        "moneda": data.moneda,
+        "simbolo": data.simbolo,
+
+      });
+  }
+
+  subirDatosValorCambio(data: any) {
+    return this.http.post(UrlSubirDatosValorCambio,
+      {
+        "codmone": data.codmone,
+        "desvalor": data.desvalor,
+        "fecdesde": data.fecdesde,
+        "fechasta": data.fechasta,
+        "vcambio": data.vcambio,
+
+      });
+  }
+  subirDatosArticulo(articulo: any) {
+    return this.http.post(UrlSubirDatosArticulo, articulo);
+  }
+
   eliminarCliente(data: any, id: any) {
     return this.http.post(UrleliminarCliente,
       {
@@ -122,6 +147,37 @@ export class SubirdataService {
 
       });
   }
+
+  eliminarTipoMoneda(id: any) {
+    return this.http.post(UrlEliminarTipoMoneda,
+      {
+        "id_moneda": id
+        
+
+      });
+  }
+  eliminarValorCambio(id: any) {
+    return this.http.post(UrlEliminarValorCambio,
+      {
+        "id_valor": id
+        
+
+      });
+  }
+
+  eliminarConflista(id: any) {
+    return this.http.post(UrlEliminarConflista,
+      {
+        "id_conflista": id
+      });
+  }
+
+  eliminarArticulo(id: any) {
+    return this.http.post(UrlEliminarArticulo, {
+      "id_articulo": id
+    });
+  }
+
   subirDatosRubroPrincipal(rubroprincipal: any){
     console.log(rubroprincipal);
    
@@ -171,6 +227,28 @@ export class SubirdataService {
       });
   }
 
+  editProveedor(proveedor: any) {
+    return this.http.post(UrlEditProveedor, {
+      "id_prov": proveedor.id_prov,
+      "cod_prov": proveedor.cod_prov,
+      "nombre": proveedor.nombre,
+      "direccion": proveedor.direccion,
+      "codpos": proveedor.codpos,
+      "localidad": proveedor.localidad,
+      "telefono": proveedor.telefono,
+      "cuit": proveedor.cuit,
+      "contacto": proveedor.contacto,
+      "rubro": proveedor.rubro,
+      "cod_iva": proveedor.cod_iva,
+      "ganancias": proveedor.ganancias,
+      "ingbrutos": proveedor.ingbrutos,
+      "email": proveedor.email,
+      "www": proveedor.www,
+      "cta_proveedores": proveedor.cta_proveedores,
+      "fec_proceso": proveedor.fec_proceso
+    });
+  }
+
   subirDatosRubro(rubro: any){
     console.log(rubro);
    
@@ -183,8 +261,7 @@ export class SubirdataService {
         "modidescri": rubro.modidescri,
         "cod_depo": rubro.cod_depo,
         "mustuni": rubro.mustuni,
-        
-
+        "id_rubro_p": rubro.id_rubro_p,
       });
   }
 
@@ -212,6 +289,27 @@ export class SubirdataService {
     });
   }
   
+  subirDatosConflista(conflista: any){
+    console.log(conflista);
+   
+    return this.http.post(UrlSubirDatosConflista,
+      {
+        "listap": conflista.listap,
+        "activa": conflista.activa,
+        "precosto21": conflista.precosto21,
+        "precosto105": conflista.precosto105,
+        "pordcto": conflista.pordcto,
+        "margen": conflista.margen,
+        "preciof21": conflista.preciof21,
+        "preciof105": conflista.preciof105,
+        "rmargen": conflista.rmargen,
+        "tipomone": conflista.tipomone,
+        "actprov": conflista.actprov,
+        "cod_marca": conflista.cod_marca,
+        "fecha": conflista.fecha
+      });
+  }
+
   updateRubro(rubro: any) {
     return this.http.post(UrlUpdateRubro, {
       "id_rubro": rubro.id_rubro,
@@ -232,4 +330,92 @@ export class SubirdataService {
       "marca": marca.marca,
     });
   }
+
+  updateTipoMoneda(moneda: any) {
+    return this.http.post(UrlUpdateTipoMoneda, {
+      "cod_mone": moneda.cod_mone,
+      "moneda": moneda.moneda,
+      "simbolo": moneda.simbolo,
+      "id_moneda": moneda.id_moneda,
+    
+    });
+ 
+  }
+
+  updateValorCambio(valorcambio: any) {
+    return this.http.post(UrlUpdateValorCambio, {
+      "codmone": valorcambio.codmone,
+      "desvalor": valorcambio.desvalor,
+      "fecdesde": valorcambio.fecdesde,
+      "fechasta": valorcambio.fechasta,
+      "vcambio": valorcambio.vcambio,
+      "id_valor": valorcambio.id_valor,
+    });
+  }
+
+  updateConflista(conflista: any) {
+    return this.http.post(UrlUpdateConflista, {
+      "id_conflista": conflista.id_conflista,
+      "listap": conflista.listap,
+      "activa": conflista.activa,
+      "precosto21": conflista.precosto21,
+      "precosto105": conflista.precosto105,
+      "pordcto": conflista.pordcto,
+      "margen": conflista.margen,
+      "preciof21": conflista.preciof21,
+      "preciof105": conflista.preciof105,
+      "rmargen": conflista.rmargen,
+      "tipomone": conflista.tipomone,
+      "actprov": conflista.actprov,
+      "cod_marca": conflista.cod_marca,
+      "fecha": conflista.fecha
+    });
+  }
+  updateArticulo(articulo: any) {
+    return this.http.post(UrlUpdateArticulo, {
+      "id_articulo": articulo.id_articulo,
+      "nomart": articulo.nomart,
+      "marca": articulo.marca,
+      "precon": articulo.precon,
+      "prefi1": articulo.prefi1,
+      "prefi2": articulo.prefi2,
+      "prefi3": articulo.prefi3,
+      "prefi4": articulo.prefi4,
+      "exi1": articulo.exi1,
+      "exi2": articulo.exi2,
+      "exi3": articulo.exi3,
+      "exi4": articulo.exi4,
+      "exi5": articulo.exi5,
+      "stkmin1": articulo.stkmin1,
+      "stkmax1": articulo.stkmax1,
+      "stkprep1": articulo.stkprep1,
+      "stkmin2": articulo.stkmin2,
+      "stkmax2": articulo.stkmax2,
+      "stkprep2": articulo.stkprep2,
+      "stkmin3": articulo.stkmin3,
+      "stkmax3": articulo.stkmax3,
+      "stkprep3": articulo.stkprep3,
+      "stkmin4": articulo.stkmin4,
+      "stkmax4": articulo.stkmax4,
+      "stkprep4": articulo.stkprep4,
+      "stkmin5": articulo.stkmin5,
+      "stkmax5": articulo.stkmax5,
+      "stkprep5": articulo.stkprep5,
+      "cd_articulo": articulo.cd_articulo,
+      "cd_proveedor": articulo.cd_proveedor,
+      "cd_barra": articulo.cd_barra,
+      "idart": articulo.idart,
+      "estado": articulo.estado,
+      "rubro": articulo.rubro,
+      "articulo": articulo.articulo,
+      "cod_iva": articulo.cod_iva,
+      "prebsiva": articulo.prebsiva,
+      "precostosi": articulo.precostosi,
+      "margen": articulo.margen,
+      "descuento": articulo.descuento,
+      "cod_deposito": articulo.cod_deposito,
+      "tipo_moneda": articulo.tipo_moneda
+    });
+  }
+
 }

@@ -158,25 +158,35 @@ export const UpdateArtsucxappWebManagedPHP= "https://motoapp.loclx.io/APIAND/ind
 
 export const UrlRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPrincipal';
 export const UrlRubro = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Rubro';
+export const UrlRubroCompleto = 'https://motoapp.loclx.io/APIAND/index.php/Carga/RubroCompleto';
 export const UrlMarca = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Marca';
 export const UrlArtIva ='https://motoapp.loclx.io/APIAND/index.php/Carga/ArtIva';
 export const UrlProveedor ='https://motoapp.loclx.io/APIAND/index.php/Carga/Proveedor';
+export const UrlTipoMoneda ='https://motoapp.loclx.io/APIAND/index.php/Carga/TipoMoneda';
+export const UrlValorCambio ='https://motoapp.loclx.io/APIAND/index.php/Carga/ValorCambio';
+export const UrlArticulos = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Articulos';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
 
 export const UrlRubroPrincipalPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPrincipalPorId";
+export const UrlConflista= "https://motoapp.loclx.io/APIAND/index.php/Carga/Conflista";
 
 export const UrlUpdateRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubroPrincipal";
+export const UrlEditProveedor= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateProveedor";
 
 export const UrleliminarRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubroPrincipal";
 export  const UrlEliminarArtIva = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarArtIva';
 export  const UrlEliminarProveedor = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarProveedor';
-
+export  const UrlEliminarTipoMoneda = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarTipoMoneda';
 
 export const UrlSubirDatosRubro = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubro';
 export const UrlSubirDatosMarca = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosMarca';
 export const UrlSubirDatosArtIva = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosArtIva';
 export const UrlSubirDatosProveedor = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosProveedor';
+export const UrlSubirDatosTipoMoneda = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosTipoMoneda';
+export const UrlSubirDatosValorCambio = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosValorCambio';
+export const UrlSubirDatosConflista = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosConflista';
+export const UrlSubirDatosArticulo = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosArticulo';
 
 export const UrlRubroPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPorId";
 
@@ -185,7 +195,15 @@ export const UrlMarcaPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/Mar
 export const UrleliminarRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarRubro";
 
 export const UrleliminarMarca= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarMarca";
+export const UrlEliminarValorCambio= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarValorCambio";
+export const UrlEliminarConflista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarConflista";
+export const UrlEliminarArticulo= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarArticulo";
 
 export const UrlUpdateRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubro";
 
 export const UrlUpdateMarca= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateMarca";
+
+export const UrlUpdateTipoMoneda= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateTipoMoneda";
+export const UrlUpdateValorCambio= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateValorCambio";
+export const UrlUpdateConflista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateConflista";
+export const UrlUpdateArticulo= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateArticulo";

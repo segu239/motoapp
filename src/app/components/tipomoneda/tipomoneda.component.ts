@@ -3,45 +3,39 @@ import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
-import { FormGroup, FormControl } from '@angular/forms';
-
 import Swal from 'sweetalert2';
 
-interface Rubro {
-  cod_rubro: string;
-  rubro: string;
-  numerador: number;
-  modiprecio: number;
-  modidescri: number;
-  cod_depo: number;
-  mustuni: number;
-  id_rubro: number;
- 
+interface TipoMoneda {
+  cod_mone: number;
+  moneda: string;
+  simbolo: string;
+  id_moneda: number;
 }
+
 @Component({
-  selector: 'app-rubro',
-  templateUrl: './rubro.component.html',
-  styleUrls: ['./rubro.component.css']
+  selector: 'app-tipomoneda',
+  templateUrl: './tipomoneda.component.html',
+  styleUrls: ['./tipomoneda.component.css']
 })
-export class RubroComponent {
+export class TipomonedaComponent {
   
-  public rubros: Rubro[] = [];
-  
+  public tiposMoneda: TipoMoneda[] = [];
+
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
     private cargardataService: CargardataService
   ) {
-    this.loadRubroCompleto();//this.loadRubros();
+    this.loadTiposMoneda();
   }
 
-  loadRubros() {
-    this.cargardataService.getRubro().subscribe({
+  loadTiposMoneda() {
+    this.cargardataService.getTipoMoneda().subscribe({
       next: (response: any) => {
         if (!response.error) {
-          this.rubros = response.mensaje;
+          this.tiposMoneda = response.mensaje;
         } else {
-          console.error('Error loading rubros:', response.mensaje);
+          console.error('Error loading tipos de moneda:', response.mensaje);
         }
       },
       error: (error) => {
@@ -49,35 +43,20 @@ export class RubroComponent {
       }
     });
   }
-  loadRubroCompleto() {
-    this.cargardataService.getRubroCompleto().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          this.rubros = response.mensaje;
-          console.log(this.rubros);
-        } else {
-          console.error('Error loading rubros:', response.mensaje);
-        }
-      },
-      error: (error) => {
-        console.error('Error in API call:', error);
-      }
-    });
-  }
-  editRubro(rubro: Rubro) {
-    // Navigate to edit page with rubro data
-    console.log(rubro);
-    this.router.navigate(['components/editrubro'], {
+
+  editTipoMoneda(tipoMoneda: TipoMoneda) {
+    // Navigate to edit page with tipo moneda data
+    this.router.navigate(['components/edittipomoneda'], {
       queryParams: {
-        rubro: JSON.stringify(rubro)
+        tipoMoneda: JSON.stringify(tipoMoneda)
       }
     });
   }
 
-  confirmDelete(rubro: Rubro) {
+  confirmDelete(tipoMoneda: TipoMoneda) {
     Swal.fire({
       title: '¿Está seguro?',
-      text: `¿Desea eliminar el rubro "${rubro.rubro}"?`,
+      text: `¿Desea eliminar la moneda "${tipoMoneda.moneda}"?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3085d6',
@@ -86,36 +65,36 @@ export class RubroComponent {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.deleteRubro(rubro);
+        this.deleteTipoMoneda(tipoMoneda);
       }
     });
   }
 
-  deleteRubro(rubro: Rubro) {
-    this.subirdataService.eliminarRubro(rubro.id_rubro).subscribe({
+  deleteTipoMoneda(tipoMoneda: TipoMoneda) {
+    this.subirdataService.eliminarTipoMoneda(tipoMoneda.id_moneda).subscribe({
       next: (response: any) => {
         if (!response.error) {
           Swal.fire({
             title: '¡Éxito!',
-            text: 'El rubro se eliminó correctamente',
+            text: 'La moneda se eliminó correctamente',
             icon: 'success',
             confirmButtonText: 'Aceptar'
           });
-          this.loadRubros(); // Reload the table after deletion
+          this.loadTiposMoneda(); // Reload the table after deletion
         } else {
           Swal.fire({
             title: '¡Error!',
-            text: 'El rubro no se pudo eliminar',
+            text: 'La moneda no se pudo eliminar',
             icon: 'error',
             confirmButtonText: 'Aceptar'
           });
-          console.error('Error deleting rubro:', response.mensaje);
+          console.error('Error deleting tipo moneda:', response.mensaje);
         }
       },
       error: (error) => {
         Swal.fire({
           title: '¡Error!',
-          text: 'El rubro no se pudo eliminar',
+          text: 'La moneda no se pudo eliminar',
           icon: 'error',
           confirmButtonText: 'Aceptar'
         });
@@ -126,10 +105,10 @@ export class RubroComponent {
 
   exportExcel() {
     import('xlsx').then((xlsx) => {
-      const worksheet = xlsx.utils.json_to_sheet(this.rubros);
+      const worksheet = xlsx.utils.json_to_sheet(this.tiposMoneda);
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-      this.saveAsExcelFile(excelBuffer, 'rubros');
+      this.saveAsExcelFile(excelBuffer, 'tipos_moneda');
     });
   }
 

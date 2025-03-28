@@ -141,12 +141,27 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <!-- <div class="col-md-6">
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Código IVA</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cod_iva" placeholder="">
                                         <small class="form-control-feedback">Máximo 2 dígitos numéricos</small>
+                                    </div>
+                                </div>
+                            </div> -->
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Código IVA</label>
+                                    <div class="col-md-9">
+                                        <select formControlName="cod_iva" class="form-control" 
+                                            (change)="onSelectionIvaChange($event)">
+                                            <option value="4">Excento</option>
+                                            <option value="3">Monotributo</option>
+                                            <option value="2">Consumidor Final</option>
+                                            <option value="1">Responsable Inscripto</option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione la condición de IVA</small>
                                     </div>
                                 </div>
                             </div>
