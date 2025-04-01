@@ -19,7 +19,7 @@ export class PuntoventaComponent implements OnInit {
   public clienteElejido: Cliente;
   constructor(private _cargardata: CargardataService, private _router: Router) { }
   ngOnInit(): void {
-    let sucursal: string = localStorage.getItem('sucursal');
+    let sucursal: string = sessionStorage.getItem('sucursal');
     this._cargardata.clisucx(sucursal).pipe(take(1)).subscribe((resp: any) => {
       console.log(resp);
       this.clientes = resp.mensaje;

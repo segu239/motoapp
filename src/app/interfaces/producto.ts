@@ -12,5 +12,6 @@ export interface Producto {
     exi4?:number;
     exi5?:number;
     idart?:number;
+    tipo_moneda?:string;
    
 }

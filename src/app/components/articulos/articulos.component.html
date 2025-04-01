@@ -3,6 +3,11 @@
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title">Artículos</h4>
+                <div class="alert alert-info mb-3" *ngIf="valoresCambio && valoresCambio.length > 0">
+                    <small>
+                        <i class="fa fa-info-circle"></i> Los precios de los artículos con moneda extranjera han sido convertidos automáticamente según el valor de cambio actual.
+                    </small>
+                </div>
                 <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
                     [rows]="10"
                     [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo']">
@@ -37,7 +42,22 @@
                     <ng-template pTemplate="body" let-articulo let-columns="columns">
                         <tr>
                             <td *ngFor="let col of columns">
-                                {{articulo[col.field]}}
+                                <!-- Mostrar precios con formato numérico si el campo es un precio -->
+                                <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4'">
+                                    {{ articulo[col.field] | number:'1.2-2' }}
+                                </ng-container>
+                                
+                                <!-- Si es tipo_moneda, mostrar el nombre de la moneda en lugar del código -->
+                                <ng-container *ngIf="col.field === 'tipo_moneda'">
+                                    <span [ngClass]="{'badge badge-secondary': articulo.tipo_moneda !== 1, 'text-muted': articulo.tipo_moneda === 1}">
+                                        {{ obtenerNombreMoneda(articulo.tipo_moneda) }}
+                                    </span>
+                                </ng-container>
+                                
+                                <!-- Para otros campos, mostrar valor normal -->
+                                <ng-container *ngIf="col.field !== 'precon' && col.field !== 'prefi1' && col.field !== 'prefi2' && col.field !== 'prefi3' && col.field !== 'prefi4' && col.field !== 'tipo_moneda'">
+                                    {{ articulo[col.field] }}
+                                </ng-container>
                             </td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"

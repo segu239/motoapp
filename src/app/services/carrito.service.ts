@@ -17,7 +17,7 @@ export class CarritoService {
   }
 
   public actualizarCarrito() {
-    const carritoData = localStorage.getItem('carrito');
+    const carritoData = sessionStorage.getItem('carrito');
     if (carritoData) {
       this.itemsEnCarrito = JSON.parse(carritoData);
       this.carritoSubject.next(this.itemsEnCarrito);
@@ -29,7 +29,7 @@ export class CarritoService {
 
   agregarItemCarritoJson(clave: string, valor: any): void {
     // Obtener el valor actual para la clave, si existe
-    let items = localStorage.getItem(clave);
+    let items = sessionStorage.getItem(clave);
   
     let array: any[] = [];
     if (items) {
@@ -40,8 +40,8 @@ export class CarritoService {
     // Agregar el nuevo valor al array
     array.push(valor);
   
-    // Guardar el array actualizado en localStorage como una cadena JSON
-    localStorage.setItem(clave, JSON.stringify(array));
+    // Guardar el array actualizado en sessionStorage como una cadena JSON
+    sessionStorage.setItem(clave, JSON.stringify(array));
     this.actualizarCarrito();
   } 
 }

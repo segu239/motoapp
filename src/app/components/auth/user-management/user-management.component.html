@@ -1,0 +1,141 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Administración de Usuarios</h4>
+                <h6 class="card-subtitle">Gestione los usuarios del sistema</h6>
+
+                <!-- Formulario para crear/editar usuario -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">{{ editMode ? 'Editar Usuario' : 'Crear Usuario' }}</h4>
+                                <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+                                    <div class="form-group">
+                                        <label for="nombre">Nombre*</label>
+                                        <input type="text" class="form-control" id="nombre" formControlName="nombre" 
+                                               [ngClass]="{'is-invalid': userForm.get('nombre')?.invalid && userForm.get('nombre')?.touched}">
+                                        <div *ngIf="userForm.get('nombre')?.invalid && userForm.get('nombre')?.touched" class="invalid-feedback">
+                                            El nombre es obligatorio
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="apellido">Apellido*</label>
+                                        <input type="text" class="form-control" id="apellido" formControlName="apellido"
+                                               [ngClass]="{'is-invalid': userForm.get('apellido')?.invalid && userForm.get('apellido')?.touched}">
+                                        <div *ngIf="userForm.get('apellido')?.invalid && userForm.get('apellido')?.touched" class="invalid-feedback">
+                                            El apellido es obligatorio
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="username">Nombre de Usuario</label>
+                                        <input type="text" class="form-control" id="username" formControlName="username">
+                                        <small class="form-text text-muted">Si se deja vacío, se usará el nombre</small>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="email">Email*</label>
+                                        <input type="email" class="form-control" id="email" formControlName="email"
+                                               [ngClass]="{'is-invalid': userForm.get('email')?.invalid && userForm.get('email')?.touched}"
+                                               [readonly]="editMode">
+                                        <div *ngIf="userForm.get('email')?.invalid && userForm.get('email')?.touched" class="invalid-feedback">
+                                            Ingrese un email válido
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="password">{{ editMode ? 'Contraseña (dejar en blanco para mantener actual)' : 'Contraseña*' }}</label>
+                                        <input type="password" class="form-control" id="password" formControlName="password"
+                                               [ngClass]="{'is-invalid': userForm.get('password')?.invalid && userForm.get('password')?.touched}">
+                                        <div *ngIf="userForm.get('password')?.invalid && userForm.get('password')?.touched" class="invalid-feedback">
+                                            La contraseña debe tener al menos 6 caracteres
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="telefono">Teléfono</label>
+                                        <input type="text" class="form-control" id="telefono" formControlName="telefono">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="nivel">Nivel de acceso*</label>
+                                        <select class="form-control" id="nivel" formControlName="nivel">
+                                            <option *ngFor="let role of userRoles" [value]="role">{{ role }}</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group mt-4">
+                                        <button type="submit" class="btn btn-primary" [disabled]="userForm.invalid || loading">
+                                            <i *ngIf="loading" class="fa fa-spinner fa-spin me-1"></i>
+                                            {{ editMode ? 'Actualizar' : 'Crear' }}
+                                        </button>
+                                        <button type="button" class="btn btn-secondary ms-2" (click)="resetForm()">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de usuarios -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">Usuarios Registrados</h4>
+                                <button class="btn btn-warning mb-3" (click)="migrateUsers()">
+                                    <i class="fa fa-exchange"></i> Migrar Usuarios a Firebase Auth
+                                </button>
+                                <div class="alert alert-info">
+                                    <strong>Nota:</strong> La migración crea usuarios en Firebase Authentication pero mantiene los datos en la BD.
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Email</th>
+                                                <th>Usuario</th>
+                                                <th>Nivel</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngIf="loading">
+                                                <td colspan="5" class="text-center">
+                                                    <i class="fa fa-spinner fa-spin"></i> Cargando...
+                                                </td>
+                                            </tr>
+                                            <tr *ngIf="!loading && users.length === 0">
+                                                <td colspan="5" class="text-center">
+                                                    No hay usuarios registrados
+                                                </td>
+                                            </tr>
+                                            <tr *ngFor="let user of users">
+                                                <td>{{ user.nombre }} {{ user.apellido }}</td>
+                                                <td>{{ user.email }}</td>
+                                                <td>{{ user.username }}</td>
+                                                <td>{{ user.nivel }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info me-1" (click)="editUser(user)" title="Editar">
+                                                        <i class="fa fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" (click)="deleteUser(user)" title="Eliminar">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

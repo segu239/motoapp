@@ -23,7 +23,7 @@ export class EditclienteComponent implements OnInit {
 
   constructor(private subirdata: SubirdataService, private router: Router, private activatedRoute: ActivatedRoute, private fb: FormBuilder) {
 
-    this.sucursal = localStorage.getItem('sucursal');
+    this.sucursal = sessionStorage.getItem('sucursal');
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
     console.log(this.clienteFrompuntoVenta);

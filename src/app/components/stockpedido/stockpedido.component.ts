@@ -68,7 +68,7 @@ export class StockpedidoComponent implements OnInit{
       
     ];
     this._selectedColumns = this.cols;
-    this.sucursal = Number(localStorage.getItem('sucursal'));
+    this.sucursal = Number(sessionStorage.getItem('sucursal'));
     /* this.sucursal = [
       { label: 'Suc. Valle Viejo', value: 2 },
       { label: 'Suc. Guemes', value: 3 },
@@ -194,7 +194,7 @@ const pedidoItem: any = {
     descripcion: selectedPedido.descripcion,
     precio: selectedPedido.precio,
     fecha_resuelto: fechaFormateada,
-    usuario_res: localStorage.getItem('usernameOp'),
+    usuario_res: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     //id_num: 456
@@ -207,7 +207,7 @@ const pedidoscb = {
     sucursald: Number(this.sucursal),
     sucursalh: selectedPedido.sucursalh,
     fecha: fechaFormateada,
-    usuario: localStorage.getItem('usernameOp'),
+    usuario: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     id_aso: 222
@@ -244,7 +244,7 @@ this._cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe({
     descripcion: selectedPedido.descripcion,
     precio: selectedPedido.precio,
     fecha_resuelto: fechaFormateada,
-    usuario_res: localStorage.getItem('usernameOp'),
+    usuario_res: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     //id_num: 456
@@ -257,7 +257,7 @@ this._cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe({
     sucursald: Number(this.sucursal),
     sucursalh: selectedPedido.sucursalh,
     fecha: fechaFormateada,
-    usuario: localStorage.getItem('usernameOp'),
+    usuario: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     id_aso: 222
@@ -307,7 +307,7 @@ refrescarDatos() {
       descripcion: selectedPedido.descripcion,
       precio: selectedPedido.precio,
       fecha_resuelto: fechaFormateada,
-      usuario_res: localStorage.getItem('usernameOp'),
+      usuario_res: sessionStorage.getItem('usernameOp'),
       observacion: this.comentario,
       estado: "Recibido",
     };
@@ -318,7 +318,7 @@ refrescarDatos() {
       sucursald: Number(this.sucursal),
       sucursalh: selectedPedido.sucursalh,
       fecha: fechaFormateada,
-      usuario: localStorage.getItem('usernameOp'),
+      usuario: sessionStorage.getItem('usernameOp'),
       observacion: this.comentario,
       estado: "Recibido",
       id_aso: 222

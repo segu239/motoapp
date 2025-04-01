@@ -11,7 +11,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div [ngClass]="{'has-danger': this.nombreFlag}" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código</label>
+                                    <label class="control-label text-right col-md-3">Código *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="cod_prov" placeholder="">
                                         <small class="form-control-feedback">Código del proveedor</small>
@@ -20,7 +20,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div [ngClass]="{'has-danger': this.nombreFlag}" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <label class="control-label text-right col-md-3">Nombre *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nombre" placeholder="">
                                         <small class="form-control-feedback">Nombre del proveedor (2-40 caracteres)</small>
@@ -33,7 +33,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div [ngClass]="{'has-danger': this.direccionFlag}" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Dirección</label>
+                                    <label class="control-label text-right col-md-3">Dirección *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="direccion" placeholder="">
                                         <small class="form-control-feedback">Dirección del proveedor (2-60 caracteres)</small>
@@ -55,7 +55,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div [ngClass]="{'has-danger': this.localidadFlag}" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Localidad</label>
+                                    <label class="control-label text-right col-md-3">Localidad *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="localidad" placeholder="">
                                         <small class="form-control-feedback">Localidad del proveedor (2-30 caracteres)</small>
@@ -77,7 +77,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div [ngClass]="{'has-danger': this.cuitFlag}" class="form-group row">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <label class="control-label text-right col-md-3">CUIT *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="cuit" placeholder="">
                                         <small class="form-control-feedback">CUIT (11 dígitos sin guiones)</small>

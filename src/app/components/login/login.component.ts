@@ -27,8 +27,8 @@ export class LoginComponent implements OnInit {
 
   }//
   ngOnInit() {
-    if (localStorage.getItem('sddccasdf') != null) {
-      let check: string = localStorage.getItem('sddccasdf');
+    if (sessionStorage.getItem('sddccasdf') != null) {
+      let check: string = sessionStorage.getItem('sddccasdf');
       if (check == "true") {
         this.check = true;
       }
@@ -37,9 +37,9 @@ export class LoginComponent implements OnInit {
       }
     }
     //login con datos guardados--------------------
-    if (localStorage.getItem("sddddasdf") !== null && localStorage.getItem("sddeeasdf") !== null) {
-      let email: any = localStorage.getItem('sddddasdf');//email
-      let pass: any = localStorage.getItem('sddeeasdf');//password
+    if (sessionStorage.getItem("sddddasdf") !== null && sessionStorage.getItem("sddeeasdf") !== null) {
+      let email: any = sessionStorage.getItem('sddddasdf');//email
+      let pass: any = sessionStorage.getItem('sddeeasdf');//password
       email = this._crypto.decrypt(email);
       pass = this._crypto.decrypt(pass);
       this._login.SignIn(email, pass).then((resp) => {
@@ -64,7 +64,7 @@ export class LoginComponent implements OnInit {
       });
     }
     else {
-      localStorage.setItem('sucursal', this.sucursal);
+      sessionStorage.setItem('sucursal', this.sucursal);
       this.checkPromise().then(() => {
         console.log("email:" + f.value.email + " pass:" + f.value.password);
         //login online---------------------------------
@@ -72,27 +72,27 @@ export class LoginComponent implements OnInit {
           console.log("LOGIN" + resp);
           if (resp == true) {
             this._crud.getListSnapFilter('usuarios/cliente', 'email', f.value.email).pipe(take(1)).subscribe((resp2: any) => {
-              localStorage.setItem('usernameOp', resp2[0].payload.val().username);
-              localStorage.setItem('emailOp', resp2[0].payload.val().email);
-              localStorage.setItem('sddffasdf', this._crypto.encrypt(resp2[0].payload.val().nivel));// sddffasdf:nivel,
-              localStorage.setItem('sddggasdf', resp2[0].key);//sddggasdf userkey
+              sessionStorage.setItem('usernameOp', resp2[0].payload.val().username);
+              sessionStorage.setItem('emailOp', resp2[0].payload.val().email);
+              sessionStorage.setItem('sddffasdf', this._crypto.encrypt(resp2[0].payload.val().nivel));// sddffasdf:nivel,
+              sessionStorage.setItem('sddggasdf', resp2[0].key);//sddggasdf userkey
               f.reset();
               this.router.navigate(['./components/puntoventa']);//this.router.navigate(['./components/dashboard']);
             });
             if (this.check == true) {
-              localStorage.setItem('sddccasdf', "true");// sddccasdf:check, cdkcdck:true
-              localStorage.setItem('sddddasdf', this._crypto.encrypt(f.value.email));// sddddasdf:mail, cdkcdck:true
-              localStorage.setItem('sddeeasdf', this._crypto.encrypt(f.value.password));// sddeeasdf:pass, cdkcdck:true
+              sessionStorage.setItem('sddccasdf', "true");// sddccasdf:check, cdkcdck:true
+              sessionStorage.setItem('sddddasdf', this._crypto.encrypt(f.value.email));// sddddasdf:mail, cdkcdck:true
+              sessionStorage.setItem('sddeeasdf', this._crypto.encrypt(f.value.password));// sddeeasdf:pass, cdkcdck:true
             }
             else {
-              localStorage.setItem('sddccasdf', "false");// sddccasdf:check, cdkcdck:true
-              localStorage.setItem('sddddasdf', this._crypto.encrypt(null));// sddddasdf:mail, cdkcdck:true
-              localStorage.setItem('sddeeasdf', this._crypto.encrypt(null));// sddeeasdf:pass, cdkcdck:true
+              sessionStorage.setItem('sddccasdf', "false");// sddccasdf:check, cdkcdck:true
+              sessionStorage.setItem('sddddasdf', this._crypto.encrypt(null));// sddddasdf:mail, cdkcdck:true
+              sessionStorage.setItem('sddeeasdf', this._crypto.encrypt(null));// sddeeasdf:pass, cdkcdck:true
             }
           }
           else {
-            localStorage.setItem('sddddasdf', this._crypto.encrypt(null));// sddddasdf:mail, cdkcdck:true
-            localStorage.setItem('sddeeasdf', this._crypto.encrypt(null));// sddeeasdf:pass, cdkcdck:true
+            sessionStorage.setItem('sddddasdf', this._crypto.encrypt(null));// sddddasdf:mail, cdkcdck:true
+            sessionStorage.setItem('sddeeasdf', this._crypto.encrypt(null));// sddeeasdf:pass, cdkcdck:true
             f.reset();
             Swal.fire({
               title: 'ERROR',
@@ -123,10 +123,10 @@ export class LoginComponent implements OnInit {
   checkPromise() {
     let promise = new Promise((resolve, reject) => {
       if (this.check == true) {
-        localStorage.setItem('sddccasdf', "true");
+        sessionStorage.setItem('sddccasdf', "true");
       }
       else {
-        localStorage.setItem('sddccasdf', "false");
+        sessionStorage.setItem('sddccasdf', "false");
       }
       resolve(1);
     });

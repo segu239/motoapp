@@ -69,7 +69,7 @@ export class EnviostockpendientesComponent {
       
     ];
     this._selectedColumns = this.cols;
-    this.sucursal = Number(localStorage.getItem('sucursal'));
+    this.sucursal = Number(sessionStorage.getItem('sucursal'));
     /* this.sucursal = [
       { label: 'Suc. Valle Viejo', value: 2 },
       { label: 'Suc. Guemes', value: 3 },
@@ -211,7 +211,7 @@ const pedidoItem: any = {
     descripcion: selectedPedido.descripcion,
     precio: selectedPedido.precio,
     fecha_resuelto: fechaFormateada,
-    usuario_res: localStorage.getItem('usernameOp'),
+    usuario_res: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     //id_num: 456
@@ -224,7 +224,7 @@ const pedidoscb = {
     sucursald: Number(this.sucursal),
     sucursalh: selectedPedido.sucursalh,
     fecha: fechaFormateada,
-    usuario: localStorage.getItem('usernameOp'),
+    usuario: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Recibido",
     id_aso: 222
@@ -267,7 +267,7 @@ enviar() {
     descripcion: selectedPedido.descripcion,
     precio: selectedPedido.precio,
     fecha_resuelto: fechaFormateada,
-    usuario_res: localStorage.getItem('usernameOp'),
+    usuario_res: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Enviado",
     //id_num: 456
@@ -280,7 +280,7 @@ enviar() {
     sucursald: Number(this.sucursal),
     sucursalh: selectedPedido.sucursald,
     fecha: fechaFormateada,
-    usuario: localStorage.getItem('usernameOp'),
+    usuario: sessionStorage.getItem('usernameOp'),
     observacion: this.comentario,
     estado: "Enviado",
     id_aso: 222

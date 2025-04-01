@@ -29,8 +29,8 @@ selectedSucursal: number;
     @Inject(DynamicDialogConfig) public config: DynamicDialogConfig) {
       this.producto = this.config.data.producto;
       console.log("producto:" + JSON.stringify(this.producto));
-      this.usuario = localStorage.getItem('usernameOp')
-      this.sucursal = localStorage.getItem('sucursal')
+      this.usuario = sessionStorage.getItem('usernameOp')
+      this.sucursal = sessionStorage.getItem('sucursal')
     }
     ngOnDestroy() {
       if (this.ref) {

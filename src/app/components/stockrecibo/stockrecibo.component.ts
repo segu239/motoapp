@@ -66,7 +66,7 @@ export class StockreciboComponent {
       
     ];
     this._selectedColumns = this.cols;
-    this.sucursal = Number(localStorage.getItem('sucursal'));
+    this.sucursal = Number(sessionStorage.getItem('sucursal'));
     /* this.sucursal = [
       { label: 'Suc. Valle Viejo', value: 2 },
       { label: 'Suc. Guemes', value: 3 },
@@ -190,7 +190,7 @@ const pedidoItem: PedidoItem = {
     descripcion: selectedPedido.descripcion,
     precio: selectedPedido.precio,
     fecha_resuelto: fechaFormateada,
-    usuario_res: localStorage.getItem('usernameOp'),
+    usuario_res: sessionStorage.getItem('usernameOp'),
     observacion: '',
     estado: "Solicitado",
     id_num: 456
@@ -203,7 +203,7 @@ const pedidoscb = {
     sucursald: Number(this.sucursal),
     sucursalh: this.selectedSucursal,
     fecha: fechaFormateada,
-    usuario: localStorage.getItem('usernameOp'),
+    usuario: sessionStorage.getItem('usernameOp'),
     observacion: '',
     estado: "Enviado",
     id_aso: 222

@@ -1,0 +1,65 @@
+.login-register {
+    position: fixed;
+    height: 100%;
+    width: 100%;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.login-box {
+    width: 400px;
+    margin-right: 60px;
+}
+
+.login-sidebar {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.text-center.db {
+    display: block;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.form-control {
+    margin-bottom: 10px;
+    border-radius: 4px;
+    padding: 10px 12px;
+}
+
+.form-control:focus {
+    border-color: #03a9f3;
+    box-shadow: 0 0 8px rgba(3, 169, 243, 0.5);
+}
+
+.btn-info {
+    background-color: #03a9f3;
+    border-color: #03a9f3;
+}
+
+.btn-info:hover,
+.btn-info:focus,
+.btn-info:active {
+    background-color: #0288d1;
+    border-color: #0288d1;
+}
+
+.checkbox-info input[type="checkbox"]:checked + label::before {
+    background-color: #03a9f3;
+    border-color: #03a9f3;
+}
+
+@media (max-width: 767px) {
+    .login-register {
+        justify-content: center;
+    }
+    
+    .login-box {
+        width: 90%;
+        margin-right: 0;
+    }
+} 

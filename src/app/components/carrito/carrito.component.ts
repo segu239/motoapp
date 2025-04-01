@@ -57,8 +57,8 @@ export class CarritoComponent {
     this.calculoTotal();
     this.getNombreSucursal();
     this.getVendedores();
-    this.usuario = localStorage.getItem('usernameOp')
-    this.cliente = JSON.parse(localStorage.getItem('datoscliente'));
+    this.usuario = sessionStorage.getItem('usernameOp')
+    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
     this.initLetraValue();
   }
   ngOnInit() {
@@ -106,7 +106,7 @@ export class CarritoComponent {
       });
     }
   getItemsCarrito() {
-    let items = localStorage.getItem('carrito');
+    let items = sessionStorage.getItem('carrito');
     if (items) {
       this.itemsEnCarrito = JSON.parse(items);
     }
@@ -118,7 +118,7 @@ export class CarritoComponent {
     })
   }
   getNombreSucursal() {
-    this.sucursal = localStorage.getItem('sucursal');
+    this.sucursal = sessionStorage.getItem('sucursal');
     console.log(this.sucursal);
     if (this.sucursal == '1') {
       this.sucursalNombre = 'Casa Central';
@@ -212,7 +212,7 @@ export class CarritoComponent {
         )
         let index = this.itemsEnCarrito.indexOf(item);
         this.itemsEnCarrito.splice(index, 1);
-        localStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+        sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
         this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
         this.calculoTotal();
       }
@@ -276,7 +276,7 @@ export class CarritoComponent {
             console.log('NUMERO SECUENCIAL:' + numero);
             this.numerocomprobante = numero.toString();
           }
-          let emailOp = localStorage.getItem('emailOp');
+          let emailOp = sessionStorage.getItem('emailOp');
           let result = this.itemsEnCarrito.map(obj => {
             return {
               ...obj,
@@ -289,9 +289,9 @@ export class CarritoComponent {
             };
           });
           this.numerocomprobanteImpresion = this.numerocomprobante;
-          localStorage.setItem('carrito', JSON.stringify(result));
+          sessionStorage.setItem('carrito', JSON.stringify(result));
           console.log(result);
-          let sucursal = localStorage.getItem('sucursal');
+          let sucursal = sessionStorage.getItem('sucursal');
           let exi = 0;  // ESTO LO HAGO POR QUE NO HAY CORRESPONDENCIA ENTRE EXI Y SUCURSAL
           if (sucursal == "2") {
             exi = 3;
@@ -424,11 +424,11 @@ export class CarritoComponent {
         icon: 'success',
         title: 'Pedido enviado',
         text: 'El pedido se envio correctamente!',
-        footer: 'Se envio el pedido a la sucursal ' + localStorage.getItem('sucursal')
+        footer: 'Se envio el pedido a la sucursal ' + sessionStorage.getItem('sucursal')
       })
       this.itemsEnCarrito = [];
       this.itemsConTipoPago = [];
-      localStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+      sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
       this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
       this.calculoTotal();
     }
@@ -479,11 +479,11 @@ export class CarritoComponent {
   }
   //-----------------------------------
   imprimir(items: any, numerocomprobante: string, fecha: any, total: any) {
-    //let cliente = JSON.parse(localStorage.getItem('datoscliente'));
+    //let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
 let cliente: Cliente;
 
 try {
-  const datosCliente = localStorage.getItem('datoscliente');
+  const datosCliente = sessionStorage.getItem('datoscliente');
   if (datosCliente) {
     cliente = JSON.parse(datosCliente);
   } else {
@@ -496,7 +496,7 @@ try {
     };
   }
 } catch (error) {
- this.showNotification('Error al leer cliente'); // console.error('Error parsing datoscliente from localStorage', error);
+ this.showNotification('Error al leer cliente'); // console.error('Error parsing datoscliente from sessionStorage', error);
   cliente = {
     nombre: '',
     direccion: '',

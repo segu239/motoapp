@@ -48,7 +48,7 @@ export class EnviodestockrealizadosComponent implements OnInit {
 
         ];
         this._selectedColumns = this.cols;
-        this.sucursal = Number(localStorage.getItem('sucursal'));
+        this.sucursal = Number(sessionStorage.getItem('sucursal'));
 
     }
     ngOnInit(): void {

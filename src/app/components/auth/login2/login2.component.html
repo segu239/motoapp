@@ -1,0 +1,71 @@
+<section id="wrapper" class="login-register login-sidebar"
+    style="background-image:url(../assets/images/motomatch.png);">
+    <div class="login-box card">
+        <div class="card-body">
+            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="form-horizontal form-material">
+                <a href="javascript:void(0)" class="text-center db">
+                    <img src="../assets/images/HACKS-LAB110X68.png" alt="Home" />
+                </a>
+
+                <h3 class="box-title m-t-40 m-b-0">Iniciar sesión</h3>
+                <small *ngIf="errorMessage" class="text-danger">{{ errorMessage }}</small>
+
+                <!-- Email -->
+                <div class="form-group m-t-20">
+                    <div class="col-xs-12">
+                        <input formControlName="email" class="form-control" type="email" placeholder="Email">
+                        <small *ngIf="loginForm.get('email')?.invalid && loginForm.get('email')?.touched" class="text-danger">
+                            El email es obligatorio y debe tener un formato válido
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="form-group">
+                    <div class="col-xs-12">
+                        <input formControlName="password" class="form-control" type="password" placeholder="Contraseña">
+                        <small *ngIf="loginForm.get('password')?.invalid && loginForm.get('password')?.touched" class="text-danger">
+                            La contraseña es obligatoria y debe tener al menos 6 caracteres
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Sucursal -->
+                <div class="form-group">
+                    <div class="col-xs-12">
+                        <select class="form-control" (change)="onSucursalChange($event)">
+                            <option value="" disabled selected>Seleccione sucursal</option>
+                            <option value="2">Suc. Valle Viejo</option>
+                            <option value="3">Suc. Guemes</option>
+                            <option value="4">Deposito</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Remember me -->
+                <div class="form-group">
+                    <div class="col-md-12">
+                        <div class="checkbox checkbox-info pull-left p-t-0">
+                            <input id="checkbox-signup" type="checkbox" class="filled-in chk-col-light-blue"
+                                [(ngModel)]="rememberMe" [ngModelOptions]="{standalone: true}">
+                            <label for="checkbox-signup"> Recordar sesión </label>
+                        </div>
+                        <a href="javascript:void(0)" id="to-recover" class="text-dark pull-right" (click)="onForgotPassword()">
+                            <i class="fa fa-lock m-r-5"></i> ¿Olvidó su contraseña?
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Submit button -->
+                <div class="form-group text-center m-t-20">
+                    <div class="col-xs-12">
+                        <button class="btn btn-info btn-lg btn-block text-uppercase" type="submit"
+                            [disabled]="loginForm.invalid || loading">
+                            <i *ngIf="loading" class="fa fa-spinner fa-spin"></i> Ingresar
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section> 

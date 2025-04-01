@@ -8,205 +8,478 @@
                         <h3 class="box-title">Nuevo Artículo</h3>
                         <hr class="m-t-0 m-b-40">
                         
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div *ngIf="this.nomartFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="nomart" placeholder="">
-                                        <small class="form-control-feedback">Máximo 80 caracteres</small>
-                                    </div>
-                                </div>
-                                <div *ngIf="!this.nomartFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="nomart" placeholder="">
-                                        <small class="form-control-feedback">Máximo 80 caracteres</small>
-                                    </div>
-                                </div>
+                        <!-- SECCIÓN DATOS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h4 class="mb-0"><i class="fa fa-info-circle"></i> Datos del Artículo</h4>
                             </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Marca</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" formControlName="marca">
-                                            <option value="">Seleccione una Marca</option>
-                                            <option *ngFor="let marca of marcas" [value]="marca.marca">
-                                                {{ marca.marca }}
-                                            </option>
-                                        </select>
-                                        <small class="form-control-feedback">Seleccione la marca del artículo</small>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Proveedor</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="cd_proveedor">
+                                                    <option value="">Seleccione un Proveedor</option>
+                                                    <option *ngFor="let proveedor of proveedores" [value]="proveedor.id_prov">
+                                                        {{ proveedor.nombre }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione el proveedor</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div *ngIf="this.nomartFlag" class="form-group row has-danger">
+                                            <label class="control-label text-right col-md-3">Nombre *</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="nomart" placeholder="">
+                                                <small class="form-control-feedback">Máximo 80 caracteres</small>
+                                            </div>
+                                        </div>
+                                        <div *ngIf="!this.nomartFlag" class="form-group row">
+                                            <label class="control-label text-right col-md-3">Nombre *</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="nomart" placeholder="">
+                                                <small class="form-control-feedback">Máximo 80 caracteres</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <!-- Agregar después de la fila que contiene marca y antes de la fila con rubro -->
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group row">
-            <label class="control-label text-right col-md-3">Código Artículo</label>
-            <div class="col-md-9">
-                <input type="number" class="form-control" formControlName="cd_articulo" placeholder="">
-                <small class="form-control-feedback">Valor numérico entero (máx. 6 dígitos)</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="form-group row">
-            <label class="control-label text-right col-md-3">Código Depósito</label>
-            <div class="col-md-9">
-                <input type="number" class="form-control" formControlName="cod_deposito" placeholder="">
-                <small class="form-control-feedback">Valor numérico entero (máx. 2 dígitos)</small>
-            </div>
-        </div>
-    </div>
-</div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Rubro</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" formControlName="rubro">
-                                            <option value="">Seleccione un Rubro</option>
-                                            <option *ngFor="let rubro of rubros" [value]="rubro.cod_rubro">
-                                                {{ rubro.rubro }}
-                                            </option>
-                                        </select>
-                                        <small class="form-control-feedback">Seleccione el rubro del artículo</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div *ngIf="this.cd_articuloFlag" class="form-group row has-danger">
+                                            <label class="control-label text-right col-md-3">Código Artículo *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control form-control-danger" formControlName="articulo" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero positivo (máx. 4 dígitos)</small>
+                                            </div>
+                                        </div>
+                                        <div *ngIf="!this.cd_articuloFlag" class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código Artículo *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="articulo" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero positivo (máx. 4 dígitos)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Rubro *</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="rubro">
+                                                    <option value="">Seleccione un Rubro</option>
+                                                    <option *ngFor="let rubro of rubros" [value]="rubro.cod_rubro">
+                                                        {{ rubro.rubro }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione el rubro del artículo</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div *ngIf="this.cd_barraFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Código de Barra</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="cd_barra" placeholder="">
-                                        <small class="form-control-feedback">Máximo 13 caracteres</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Marca *</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="marca">
+                                                    <option value="">Seleccione una Marca</option>
+                                                    <option *ngFor="let marca of marcas" [value]="marca.marca">
+                                                        {{ marca.marca }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione la marca del artículo</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código del Prov. *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="cd_articulo" placeholder="">
+                                                <small class="form-control-feedback">Código del artículo que maneja el proveedor</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div *ngIf="!this.cd_barraFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código de Barra</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="cd_barra" placeholder="">
-                                        <small class="form-control-feedback">Máximo 13 caracteres</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div *ngIf="this.cod_depositoFlag" class="form-group row has-danger">
+                                            <label class="control-label text-right col-md-3">Código Depósito *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control form-control-danger" formControlName="cod_deposito" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero positivo (máx. 2 dígitos)</small>
+                                            </div>
+                                        </div>
+                                        <div *ngIf="!this.cod_depositoFlag" class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código Depósito *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="cod_deposito" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero positivo (máx. 2 dígitos)</small>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Precio Costo</label>
-                                    <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Precio Final 1</label>
-                                    <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="prefi1" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Precio Base s/IVA</label>
-                                    <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Margen</label>
-                                    <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="margen" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Existencia Suc1</label>
-                                    <div class="col-md-9">
-                                        <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico entero</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stock Mín Suc1</label>
-                                    <div class="col-md-9">
-                                        <input type="number" value="0" class="form-control" formControlName="stkmin1" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    <div class="col-md-6">
+                                        <div *ngIf="this.cd_barraFlag" class="form-group row has-danger">
+                                            <label class="control-label text-right col-md-3">Código de Barra</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="cd_barra" placeholder="">
+                                                <small class="form-control-feedback">Máximo 13 caracteres</small>
+                                            </div>
+                                        </div>
+                                        <div *ngIf="!this.cd_barraFlag" class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código de Barra</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="cd_barra" placeholder="">
+                                                <small class="form-control-feedback">Máximo 13 caracteres</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stock Máx Suc1</label>
-                                    <div class="col-md-9">
-                                        <input type="number" value="0" class="form-control" formControlName="stkmax1" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico entero</small>
+                        <!-- SECCIÓN PRECIOS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h4 class="mb-0"><i class="fa fa-money"></i> Información de Precios</h4>
+                            </div>
+                            <div class="card-body">
+                                <!-- Mensaje de alerta para cambio de moneda -->
+                                <div *ngIf="mensajeCambioMoneda" class="alert alert-warning mb-3">
+                                    <i class="fa fa-exclamation-triangle"></i> {{ mensajeCambioMoneda }}
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Precio Costo sin IVA</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="precostosi" placeholder="" (change)="calcularDesdePrecoSinIva()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Descuento (%)</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="descuento" placeholder="" (change)="calcularPrecioBase()">
+                                                <small class="form-control-feedback">Porcentaje de descuento</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código IVA</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" formControlName="cod_iva">
-                                            <option value="">Seleccione un Tipo de IVA</option>
-                                            <option *ngFor="let iva of tiposIva" [value]="iva.cod_iva">
-                                                {{ iva.descripcion }}
-                                            </option>
-                                        </select>
-                                        <small class="form-control-feedback">Seleccione el tipo de IVA</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Precio Base s/IVA</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="" (change)="calcularMargen()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Margen (%)</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="margen" placeholder="" (change)="calcularPrecioBase()">
+                                                <small class="form-control-feedback">Porcentaje de margen</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código IVA *</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="cod_iva" (change)="manejarCambioIva()">
+                                                    <option value="">Seleccione un Tipo de IVA</option>
+                                                    <option *ngFor="let iva of tiposIva" [value]="iva.cod_iva">
+                                                        {{ iva.descripcion }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione el tipo de IVA</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Precio Final *</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="" (change)="calcularPreciosSinIva()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Tipo Moneda</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="tipo_moneda">
+                                                    <option value="">Seleccione un Tipo de Moneda</option>
+                                                    <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
+                                                        {{ moneda.moneda }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione el tipo de moneda</small>
+                                                <small class="form-text text-info mt-1">
+                                                    <strong>Nota:</strong> El precio de costo estará expresado en la moneda seleccionada, mientras que el precio base sin IVA y el precio final siempre estarán en pesos.
+                                                </small>
+                                                <div *ngIf="infoTasaCambio" class="alert alert-info mt-2 p-1 small">
+                                                    {{ infoTasaCambio }}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="row">
+                        <!-- SECCIÓN STOCKS -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-white">
+                                <h4 class="mb-0"><i class="fa fa-cubes"></i> Información de Stock</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Existencia Suc1</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Mín Suc1</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmin1" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Máx Suc1</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmax1" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Prep Suc1</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkprep1" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sucursal 2 -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Existencia Suc2</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="exi2" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Mín Suc2</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmin2" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Máx Suc2</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmax2" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Prep Suc2</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkprep2" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sucursal 3 -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Existencia Suc3</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="exi3" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Mín Suc3</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmin3" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Máx Suc3</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmax3" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Prep Suc3</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkprep3" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sucursal 4 -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Existencia Suc4</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="exi4" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Mín Suc4</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmin4" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Máx Suc4</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmax4" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Prep Suc4</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkprep4" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sucursal 5 -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Existencia Suc5</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="exi5" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Mín Suc5</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmin5" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Máx Suc5</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkmax5" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stock Prep Suc5</label>
+                                            <div class="col-md-9">
+                                                <input type="number" value="0" class="form-control" formControlName="stkprep5" placeholder="">
+                                                <small class="form-control-feedback">Valor numérico entero</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- ESTADO (FUERA DE LAS SECCIONES) -->
+                        <div class="row mb-4">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Estado</label>
+                                    <label class="control-label text-right col-md-3">Estado *</label>
                                     <div class="col-md-9">
                                         <select class="form-control" formControlName="estado">
                                             <option value="AC">Activo</option>
                                             <option value="IN">Inactivo</option>
                                         </select>
                                         <small class="form-control-feedback">Estado del artículo</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Proveedor</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" formControlName="cd_proveedor">
-                                            <option value="">Seleccione un Proveedor</option>
-                                            <option *ngFor="let proveedor of proveedores" [value]="proveedor.id_prov">
-                                                {{ proveedor.nombre }}
-                                            </option>
-                                        </select>
-                                        <small class="form-control-feedback">Seleccione el proveedor</small>
                                     </div>
                                 </div>
                             </div>

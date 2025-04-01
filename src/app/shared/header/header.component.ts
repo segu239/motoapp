@@ -16,7 +16,7 @@ public sucursalNombre: string = '';
 
 
 constructor(private dialogService: DialogService, private carritoService: CarritoService) {
-  this.sucursal = localStorage.getItem('sucursal');
+  this.sucursal = sessionStorage.getItem('sucursal');
   if (this.sucursal == '1') {
     this.sucursalNombre = 'Casa Central';
   }

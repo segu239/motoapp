@@ -9,14 +9,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.codmoneFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Código Moneda</label>
+                                    <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="codmone" placeholder="">
                                         <small class="form-control-feedback">Valor numérico (máx. 2 dígitos)</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codmoneFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código Moneda</label>
+                                    <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="codmone" placeholder="">
                                         <small class="form-control-feedback">Valor numérico (máx. 2 dígitos)</small>
@@ -25,14 +25,14 @@
                             </div>
                             <div class="col-md-6">
                                 <div *ngIf="this.desvalorFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Descripción</label>
+                                    <label class="control-label text-right col-md-3">Descripción *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="desvalor" placeholder="">
                                         <small class="form-control-feedback">Máximo 30 caracteres</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.desvalorFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Descripción</label>
+                                    <label class="control-label text-right col-md-3">Descripción *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="desvalor" placeholder="">
                                         <small class="form-control-feedback">Máximo 30 caracteres</small>
@@ -43,7 +43,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Desde</label>
+                                    <label class="control-label text-right col-md-3">Fecha Desde *</label>
                                     <div class="col-md-9">
                                         <input type="date" class="form-control" formControlName="fecdesde" placeholder="">
                                         <small class="form-control-feedback">Fecha de inicio</small>
@@ -63,14 +63,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.vcambioFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Valor de Cambio</label>
+                                    <label class="control-label text-right col-md-3">Valor de Cambio *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="vcambio" placeholder="">
                                         <small class="form-control-feedback">Valor numérico (máx. 10 dígitos con 2 decimales)</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.vcambioFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Valor de Cambio</label>
+                                    <label class="control-label text-right col-md-3">Valor de Cambio *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="vcambio" placeholder="">
                                         <small class="form-control-feedback">Valor numérico (máx. 10 dígitos con 2 decimales)</small>

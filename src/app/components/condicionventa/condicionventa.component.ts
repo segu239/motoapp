@@ -13,6 +13,12 @@ import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.com
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ChangeDetectorRef } from '@angular/core';
 
+// Definir la interfaz Column para la selección de columnas
+interface Column {
+  field: string;
+  header: string;
+}
+
 @Component({
   selector: 'app-condicionventa',
   templateUrl: './condicionventa.component.html',
@@ -55,9 +61,16 @@ export class CondicionventaComponent {
   public chequeFlag: boolean = false;
   public previousUrl: string = "";
   filteredTipo: any[] = [];
+  
+  // Nuevas propiedades para manejar los valores de cambio
+  public valoresCambio: any[] = [];
+  public tiposMoneda: any[] = [];
+
+  // Añadir nuevas propiedades para la selección de columnas
+  cols: Column[];
+  _selectedColumns: Column[];
 
   constructor(public dialogService: DialogService, private cdr: ChangeDetectorRef, private router: Router, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService) {
-
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
     this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp: any) => {
@@ -65,7 +78,61 @@ export class CondicionventaComponent {
       console.log(this.tipo);
       this.filterByDay();
     });
+    
+    // Obtener los valores de cambio
+    this._cargardata.getValorCambio().pipe(take(1)).subscribe((resp: any) => {
+      this.valoresCambio = resp.mensaje;
+      console.log('Valores de cambio:', this.valoresCambio);
+    });
+    
+    // Obtener los tipos de moneda
+    this._cargardata.getTipoMoneda().pipe(take(1)).subscribe((resp: any) => {
+      this.tiposMoneda = resp.mensaje;
+      console.log('Tipos de moneda:', this.tiposMoneda);
+    });
+
+    // Definir todas las columnas disponibles
+    this.cols = [
+      { field: 'nomart', header: 'Nombre' },
+      { field: 'marca', header: 'Marca' },
+      { field: 'precon', header: 'Precio 0' },
+      { field: 'prefi1', header: 'Precio 1' },
+      { field: 'prefi2', header: 'Precio 2' },
+      { field: 'prefi3', header: 'Precio 3' },
+      { field: 'prefi4', header: 'Precio 4' },
+      { field: 'exi1', header: 'Stock Dep' },
+      { field: 'exi2', header: 'Stock CC' },
+      { field: 'exi3', header: 'Stock VV' },
+      { field: 'exi4', header: 'Stock GM' },
+      { field: 'exi5', header: 'Stock 5' },
+      { field: 'cd_articulo', header: 'Código' },
+      { field: 'cd_barra', header: 'Código Barra' },
+      { field: 'rubro', header: 'Rubro' },
+      { field: 'estado', header: 'Estado' },
+    ];
+    
+    // Definir las columnas seleccionadas por defecto
+    this._selectedColumns = [
+      this.cols[0], // nomart
+      this.cols[1], // marca
+      this.cols[2], // precon
+      this.cols[7], // exi1
+      this.cols[8], // exi2
+      this.cols[9], // exi3
+      this.cols[10], // exi4
+    ];
   }
+
+  // Getters y setters para las columnas seleccionadas
+  get selectedColumns(): Column[] {
+    return this._selectedColumns;
+  }
+  
+  set selectedColumns(val: Column[]) {
+    // Restaurar orden original
+    this._selectedColumns = this.cols.filter((col) => val.includes(col));
+  }
+
   filterByDay() {
     const dayOfWeek = new Date().getDay(); // Domingo - 0, Lunes - 1, ..., Sábado - 6
     const dayFieldMap = {
@@ -110,7 +177,29 @@ export class CondicionventaComponent {
     else {
       this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
         console.log(resp.mensaje);
-        this.productos = [...resp.mensaje];
+        
+        // Convertir a array y aplicar el cálculo de precios según tipo de moneda y valor de cambio
+        let productos = [...resp.mensaje];
+        
+        // Procesar cada producto para ajustar el precio según su tipo de moneda
+        productos.forEach(producto => {
+          // Verificar si el producto tiene un tipo de moneda
+          if (producto.tipo_moneda) {
+            // Buscar el valor de cambio correspondiente al tipo de moneda
+            const valorCambio = this.valoresCambio.find(vc => vc.codmone === producto.tipo_moneda);
+            
+            if (valorCambio && valorCambio.vcambio) {
+              // Aplicar el multiplicador a todos los precios
+              producto.precon = producto.precon * parseFloat(valorCambio.vcambio);
+              producto.prefi1 = producto.prefi1 * parseFloat(valorCambio.vcambio);
+              producto.prefi2 = producto.prefi2 * parseFloat(valorCambio.vcambio);
+              producto.prefi3 = producto.prefi3 * parseFloat(valorCambio.vcambio);
+              producto.prefi4 = producto.prefi4 * parseFloat(valorCambio.vcambio);
+            }
+          }
+        });
+        
+        this.productos = productos;
         // Forzar la detección de cambios
         this.cdr.detectChanges();
       });
@@ -266,41 +355,78 @@ export class CondicionventaComponent {
   }
 
   listaPrecioF() {
-    if (this.listaPrecio == "0") {
-      this.prefi0 = true;
-      this.prefi1 = false;
-      this.prefi2 = false;
-      this.prefi3 = false;
-      this.prefi4 = false;
+    // Se eliminan los seteos individuales de prefijos
+    // y se trabaja ahora con la selección de columnas directamente
+    console.log(this.listaPrecio);
+
+    // Actualizar el arreglo de columnas seleccionadas según la lista de precios
+    if (this.listaPrecio === '0') {
+      // Precio 0 (precon)
+      this._selectedColumns = this.cols.filter(col => 
+        col.field === 'nomart' || 
+        col.field === 'marca' || 
+        col.field === 'precon' || 
+        col.field === 'exi1' || 
+        col.field === 'exi2' || 
+        col.field === 'exi3' || 
+        col.field === 'exi4'
+      );
     }
-    else if (this.listaPrecio == "1") {
-      this.prefi0 = false;
-      this.prefi1 = true;
-      this.prefi2 = false;
-      this.prefi3 = false;
-      this.prefi4 = false;
+    else if (this.listaPrecio === '1') {
+      // Precio 1 (prefi1)
+      this._selectedColumns = this.cols.filter(col => 
+        col.field === 'nomart' || 
+        col.field === 'marca' || 
+        col.field === 'prefi1' || 
+        col.field === 'exi1' || 
+        col.field === 'exi2' || 
+        col.field === 'exi3' || 
+        col.field === 'exi4'
+      );
     }
-    else if (this.listaPrecio == "2") {
-      this.prefi0 = false;
-      this.prefi1 = false;
-      this.prefi2 = true;
-      this.prefi3 = false;
-      this.prefi4 = false;
+    else if (this.listaPrecio === '2') {
+      // Precio 2 (prefi2)
+      this._selectedColumns = this.cols.filter(col => 
+        col.field === 'nomart' || 
+        col.field === 'marca' || 
+        col.field === 'prefi2' || 
+        col.field === 'exi1' || 
+        col.field === 'exi2' || 
+        col.field === 'exi3' || 
+        col.field === 'exi4'
+      );
     }
-    else if (this.listaPrecio == "3") {
-      this.prefi0 = false;
-      this.prefi1 = false;
-      this.prefi2 = false;
-      this.prefi3 = true;
-      this.prefi4 = false;
+    else if (this.listaPrecio === '3') {
+      // Precio 3 (prefi3)
+      this._selectedColumns = this.cols.filter(col => 
+        col.field === 'nomart' || 
+        col.field === 'marca' || 
+        col.field === 'prefi3' || 
+        col.field === 'exi1' || 
+        col.field === 'exi2' || 
+        col.field === 'exi3' || 
+        col.field === 'exi4'
+      );
     }
-    else if (this.listaPrecio == "4") {
-      this.prefi0 = false;
-      this.prefi1 = false;
-      this.prefi2 = false;
-      this.prefi3 = false;
-      this.prefi4 = true;
+    else if (this.listaPrecio === '4') {
+      // Precio 4 (prefi4)
+      this._selectedColumns = this.cols.filter(col => 
+        col.field === 'nomart' || 
+        col.field === 'marca' || 
+        col.field === 'prefi4' || 
+        col.field === 'exi1' || 
+        col.field === 'exi2' || 
+        col.field === 'exi3' || 
+        col.field === 'exi4'
+      );
     }
+    
+    // Mantener los flags para compatibilidad con código existente
+    this.prefi0 = this.listaPrecio === '0';
+    this.prefi1 = this.listaPrecio === '1';
+    this.prefi2 = this.listaPrecio === '2';
+    this.prefi3 = this.listaPrecio === '3';
+    this.prefi4 = this.listaPrecio === '4';
   }
   selectProducto(producto) {
     let datoscondicionventa: any =

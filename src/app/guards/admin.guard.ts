@@ -14,7 +14,7 @@ export class AdminGuard implements CanActivate {
 
 constructor(private router:Router, private _login:LoginService, private _crypto: CryptoService){}
   canActivate(): boolean {
-    let a=localStorage.getItem('sddffasdf');
+    let a=sessionStorage.getItem('sddffasdf');
     a= this._crypto.decrypt(a);
     if(a== 'super' || a== 'admin')
   {

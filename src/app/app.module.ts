@@ -90,7 +90,14 @@ import { EditconflistaComponent } from './components/editconflista/editconflista
 import { ArticulosComponent } from './components/articulos/articulos.component';
 import { NewarticuloComponent } from './components/newarticulo/newarticulo.component';
 import { EditarticuloComponent } from './components/editarticulo/editarticulo.component';
-//import { DataTablesModule } from 'angular-datatables';
+
+// Nuevos componentes para autenticación
+import { Login2Component } from './components/auth/login2/login2.component';
+import { UserManagementComponent } from './components/auth/user-management/user-management.component';
+
+// Servicios y Guards
+import { AuthService } from './services/auth.service';
+import { AuthGuard } from './guards/auth.guard';
 
 @NgModule({
   declarations: [
@@ -156,14 +163,16 @@ import { EditarticuloComponent } from './components/editarticulo/editarticulo.co
     ArticulosComponent,
     NewarticuloComponent,
     EditarticuloComponent,
-
+    
+    // Nuevos componentes
+    Login2Component,
+    UserManagementComponent,
   ],
   imports: [
     ButtonModule,
     TableModule,
     CalendarModule,
     MultiSelectModule,
-    //DataTablesModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,
@@ -178,8 +187,6 @@ import { EditarticuloComponent } from './components/editarticulo/editarticulo.co
     provideFunctions(() => getFunctions()),
     provideMessaging(() => getMessaging()),
     provideStorage(() => getStorage())
-   
-
   ],
   providers: [DialogService,  DatePipe, AngularFireAuthGuard, { provide: FIREBASE_OPTIONS, useValue: environment.firebase}],
   bootstrap: [AppComponent]

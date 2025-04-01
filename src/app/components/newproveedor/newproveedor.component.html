@@ -11,14 +11,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.codProvFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Código prov.</label>
+                                    <label class="control-label text-right col-md-3">Código prov. *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cod_prov" placeholder="">
                                         <small class="form-control-feedback">Máximo 6 dígitos numéricos</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codProvFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código</label>
+                                    <label class="control-label text-right col-md-3">Código *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cod_prov" placeholder="">
                                         <small class="form-control-feedback">Máximo 6 dígitos numéricos</small>
@@ -27,14 +27,14 @@
                             </div>
                             <div class="col-md-6">
                                 <div *ngIf="this.nombreFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <label class="control-label text-right col-md-3">Nombre *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nombre" placeholder="">
                                         <small class="form-control-feedback">Máximo 40 caracteres alfanuméricos</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.nombreFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <label class="control-label text-right col-md-3">Nombre *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nombre" placeholder="">
                                         <small class="form-control-feedback">Máximo 40 caracteres alfanuméricos</small>
@@ -47,14 +47,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.direccionFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Dirección</label>
+                                    <label class="control-label text-right col-md-3">Dirección *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="direccion" placeholder="">
                                         <small class="form-control-feedback">Máximo 40 caracteres alfanuméricos</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.direccionFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Dirección</label>
+                                    <label class="control-label text-right col-md-3">Dirección *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="direccion" placeholder="">
                                         <small class="form-control-feedback">Máximo 40 caracteres alfanuméricos</small>
@@ -76,7 +76,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Localidad</label>
+                                    <label class="control-label text-right col-md-3">Localidad *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="localidad" placeholder="">
                                         <small class="form-control-feedback">Máximo 35 caracteres alfanuméricos</small>
@@ -105,14 +105,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.cuitFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <label class="control-label text-right col-md-3">CUIT *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cuit" placeholder="">
                                         <small class="form-control-feedback">11 dígitos numéricos</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.cuitFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <label class="control-label text-right col-md-3">CUIT *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cuit" placeholder="">
                                         <small class="form-control-feedback">11 dígitos numéricos</small>
@@ -152,7 +152,7 @@
                             </div> -->
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código IVA</label>
+                                    <label class="control-label text-right col-md-3">Código IVA *</label>
                                     <div class="col-md-9">
                                         <select formControlName="cod_iva" class="form-control" 
                                             (change)="onSelectionIvaChange($event)">
@@ -171,7 +171,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Ganancias</label>
+                                    <label class="control-label text-right col-md-3">Ganancias *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="ganancias" placeholder="">
                                         <small class="form-control-feedback">Valor numérico</small>

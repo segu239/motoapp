@@ -20,7 +20,16 @@ export class EditarticuloComponent implements OnInit {
   public marcas: any;
   public tiposIva: any;
   public proveedores: any;
+  public tiposMoneda: any;
   private id_articulo: number = 0;
+  // Lista de campos editables e inmodificables
+  private camposEditables = [
+    'nomart', 'marca', 'cd_articulo', 'cod_deposito', 'rubro', 'cd_barra',
+    'exi1', 'exi2', 'exi3', 'exi4', 'exi5',
+    'stkmin1', 'stkmin2', 'stkmin3', 'stkmin4', 'stkmin5',
+    'stkmax1', 'stkmax2', 'stkmax3', 'stkmax4', 'stkmax5',
+    'stkprep1', 'stkprep2', 'stkprep3', 'stkprep4', 'stkprep5'
+  ];
 
   constructor(
     private subirdata: SubirdataService,
@@ -36,6 +45,7 @@ export class EditarticuloComponent implements OnInit {
     this.cargarMarcas();
     this.cargarTiposIva();
     this.cargarProveedores();
+    this.cargarTiposMoneda();
     this.loadArticuloData();
   }
 
@@ -54,11 +64,11 @@ export class EditarticuloComponent implements OnInit {
         Validators.required,
         Validators.pattern(/^[0-9]{1,2}$/) // Patrón para aceptar hasta 2 dígitos numéricos
       ])),
-      precon: new FormControl(0, Validators.required),
-      prefi1: new FormControl(0),
-      prefi2: new FormControl(0),
-      prefi3: new FormControl(0),
-      prefi4: new FormControl(0),
+      precon: new FormControl({value: 0, disabled: true}),
+      prefi1: new FormControl({value: 0, disabled: true}),
+      prefi2: new FormControl({value: 0, disabled: true}),
+      prefi3: new FormControl({value: 0, disabled: true}),
+      prefi4: new FormControl({value: 0, disabled: true}),
       exi1: new FormControl(0),
       exi2: new FormControl(0),
       exi3: new FormControl(0),
@@ -79,22 +89,20 @@ export class EditarticuloComponent implements OnInit {
       stkmin5: new FormControl(0),
       stkmax5: new FormControl(0),
       stkprep5: new FormControl(0),
-      //cd_articulo: new FormControl(0),
-      cd_proveedor: new FormControl(''),
+      cd_proveedor: new FormControl({value: '', disabled: true}),
       cd_barra: new FormControl('', Validators.compose([
         Validators.maxLength(13)
       ])),
-      idart: new FormControl(0),
-      estado: new FormControl('', Validators.required),
+      idart: new FormControl({value: 0, disabled: true}),
+      estado: new FormControl({value: '', disabled: true}),
       rubro: new FormControl('', Validators.required),
-      articulo: new FormControl(0),
-      cod_iva: new FormControl('', Validators.required),
-      prebsiva: new FormControl(0),
-      precostosi: new FormControl(0),
-      margen: new FormControl(0),
-      descuento: new FormControl(0),
-     // cod_deposito: new FormControl(0),
-      tipo_moneda: new FormControl(0)
+      articulo: new FormControl({value: 0, disabled: true}),
+      cod_iva: new FormControl({value: '', disabled: true}),
+      prebsiva: new FormControl({value: 0, disabled: true}),
+      precostosi: new FormControl({value: 0, disabled: true}),
+      margen: new FormControl({value: 0, disabled: true}),
+      descuento: new FormControl({value: 0, disabled: true}),
+      tipo_moneda: new FormControl({value: 0, disabled: true})
     });
 
     this.monitorFormChanges();
@@ -160,6 +168,21 @@ export class EditarticuloComponent implements OnInit {
     });
   }
 
+  cargarTiposMoneda() {
+    this.cargardata.getTipoMoneda().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.tiposMoneda = response.mensaje;
+        } else {
+          console.error('Error loading tipos moneda:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+      }
+    });
+  }
+
   loadArticuloData(): void {
     this.route.queryParams.subscribe(params => {
       if (params['articulo']) {
@@ -169,12 +192,12 @@ export class EditarticuloComponent implements OnInit {
           this.id_articulo = articuloData.id_articulo;
           this.currentArticulo = articuloData;
           
-          // Patch the form with the article data
-          this.articuloForm.patchValue({
+          // Crear un objeto con todos los valores del artículo para patchValue
+          const formValues: any = {
             nomart: this.currentArticulo.nomart ? this.currentArticulo.nomart.trim() : '',
             marca: this.currentArticulo.marca.trim(),
             cd_articulo: this.currentArticulo.cd_articulo,
-          cod_deposito: this.currentArticulo.cod_deposito,
+            cod_deposito: this.currentArticulo.cod_deposito,
             precon: this.currentArticulo.precon,
             prefi1: this.currentArticulo.prefi1,
             prefi2: this.currentArticulo.prefi2,
@@ -200,7 +223,6 @@ export class EditarticuloComponent implements OnInit {
             stkmin5: this.currentArticulo.stkmin5,
             stkmax5: this.currentArticulo.stkmax5,
             stkprep5: this.currentArticulo.stkprep5,
-            //cd_articulo: this.currentArticulo.cd_articulo,
             cd_proveedor: this.currentArticulo.cd_proveedor,
             cd_barra: this.currentArticulo.cd_barra ? this.currentArticulo.cd_barra.trim() : '',
             idart: this.currentArticulo.idart,
@@ -212,9 +234,11 @@ export class EditarticuloComponent implements OnInit {
             precostosi: this.currentArticulo.precostosi,
             margen: this.currentArticulo.margen,
             descuento: this.currentArticulo.descuento,
-            //cod_deposito: this.currentArticulo.cod_deposito,
             tipo_moneda: this.currentArticulo.tipo_moneda
-          });
+          };
+
+          // Actualizar el formulario con los valores
+          this.articuloForm.patchValue(formValues);
         } catch (error) {
           console.error('Error parsing articulo data:', error);
           Swal.fire({
@@ -230,10 +254,24 @@ export class EditarticuloComponent implements OnInit {
 
   onSubmit(): void {
     if (this.articuloForm.valid) {
-      const articuloData = {
-        ...this.articuloForm.value,
-        id_articulo: this.id_articulo
-      };
+      // Obtener valores actuales del formulario (solo los editables)
+      let formValues = this.articuloForm.getRawValue();
+      
+      // Crear objeto de datos a enviar al servidor
+      // Incluir solo campos editables y conservar los valores originales para los no editables
+      const articuloData: any = { id_articulo: this.id_articulo };
+      
+      // Añadir campos editables desde el formulario
+      this.camposEditables.forEach(campo => {
+        articuloData[campo] = formValues[campo];
+      });
+      
+      // Añadir campos no editables desde el objeto original
+      Object.keys(this.currentArticulo).forEach(key => {
+        if (!this.camposEditables.includes(key) && key !== 'id_articulo') {
+          articuloData[key] = this.currentArticulo[key];
+        }
+      });
 
       this.subirdata.updateArticulo(articuloData).subscribe({
         next: (response: any) => {

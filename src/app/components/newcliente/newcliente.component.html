@@ -10,14 +10,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.nombreFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Nombre y Apellido</label>
+                                    <label class="control-label text-right col-md-3">Nombre y Apellido *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nombre" placeholder="">
                                         <small class="form-control-feedback"> Solo letras y mas de 2 de longitud</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.nombreFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre y Apellido</label>
+                                    <label class="control-label text-right col-md-3">Nombre y Apellido *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nombre" placeholder="">
                                         <small class="form-control-feedback"> Solo letras y mas de 2 de longitud</small>
@@ -26,7 +26,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div *ngIf="this.direccionFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Direccion</label>
+                                    <label class="control-label text-right col-md-3">Direccion *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="direccion"
                                             placeholder="">
@@ -35,7 +35,7 @@
                                     </div>
                                 </div>
                                 <div *ngIf="!this.direccionFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Direccion</label>
+                                    <label class="control-label text-right col-md-3">Direccion *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="direccion"
                                             placeholder="">
@@ -49,7 +49,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.cuitFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <label class="control-label text-right col-md-3">CUIT *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cuit" placeholder="">
                                         <small class="form-control-feedback"> 11 numeros con este formato: 20332451264
@@ -57,7 +57,7 @@
                                     </div>
                                 </div>
                                 <div *ngIf="!this.cuitFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">CUIT</label>
+                                    <label class="control-label text-right col-md-3">CUIT *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="cuit" placeholder="">
                                         <small class="form-control-feedback"> 11 numeros con este formato: 20332451264
@@ -67,7 +67,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div *ngIf="this.dniFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">DNI</label>
+                                    <label class="control-label text-right col-md-3">DNI *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="dni" placeholder="">
                                         <small class="form-control-feedback">8 numeros con este formato: 31267853
@@ -75,7 +75,7 @@
                                     </div>
                                 </div>
                                 <div *ngIf="!this.dniFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">DNI</label>
+                                    <label class="control-label text-right col-md-3">DNI *</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="dni" placeholder="">
                                         <small class="form-control-feedback">8 numeros con este formato: 31267853
@@ -106,7 +106,7 @@
 
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Cod. Iva</label>
+                                    <label class="control-label text-right col-md-3">Cod. Iva *</label>
                                     <div class="col-md-9">
                                         <select formControlName="cod_iva" class="form-control"
                                             (change)="onSelectionChange($event)">
@@ -122,7 +122,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Ingresos Brutos</label>
+                                    <label class="control-label text-right col-md-3">Ingresos Brutos *</label>
                                     <div class="col-md-9">
                                         <select formControlName="ingresos_br" class="form-control">
                                             <option value="no" selected="true">No</option>

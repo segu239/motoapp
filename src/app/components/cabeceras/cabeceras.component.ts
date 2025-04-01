@@ -88,7 +88,7 @@ export class CabecerasComponent {
     this.clienteFromCuentaCorriente = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFromCuentaCorriente = JSON.parse(this.clienteFromCuentaCorriente);
     console.log(this.clienteFromCuentaCorriente);
-    let sucursal: string = localStorage.getItem('sucursal');
+    let sucursal: string = sessionStorage.getItem('sucursal');
     this._cargardata.cabecerax(sucursal, this.clienteFromCuentaCorriente.idcli).pipe(take(1)).subscribe((resp: any) => {
       console.log(resp);
       this.cabeceras = resp.mensaje;
@@ -104,17 +104,17 @@ export class CabecerasComponent {
     this.getVendedores();
     //-----------------------------------------------------
     //get clientes-----------------------------------------
-    this.cliente = JSON.parse(localStorage.getItem('datoscliente'));
+    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
     //-----------------------------------------------------
     //get sucursal-----------------------------------------
-    this.sucursal = localStorage.getItem('sucursal');
+    this.sucursal = sessionStorage.getItem('sucursal');
     //-----------------------------------------------------
     //get usuario-----------------------------------------
-    this.usuario = localStorage.getItem('sddggasdf');
+    this.usuario = sessionStorage.getItem('sddggasdf');
     //-----------------------------------------------------
   }
   getNombreSucursal() {
-    this.sucursal = localStorage.getItem('sucursal');
+    this.sucursal = sessionStorage.getItem('sucursal');
     if (this.sucursal == '1') {
       this.sucursalNombre = 'Casa Central';
     }
@@ -362,7 +362,7 @@ export class CabecerasComponent {
     let date = new Date();
     let fecha = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
     let hora = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();
-    let emailOp = localStorage.getItem('emailOp');
+    let emailOp = sessionStorage.getItem('emailOp');
     console.log(Number(this.numerocomprobantecabecera) + 1);
     let codtarj: number = 0;
     if (this.codTarj == "") {
@@ -758,7 +758,7 @@ export class CabecerasComponent {
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
-    let cliente = JSON.parse(localStorage.getItem('datoscliente'));
+    let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
     console.log(cliente);
     console.log(pagoCC);
     let numeroenPlabras = this.numeroAPalabras(totalImporte);

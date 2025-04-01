@@ -128,10 +128,10 @@ export class AnalisiscajaprodComponent {
     });
   }
   getClientes() {
-    //let sucursal: string = localStorage.getItem('sucursal');
-    let sucursal: string = localStorage.getItem('sucursal');
+    //let sucursal: string = sessionStorage.getItem('sucursal');
+    let sucursal: string = sessionStorage.getItem('sucursal');
     if (!sucursal) {
-    console.error('Sucursal no encontrada en localStorage');
+    console.error('Sucursal no encontrada en sessionStorage');
     // Mostrar notificación al usuario
     this.showNotification('Sucursal no encontrada. Por favor, inténtalo nuevamente.');
     return;
@@ -156,7 +156,7 @@ export class AnalisiscajaprodComponent {
     });
   }
 /*   getClientes() {
-    let sucursal: string = localStorage.getItem('sucursal');
+    let sucursal: string = sessionStorage.getItem('sucursal');
     this._cargardata.clisucx(sucursal).pipe(take(1)).subscribe((resp: any) => {
       console.log(resp);
       this.clientes = resp.mensaje;

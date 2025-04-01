@@ -14,8 +14,8 @@ export class PagesComponent implements OnInit {
   { 
   /*   this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp:any)=>{
       console.log(resp.mensaje);
-      localStorage.setItem('tarjetas', JSON.stringify(resp.mensaje));
-      localStorage.setItem('lastSelectedValue', JSON.stringify({'tarjeta':'EFECTIVO'}));
+      sessionStorage.setItem('tarjetas', JSON.stringify(resp.mensaje));
+      sessionStorage.setItem('lastSelectedValue', JSON.stringify({'tarjeta':'EFECTIVO'}));
     }); */  
   }
 

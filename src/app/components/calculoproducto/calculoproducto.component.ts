@@ -17,6 +17,7 @@ export class CalculoproductoComponent {
   public tipoVal: any;
   public codTarj: any
   public listaPrecio: any;
+  public tipoMoneda: string = '';
 
   public pedido: any = {
     'idart': 0,
@@ -68,6 +69,10 @@ export class CalculoproductoComponent {
     console.log("codTarj:" + JSON.stringify(this.codTarj));
     console.log("listaPrecio:" + JSON.stringify(this.listaPrecio));
 
+    if (this.producto.tipo_moneda) {
+      this.tipoMoneda = this.producto.tipo_moneda;
+    }
+
     //case dependiente de this.listaPrecio en caso de 0 this.producto.precon , si es 1 this.producto.prefi1 , si es 2 this.producto.prefi2, si es 3 this.producto.prefi3, si es 4 this.producto.prefi4
     switch (this.listaPrecio) {
       case "0":
@@ -115,7 +120,7 @@ export class CalculoproductoComponent {
 
   generarPedido() {
     // esto es para que se muestre en la factura , presupuesto, etc el nombre del cliente
-    localStorage.setItem('datoscliente', JSON.stringify(this.cliente));
+    sessionStorage.setItem('datoscliente', JSON.stringify(this.cliente));
     let date = new Date();
     let fecha = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
     let hora = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds();

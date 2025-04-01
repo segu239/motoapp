@@ -75,7 +75,7 @@ export class NewclienteComponent {
     {
       const ivaArray: string[] = ["", "Responsable Inscripto", "Consumidor Final", "Monotributo", "Excento"];
       let indexnuevocli: number = Math.floor((Math.random() * 9999999) + 10000);//genera un numero entre 10000 y 9999999 incluidos
-      let sucursal: any = localStorage.getItem('sucursal');
+      let sucursal: any = sessionStorage.getItem('sucursal');
       let nuevoclirandom: number = Math.floor((Math.random() * 99999) + 10000);
       let date = new Date();
       let fecha = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();//let fecha= date.getDate() + "/"+ (date.getMonth()+ 1) + "/" +date.getFullYear();

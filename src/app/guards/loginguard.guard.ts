@@ -14,7 +14,7 @@ export class LoginguardGuard implements CanActivate {
 constructor(private router:Router, private _login:LoginService, private _crypto: CryptoService){}
   canActivate(): boolean {
   
-    let a=localStorage.getItem('sddffasdf');
+    let a=sessionStorage.getItem('sddffasdf');
     a= this._crypto.decrypt(a);
     if(a== 'super' || a == "admin" || a=="user")
   {
@@ -35,7 +35,7 @@ constructor(private router:Router, private _login:LoginService, private _crypto:
    // this.promise().then((resp:any)=>{
    //   if (resp != "fallo")
    //   {
-   //     localStorage.setItem('logica',resp);
+   //     sessionStorage.setItem('logica',resp);
    //     return true;
    //   }
    //   else
@@ -46,7 +46,7 @@ constructor(private router:Router, private _login:LoginService, private _crypto:
    // return new Promise((resolve) => {
      // this._crud.getListSnap('configuraciones').pipe(take(1)).subscribe((resp:any)=>{
      //   let logica=resp[0].payload.val().positivoalto;
-     //   localStorage.setItem('logica',logica);
+     //   sessionStorage.setItem('logica',logica);
      //   resolve(true);
      //
      // }, (error)=>{resolve(false)});

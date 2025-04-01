@@ -19,8 +19,8 @@ export class CuentacorrienteComponent {
 
   constructor(private _cargardata: CargardataService, private _router: Router) { }
   ngOnInit(): void {
-    //let sucursal: string = localStorage.getItem('sucursal');
-    const sucursal: string | null = localStorage.getItem('sucursal');
+    //let sucursal: string = sessionStorage.getItem('sucursal');
+    const sucursal: string | null = sessionStorage.getItem('sucursal');
     if (sucursal) {
       this._cargardata.clisucx(sucursal).pipe(take(1)).subscribe((resp: any) => {
         console.log(resp);
@@ -31,7 +31,7 @@ export class CuentacorrienteComponent {
       });
     }
     else {
-      this.showNotification('Sucursal no encontrada en localStorage');//console.log('Sucursal no encontrada en localStorage');
+      this.showNotification('Sucursal no encontrada en sessionStorage');//console.log('Sucursal no encontrada en sessionStorage');
     }
   }
   selectCliente(cliente) {

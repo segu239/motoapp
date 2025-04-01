@@ -10,14 +10,14 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div *ngIf="this.nomartFlag" class="form-group row has-danger">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <label class="control-label text-right col-md-3">Nombre *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nomart" placeholder="">
                                         <small class="form-control-feedback">Máximo 80 caracteres</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.nomartFlag" class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre</label>
+                                    <label class="control-label text-right col-md-3">Nombre *</label>
                                     <div class="col-md-9">
                                         <input type="text" class="form-control" formControlName="nomart" placeholder="">
                                         <small class="form-control-feedback">Máximo 80 caracteres</small>
@@ -26,7 +26,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Marca</label>
+                                    <label class="control-label text-right col-md-3">Marca *</label>
                                     <div class="col-md-9">
                                         <select class="form-control" formControlName="marca">
                                             <option value="">Seleccione una Marca</option>
@@ -39,31 +39,30 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- Agregar después de la fila que contiene marca y antes de la fila con rubro -->
-<div class="row">
-    <div class="col-md-6">
-        <div class="form-group row">
-            <label class="control-label text-right col-md-3">Código Artículo</label>
-            <div class="col-md-9">
-                <input type="number" class="form-control" formControlName="cd_articulo" placeholder="">
-                <small class="form-control-feedback">Valor numérico entero (máx. 6 dígitos)</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="form-group row">
-            <label class="control-label text-right col-md-3">Código Depósito</label>
-            <div class="col-md-9">
-                <input type="number" class="form-control" formControlName="cod_deposito" placeholder="">
-                <small class="form-control-feedback">Valor numérico entero (máx. 2 dígitos)</small>
-            </div>
-        </div>
-    </div>
-</div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Rubro</label>
+                                    <label class="control-label text-right col-md-3">Código Artículo *</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="cd_articulo" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero (máx. 6 dígitos)</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Código Depósito *</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="cod_deposito" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero (máx. 2 dígitos)</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Rubro *</label>
                                     <div class="col-md-9">
                                         <select class="form-control" formControlName="rubro">
                                             <option value="">Seleccione un Rubro</option>
@@ -96,9 +95,9 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Precio Costo</label>
+                                    <label class="control-label text-right col-md-3">Precio Costo *</label>
                                     <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="">
+                                        <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="" [disabled]="true">
                                         <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
                                     </div>
                                 </div>
@@ -107,7 +106,7 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Precio Final 1</label>
                                     <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="prefi1" placeholder="">
+                                        <input type="number" step="0.01" class="form-control" formControlName="prefi1" placeholder="" [disabled]="true">
                                         <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
                                     </div>
                                 </div>
@@ -117,9 +116,51 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Precio Final 2</label>
+                                    <div class="col-md-9">
+                                        <input type="number" step="0.01" class="form-control" formControlName="prefi2" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Precio Final 3</label>
+                                    <div class="col-md-9">
+                                        <input type="number" step="0.01" class="form-control" formControlName="prefi3" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Precio Final 4</label>
+                                    <div class="col-md-9">
+                                        <input type="number" step="0.01" class="form-control" formControlName="prefi4" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Precio Base s/IVA</label>
                                     <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="">
+                                        <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Precio Costo s/IVA</label>
+                                    <div class="col-md-9">
+                                        <input type="number" step="0.01" class="form-control" formControlName="precostosi" placeholder="" [disabled]="true">
                                         <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
                                     </div>
                                 </div>
@@ -128,8 +169,34 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Margen</label>
                                     <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="margen" placeholder="">
+                                        <input type="number" step="0.01" class="form-control" formControlName="margen" placeholder="" [disabled]="true">
                                         <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Descuento</label>
+                                    <div class="col-md-9">
+                                        <input type="number" step="0.01" class="form-control" formControlName="descuento" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Tipo Moneda</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" formControlName="tipo_moneda" [disabled]="true">
+                                            <option value="">Seleccione un Tipo de Moneda</option>
+                                            <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
+                                                {{ moneda.moneda }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione el tipo de moneda</small>
                                     </div>
                                 </div>
                             </div>
@@ -147,9 +214,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stock Mín Suc1</label>
+                                    <label class="control-label text-right col-md-3">Existencia Suc2</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="stkmin1" placeholder="">
+                                        <input type="number" class="form-control" formControlName="exi2" placeholder="">
                                         <small class="form-control-feedback">Valor numérico entero</small>
                                     </div>
                                 </div>
@@ -159,6 +226,48 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Existencia Suc3</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="exi3" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Existencia Suc4</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="exi4" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Existencia Suc5</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="exi5" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Mín Suc1</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmin1" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Stock Máx Suc1</label>
                                     <div class="col-md-9">
                                         <input type="number" class="form-control" formControlName="stkmax1" placeholder="">
@@ -166,11 +275,164 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código IVA</label>
+                                    <label class="control-label text-right col-md-3">Stock Mín Suc2</label>
                                     <div class="col-md-9">
-                                        <select class="form-control" formControlName="cod_iva">
+                                        <input type="number" class="form-control" formControlName="stkmin2" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Máx Suc2</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmax2" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Mín Suc3</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmin3" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Máx Suc3</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmax3" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Mín Suc4</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmin4" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Máx Suc4</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmax4" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Mín Suc5</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmin5" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Máx Suc5</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkmax5" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Prep Suc1</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkprep1" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Prep Suc2</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkprep2" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Prep Suc3</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkprep3" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Prep Suc4</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkprep4" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Stock Prep Suc5</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="stkprep5" placeholder="">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Estado *</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" formControlName="estado" [disabled]="true">
+                                            <option [value]="'AC'">Activo</option>
+                                            <option [value]="'IN'">Inactivo</option>
+                                        </select>
+                                        <small class="form-control-feedback">Estado del artículo</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Código IVA *</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" formControlName="cod_iva" [disabled]="true">
                                             <option value="">Seleccione un Tipo de IVA</option>
                                             <option *ngFor="let iva of tiposIva" [value]="iva.cod_iva">
                                                 {{ iva.descripcion }}
@@ -185,27 +447,36 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Estado</label>
-                                    <div class="col-md-9">
-                                        <select class="form-control" formControlName="estado">
-                                            <option value="AC">Activo</option>
-                                            <option value="IN">Inactivo</option>
-                                        </select>
-                                        <small class="form-control-feedback">Estado del artículo</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Proveedor</label>
                                     <div class="col-md-9">
-                                        <select class="form-control" formControlName="cd_proveedor">
+                                        <select class="form-control" formControlName="cd_proveedor" [disabled]="true">
                                             <option value="">Seleccione un Proveedor</option>
                                             <option *ngFor="let proveedor of proveedores" [value]="proveedor.id_prov">
                                                 {{ proveedor.nombre }}
                                             </option>
                                         </select>
                                         <small class="form-control-feedback">Seleccione el proveedor</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">ID Artículo</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="idart" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">ID interno del artículo</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Artículo</label>
+                                    <div class="col-md-9">
+                                        <input type="number" class="form-control" formControlName="articulo" placeholder="" [disabled]="true">
+                                        <small class="form-control-feedback">Valor numérico entero</small>
                                     </div>
                                 </div>
                             </div>
