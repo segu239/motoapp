@@ -185,16 +185,34 @@ export class CondicionventaComponent {
         productos.forEach(producto => {
           // Verificar si el producto tiene un tipo de moneda
           if (producto.tipo_moneda) {
-            // Buscar el valor de cambio correspondiente al tipo de moneda
-            const valorCambio = this.valoresCambio.find(vc => vc.codmone === producto.tipo_moneda);
+            // Filtrar los valores de cambio para este tipo de moneda
+            const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
             
-            if (valorCambio && valorCambio.vcambio) {
-              // Aplicar el multiplicador a todos los precios
-              producto.precon = producto.precon * parseFloat(valorCambio.vcambio);
-              producto.prefi1 = producto.prefi1 * parseFloat(valorCambio.vcambio);
-              producto.prefi2 = producto.prefi2 * parseFloat(valorCambio.vcambio);
-              producto.prefi3 = producto.prefi3 * parseFloat(valorCambio.vcambio);
-              producto.prefi4 = producto.prefi4 * parseFloat(valorCambio.vcambio);
+            // Si hay valores de cambio para este tipo de moneda
+            if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
+              let valorCambioSeleccionado;
+              
+              // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+              if (valoresCambioMoneda.length > 1) {
+                // Ordenar por fecha descendente (más reciente primero)
+                valoresCambioMoneda.sort((a, b) => {
+                  const fechaA = new Date(a.fecdesde);
+                  const fechaB = new Date(b.fecdesde);
+                  return fechaB.getTime() - fechaA.getTime();
+                });
+              }
+              
+              // Tomar el primer valor (el más reciente después de ordenar)
+              valorCambioSeleccionado = valoresCambioMoneda[0];
+              
+              if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
+                // Aplicar el multiplicador a todos los precios
+                producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
+                producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
+                producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
+                producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
+                producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
+              }
             }
           }
         });

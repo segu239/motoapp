@@ -15,19 +15,31 @@ import Swal from 'sweetalert2';
 })
 export class PuntoventaComponent implements OnInit {
 
-  public clientes: Cliente[];
+  public clientes: Cliente[] = [];
   public clienteElejido: Cliente;
   constructor(private _cargardata: CargardataService, private _router: Router) { }
   ngOnInit(): void {
     let sucursal: string = sessionStorage.getItem('sucursal');
-    this._cargardata.clisucx(sucursal).pipe(take(1)).subscribe((resp: any) => {
-      console.log(resp);
-      this.clientes = resp.mensaje;
-    }, (err) => { 
-      this.showNotification('Error al cargar los clientes');
-      console.log(err);
-
-     });
+    if (!sucursal) {
+      this.showNotification('No se encontró la sucursal, porfavor cierre la sesión y vuelva a iniciar');
+      return;
+    }
+    this._cargardata.clisucx(sucursal).pipe(take(1)).subscribe({
+      next: (resp: any) => {
+        console.log('Respuesta del servicio:', resp);
+        if (resp && Array.isArray(resp.mensaje)) {
+          this.clientes = resp.mensaje;
+        } else {
+          this.clientes = [];
+          this.showNotification('No se encontraron clientes o el formato de respuesta no es válido');
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar clientes:', err);
+        this.clientes = [];
+        this.showNotification('Error al cargar los clientes');
+      }
+    });
   }
   selectCliente(cliente) {
     console.log(cliente);

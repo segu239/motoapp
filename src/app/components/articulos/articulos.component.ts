@@ -81,6 +81,7 @@ interface TipoMoneda {
 export class ArticulosComponent {
   
   public articulos: Articulo[] = [];
+  public articulosOriginal: Articulo[] = [];
   public valoresCambio: ValorCambio[] = [];
   public tiposMoneda: TipoMoneda[] = [];
   cols: Column[];
@@ -117,6 +118,7 @@ export class ArticulosComponent {
       { field: 'cd_proveedor', header: 'Proveedor' },
       { field: 'idart', header: 'ID Art' },
       { field: 'cod_iva', header: 'IVA' },
+      { field: 'precostosi', header: 'Costo s/IVA' },
       { field: 'margen', header: 'Margen' },
       { field: 'descuento', header: 'Descuento' },
       { field: 'tipo_moneda', header: 'Tipo Moneda' }
@@ -127,7 +129,10 @@ export class ArticulosComponent {
       this.cols[1], // nomart
       this.cols[2], // marca
       this.cols[3], // precon
-      this.cols[13], // cd_barra
+      this.cols[4], // prefi1 (precio1)
+      this.cols[5], // prefi2 (precio2)
+      this.cols[6], // prefi3 (precio3)
+      this.cols[7], // prefi4 (precio4)
       this.cols[14], // rubro
       this.cols[15]  // estado
     ];
@@ -218,6 +223,9 @@ export class ArticulosComponent {
     this.cargardataService.getArticulos().subscribe({
       next: (response: any) => {
         if (!response.error) {
+          // Guardar los artículos originales sin transformación
+          this.articulosOriginal = [...response.mensaje];
+          
           // Hacer una copia de los artículos originales
           let articulosConPrecios = [...response.mensaje];
           
@@ -289,20 +297,74 @@ export class ArticulosComponent {
       return 1;
     }
     
-    // Buscar el valor de cambio para esta moneda
-    const valorCambio = this.valoresCambio.find(vc => vc.codmone === codMoneda);
+    // Filtrar todos los valores de cambio para esta moneda
+    const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === codMoneda);
     
-    // Si existe un valor de cambio, devolver su multiplicador, si no, devolver 1
-    return valorCambio && valorCambio.vcambio ? parseFloat(valorCambio.vcambio.toString()) : 1;
+    // Si no hay valores para esta moneda, devolver 1
+    if (!valoresCambioMoneda || valoresCambioMoneda.length === 0) {
+      return 1;
+    }
+    
+    // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+    if (valoresCambioMoneda.length > 1) {
+      // Ordenar por fecha descendente (más reciente primero)
+      valoresCambioMoneda.sort((a, b) => {
+        const fechaA = new Date(a.fecdesde);
+        const fechaB = new Date(b.fecdesde);
+        return fechaB.getTime() - fechaA.getTime();
+      });
+    }
+    
+    // Tomar el primer valor (el más reciente después de ordenar)
+    const valorCambioSeleccionado = valoresCambioMoneda[0];
+    
+    // Devolver el valor de cambio o 1 si no está definido
+    return valorCambioSeleccionado && valorCambioSeleccionado.vcambio ? 
+      parseFloat(valorCambioSeleccionado.vcambio.toString()) : 1;
   }
 
   editArticulo(articulo: Articulo) {
-    // Navigate to edit page with articulo data
-    this.router.navigate(['components/editarticulo'], {
-      queryParams: {
-        articulo: JSON.stringify(articulo)
-      }
-    });
+    // Buscar el artículo original por ID en la lista de artículos originales
+    const articuloOriginal = this.articulosOriginal.find(a => a.id_articulo === articulo.id_articulo);
+    
+    if (articuloOriginal) {
+      // Si se encuentra, usar ese artículo original sin transformación
+      this.router.navigate(['components/editarticulo'], {
+        queryParams: {
+          articulo: JSON.stringify(articuloOriginal)
+        }
+      });
+    } else {
+      // Intentar obtener el artículo original de la API
+      this.cargardataService.getArticuloById(articulo.id_articulo).subscribe({
+        next: (response: any) => {
+          if (!response.error && response.mensaje) {
+            // Si la API devuelve datos, usar esos datos sin transformación
+            this.router.navigate(['components/editarticulo'], {
+              queryParams: {
+                articulo: JSON.stringify(response.mensaje)
+              }
+            });
+          } else {
+            // Como último recurso, usar el artículo con transformación
+            this.router.navigate(['components/editarticulo'], {
+              queryParams: {
+                articulo: JSON.stringify(articulo)
+              }
+            });
+          }
+        },
+        error: (error) => {
+          console.error('Error al obtener artículo por ID:', error);
+          // En caso de error, usar el artículo con transformación como último recurso
+          this.router.navigate(['components/editarticulo'], {
+            queryParams: {
+              articulo: JSON.stringify(articulo)
+            }
+          });
+        }
+      });
+    }
   }
 
   confirmDelete(articulo: Articulo) {

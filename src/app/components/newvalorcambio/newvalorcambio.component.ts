@@ -6,6 +6,13 @@ import { SubirdataService } from 'src/app/services/subirdata.service';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 
+interface TipoMoneda {
+  cod_mone: number;
+  moneda: string;
+  simbolo: string;
+  id_moneda: number;
+}
+
 @Component({
   selector: 'app-newvalorcambio',
   templateUrl: './newvalorcambio.component.html',
@@ -18,7 +25,7 @@ export class NewvalorcambioComponent {
   public fecDesdeFlag: boolean = false;
   public fecHastaFlag: boolean = false;
   public vCambioFlag: boolean = false;
-  public tiposMoneda: any[] = [];
+  public tiposMoneda: TipoMoneda[] = [];
 
   constructor(
     private subirdata: SubirdataService,
@@ -49,8 +56,7 @@ export class NewvalorcambioComponent {
   cargarForm() {
     this.valorCambioForm = this.fb.group({
       codmone: new FormControl('', Validators.compose([
-        Validators.required,
-        Validators.pattern(/^[0-9]{1,3}$/)
+        Validators.required
       ])),
       desvalor: new FormControl('', Validators.compose([
         Validators.required,
@@ -77,7 +83,7 @@ export class NewvalorcambioComponent {
       };
 
       let nuevoValorCambio = {
-        "codmone": form.value.codmone,
+        "codmone": Number(form.value.codmone),
         "desvalor": form.value.desvalor,
         "fecdesde": formatDate(form.value.fecdesde),
         "fechasta": formatDate(form.value.fechasta),

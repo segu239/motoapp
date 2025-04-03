@@ -18,6 +18,8 @@ export class EditconflistaComponent implements OnInit {
   private id_conflista: number = 0;
   public tiposMoneda: any[] = [];
   public marcas: any[] = [];
+  private originalPreciof21: number = 0;
+  private originalPreciof105: number = 0;
 
   constructor(
     private subirdata: SubirdataService,
@@ -28,9 +30,6 @@ export class EditconflistaComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-
-
-
     this.initForm(); // Initialize form first
     this.cargarTiposMoneda();
     this.cargarMarcas();
@@ -117,6 +116,10 @@ export class EditconflistaComponent implements OnInit {
           this.id_conflista = conflistaData.id_conflista;
           console.log('ID Conflista:', this.id_conflista);
           this.currentConflista = conflistaData;
+          // Guardar valores originales
+          this.originalPreciof21 = conflistaData.preciof21;
+          this.originalPreciof105 = conflistaData.preciof105;
+          
           console.log('Current Conflista Data:', this.currentConflista);
           console.log('Raw activa value from backend:', this.currentConflista.activa);
           console.log('Raw rmargen value from backend:', this.currentConflista.rmargen);
@@ -184,27 +187,37 @@ export class EditconflistaComponent implements OnInit {
   }
 
   onSubmit(): void {
-    
-      if (this.conflistaForm.valid) {
-        const conflistaData = {
-          id_conflista: this.id_conflista,
-          listap: this.conflistaForm.value.listap,
-          // Convert boolean values back to 't'/'f' for the API
-          activa: this.conflistaForm.value.activa ? 't' : 'f',
-          precosto21: this.conflistaForm.value.precosto21,
-          precosto105: this.conflistaForm.value.precosto105,
-          pordcto: this.conflistaForm.value.pordcto,
-          margen: this.conflistaForm.value.margen,
-          preciof21: this.conflistaForm.value.preciof21,
-          preciof105: this.conflistaForm.value.preciof105,
-          rmargen: this.conflistaForm.value.rmargen ? 't' : 'f',
-          tipomone: this.conflistaForm.value.tipomone,
-          actprov: this.conflistaForm.value.actprov ? 't' : 'f',
-          cod_marca: this.conflistaForm.value.cod_marca,
-          fecha: this.conflistaForm.value.fecha
-        };
+    if (this.conflistaForm.valid) {
+      const formValues = this.conflistaForm.value;
+      
+      // Verificar si se modificaron los precios
+      const preciof21Changed = formValues.preciof21 !== this.originalPreciof21;
+      const preciof105Changed = formValues.preciof105 !== this.originalPreciof105;
+      
+      const conflistaData = {
+        id_conflista: this.id_conflista,
+        listap: formValues.listap,
+        // Convert boolean values back to 't'/'f' for the API
+        activa: formValues.activa ? 't' : 'f',
+        precosto21: formValues.precosto21,
+        precosto105: formValues.precosto105,
+        pordcto: formValues.pordcto,
+        margen: formValues.margen,
+        preciof21: formValues.preciof21,
+        preciof105: formValues.preciof105,
+        rmargen: formValues.rmargen ? 't' : 'f',
+        tipomone: formValues.tipomone,
+        actprov: formValues.actprov ? 't' : 'f',
+        cod_marca: formValues.cod_marca,
+        fecha: formValues.fecha,
+        // Solo recalcular si se modificaron los precios
+        //recalcular_precios: preciof21Changed || preciof105Changed
+        recalcular_21: preciof21Changed,
+        recalcular_105: preciof105Changed
+      };
 
       this.subirdata.updateConflista(conflistaData).subscribe((response: any) => {
+        console.log('conflistaData:', conflistaData);
         Swal.fire({
           title: 'Actualizando...',
           timer: 300,
@@ -212,6 +225,8 @@ export class EditconflistaComponent implements OnInit {
             Swal.showLoading();
           }
         }).then((result) => {
+          console.log('result:', result);
+          console.log('response:', response);
           if (result.dismiss === Swal.DismissReason.timer) {
             Swal.fire({
               title: '¡Éxito!',

@@ -368,7 +368,9 @@ export class SubirdataService {
       "tipomone": conflista.tipomone,
       "actprov": conflista.actprov,
       "cod_marca": conflista.cod_marca,
-      "fecha": conflista.fecha
+      "fecha": conflista.fecha,
+      "recalcular_21": conflista.recalcular_21,
+      "recalcular_105": conflista.recalcular_105
     });
   }
   updateArticulo(articulo: any) {

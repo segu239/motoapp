@@ -12,14 +12,24 @@
                                 <div *ngIf="this.codMoneFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codmone" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico (máx. 3 dígitos)</small>
+                                        <select class="form-control" formControlName="codmone">
+                                            <option value="">Seleccione un tipo de moneda</option>
+                                            <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
+                                                {{ moneda.moneda }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione un tipo de moneda</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codMoneFlag" class="form-group row">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codmone" placeholder="">
+                                        <select class="form-control" formControlName="codmone">
+                                            <option value="">Seleccione un tipo de moneda</option>
+                                            <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
+                                                {{ moneda.moneda }}
+                                            </option>
+                                        </select>
                                     </div>
                                 </div>
                                 

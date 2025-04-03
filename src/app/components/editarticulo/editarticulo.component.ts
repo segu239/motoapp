@@ -28,7 +28,8 @@ export class EditarticuloComponent implements OnInit {
     'exi1', 'exi2', 'exi3', 'exi4', 'exi5',
     'stkmin1', 'stkmin2', 'stkmin3', 'stkmin4', 'stkmin5',
     'stkmax1', 'stkmax2', 'stkmax3', 'stkmax4', 'stkmax5',
-    'stkprep1', 'stkprep2', 'stkprep3', 'stkprep4', 'stkprep5'
+    'stkprep1', 'stkprep2', 'stkprep3', 'stkprep4', 'stkprep5',
+    'estado', 'idart', 'cd_proveedor', 'articulo'
   ];
 
   constructor(
@@ -89,14 +90,14 @@ export class EditarticuloComponent implements OnInit {
       stkmin5: new FormControl(0),
       stkmax5: new FormControl(0),
       stkprep5: new FormControl(0),
-      cd_proveedor: new FormControl({value: '', disabled: true}),
+      cd_proveedor: new FormControl(''),
       cd_barra: new FormControl('', Validators.compose([
         Validators.maxLength(13)
       ])),
-      idart: new FormControl({value: 0, disabled: true}),
-      estado: new FormControl({value: '', disabled: true}),
+      idart: new FormControl(0),
+      estado: new FormControl(''),
       rubro: new FormControl('', Validators.required),
-      articulo: new FormControl({value: 0, disabled: true}),
+      articulo: new FormControl(0),
       cod_iva: new FormControl({value: '', disabled: true}),
       prebsiva: new FormControl({value: 0, disabled: true}),
       precostosi: new FormControl({value: 0, disabled: true}),

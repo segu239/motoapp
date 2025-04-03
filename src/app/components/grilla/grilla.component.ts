@@ -164,11 +164,30 @@ export class GrillaComponent implements OnInit {
       return 1;
     }
     
-    // Buscar el valor de cambio para esta moneda
-    const valorCambio = this.valoresCambio.find(vc => vc.codmone === codMoneda);
+    // Filtrar todos los valores de cambio para esta moneda
+    const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === codMoneda);
     
-    // Si existe un valor de cambio, devolver su multiplicador, si no, devolver 1
-    return valorCambio && valorCambio.vcambio ? parseFloat(valorCambio.vcambio.toString()) : 1;
+    // Si no hay valores para esta moneda, devolver 1
+    if (!valoresCambioMoneda || valoresCambioMoneda.length === 0) {
+      return 1;
+    }
+    
+    // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+    if (valoresCambioMoneda.length > 1) {
+      // Ordenar por fecha descendente (más reciente primero)
+      valoresCambioMoneda.sort((a, b) => {
+        const fechaA = new Date(a.fecdesde);
+        const fechaB = new Date(b.fecdesde);
+        return fechaB.getTime() - fechaA.getTime();
+      });
+    }
+    
+    // Tomar el primer valor (el más reciente después de ordenar)
+    const valorCambioSeleccionado = valoresCambioMoneda[0];
+    
+    // Devolver el valor de cambio o 1 si no está definido
+    return valorCambioSeleccionado && valorCambioSeleccionado.vcambio ? 
+      parseFloat(valorCambioSeleccionado.vcambio.toString()) : 1;
   }
 
   obtenerNombreMoneda(codMoneda: number): string {

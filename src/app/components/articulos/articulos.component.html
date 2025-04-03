@@ -43,7 +43,7 @@
                         <tr>
                             <td *ngFor="let col of columns">
                                 <!-- Mostrar precios con formato numérico si el campo es un precio -->
-                                <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4'">
+                                <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4' || col.field === 'precostosi'">
                                     {{ articulo[col.field] | number:'1.2-2' }}
                                 </ng-container>
                                 
@@ -55,7 +55,7 @@
                                 </ng-container>
                                 
                                 <!-- Para otros campos, mostrar valor normal -->
-                                <ng-container *ngIf="col.field !== 'precon' && col.field !== 'prefi1' && col.field !== 'prefi2' && col.field !== 'prefi3' && col.field !== 'prefi4' && col.field !== 'tipo_moneda'">
+                                <ng-container *ngIf="col.field !== 'precon' && col.field !== 'prefi1' && col.field !== 'prefi2' && col.field !== 'prefi3' && col.field !== 'prefi4' && col.field !== 'tipo_moneda' && col.field !== 'precostosi'">
                                     {{ articulo[col.field] }}
                                 </ng-container>
                             </td>

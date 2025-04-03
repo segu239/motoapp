@@ -165,6 +165,7 @@ export const UrlProveedor ='https://motoapp.loclx.io/APIAND/index.php/Carga/Prov
 export const UrlTipoMoneda ='https://motoapp.loclx.io/APIAND/index.php/Carga/TipoMoneda';
 export const UrlValorCambio ='https://motoapp.loclx.io/APIAND/index.php/Carga/ValorCambio';
 export const UrlArticulos = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Articulos';
+export const UrlArticuloById = 'https://motoapp.loclx.io/APIAND/index.php/Carga/ArticuloById';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
 
