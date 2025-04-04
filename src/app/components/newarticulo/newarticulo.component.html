@@ -234,9 +234,9 @@
                                                     </option>
                                                 </select>
                                                 <small class="form-control-feedback">Seleccione el tipo de moneda</small>
-                                                <small class="form-text text-info mt-1">
+                                                <!-- <small class="form-text text-info mt-1">
                                                     <strong>Nota:</strong> El precio de costo estará expresado en la moneda seleccionada, mientras que el precio base sin IVA y el precio final siempre estarán en pesos.
-                                                </small>
+                                                </small> -->
                                                 <div *ngIf="infoTasaCambio" class="alert alert-info mt-2 p-1 small">
                                                     {{ infoTasaCambio }}
                                                 </div>
@@ -258,7 +258,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc1</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="">
+                                                <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -301,7 +301,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc2</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi2" placeholder="">
+                                                <input type="number" value="0" class="form-control" formControlName="exi2" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -344,7 +344,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc3</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi3" placeholder="">
+                                                <input type="number" value="0" class="form-control" formControlName="exi3" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -387,7 +387,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc4</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi4" placeholder="">
+                                                <input type="number" value="0" class="form-control" formControlName="exi4" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -430,7 +430,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc5</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi5" placeholder="">
+                                                <input type="number" value="0" class="form-control" formControlName="exi5" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>

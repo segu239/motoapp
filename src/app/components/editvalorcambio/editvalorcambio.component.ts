@@ -6,6 +6,18 @@ import { CargardataService } from '../../services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
+interface TipoMoneda {
+  cod_mone: number;
+  moneda: string;
+  simbolo: string;
+  id_moneda: number;
+}
+
+interface MonedaOption {
+  codmone: number;
+  desvalor: string;
+}
+
 @Component({
   selector: 'app-editvalorcambio',
   templateUrl: './editvalorcambio.component.html',
@@ -18,6 +30,9 @@ export class EditvalorcambioComponent implements OnInit {
   public vcambioFlag: boolean = false;
   public currentValorCambio: any = null;
   private id_valor: number = 0;
+  public monedaOptions: MonedaOption[] = [];
+  public tiposMoneda: TipoMoneda[] = [];
+  public valoresCambio: any[] = [];
 
   constructor(
     private subirdata: SubirdataService,
@@ -29,7 +44,79 @@ export class EditvalorcambioComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.loadTiposMoneda();
     this.loadValorCambioData();
+  }
+
+  loadTiposMoneda(): void {
+    this.cargardata.getTipoMoneda().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.tiposMoneda = response.mensaje;
+          console.log('Tipos de moneda cargados:', this.tiposMoneda);
+          
+          // Cargar todos los valores de cambio para obtener las descripciones
+          this.loadAllValoresCambio();
+        } else {
+          console.error('Error loading tipos de moneda:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+      }
+    });
+  }
+
+  loadAllValoresCambio(): void {
+    this.cargardata.getValorCambio().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.valoresCambio = response.mensaje;
+          
+          // Crear opciones combinando la info de tipos de moneda y valores de cambio
+          this.createMonedaOptions();
+        } else {
+          console.error('Error loading valores de cambio:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+      }
+    });
+  }
+
+  createMonedaOptions(): void {
+    // Crear un mapa para eliminar duplicados por codmone
+    const monedaMap = new Map<number, MonedaOption>();
+    
+    // Primero añadir todas las monedas de la tabla valoresCambio
+    this.valoresCambio.forEach(valor => {
+      if (!monedaMap.has(valor.codmone)) {
+        monedaMap.set(valor.codmone, {
+          codmone: valor.codmone,
+          desvalor: valor.desvalor.trim()
+        });
+      }
+    });
+    
+    // También añadir las monedas de tiposMoneda que no están en valoresCambio
+    this.tiposMoneda.forEach(moneda => {
+      if (!monedaMap.has(moneda.cod_mone)) {
+        monedaMap.set(moneda.cod_mone, {
+          codmone: moneda.cod_mone,
+          desvalor: moneda.moneda
+        });
+      }
+    });
+    
+    // Convertir el mapa a un array
+    this.monedaOptions = Array.from(monedaMap.values());
+    console.log('Opciones de moneda:', this.monedaOptions);
+    
+    // Si ya tenemos los datos del valor de cambio, actualizar el formulario
+    if (this.currentValorCambio) {
+      this.updateFormValues(this.currentValorCambio);
+    }
   }
 
   initForm(): void {
@@ -63,14 +150,28 @@ export class EditvalorcambioComponent implements OnInit {
           this.id_valor = valorcambioData.id_valor;
           console.log(this.id_valor);
           this.currentValorCambio = valorcambioData;
-          this.valorcambioForm.patchValue({
-            codmone: this.currentValorCambio.codmone,
-            desvalor: this.currentValorCambio.desvalor.trim(),
-            fecdesde: this.formatDate(this.currentValorCambio.fecdesde),
-            fechasta: this.formatDate(this.currentValorCambio.fechasta),
-            vcambio: this.currentValorCambio.vcambio,
-            id_valor: this.id_valor
-          });
+          
+          // Al cargar los datos, esperar a que monedaOptions esté disponible
+          if (this.monedaOptions.length > 0) {
+            this.updateFormValues(valorcambioData);
+          } else {
+            // Si aún no están disponibles, esperar a que se carguen
+            const checkInterval = setInterval(() => {
+              if (this.monedaOptions.length > 0) {
+                this.updateFormValues(valorcambioData);
+                clearInterval(checkInterval);
+              }
+            }, 300);
+            
+            // Por seguridad, limpiar el intervalo después de 5 segundos
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              // Si después de 5 segundos no hay opciones, cargar los datos sin el dropdown
+              if (this.monedaOptions.length === 0) {
+                this.updateFormWithoutOptions(valorcambioData);
+              }
+            }, 5000);
+          }
         } catch (error) {
           console.error('Error parsing valor cambio data:', error);
           Swal.fire({
@@ -81,6 +182,30 @@ export class EditvalorcambioComponent implements OnInit {
           });
         }
       }
+    });
+  }
+
+  updateFormValues(valorcambioData: any): void {
+    // Actualizar el formulario con los valores del objeto recibido
+    this.valorcambioForm.patchValue({
+      codmone: valorcambioData.codmone,
+      desvalor: valorcambioData.desvalor.trim(),
+      fecdesde: this.formatDate(valorcambioData.fecdesde),
+      fechasta: this.formatDate(valorcambioData.fechasta),
+      vcambio: valorcambioData.vcambio,
+      id_valor: this.id_valor
+    });
+  }
+
+  updateFormWithoutOptions(valorcambioData: any): void {
+    // Si no hay opciones en el dropdown, cargar los valores directamente
+    this.valorcambioForm.patchValue({
+      codmone: valorcambioData.codmone,
+      desvalor: valorcambioData.desvalor.trim(),
+      fecdesde: this.formatDate(valorcambioData.fecdesde),
+      fechasta: this.formatDate(valorcambioData.fechasta),
+      vcambio: valorcambioData.vcambio,
+      id_valor: this.id_valor
     });
   }
 

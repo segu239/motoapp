@@ -154,125 +154,75 @@
                                 <h4 class="mb-0"><i class="fa fa-money"></i> Información de Precios</h4>
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Final *</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="precostosi">Precio Costo s/IVA *</label>
+                                        <input type="number" class="form-control" id="precostosi" formControlName="precostosi" required
+                                            (change)="calcularDesdePrecoSinIva()" (input)="calcularDesdePrecoSinIva()">
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Final 1</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prefi1" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="descuento">Descuento *</label>
+                                        <input type="number" class="form-control" id="descuento" formControlName="descuento" required
+                                            (change)="calcularPrecioBase()" (input)="calcularPrecioBase()">
                                     </div>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Final 2</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prefi2" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="prebsiva">Precio Base s/IVA *</label>
+                                        <input type="number" class="form-control" id="prebsiva" formControlName="prebsiva" required
+                                            (change)="calcularPrecioFinal()" (input)="calcularPrecioFinal()">
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Final 3</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prefi3" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="margen">Margen *</label>
+                                        <input type="number" class="form-control" id="margen" formControlName="margen" required
+                                            (change)="calcularPrecioBase()" (input)="calcularPrecioBase()">
                                     </div>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Final 4</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prefi4" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="cod_iva">Código IVA *</label>
+                                        <select class="form-control" id="cod_iva" formControlName="cod_iva" required (change)="manejarCambioIva()">
+                                            <option value="">Seleccione un Tipo de IVA</option>
+                                            <option *ngFor="let iva of tiposIva" [value]="iva.cod_iva">
+                                                {{ iva.descripcion }}
+                                            </option>
+                                        </select>
                                     </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Base s/IVA</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Precio Costo s/IVA</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="precostosi" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Margen</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="margen" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="cod_mon">Tipo Moneda *</label>
+                                        <select class="form-control" id="cod_mon" formControlName="tipo_moneda" required>
+                                            <option value="">Seleccione un Tipo de Moneda</option>
+                                            <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
+                                                {{ moneda.moneda }}
+                                            </option>
+                                        </select>
                                     </div>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Descuento</label>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="descuento" placeholder="" [disabled]="true">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Código IVA *</label>
-                                            <div class="col-md-9">
-                                                <select class="form-control" formControlName="cod_iva" [disabled]="true">
-                                                    <option value="">Seleccione un Tipo de IVA</option>
-                                                    <option *ngFor="let iva of tiposIva" [value]="iva.cod_iva">
-                                                        {{ iva.descripcion }}
-                                                    </option>
-                                                </select>
-                                                <small class="form-control-feedback">Seleccione el tipo de IVA</small>
-                                            </div>
-                                        </div>
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="precon">Precio Final *</label>
+                                        <input type="number" class="form-control" id="precon" formControlName="precon" required
+                                            (change)="calcularPreciosSinIva()" (input)="calcularPreciosSinIva()">
                                     </div>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group row">
-                                            <label class="control-label text-right col-md-3">Tipo Moneda</label>
-                                            <div class="col-md-9">
-                                                <select class="form-control" formControlName="tipo_moneda" [disabled]="true">
-                                                    <option value="">Seleccione un Tipo de Moneda</option>
-                                                    <option *ngFor="let moneda of tiposMoneda" [value]="moneda.cod_mone">
-                                                        {{ moneda.moneda }}
-                                                    </option>
-                                                </select>
-                                                <small class="form-control-feedback">Seleccione el tipo de moneda</small>
-                                            </div>
-                                        </div>
+                                <hr>
+                                <h4>Precios de Lista</h4>
+                                <div class="form-row">
+                                    <div class="form-group col-md-3">
+                                        <label for="prefi1">Precio 1</label>
+                                        <input type="number" class="form-control" id="prefi1" formControlName="prefi1" readonly>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="prefi2">Precio 2</label>
+                                        <input type="number" class="form-control" id="prefi2" formControlName="prefi2" readonly>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="prefi3">Precio 3</label>
+                                        <input type="number" class="form-control" id="prefi3" formControlName="prefi3" readonly>
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label for="prefi4">Precio 4</label>
+                                        <input type="number" class="form-control" id="prefi4" formControlName="prefi4" readonly>
                                     </div>
                                 </div>
                             </div>
@@ -289,7 +239,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc1</label>
                                             <div class="col-md-9">
-                                                <input type="number" class="form-control" formControlName="exi1" placeholder="">
+                                                <input type="number" class="form-control" formControlName="exi1" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -298,7 +248,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc2</label>
                                             <div class="col-md-9">
-                                                <input type="number" class="form-control" formControlName="exi2" placeholder="">
+                                                <input type="number" class="form-control" formControlName="exi2" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -309,7 +259,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc3</label>
                                             <div class="col-md-9">
-                                                <input type="number" class="form-control" formControlName="exi3" placeholder="">
+                                                <input type="number" class="form-control" formControlName="exi3" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -318,7 +268,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc4</label>
                                             <div class="col-md-9">
-                                                <input type="number" class="form-control" formControlName="exi4" placeholder="">
+                                                <input type="number" class="form-control" formControlName="exi4" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -329,7 +279,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc5</label>
                                             <div class="col-md-9">
-                                                <input type="number" class="form-control" formControlName="exi5" placeholder="">
+                                                <input type="number" class="form-control" formControlName="exi5" placeholder="" readonly>
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -441,7 +391,7 @@
                                 </div>
                                 
                                 <hr class="mt-3">
-                                <h5 class="mb-3">Stock en Preparación</h5>
+                                <h5 class="mb-3">Stock Punto de Reposicion</h5>
                                 
                                 <div class="row">
                                     <div class="col-md-6">

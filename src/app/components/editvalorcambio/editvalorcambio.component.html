@@ -11,15 +11,21 @@
                                 <div *ngIf="this.codmoneFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codmone" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico (máx. 2 dígitos)</small>
+                                        <p-dropdown [options]="monedaOptions" formControlName="codmone" 
+                                            optionLabel="desvalor" optionValue="codmone" 
+                                            placeholder="Seleccione una moneda" styleClass="form-control w-100">
+                                        </p-dropdown>
+                                        <small class="form-control-feedback">Seleccione un tipo de moneda</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codmoneFlag" class="form-group row">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codmone" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico (máx. 2 dígitos)</small>
+                                        <p-dropdown [options]="monedaOptions" formControlName="codmone" 
+                                            optionLabel="desvalor" optionValue="codmone" 
+                                            placeholder="Seleccione una moneda" styleClass="form-control w-100">
+                                        </p-dropdown>
+                                        <small class="form-control-feedback">Seleccione un tipo de moneda</small>
                                     </div>
                                 </div>
                             </div>
