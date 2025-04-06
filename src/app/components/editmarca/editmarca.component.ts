@@ -56,8 +56,8 @@ export class EditmarcaComponent implements OnInit {
           console.log(this.id_marca);
           this.currentMarca = marcaData;
           this.marcaForm.patchValue({
-            cod_marca: this.currentMarca.cod_marca,
-            marca: this.currentMarca.marca
+            cod_marca: this.currentMarca.cod_marca.trim(),
+            marca: this.currentMarca.marca.trim()
           });
         } catch (error) {
           console.error('Error parsing marca data:', error);

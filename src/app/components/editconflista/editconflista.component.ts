@@ -158,6 +158,7 @@ export class EditconflistaComponent implements OnInit {
             this.conflistaForm.get('preciof105')?.setValue(this.currentConflista.preciof105);
             this.conflistaForm.get('rmargen')?.setValue(rmargenValue);
             this.conflistaForm.get('tipomone')?.setValue(this.currentConflista.tipomone);
+            this.conflistaForm.get('tipomone')?.disable();
             this.conflistaForm.get('actprov')?.setValue(actprovValue);
             this.conflistaForm.get('cod_marca')?.setValue(this.currentConflista.cod_marca ? this.currentConflista.cod_marca.trim() : '');
             this.conflistaForm.get('fecha')?.setValue(fechaStr);

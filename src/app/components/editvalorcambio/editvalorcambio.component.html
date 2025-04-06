@@ -11,21 +11,17 @@
                                 <div *ngIf="this.codmoneFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <p-dropdown [options]="monedaOptions" formControlName="codmone" 
-                                            optionLabel="desvalor" optionValue="codmone" 
-                                            placeholder="Seleccione una moneda" styleClass="form-control w-100">
-                                        </p-dropdown>
-                                        <small class="form-control-feedback">Seleccione un tipo de moneda</small>
+                                        <input type="text" class="form-control" [value]="getMonedaName(valorcambioForm.value.codmone)" readonly>
+                                        <input type="hidden" formControlName="codmone">
+                                        <small class="form-control-feedback">Tipo de moneda no editable</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codmoneFlag" class="form-group row">
                                     <label class="control-label text-right col-md-3">Código Moneda *</label>
                                     <div class="col-md-9">
-                                        <p-dropdown [options]="monedaOptions" formControlName="codmone" 
-                                            optionLabel="desvalor" optionValue="codmone" 
-                                            placeholder="Seleccione una moneda" styleClass="form-control w-100">
-                                        </p-dropdown>
-                                        <small class="form-control-feedback">Seleccione un tipo de moneda</small>
+                                        <input type="text" class="form-control" [value]="getMonedaName(valorcambioForm.value.codmone)" readonly>
+                                        <input type="hidden" formControlName="codmone">
+                                        <small class="form-control-feedback">Tipo de moneda no editable</small>
                                     </div>
                                 </div>
                             </div>

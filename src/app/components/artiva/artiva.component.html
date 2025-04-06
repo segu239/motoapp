@@ -32,7 +32,7 @@
                             <th pSortableColumn="tipo_ali_3">Tipo Ali 3<p-sortIcon field="tipo_ali_3"></p-sortIcon></th>
                             <th pSortableColumn="alicuota3">Alícuota 3<p-sortIcon field="alicuota3"></p-sortIcon></th>
                             <th pSortableColumn="cuit">CUIT<p-sortIcon field="cuit"></p-sortIcon></th>
-                            <th>Editar</th>
+                            <!-- <th>Editar</th> -->
                             <th>Eliminar</th>
                         </tr>
                     </ng-template>
@@ -49,10 +49,10 @@
                             <td>{{ iva.tipo_ali_3 }}</td>
                             <td>{{ iva.alicuota3 }}</td>
                             <td>{{ iva.cuit ? 'TRUE' : 'FALSE' }}</td>
-                            <td>
+                          <!--   <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
                                     (click)="editIva(iva)"></p-button>
-                            </td>
+                            </td> -->
                             <td>
                                 <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
                                 (click)="confirmDelete(iva)"></p-button>

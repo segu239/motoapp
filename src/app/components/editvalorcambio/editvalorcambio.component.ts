@@ -89,24 +89,12 @@ export class EditvalorcambioComponent implements OnInit {
     // Crear un mapa para eliminar duplicados por codmone
     const monedaMap = new Map<number, MonedaOption>();
     
-    // Primero añadir todas las monedas de la tabla valoresCambio
-    this.valoresCambio.forEach(valor => {
-      if (!monedaMap.has(valor.codmone)) {
-        monedaMap.set(valor.codmone, {
-          codmone: valor.codmone,
-          desvalor: valor.desvalor.trim()
-        });
-      }
-    });
-    
-    // También añadir las monedas de tiposMoneda que no están en valoresCambio
+    // Mapear los tipos de moneda para mostrar correctamente
     this.tiposMoneda.forEach(moneda => {
-      if (!monedaMap.has(moneda.cod_mone)) {
-        monedaMap.set(moneda.cod_mone, {
-          codmone: moneda.cod_mone,
-          desvalor: moneda.moneda
-        });
-      }
+      monedaMap.set(moneda.cod_mone, {
+        codmone: moneda.cod_mone,
+        desvalor: moneda.moneda // Usar moneda en lugar de desvalor
+      });
     });
     
     // Convertir el mapa a un array
@@ -289,5 +277,11 @@ export class EditvalorcambioComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  getMonedaName(codmone: number): string {
+    // Buscar la moneda por su código y devolver la descripción
+    const moneda = this.tiposMoneda.find(m => m.cod_mone === codmone);
+    return moneda ? moneda.moneda : '';
   }
 }

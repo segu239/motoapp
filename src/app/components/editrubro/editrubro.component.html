@@ -11,14 +11,14 @@
                                 <div *ngIf="this.codigoFlag" class="form-group row has-danger">
                                     <label class="control-label text-right col-md-3">Código *</label>
                                     <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="cod_rubro" placeholder="">
+                                        <input type="text" class="form-control" formControlName="cod_rubro" placeholder="" readonly>
                                         <small class="form-control-feedback">Máximo 4 caracteres alfanuméricos</small>
                                     </div>
                                 </div>
                                 <div *ngIf="!this.codigoFlag" class="form-group row">
                                     <label class="control-label text-right col-md-3">Código *</label>
                                     <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="cod_rubro" placeholder="">
+                                        <input type="text" class="form-control" formControlName="cod_rubro" placeholder="" readonly>
                                         <small class="form-control-feedback">Máximo 4 caracteres alfanuméricos</small>
                                     </div>
                                 </div>
