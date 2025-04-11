@@ -16,6 +16,15 @@ export class NewconflistaComponent {
   public listapFlag: boolean = false;
   public tiposMoneda: any[] = [];
   public marcas: any[] = [];
+  public tipomoneFlag: boolean = false;
+  public cod_marcaFlag: boolean = false;
+  public fechaFlag: boolean = false;
+  public precosto21Flag: boolean = false;
+  public precosto105Flag: boolean = false;
+  public pordctoFlag: boolean = false;
+  public margenFlag: boolean = false;
+  public preciof21Flag: boolean = false;
+  public preciof105Flag: boolean = false;
 
   constructor(
     private subirdata: SubirdataService, 
@@ -117,7 +126,25 @@ export class NewconflistaComponent {
         })
       });
     } else {
-      this.monitorFormChanges();
+      // Marcar todos los campos como tocados para mostrar errores
+      Object.keys(form.controls).forEach(key => {
+        const control = form.get(key);
+        control?.markAsTouched();
+        control?.markAsDirty();
+      });
+      
+      // Actualizar todas las banderas de validación
+      this.listapFlag = this.nuevoconflistaForm.controls['listap'].invalid;
+      this.tipomoneFlag = this.nuevoconflistaForm.controls['tipomone'].invalid;
+      this.cod_marcaFlag = this.nuevoconflistaForm.controls['cod_marca'].invalid;
+      this.fechaFlag = this.nuevoconflistaForm.controls['fecha'].invalid;
+      this.precosto21Flag = this.nuevoconflistaForm.controls['precosto21'].invalid;
+      this.precosto105Flag = this.nuevoconflistaForm.controls['precosto105'].invalid;
+      this.pordctoFlag = this.nuevoconflistaForm.controls['pordcto'].invalid;
+      this.margenFlag = this.nuevoconflistaForm.controls['margen'].invalid;
+      this.preciof21Flag = this.nuevoconflistaForm.controls['preciof21'].invalid;
+      this.preciof105Flag = this.nuevoconflistaForm.controls['preciof105'].invalid;
+      
       console.log(form.errors);
       Swal.fire({
         title: 'ERROR',
@@ -128,10 +155,6 @@ export class NewconflistaComponent {
         cancelButtonColor: '#d33',
         confirmButtonText: 'OK',
       });
-
-      for (const control in form.controls) {
-        form.get(control)?.markAsTouched();
-      }
     }
   }
 
@@ -141,6 +164,15 @@ export class NewconflistaComponent {
       control?.valueChanges.pipe(debounceTime(1000)).subscribe(value => {
         console.log(`El campo ${field} cambió a: `, value);
         this.listapFlag = this.nuevoconflistaForm.controls['listap'].invalid;
+        this.tipomoneFlag = this.nuevoconflistaForm.controls['tipomone'].invalid;
+        this.cod_marcaFlag = this.nuevoconflistaForm.controls['cod_marca'].invalid;
+        this.fechaFlag = this.nuevoconflistaForm.controls['fecha'].invalid;
+        this.precosto21Flag = this.nuevoconflistaForm.controls['precosto21'].invalid;
+        this.precosto105Flag = this.nuevoconflistaForm.controls['precosto105'].invalid;
+        this.pordctoFlag = this.nuevoconflistaForm.controls['pordcto'].invalid;
+        this.margenFlag = this.nuevoconflistaForm.controls['margen'].invalid;
+        this.preciof21Flag = this.nuevoconflistaForm.controls['preciof21'].invalid;
+        this.preciof105Flag = this.nuevoconflistaForm.controls['preciof105'].invalid;
       });
     });
   }

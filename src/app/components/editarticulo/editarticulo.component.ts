@@ -21,6 +21,7 @@ export class EditarticuloComponent implements OnInit {
   public tiposIva: any;
   public proveedores: any;
   public tiposMoneda: any;
+  public confLista: any;
   private id_articulo: number = 0;
   // Lista de campos editables e inmodificables
   private camposEditables = [
@@ -49,12 +50,19 @@ export class EditarticuloComponent implements OnInit {
 
   ngOnInit(): void {
     this.initForm();
+    this.route.queryParams.subscribe(params => {
+      if (params['articulo']) {
+        this.currentArticulo = JSON.parse(params['articulo']);
+        this.id_articulo = this.currentArticulo.id_articulo;
+        this.loadArticuloData();
+      }
+    });
     this.cargarRubros();
     this.cargarMarcas();
     this.cargarTiposIva();
     this.cargarProveedores();
     this.cargarTiposMoneda();
-    this.loadArticuloData();
+    this.cargarConfLista();
     this.setupFormListeners();
   }
 
@@ -125,6 +133,74 @@ export class EditarticuloComponent implements OnInit {
     
     this.articuloForm.get('cd_barra')?.valueChanges.subscribe(() => {
       this.cd_barraFlag = this.articuloForm.controls['cd_barra'].invalid;
+    });
+
+    // Monitorear cambios en margen y descuento para actualizar precio final
+    this.articuloForm.get('margen')?.valueChanges.subscribe((value) => {
+      // No verificamos calculando aquí para forzar el cálculo
+      console.log('Valor de margen cambiado a:', value, 'forzando recálculo completo...');
+      // Guardamos temporalmente el estado actual de calculando
+      const calculandoTemp = this.calculando;
+      // Forzamos calculando a false para permitir el cálculo
+      this.calculando = false;
+      // Calculamos el precio base, que a su vez calculará el precio final
+      this.calcularPrecioBase();
+      // Restauramos el estado previo de calculando
+      this.calculando = calculandoTemp;
+    });
+    
+    this.articuloForm.get('descuento')?.valueChanges.subscribe((value) => {
+      // No verificamos calculando aquí para forzar el cálculo
+      console.log('Valor de descuento cambiado a:', value, 'forzando recálculo completo...');
+      // Guardamos temporalmente el estado actual de calculando
+      const calculandoTemp = this.calculando;
+      // Forzamos calculando a false para permitir el cálculo
+      this.calculando = false;
+      // Calculamos el precio base, que a su vez calculará el precio final
+      this.calcularPrecioBase();
+      // Restauramos el estado previo de calculando
+      this.calculando = calculandoTemp;
+    });
+    
+    // Monitorear cambios en precio costo sin IVA
+    this.articuloForm.get('precostosi')?.valueChanges.subscribe(() => {
+      if (!this.calculando) {
+        console.log('Valor de precio costo cambiado, recalculando precios...');
+        this.calcularDesdePrecoSinIva();
+      }
+    });
+    
+    // Monitorear cambios en el precio base sin IVA
+    this.articuloForm.get('prebsiva')?.valueChanges.subscribe(() => {
+      if (!this.calculando) {
+        console.log('Valor de precio base cambiado, recalculando precios...');
+        this.calcularPrecioFinal();
+      }
+    });
+    
+    // Monitorear cambios en precio final
+    this.articuloForm.get('precon')?.valueChanges.subscribe(() => {
+      if (!this.calculando) {
+        console.log('Valor de precio final cambiado, recalculando precios...');
+        this.calcularPreciosSinIva();
+      }
+    });
+    
+    // Monitorear cambios en IVA
+    this.articuloForm.get('cod_iva')?.valueChanges.subscribe(() => {
+      if (!this.calculando) {
+        console.log('Valor de IVA cambiado, actualizando precios...');
+        this.manejarCambioIva();
+      }
+    });
+
+    // Monitorear tipo de moneda
+    this.articuloForm.get('tipo_moneda')?.valueChanges.subscribe(() => {
+      if (!this.calculando) {
+        console.log('Tipo de moneda cambiado, recalculando precios de lista...');
+        // Solo recalcular los precios de lista ya que la moneda no afecta los otros cálculos
+        this.calcularPreciosLista();
+      }
     });
   }
 
@@ -203,6 +279,22 @@ export class EditarticuloComponent implements OnInit {
           this.tiposMoneda = response.mensaje;
         } else {
           console.error('Error loading tipos moneda:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+      }
+    });
+  }
+
+  cargarConfLista() {
+    this.cargardata.getConflista().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.confLista = response.mensaje;
+          console.log('Configuración de listas cargada:', this.confLista);
+        } else {
+          console.error('Error loading conf_lista:', response.mensaje);
         }
       },
       error: (error) => {
@@ -549,8 +641,9 @@ export class EditarticuloComponent implements OnInit {
   }
   
   calcularPrecioBase() {
-    if (this.calculando) return;
-    this.calculando = true;
+    console.log('Iniciando calcularPrecioBase...');
+    // No usamos la bandera calculando para este método crítico
+    // Esto asegura que siempre se ejecute aunque estemos en medio de otro cálculo
     
     try {
       const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 100) / 100;
@@ -558,9 +651,11 @@ export class EditarticuloComponent implements OnInit {
       const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 100) / 100;
       
       console.log('CALCULAR PRECIO BASE | Precio Costo:', precioSinIva);
+      console.log('Margen:', margenPorcentaje, '% | Descuento:', descuentoPorcentaje, '%');
       
       // Verificar si el precio costo es 0
       if (precioSinIva <= 0) {
+        console.log('Precio costo es 0 o negativo, estableciendo precios a 0');
         this.articuloForm.get('prebsiva')?.setValue(0, {emitEvent: false});
         this.articuloForm.get('precon')?.setValue(0, {emitEvent: false});
         this.calcularPreciosLista();
@@ -571,21 +666,45 @@ export class EditarticuloComponent implements OnInit {
       let precioConDescuento = precioSinIva;
       if (descuentoPorcentaje > 0) {
         precioConDescuento = precioSinIva * (1 - (descuentoPorcentaje / 100));
+        precioConDescuento = Math.round(precioConDescuento * 100) / 100;
+        console.log('Precio con descuento aplicado:', precioConDescuento);
       }
       
       // Aplicar margen al precio con descuento
       let precioBase = precioConDescuento;
       if (margenPorcentaje > 0) {
         precioBase = precioConDescuento * (1 + (margenPorcentaje / 100));
+        precioBase = Math.round(precioBase * 100) / 100;
+        console.log('Precio base con margen aplicado:', precioBase);
       }
       
-      console.log('Precio base calculado:', precioBase);
-      this.articuloForm.get('prebsiva')?.setValue(Math.round(precioBase * 100) / 100, {emitEvent: false});
+      console.log('Precio base calculado final:', precioBase);
+      this.articuloForm.get('prebsiva')?.setValue(precioBase, {emitEvent: false});
       
-      // Recalcular precio final
-      this.calcularPrecioFinal();
-    } finally {
-      this.calculando = false;
+      // Ahora calculamos el precio final directamente aquí en lugar de llamar a otro método
+      // Esto asegura que el cálculo completo se realiza sin interrupciones
+      const codIva = this.articuloForm.get('cod_iva')?.value;
+      const porcentajeIva = this.obtenerPorcentajeIva(codIva);
+      
+      console.log('Aplicando IVA al precio base. Porcentaje:', porcentajeIva, '%');
+      
+      // Aplicar IVA para obtener el precio final
+      let precioFinal = precioBase;
+      if (porcentajeIva > 0) {
+        precioFinal = precioBase * (1 + (porcentajeIva / 100));
+        precioFinal = Math.round(precioFinal * 100) / 100;
+        console.log('Cálculo del precio final: ', precioBase, ' * (1 + (', porcentajeIva, '/ 100)) = ', precioFinal);
+      }
+      
+      console.log('Precio final calculado:', precioFinal);
+      this.articuloForm.get('precon')?.setValue(precioFinal, {emitEvent: false});
+      
+      // Calcular precios de lista directamente
+      this.calcularPreciosLista();
+      
+      console.log('Cálculo completo finalizado con éxito');
+    } catch (error) {
+      console.error('Error en calcularPrecioBase:', error);
     }
   }
   
@@ -678,62 +797,31 @@ export class EditarticuloComponent implements OnInit {
   }
   
   private obtenerPorcentajeIva(codIva: string): number {
-    let porcentajeIva = 21; // Valor por defecto
+    if (!codIva) return 0;
     
-    // Si es EXENTO (código 5 según la imagen), retornar 0%
-    if (codIva === '5') {
-      console.log(`IVA seleccionado: ${codIva}, EXENTO - Alícuota: 0%`);
+    // Obtener el porcentaje de IVA según el código seleccionado
+    // Buscamos en los tipos de IVA cargados
+    if (!this.tiposIva || this.tiposIva.length === 0) {
+      console.log('No hay tipos de IVA disponibles');
       return 0;
     }
     
-    if (codIva && this.tiposIva) {
-      // Imprimir todos los tipos de IVA para debug
-      console.log('Tipos de IVA disponibles:', this.tiposIva);
+    const tipoIva = this.tiposIva.find((iva: any) => iva.cod_iva === codIva);
+    if (tipoIva) {
+      // Algunos tipos de IVA comunes
+      if (tipoIva.descripcion.includes('21')) return 21;
+      if (tipoIva.descripcion.includes('10.5')) return 10.5;
+      if (tipoIva.descripcion.toLowerCase().includes('exento')) return 0;
       
-      const tipoIva = this.tiposIva.find((iva: any) => iva.cod_iva === codIva);
-      if (tipoIva) {
-        console.log('Tipo IVA encontrado completo:', tipoIva);
-        
-        // Verificar la descripción para EXENTO
-        if (tipoIva.descripcion && tipoIva.descripcion.toUpperCase().includes('EXENTO')) {
-          console.log(`IVA seleccionado: ${codIva}, EXENTO por descripción - Alícuota: 0%`);
-          return 0;
-        }
-        
-        // Verificar explícitamente si es 10.5%
-        if (tipoIva.descripcion && tipoIva.descripcion.includes('10,5')) {
-          console.log(`IVA seleccionado: ${codIva}, identificado como 10.5% por descripción`);
-          return 10.5;
-        }
-        
-        // Usar el campo alicuota1 o porcentaje, asegurando que se procesen como números
-        if (tipoIva.alicuota1 !== undefined) {
-          // Convertir posibles formatos con coma a punto
-          const alicuotaStr = String(tipoIva.alicuota1).replace(',', '.');
-          porcentajeIva = parseFloat(alicuotaStr) || 21;
-          console.log(`Porcentaje IVA desde alicuota1: ${alicuotaStr} -> ${porcentajeIva}`);
-        } else if (tipoIva.porcentaje !== undefined) {
-          // Convertir posibles formatos con coma a punto
-          const porcentajeStr = String(tipoIva.porcentaje).replace(',', '.');
-          porcentajeIva = parseFloat(porcentajeStr) || 21;
-          console.log(`Porcentaje IVA desde porcentaje: ${porcentajeStr} -> ${porcentajeIva}`);
-        }
-        
-        // Si la alícuota es 0 o muy pequeña, podría ser EXENTO
-        if (porcentajeIva <= 0.01) {
-          console.log(`IVA seleccionado: ${codIva}, alícuota 0 - Posiblemente EXENTO`);
-          return 0;
-        }
-        
-        console.log(`IVA seleccionado: ${codIva}, Alícuota final: ${porcentajeIva}%`);
-      } else {
-        console.log(`Tipo de IVA no encontrado para el código: ${codIva}, usando valor por defecto: ${porcentajeIva}%`);
+      // Para cualquier otro caso, intentar extraer un número de la descripción
+      const match = tipoIva.descripcion.match(/(\d+(\.\d+)?)/);
+      if (match) {
+        return parseFloat(match[0]);
       }
-    } else {
-      console.log("No hay tiposIva cargados o no se proporcionó codIva, usando valor por defecto:", porcentajeIva);
     }
     
-    return porcentajeIva;
+    console.log(`No se pudo determinar el porcentaje para el código de IVA: ${codIva}`);
+    return 0;
   }
   
   forzarCalculosCompletos(): void {
@@ -768,9 +856,33 @@ export class EditarticuloComponent implements OnInit {
   }
   
   calcularPreciosLista(): void {
-    const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 100) / 100;
+    if (!this.confLista || this.confLista.length === 0) {
+      console.log('confLista no disponible, usando cálculo fijo alternativo');
+      // Usar cálculo fijo como fallback
+      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 100) / 100;
+      
+      if (precon <= 0) {
+        this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
+        this.articuloForm.get('prefi2')?.setValue(0, {emitEvent: false});
+        this.articuloForm.get('prefi3')?.setValue(0, {emitEvent: false});
+        this.articuloForm.get('prefi4')?.setValue(0, {emitEvent: false});
+        return;
+      }
+      
+      // Cálculo alternativo (sin confLista)
+      this.articuloForm.get('prefi1')?.setValue(precon * 1.05, {emitEvent: false});
+      this.articuloForm.get('prefi2')?.setValue(precon * 1.10, {emitEvent: false});
+      this.articuloForm.get('prefi3')?.setValue(precon * 1.15, {emitEvent: false});
+      this.articuloForm.get('prefi4')?.setValue(precon * 1.20, {emitEvent: false});
+      return;
+    }
+    
+    const precon = parseFloat(this.articuloForm.get('precon')?.value || 0);
+    const codIva = this.articuloForm.get('cod_iva')?.value;
+    const tipoMoneda = parseInt(this.articuloForm.get('tipo_moneda')?.value) || 1;
     
     if (precon <= 0) {
+      console.log('Precio final es 0 o negativo, no se calculan precios de lista');
       this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
       this.articuloForm.get('prefi2')?.setValue(0, {emitEvent: false});
       this.articuloForm.get('prefi3')?.setValue(0, {emitEvent: false});
@@ -778,15 +890,93 @@ export class EditarticuloComponent implements OnInit {
       return;
     }
     
-    // Calcular los precios de lista con los porcentajes fijos
-    const prefi1 = Math.round(precon * 0.95 * 100) / 100;
-    const prefi2 = Math.round(precon * 0.90 * 100) / 100;
-    const prefi3 = Math.round(precon * 0.85 * 100) / 100;
-    const prefi4 = Math.round(precon * 0.80 * 100) / 100;
+    // Verificar primero si es IVA EXENTO (código 5)
+    let esExento = (codIva === '5');
     
-    this.articuloForm.get('prefi1')?.setValue(prefi1, {emitEvent: false});
-    this.articuloForm.get('prefi2')?.setValue(prefi2, {emitEvent: false});
-    this.articuloForm.get('prefi3')?.setValue(prefi3, {emitEvent: false});
-    this.articuloForm.get('prefi4')?.setValue(prefi4, {emitEvent: false});
+    // Obtener el porcentaje de IVA
+    const porcentajeIva = this.obtenerPorcentajeIva(codIva);
+    console.log('calcularPreciosLista - Porcentaje IVA:', porcentajeIva);
+    console.log('calcularPreciosLista - Tipo de Moneda:', tipoMoneda);
+    
+    // Si el porcentaje es 0, podría ser EXENTO
+    if (porcentajeIva <= 0.01) {
+      esExento = true;
+      console.log('Tratando como EXENTO para cálculos de lista');
+    }
+    
+    // Determinar qué columna de porcentaje usar según el IVA
+    // Si es EXENTO se usa la columna para IVA 10.5%
+    const usarPreciof21 = !esExento && (porcentajeIva === 21);
+    console.log('Usando precios para IVA 21%:', usarPreciof21);
+    
+    // Buscar registros para cada lista considerando también el tipo de moneda
+    const lista1 = this.confLista.find((item: any) => 
+      parseInt(item.listap) === 1 && parseInt(item.tipomone) === tipoMoneda
+    );
+    const lista2 = this.confLista.find((item: any) => 
+      parseInt(item.listap) === 2 && parseInt(item.tipomone) === tipoMoneda
+    );
+    const lista3 = this.confLista.find((item: any) => 
+      parseInt(item.listap) === 3 && parseInt(item.tipomone) === tipoMoneda
+    );
+    const lista4 = this.confLista.find((item: any) => 
+      parseInt(item.listap) === 4 && parseInt(item.tipomone) === tipoMoneda
+    );
+    
+    console.log('Precio final para cálculos:', precon);
+    console.log('Configuraciones encontradas según moneda:', 
+      { lista1: !!lista1, lista2: !!lista2, lista3: !!lista3, lista4: !!lista4 });
+    
+    // Calcular prefi1
+    if (lista1) {
+      const porcentaje = usarPreciof21 ? 
+                          parseFloat(lista1.preciof21) : 
+                          parseFloat(lista1.preciof105);
+      const valorPrefi1 = precon + (precon * porcentaje / 100);
+      this.articuloForm.get('prefi1')?.setValue(Math.round(valorPrefi1 * 100) / 100, {emitEvent: false});
+      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(2)}`);
+    } else {
+      console.log('No se encontró configuración para Lista 1 con la moneda seleccionada');
+      this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
+    }
+    
+    // Calcular prefi2
+    if (lista2) {
+      const porcentaje = usarPreciof21 ? 
+                          parseFloat(lista2.preciof21) : 
+                          parseFloat(lista2.preciof105);
+      const valorPrefi2 = precon + (precon * porcentaje / 100);
+      this.articuloForm.get('prefi2')?.setValue(Math.round(valorPrefi2 * 100) / 100, {emitEvent: false});
+      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(2)}`);
+    } else {
+      console.log('No se encontró configuración para Lista 2 con la moneda seleccionada');
+      this.articuloForm.get('prefi2')?.setValue(0, {emitEvent: false});
+    }
+    
+    // Calcular prefi3
+    if (lista3) {
+      const porcentaje = usarPreciof21 ? 
+                          parseFloat(lista3.preciof21) : 
+                          parseFloat(lista3.preciof105);
+      const valorPrefi3 = precon + (precon * porcentaje / 100);
+      this.articuloForm.get('prefi3')?.setValue(Math.round(valorPrefi3 * 100) / 100, {emitEvent: false});
+      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(2)}`);
+    } else {
+      console.log('No se encontró configuración para Lista 3 con la moneda seleccionada');
+      this.articuloForm.get('prefi3')?.setValue(0, {emitEvent: false});
+    }
+    
+    // Calcular prefi4
+    if (lista4) {
+      const porcentaje = usarPreciof21 ? 
+                          parseFloat(lista4.preciof21) : 
+                          parseFloat(lista4.preciof105);
+      const valorPrefi4 = precon + (precon * porcentaje / 100);
+      this.articuloForm.get('prefi4')?.setValue(Math.round(valorPrefi4 * 100) / 100, {emitEvent: false});
+      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(2)}`);
+    } else {
+      console.log('No se encontró configuración para Lista 4 con la moneda seleccionada');
+      this.articuloForm.get('prefi4')?.setValue(0, {emitEvent: false});
+    }
   }
 }

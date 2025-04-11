@@ -17,6 +17,12 @@ export class NewarticuloComponent implements AfterViewInit {
   public cd_barraFlag: boolean = false;
   public cd_articuloFlag: boolean = false;
   public cod_depositoFlag: boolean = false;
+  public marcaFlag: boolean = false;
+  public rubroFlag: boolean = false;
+  public articuloFlag: boolean = false;
+  public cod_ivaFlag: boolean = false;
+  public preconFlag: boolean = false;
+  public estadoFlag: boolean = false;
   public rubros: any;
   public marcas: any;
   public tiposIva: any;
@@ -265,13 +271,25 @@ export class NewarticuloComponent implements AfterViewInit {
         }
       });
     } else {
-      // Actualizar todas las banderas de validación para mostrar errores visualmente
+      // Marcar todos los campos como tocados para mostrar errores
+      Object.keys(form.controls).forEach(key => {
+        const control = form.get(key);
+        control?.markAsTouched();
+        control?.markAsDirty();
+      });
+      
+      // Actualizar todas las banderas de validación
       this.nomartFlag = this.nuevoarticuloForm.controls['nomart'].invalid;
       this.cd_barraFlag = this.nuevoarticuloForm.controls['cd_barra'].invalid;
-      this.cd_articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
+      this.cd_articuloFlag = this.nuevoarticuloForm.controls['cd_articulo'].invalid;
       this.cod_depositoFlag = this.nuevoarticuloForm.controls['cod_deposito'].invalid;
+      this.marcaFlag = this.nuevoarticuloForm.controls['marca'].invalid;
+      this.rubroFlag = this.nuevoarticuloForm.controls['rubro'].invalid;
+      this.articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
+      this.cod_ivaFlag = this.nuevoarticuloForm.controls['cod_iva'].invalid;
+      this.preconFlag = this.nuevoarticuloForm.controls['precon'].invalid;
+      this.estadoFlag = this.nuevoarticuloForm.controls['estado'].invalid;
       
-      // NO llamar a monitorFormChanges() aquí para evitar duplicar suscripciones
       Swal.fire({
         title: 'ERROR',
         text: 'Verifique los datos ingresados, hay campos inválidos o vacíos',
@@ -281,10 +299,6 @@ export class NewarticuloComponent implements AfterViewInit {
         cancelButtonColor: '#d33',
         confirmButtonText: 'OK',
       });
-
-      for (const control in form.controls) {
-        form.get(control)?.markAsTouched();
-      }
       
       // Mostrar en la consola los campos con errores para depuración
       console.log('Campos con errores:');
@@ -304,14 +318,20 @@ export class NewarticuloComponent implements AfterViewInit {
       control?.valueChanges.pipe(debounceTime(1000)).subscribe(value => {
         this.nomartFlag = this.nuevoarticuloForm.controls['nomart'].invalid;
         this.cd_barraFlag = this.nuevoarticuloForm.controls['cd_barra'].invalid;
-        this.cd_articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
+        this.cd_articuloFlag = this.nuevoarticuloForm.controls['cd_articulo'].invalid;
         this.cod_depositoFlag = this.nuevoarticuloForm.controls['cod_deposito'].invalid;
+        this.marcaFlag = this.nuevoarticuloForm.controls['marca'].invalid;
+        this.rubroFlag = this.nuevoarticuloForm.controls['rubro'].invalid;
+        this.articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
+        this.cod_ivaFlag = this.nuevoarticuloForm.controls['cod_iva'].invalid;
+        this.preconFlag = this.nuevoarticuloForm.controls['precon'].invalid;
+        this.estadoFlag = this.nuevoarticuloForm.controls['estado'].invalid;
       });
     });
 
     // Monitoreo específico para cada campo crítico
     this.nuevoarticuloForm.get('articulo')?.valueChanges.pipe(debounceTime(300)).subscribe(value => {
-      this.cd_articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
+      this.articuloFlag = this.nuevoarticuloForm.controls['articulo'].invalid;
     });
 
     this.nuevoarticuloForm.get('cod_deposito')?.valueChanges.pipe(debounceTime(300)).subscribe(value => {

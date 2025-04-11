@@ -189,64 +189,96 @@ export class EditconflistaComponent implements OnInit {
 
   onSubmit(): void {
     if (this.conflistaForm.valid) {
-      const formValues = this.conflistaForm.value;
+      // Uso getRawValue() en lugar de value para incluir campos deshabilitados
+      const formValues = this.conflistaForm.getRawValue();
       
-      // Verificar si se modificaron los precios
-      const preciof21Changed = formValues.preciof21 !== this.originalPreciof21;
-      const preciof105Changed = formValues.preciof105 !== this.originalPreciof105;
+      // Depuración: muestra los tipos de datos de los campos importantes
+      console.log('Tipos de datos antes de enviar:');
+      console.log('preciof21 tipo:', typeof formValues.preciof21, 'valor:', formValues.preciof21);
+      console.log('preciof105 tipo:', typeof formValues.preciof105, 'valor:', formValues.preciof105);
+      console.log('originalPreciof21 tipo:', typeof this.originalPreciof21, 'valor:', this.originalPreciof21);
+      console.log('originalPreciof105 tipo:', typeof this.originalPreciof105, 'valor:', this.originalPreciof105);
+      console.log('tipomone valor:', formValues.tipomone);
+      
+      // Convertir a número para asegurar que la comparación sea correcta
+      const preciof21Num = Number(formValues.preciof21);
+      const preciof105Num = Number(formValues.preciof105);
+      const originalPreciof21Num = Number(this.originalPreciof21);
+      const originalPreciof105Num = Number(this.originalPreciof105);
+      
+      // Verificar si se modificaron los precios usando los valores numéricos
+      const preciof21Changed = preciof21Num !== originalPreciof21Num;
+      const preciof105Changed = preciof105Num !== originalPreciof105Num;
+      
+      console.log('Comparación de precios:');
+      console.log('preciof21 cambiado:', preciof21Changed, '(', preciof21Num, '!=', originalPreciof21Num, ')');
+      console.log('preciof105 cambiado:', preciof105Changed, '(', preciof105Num, '!=', originalPreciof105Num, ')');
       
       const conflistaData = {
         id_conflista: this.id_conflista,
         listap: formValues.listap,
         // Convert boolean values back to 't'/'f' for the API
         activa: formValues.activa ? 't' : 'f',
-        precosto21: formValues.precosto21,
-        precosto105: formValues.precosto105,
-        pordcto: formValues.pordcto,
-        margen: formValues.margen,
-        preciof21: formValues.preciof21,
-        preciof105: formValues.preciof105,
+        precosto21: Number(formValues.precosto21),
+        precosto105: Number(formValues.precosto105),
+        pordcto: Number(formValues.pordcto),
+        margen: Number(formValues.margen),
+        preciof21: preciof21Num,
+        preciof105: preciof105Num,
         rmargen: formValues.rmargen ? 't' : 'f',
-        tipomone: formValues.tipomone,
+        // Asegurar que tipomone tenga un valor válido
+        tipomone: formValues.tipomone || (this.currentConflista?.tipomone || '1'),
         actprov: formValues.actprov ? 't' : 'f',
         cod_marca: formValues.cod_marca,
         fecha: formValues.fecha,
         // Solo recalcular si se modificaron los precios
-        //recalcular_precios: preciof21Changed || preciof105Changed
         recalcular_21: preciof21Changed,
         recalcular_105: preciof105Changed
       };
 
-      this.subirdata.updateConflista(conflistaData).subscribe((response: any) => {
-        console.log('conflistaData:', conflistaData);
-        Swal.fire({
-          title: 'Actualizando...',
-          timer: 300,
-          didOpen: () => {
-            Swal.showLoading();
-          }
-        }).then((result) => {
-          console.log('result:', result);
-          console.log('response:', response);
-          if (result.dismiss === Swal.DismissReason.timer) {
-            Swal.fire({
-              title: '¡Éxito!',
-              text: 'La conflista se actualizó correctamente',
-              icon: 'success',
-              confirmButtonText: 'Aceptar'
-            });
-            console.log('Conflista actualizada correctamente');
-            this.router.navigate(['components/conflista']);
-          }
-        });
-      }, error => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo actualizar la conflista',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        });
-      });
+      console.log('Objeto conflistaData completo a enviar:', conflistaData);
+      console.log('Verificación del campo tipomone:', conflistaData.tipomone);
+
+      this.subirdata.updateConflista(conflistaData).subscribe(
+        (response: any) => {
+          console.log('conflistaData enviada al servidor:', conflistaData);
+          console.log('Valores de precio enviados - preciof21:', conflistaData.preciof21, 'preciof105:', conflistaData.preciof105);
+          console.log('Estado de recalcular precios - recalcular_21:', conflistaData.recalcular_21, 'recalcular_105:', conflistaData.recalcular_105);
+          
+          Swal.fire({
+            title: 'Actualizando...',
+            timer: 300,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          }).then((result) => {
+            console.log('result de Swal:', result);
+            console.log('respuesta completa del servidor:', response);
+            if (result.dismiss === Swal.DismissReason.timer) {
+              Swal.fire({
+                title: '¡Éxito!',
+                text: 'La conflista se actualizó correctamente',
+                icon: 'success',
+                confirmButtonText: 'Aceptar'
+              });
+              console.log('Conflista actualizada correctamente');
+              this.router.navigate(['components/conflista']);
+            }
+          });
+        }, 
+        error => {
+          console.error('Error al actualizar conflista:', error);
+          console.error('Detalle del error:', JSON.stringify(error));
+          console.error('Valores que causaron el error - preciof21:', conflistaData.preciof21, 'preciof105:', conflistaData.preciof105);
+          
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo actualizar la conflista. Detalles: ' + (error.error?.mensaje || error.message || 'Error desconocido'),
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      );
     } else {
       this.markFormGroupTouched(this.conflistaForm);
       Swal.fire({

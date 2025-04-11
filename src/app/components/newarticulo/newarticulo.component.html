@@ -3,7 +3,25 @@
         <div class="card">
             <div class="card-body">
                 <form ngNativeValidate [formGroup]="nuevoarticuloForm" (ngSubmit)="guardar(nuevoarticuloForm)"
-                    class="form-horizontal">
+                    class="form-horizontal">                    <style>
+                        .ng-invalid.ng-touched:not(form) {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                        .form-group.has-danger .form-control {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                    </style>                    <style>
+                        .ng-invalid.ng-touched:not(form) {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                        .form-group.has-danger .form-control {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                    </style>
                     <div class="form-body">
                         <h3 class="box-title">Nuevo Artículo</h3>
                         <hr class="m-t-0 m-b-40">
@@ -258,7 +276,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc1</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="" readonly>
+                                                <input type="number" value="0" class="form-control" formControlName="exi1" placeholder="">
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -301,7 +319,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc2</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi2" placeholder="" readonly>
+                                                <input type="number" value="0" class="form-control" formControlName="exi2" placeholder="">
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -344,7 +362,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc3</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi3" placeholder="" readonly>
+                                                <input type="number" value="0" class="form-control" formControlName="exi3" placeholder="">
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -387,7 +405,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc4</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi4" placeholder="" readonly>
+                                                <input type="number" value="0" class="form-control" formControlName="exi4" placeholder="">
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
@@ -430,7 +448,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Existencia Suc5</label>
                                             <div class="col-md-9">
-                                                <input type="number" value="0" class="form-control" formControlName="exi5" placeholder="" readonly>
+                                                <input type="number" value="0" class="form-control" formControlName="exi5" placeholder="">
                                                 <small class="form-control-feedback">Valor numérico entero</small>
                                             </div>
                                         </div>
