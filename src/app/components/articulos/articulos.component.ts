@@ -84,6 +84,7 @@ export class ArticulosComponent {
   public articulosOriginal: Articulo[] = [];
   public valoresCambio: ValorCambio[] = [];
   public tiposMoneda: TipoMoneda[] = [];
+  public confLista: any[] = [];
   cols: Column[];
   _selectedColumns: Column[];
   
@@ -195,8 +196,8 @@ export class ArticulosComponent {
         if (!response.error) {
           this.tiposMoneda = response.mensaje;
           console.log('Tipos de moneda cargados:', this.tiposMoneda);
-          // Una vez cargados los tipos de moneda, cargamos los artículos
-          this.loadArticulos();
+          // Una vez cargados los tipos de moneda, cargamos la configuración de listas
+          this.cargarConfLista();
         } else {
           Swal.close();
           console.error('Error loading tipos de moneda:', response.mensaje);
@@ -219,12 +220,44 @@ export class ArticulosComponent {
     });
   }
 
+  cargarConfLista() {
+    this.cargardataService.getConflista().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.confLista = response.mensaje;
+          console.log('Configuración de listas cargada:', this.confLista);
+          // Una vez cargada la configuración de listas, cargamos los artículos
+          this.loadArticulos();
+        } else {
+          Swal.close();
+          console.error('Error loading conf_lista:', response.mensaje);
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo cargar la configuración de listas de precio',
+            icon: 'error'
+          });
+        }
+      },
+      error: (error) => {
+        Swal.close();
+        console.error('Error in API call:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudo cargar la configuración de listas de precio',
+          icon: 'error'
+        });
+      }
+    });
+  }
+
   loadArticulos() {
     this.cargardataService.getArticulos().subscribe({
       next: (response: any) => {
         if (!response.error) {
           // Guardar los artículos originales sin transformación
           this.articulosOriginal = [...response.mensaje];
+          
+          console.log('Datos originales cargados:', this.articulosOriginal.length);
           
           // Hacer una copia de los artículos originales
           let articulosConPrecios = [...response.mensaje];
@@ -266,29 +299,64 @@ export class ArticulosComponent {
     }
 
     return articulos.map(articulo => {
-      // Crear una copia del artículo para no modificar el original
-      const articuloCopy = { ...articulo };
-      
-      // Verificar si el artículo tiene tipo_moneda y es diferente de 1 (asumiendo que 1 es la moneda local)
-      if (articuloCopy.tipo_moneda && articuloCopy.tipo_moneda !== 1) {
-        // Buscar el valor de cambio correspondiente
-        const valorCambio = this.obtenerValorCambio(articuloCopy.tipo_moneda);
+      try {
+        // Crear una copia del artículo para no modificar el original
+        const articuloCopy = { ...articulo };
         
-        // Si se encontró un valor de cambio válido y tiene un multiplicador
-        if (valorCambio && valorCambio > 0) {
-          // Aplicar el multiplicador a los precios
-          articuloCopy.precon = articuloCopy.precon * valorCambio;
-          articuloCopy.prefi1 = articuloCopy.prefi1 * valorCambio;
-          articuloCopy.prefi2 = articuloCopy.prefi2 * valorCambio;
-          articuloCopy.prefi3 = articuloCopy.prefi3 * valorCambio;
-          articuloCopy.prefi4 = articuloCopy.prefi4 * valorCambio;
-          articuloCopy.prebsiva = articuloCopy.prebsiva * valorCambio;
-          articuloCopy.precostosi = articuloCopy.precostosi * valorCambio;
+        // Verificar si el artículo tiene tipo_moneda y es diferente de 1 (asumiendo que 1 es la moneda local)
+        if (articuloCopy.tipo_moneda && articuloCopy.tipo_moneda !== 1) {
+          // Buscar el valor de cambio correspondiente directamente usando tipo_moneda como codmone
+          const valorCambio = this.obtenerValorCambio(articuloCopy.tipo_moneda);
+          
+          console.log(`Artículo ${articuloCopy.id_articulo || 'N/A'} - ${articuloCopy.nomart || 'Sin nombre'}: Aplicando valor de cambio ${valorCambio}`);
+          
+          // Si se encontró un valor de cambio válido y tiene un multiplicador
+          if (valorCambio && valorCambio > 0) {
+            // Aplicar el multiplicador directamente a TODOS los precios
+            // Asegurarse de que los valores no sean nulos antes de multiplicar
+            articuloCopy.precon = articuloCopy.precon ? articuloCopy.precon * valorCambio : 0;
+            articuloCopy.prebsiva = articuloCopy.prebsiva ? articuloCopy.prebsiva * valorCambio : 0;
+            articuloCopy.precostosi = articuloCopy.precostosi ? articuloCopy.precostosi * valorCambio : 0;
+            
+            // Aplicar el mismo multiplicador a todos los precios prefijados sin excepciones
+            articuloCopy.prefi1 = articuloCopy.prefi1 ? articuloCopy.prefi1 * valorCambio : 0;
+            articuloCopy.prefi2 = articuloCopy.prefi2 ? articuloCopy.prefi2 * valorCambio : 0;
+            articuloCopy.prefi3 = articuloCopy.prefi3 ? articuloCopy.prefi3 * valorCambio : 0;
+            articuloCopy.prefi4 = articuloCopy.prefi4 ? articuloCopy.prefi4 * valorCambio : 0;
+            
+            // Verificar que los valores existen antes de llamar a toFixed
+            const preconStr = articuloCopy.precon !== undefined ? articuloCopy.precon.toFixed(2) : '0.00';
+            const prefi1Str = articuloCopy.prefi1 !== undefined ? articuloCopy.prefi1.toFixed(2) : '0.00';
+            const prefi2Str = articuloCopy.prefi2 !== undefined ? articuloCopy.prefi2.toFixed(2) : '0.00';
+            const prefi3Str = articuloCopy.prefi3 !== undefined ? articuloCopy.prefi3.toFixed(2) : '0.00';
+            const prefi4Str = articuloCopy.prefi4 !== undefined ? articuloCopy.prefi4.toFixed(2) : '0.00';
+            
+            console.log(`Precios convertidos: precon=${preconStr}, prefi1=${prefi1Str}, prefi2=${prefi2Str}, prefi3=${prefi3Str}, prefi4=${prefi4Str}`);
+          }
+        } else {
+          // Para artículos en moneda local, no es necesario hacer nada
+          // No recalcular los precios ya que deben mantenerse como están
+          console.log(`Artículo en moneda local (${articuloCopy.id_articulo || 'N/A'} - ${articuloCopy.nomart || 'Sin nombre'}): Se mantienen los precios originales`);
         }
+        
+        return articuloCopy;
+      } catch (error) {
+        console.error('Error al procesar artículo:', articulo, error);
+        return articulo; // Devolver el artículo original en caso de error
       }
-      
-      return articuloCopy;
     });
+  }
+
+  // Método auxiliar para obtener el porcentaje de IVA (simplificado)
+  private obtenerPorcentajeIva(codIva: number): number {
+    // Valor por defecto es 21%
+    if (codIva === 5) { // Si es EXENTO (código 5)
+      return 0;
+    }
+    
+    // Aquí podríamos buscar en una lista de tipos de IVA, pero para simplificar:
+    // Por defecto retornamos 21%
+    return 21;
   }
 
   obtenerValorCambio(codMoneda: number): number {
