@@ -43,12 +43,23 @@ export class PedirStockComponent {
   filteredTipo: any[] = [];
   constructor(public dialogService: DialogService, private cdr: ChangeDetectorRef, private router: Router, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService) {
 
+    // Mostrar loading antes de cargar los productos
+    this.mostrarLoading();
     
     this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
       console.log(resp.mensaje);
       this.productos = [...resp.mensaje];
       // Forzar la detección de cambios
       this.cdr.detectChanges();
+      // Cerrar loading
+      Swal.close();
+    }, error => {
+      Swal.close();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los productos'
+      });
     });
   }
  
@@ -63,6 +74,19 @@ export class PedirStockComponent {
 
   }
 
+  // Método para mostrar el indicador de carga
+  mostrarLoading() {
+    Swal.fire({
+      title: 'Cargando datos',
+      text: 'Por favor espere...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
+
   selectTipo(item: any) {
     console.log(item);
     //esto son datos de la tabla tarjcredito
@@ -72,8 +96,24 @@ export class PedirStockComponent {
     this.activaDatos = item.activadatos;
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
 
- 
+    // Mostrar loading antes de cargar los productos
+    this.mostrarLoading();
     
+    this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
+      console.log(resp.mensaje);
+      this.productos = [...resp.mensaje];
+      // Forzar la detección de cambios
+      this.cdr.detectChanges();
+      // Cerrar loading
+      Swal.close();
+    }, error => {
+      Swal.close();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los productos'
+      });
+    });
   }
   abrirFormularioTarj() {
    /*  Swal.fire({

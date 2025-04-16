@@ -77,6 +77,15 @@ export class CondicionventaComponent {
       this.tipo = resp.mensaje;//.tarjeta;
       console.log(this.tipo);
       this.filterByDay();
+      // Cerrar loading
+      Swal.close();
+    }, error => {
+      Swal.close();
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los datos de tarjetas'
+      });
     });
     
     // Obtener los valores de cambio
@@ -158,6 +167,19 @@ export class CondicionventaComponent {
 
   }
 
+  // Método para mostrar el indicador de carga
+  mostrarLoading() {
+    Swal.fire({
+      title: 'Cargando datos',
+      text: 'Por favor espere...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
+
   selectTipo(item: any) {
     console.log(item);
     //esto son datos de la tabla tarjcredito
@@ -175,6 +197,9 @@ export class CondicionventaComponent {
       // aca se llama a la funcion que muestra los prefijos
     }
     else {
+      // Mostrar loading antes de cargar los productos
+      this.mostrarLoading();
+      
       this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
         console.log(resp.mensaje);
         
@@ -220,6 +245,16 @@ export class CondicionventaComponent {
         this.productos = productos;
         // Forzar la detección de cambios
         this.cdr.detectChanges();
+        
+        // Cerrar loading
+        Swal.close();
+      }, error => {
+        Swal.close();
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No se pudieron cargar los productos'
+        });
       });
     }
   }
@@ -271,11 +306,25 @@ export class CondicionventaComponent {
         this.tarjeta.Numero = result.value.numero;
         this.tarjeta.Autorizacion = result.value.autorizacion;
         console.log('Tarjeta guardada:', this.tarjeta);
+        
+        // Mostrar loading antes de cargar los productos
+        this.mostrarLoading();
+        
         this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
           console.log(resp.mensaje);
           this.productos = [...resp.mensaje];
           // Forzar la detección de cambios
           this.cdr.detectChanges();
+          
+          // Cerrar loading
+          Swal.close();
+        }, error => {
+          Swal.close();
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar los productos'
+          });
         });
       }
     });
@@ -362,11 +411,25 @@ export class CondicionventaComponent {
         this.cheque.ImporteImputar = result.value.importeimputar;
         this.cheque.ImporteCheque = result.value.importecheque;
         this.cheque.FechaCheque = result.value.fechacheque;
-        console.log('Cheque guardado:', this.cheque);//console.log('Tarjeta guardada:', this.tarjeta);
+        console.log('Cheque guardado:', this.cheque);
+        
+        // Mostrar loading antes de cargar los productos
+        this.mostrarLoading();
+        
         this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
           console.log(resp.mensaje);
           this.productos = [...resp.mensaje];
           this.cdr.detectChanges();
+          
+          // Cerrar loading
+          Swal.close();
+        }, error => {
+          Swal.close();
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar los productos'
+          });
         });
       }
     });
