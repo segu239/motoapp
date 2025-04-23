@@ -202,6 +202,11 @@ export class EditarticuloComponent implements OnInit {
         this.calcularPreciosLista();
       }
     });
+
+    // Monitorear cambios en idart para habilitar/deshabilitar campos de precios lista
+    this.articuloForm.get('idart')?.valueChanges.subscribe(value => {
+      console.log('Modo precios manual:', value === 1 ? 'Activado' : 'Desactivado');
+    });
   }
 
   cargarRubros() {
@@ -312,6 +317,20 @@ export class EditarticuloComponent implements OnInit {
           this.id_articulo = articuloData.id_articulo;
           this.currentArticulo = articuloData;
           
+          // Verificar el valor de idart
+          console.log('Valor original de idart:', this.currentArticulo.idart, 'Tipo:', typeof this.currentArticulo.idart);
+          
+          // Asegurarnos que idart sea un número (0 o 1)
+          // Cualquier valor que no sea exactamente 1 se normaliza a 0
+          let idartValue = 0;
+          if (this.currentArticulo.idart === 1 || this.currentArticulo.idart === '1') {
+            idartValue = 1;
+          } else {
+            // Si el valor no es 0 o 1, lo normalizamos a 0 (modo automático)
+            console.log('Valor de idart diferente de 0 o 1 detectado, normalizando a 0');
+          }
+          console.log('Valor normalizado de idart:', idartValue);
+          
           // Crear un objeto con todos los valores del artículo para patchValue
           const formValues: any = {
             nomart: this.currentArticulo.nomart ? this.currentArticulo.nomart.trim() : '',
@@ -345,7 +364,7 @@ export class EditarticuloComponent implements OnInit {
             stkprep5: this.currentArticulo.stkprep5,
             cd_proveedor: this.currentArticulo.cd_proveedor,
             cd_barra: this.currentArticulo.cd_barra ? this.currentArticulo.cd_barra.trim() : '',
-            idart: this.currentArticulo.idart,
+            idart: idartValue,
             estado: this.currentArticulo.estado ? this.currentArticulo.estado.trim() : '',
             rubro: this.currentArticulo.rubro ? this.currentArticulo.rubro.trim() : '',
             articulo: this.currentArticulo.articulo,
@@ -362,9 +381,16 @@ export class EditarticuloComponent implements OnInit {
           
           console.log('Valores iniciales cargados:', formValues);
           console.log('IVA cargado:', this.currentArticulo.cod_iva);
+          console.log('Valor de idart en el formulario:', idartValue);
 
           // Actualizar el formulario con los valores
-          this.articuloForm.patchValue(formValues, {emitEvent: false});
+          this.articuloForm.patchValue(formValues);
+          
+          // Verificar que el valor se haya asignado correctamente
+          setTimeout(() => {
+            console.log('Valor actual de idart en el formulario después de patchValue:', 
+              this.articuloForm.get('idart')?.value);
+          }, 0);
           
           // Verificar si hay datos de IVA cargados
           if (this.tiposIva && this.tiposIva.length > 0) {
@@ -856,6 +882,13 @@ export class EditarticuloComponent implements OnInit {
   }
   
   calcularPreciosLista(): void {
+    // Si idart es 1, los precios son manuales y no se calculan
+    const idartValue = this.articuloForm.get('idart')?.value;
+    if (idartValue === 1) {
+      console.log('Precios lista manual activado: no se calculan precios automáticamente');
+      return;
+    }
+    
     if (!this.confLista || this.confLista.length === 0) {
       console.log('confLista no disponible, usando cálculo fijo alternativo');
       // Usar cálculo fijo como fallback
@@ -977,6 +1010,23 @@ export class EditarticuloComponent implements OnInit {
     } else {
       console.log('No se encontró configuración para Lista 4 con la moneda seleccionada');
       this.articuloForm.get('prefi4')?.setValue(0, {emitEvent: false});
+    }
+  }
+
+  // Método para manejar el cambio en el checkbox de precios manuales
+  manejarCambioManual(isChecked: boolean): void {
+    console.log('Precios lista manual:', isChecked ? 'Activado' : 'Desactivado');
+    
+    // Actualizar el valor de idart según el estado del checkbox
+    this.articuloForm.get('idart')?.setValue(isChecked ? 1 : 0);
+    
+    if (isChecked) {
+      // Si se activa el modo manual, mantener los valores actuales para edición manual
+      console.log('Modo manual activado: se mantendrán los valores actuales para edición');
+    } else {
+      // Si se desactiva el modo manual, recalcular los precios automáticamente
+      console.log('Modo manual desactivado: recalculando precios automáticamente');
+      this.calcularPreciosLista();
     }
   }
 }

@@ -199,25 +199,40 @@
                                         <label for="precon">Precio Final *</label>
                                         <input type="number" class="form-control" id="precon" formControlName="precon" required>
                                     </div>
+                                    <div class="form-group col-md-6 d-flex align-items-center">
+                                        <div class="form-check mt-2">
+                                            <input type="checkbox" class="form-check-input" id="preciosManualCheck"
+                                                [ngModel]="articuloForm.get('idart')?.value === 1"
+                                                (ngModelChange)="manejarCambioManual($event)"
+                                                [ngModelOptions]="{standalone: true}">
+                                            <label class="form-check-label" for="preciosManualCheck">
+                                                Ingresar precios de lista manualmente
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
                                 <hr>
                                 <h4>Precios de Lista</h4>
                                 <div class="form-row">
                                     <div class="form-group col-md-3">
                                         <label for="prefi1">Precio 1</label>
-                                        <input type="number" class="form-control" id="prefi1" formControlName="prefi1" readonly>
+                                        <input type="number" class="form-control" id="prefi1" formControlName="prefi1" 
+                                            [readonly]="articuloForm.get('idart')?.value !== 1">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi2">Precio 2</label>
-                                        <input type="number" class="form-control" id="prefi2" formControlName="prefi2" readonly>
+                                        <input type="number" class="form-control" id="prefi2" formControlName="prefi2" 
+                                            [readonly]="articuloForm.get('idart')?.value !== 1">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi3">Precio 3</label>
-                                        <input type="number" class="form-control" id="prefi3" formControlName="prefi3" readonly>
+                                        <input type="number" class="form-control" id="prefi3" formControlName="prefi3" 
+                                            [readonly]="articuloForm.get('idart')?.value !== 1">
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi4">Precio 4</label>
-                                        <input type="number" class="form-control" id="prefi4" formControlName="prefi4" readonly>
+                                        <input type="number" class="form-control" id="prefi4" formControlName="prefi4" 
+                                            [readonly]="articuloForm.get('idart')?.value !== 1">
                                     </div>
                                 </div>
                             </div>

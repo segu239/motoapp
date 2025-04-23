@@ -351,6 +351,21 @@ export class NewarticuloComponent implements AfterViewInit {
       }
     });
     
+    // Monitorear cambios en idart (modo precios manual)
+    this.nuevoarticuloForm.get('idart')?.valueChanges.pipe(debounceTime(300)).subscribe(value => {
+      console.log('Modo precios manual:', value === 1 ? 'Activado' : 'Desactivado');
+      if (value === 1) {
+        // Si idart es 1 (modo manual), establecer todos los precios de lista a 0
+        this.nuevoarticuloForm.get('prefi1')?.setValue('0.00');
+        this.nuevoarticuloForm.get('prefi2')?.setValue('0.00');
+        this.nuevoarticuloForm.get('prefi3')?.setValue('0.00');
+        this.nuevoarticuloForm.get('prefi4')?.setValue('0.00');
+      } else if (value === 0) {
+        // Si idart es 0 (modo automático), recalcular los precios de lista
+        this.calcularPreciosLista();
+      }
+    });
+    
     // Monitorear cambios en el tipo de moneda
     this.nuevoarticuloForm.get('tipo_moneda')?.valueChanges.pipe(debounceTime(300)).subscribe(value => {
       if (value) {
@@ -721,6 +736,15 @@ export class NewarticuloComponent implements AfterViewInit {
   }
 
   calcularPreciosLista() {
+    // Si idart es 1, los precios son manuales y no se calculan
+    const idartRaw = this.nuevoarticuloForm.get('idart')?.value;
+    const idartValue = this.normalizarIdart(idartRaw);
+    
+    if (idartValue === 1) {
+      console.log('Precios lista manual activado: no se calculan precios automáticamente');
+      return;
+    }
+    
     if (!this.confLista || this.confLista.length === 0) {
       console.log('confLista no disponible aún');
       return;
@@ -887,5 +911,20 @@ export class NewarticuloComponent implements AfterViewInit {
     // Mantenemos este método pero lo dejamos como paso directo sin conversión
     // por si hay alguna parte del código que aún lo use
     return valorEnPesos;
+  }
+
+  // Método que maneja el cambio en el checkbox de Precios Lista Manual
+  manejarCambioManual(event: any) {
+    const isChecked = event.target.checked;
+    console.log('Precios lista manual:', isChecked ? 'Activado' : 'Desactivado');
+    
+    // Actualizar idart según el estado del checkbox (1 si está activado, 0 si no)
+    this.nuevoarticuloForm.get('idart')?.setValue(isChecked ? 1 : 0);
+  }
+  
+  // Método auxiliar para normalizar el valor de idart (utilizado internamente)
+  private normalizarIdart(valor: any): number {
+    // Si el valor es exactamente 1 (como número o string), devuelve 1, si no, 0
+    return (valor === 1 || valor === '1') ? 1 : 0;
   }
 }
