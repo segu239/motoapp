@@ -1,0 +1,98 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Movimientos de Caja</h4>
+                <p-table #dtable [value]="cajamovis" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
+                    [rows]="10"
+                    [globalFilterFields]="['sucursal', 'codigo_mov', 'num_operacion', 'fecha_mov', 'importe_mov', 'descripcion_mov', 'fecha_emibco', 'banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'plaza_cheque', 'codigo_mbco', 'desc_bancaria', 'marca_cerrado', 'fecha_cobro_bco', 'fecha_vto_bco', 'tipo_movi', 'caja', 'letra', 'punto_venta', 'tipo_comprobante', 'numero_comprobante', 'fecha_proceso', 'id_movimiento']">
+                    <ng-template pTemplate="caption">
+                        <div class="p-d-flex">
+                            <span class="p-input-icon-left ml-auto">
+                                <input pInputText type="text"
+                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                    placeholder="Buscar.." />
+                            </span>
+                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                styleClass="p-button-sm p-button-success ml-4"></p-button>
+                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajamovi']"
+                                styleClass="p-button-sm p-button-info ml-2"></p-button>
+                        </div>
+                    </ng-template>
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th pSortableColumn="sucursal">Sucursal<p-sortIcon field="sucursal"></p-sortIcon></th>
+                            <th pSortableColumn="codigo_mov">Código Mov.<p-sortIcon field="codigo_mov"></p-sortIcon></th>
+                            <th pSortableColumn="num_operacion">N° Operación<p-sortIcon field="num_operacion"></p-sortIcon></th>
+                            <th pSortableColumn="fecha_mov">Fecha Mov.<p-sortIcon field="fecha_mov"></p-sortIcon></th>
+                            <th pSortableColumn="importe_mov">Importe<p-sortIcon field="importe_mov"></p-sortIcon></th>
+                            <th pSortableColumn="descripcion_mov">Descripción<p-sortIcon field="descripcion_mov"></p-sortIcon></th>
+                            <!-- <th pSortableColumn="fecha_emibco">Fecha Emi. Bco<p-sortIcon field="fecha_emibco"></p-sortIcon></th>
+                            <th pSortableColumn="banco">Banco<p-sortIcon field="banco"></p-sortIcon></th>
+                            <th pSortableColumn="num_cheque">N° Cheque<p-sortIcon field="num_cheque"></p-sortIcon></th>
+                            <th pSortableColumn="cuenta_mov">Cuenta Mov.<p-sortIcon field="cuenta_mov"></p-sortIcon></th>
+                            <th pSortableColumn="cliente">Cliente<p-sortIcon field="cliente"></p-sortIcon></th>
+                            <th pSortableColumn="proveedor">Proveedor<p-sortIcon field="proveedor"></p-sortIcon></th>
+                            <th pSortableColumn="plaza_cheque">Plaza Cheque<p-sortIcon field="plaza_cheque"></p-sortIcon></th>
+                            <th pSortableColumn="codigo_mbco">Código MBco<p-sortIcon field="codigo_mbco"></p-sortIcon></th>
+                            <th pSortableColumn="desc_bancaria">Desc. Bancaria<p-sortIcon field="desc_bancaria"></p-sortIcon></th>
+                            <th pSortableColumn="marca_cerrado">Marca Cerrado<p-sortIcon field="marca_cerrado"></p-sortIcon></th>
+                            <th pSortableColumn="fecha_cobro_bco">Fecha Cobro Bco<p-sortIcon field="fecha_cobro_bco"></p-sortIcon></th>
+                            <th pSortableColumn="fecha_vto_bco">Fecha Vto Bco<p-sortIcon field="fecha_vto_bco"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_movi">Tipo Movi<p-sortIcon field="tipo_movi"></p-sortIcon></th>
+                            <th pSortableColumn="caja">Caja<p-sortIcon field="caja"></p-sortIcon></th>
+                            <th pSortableColumn="letra">Letra<p-sortIcon field="letra"></p-sortIcon></th>
+                            <th pSortableColumn="punto_venta">Pto. Venta<p-sortIcon field="punto_venta"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_comprobante">Tipo Comp.<p-sortIcon field="tipo_comprobante"></p-sortIcon></th>
+                            <th pSortableColumn="numero_comprobante">N° Comp.<p-sortIcon field="numero_comprobante"></p-sortIcon></th>
+                            <th pSortableColumn="marca_cerrado">Marca Cerrado<p-sortIcon field="marca_cerrado"></p-sortIcon></th>
+                            <th pSortableColumn="fecha_proceso">Fecha Proceso<p-sortIcon field="fecha_proceso"></p-sortIcon></th>
+                            <th pSortableColumn="id_movimiento">ID<p-sortIcon field="id_movimiento"></p-sortIcon></th> -->
+                            <th>Editar</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-cajamovi>
+                        <tr>
+                            <td>{{ cajamovi.sucursal }}</td>
+                            <td>{{ cajamovi.codigo_mov }}</td>
+                            <td>{{ cajamovi.num_operacion }}</td>
+                            <td>{{ cajamovi.fecha_mov | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ cajamovi.importe_mov | number:'1.2-2' }}</td>
+                            <td>{{ cajamovi.descripcion_mov }}</td>
+                           <!--  <td>{{ cajamovi.fecha_emibco | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ cajamovi.banco }}</td>
+                            <td>{{ cajamovi.num_cheque }}</td>
+                            <td>{{ cajamovi.cuenta_mov }}</td>
+                            <td>{{ cajamovi.cliente }}</td>
+                            <td>{{ cajamovi.proveedor }}</td>
+                            <td>{{ cajamovi.plaza_cheque }}</td>
+                            <td>{{ cajamovi.codigo_mbco }}</td>
+                            <td>{{ cajamovi.desc_bancaria }}</td>
+                            <td>{{ cajamovi.marca_cerrado }}</td>
+                            <td>{{ cajamovi.fecha_cobro_bco | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ cajamovi.fecha_vto_bco | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ cajamovi.tipo_movi }}</td>
+                            <td>{{ cajamovi.caja }}</td>
+                            <td>{{ cajamovi.letra }}</td>
+                            <td>{{ cajamovi.punto_venta }}</td>
+                            <td>{{ cajamovi.tipo_comprobante }}</td>
+                            <td>{{ cajamovi.numero_comprobante }}</td>
+                            <td>{{ cajamovi.marca_cerrado }}</td>
+                            <td>{{ cajamovi.fecha_proceso | date:'dd/MM/yyyy' }}</td>
+                            <td>{{ cajamovi.id_movimiento }}</td> -->
+                            <td>
+                                <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                                    (click)="editCajamovi(cajamovi)"></p-button>
+                            </td>
+                            <td>
+                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
+                                (click)="confirmDelete(cajamovi)"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>

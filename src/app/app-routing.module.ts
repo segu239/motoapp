@@ -58,6 +58,17 @@ import { EditconflistaComponent } from './components/editconflista/editconflista
 import { ArticulosComponent } from './components/articulos/articulos.component';
 import { NewarticuloComponent } from './components/newarticulo/newarticulo.component';
 import { EditarticuloComponent } from './components/editarticulo/editarticulo.component';
+import { CajaListaComponent } from './components/cajalista/cajalista.component';
+import { NewCajaListaComponent } from './components/newcajalista/newcajalista.component';
+import { EditCajaListaComponent } from './components/editcajalista/editcajalista.component';
+import { CajaconceptoComponent } from './components/cajaconcepto/cajaconcepto.component';
+import { NewcajaconceptoComponent } from './components/newcajaconcepto/newcajaconcepto.component';
+import { EditcajaconceptoComponent } from './components/editcajaconcepto/editcajaconcepto.component';
+import { CajamoviComponent } from './components/cajamovi/cajamovi.component';
+import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.component';
+import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
+
+
 //nuevouser role
 import { UserRole } from './interfaces/user';
 
@@ -117,7 +128,15 @@ children:[
     {path: 'articulo', component: ArticulosComponent, data: { titulo: "Articulos" } },
     { path: 'newarticulo', component: NewarticuloComponent, data: { titulo: "Nuevo Articulo" } },
     { path: 'editarticulo', component: EditarticuloComponent, data: { titulo: "Editar Articulo" } },
-    
+    {path: 'cajalista', component: CajaListaComponent, data: { titulo: "Cajalista" } },
+    { path: 'newcajalista', component: NewCajaListaComponent, data: { titulo: "Nuevo Cajalista" } },
+    { path: 'editcajalista', component: EditCajaListaComponent, data: { titulo: "Editar Cajalista" } },
+    {path: 'cajaconcepto', component: CajaconceptoComponent, data: { titulo: "Cajaconcepto" } },
+    { path: 'newcajaconcepto', component: NewcajaconceptoComponent, data: { titulo: "Nuevo Cajaconcepto" } },
+    { path: 'editcajaconcepto', component: EditcajaconceptoComponent, data: { titulo: "Editar Cajaconcepto" } },
+    {path: 'cajamovi', component: CajamoviComponent, data: { titulo: "Cajamovi" } },
+    { path: 'newcajamovi', component: NewCajamoviComponent, data: { titulo: "Nuevo Cajamovi" } },
+    { path: 'editcajamovi', component: EditCajamoviComponent, data: { titulo: "Editar Cajamovi" } },
     // Nuevas rutas para la administración de usuarios
     { path: 'user-management', component: UserManagementComponent, data: { titulo: "Administración de Usuarios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
 ]

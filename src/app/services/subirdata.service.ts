@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from "@angular/common/http";
-import { UrlUpdateArticulo,UrlEliminarArticulo,UrlSubirDatosArticulo,UrlUpdateConflista, UrlSubirDatosConflista, UrlEliminarConflista,UrlUpdateValorCambio,UrlUpdateTipoMoneda,UrlSubirDatosValorCambio,UrlEliminarValorCambio, UrlSubirDatosTipoMoneda,UrlEliminarTipoMoneda,UrlEditProveedor,UrlSubirDatosProveedor,UrlEliminarProveedor, UrlSubirDatosArtIva,UrlUpdateMarca,UrlSubirDatosMarca,UrleliminarMarca,UrlUpdateRubro, UrleliminarRubro,UrlSubirDatosRubro,UrleliminarRubroPrincipal,UrlUpdateRubroPrincipal, UrlSubirDatosRubroPrincipal,UpdateArtsucxappWebManagedPHP, UpdateArtsucxappWeb, Urlclisucxapp, Urlpedidossucxapp, UrlpedidossucxappCompleto, Urlarticulossucxapp, Urlmixto, UpdateClisucxappWeb, UrlclisucxappWeb, UrleliminarCliente, UrlEliminarArtIva } from '../config/ini';
+import { UrlUpdateCajamovi,UrlEliminarCajamovi,UrlSubirDatosCajamovi,UrlUpdateCajaconcepto, UrlSubirDatosCajaconcepto,UrlEliminarCajaconcepto,UrlUpdateCajaLista, UrlSubirDatosCajaLista, UrlEliminarCajaLista, UrlUpdateArticulo,UrlEliminarArticulo,UrlSubirDatosArticulo,UrlUpdateConflista, UrlSubirDatosConflista, UrlEliminarConflista,UrlUpdateValorCambio,UrlUpdateTipoMoneda,UrlSubirDatosValorCambio,UrlEliminarValorCambio, UrlSubirDatosTipoMoneda,UrlEliminarTipoMoneda,UrlEditProveedor,UrlSubirDatosProveedor,UrlEliminarProveedor, UrlSubirDatosArtIva,UrlUpdateMarca,UrlSubirDatosMarca,UrleliminarMarca,UrlUpdateRubro, UrleliminarRubro,UrlSubirDatosRubro,UrleliminarRubroPrincipal,UrlUpdateRubroPrincipal, UrlSubirDatosRubroPrincipal,UpdateArtsucxappWebManagedPHP, UpdateArtsucxappWeb, Urlclisucxapp, Urlpedidossucxapp, UrlpedidossucxappCompleto, Urlarticulossucxapp, Urlmixto, UpdateClisucxappWeb, UrlclisucxappWeb, UrleliminarCliente, UrlEliminarArtIva } from '../config/ini';
 
 @Injectable({
   providedIn: 'root'
@@ -94,6 +94,11 @@ export class SubirdataService {
     return this.http.post(UrlSubirDatosArticulo, articulo);
   }
 
+  subirDatosCajamovi(cajamovi: any) {
+    // El backend espera un objeto con los datos del movimiento
+    return this.http.post(UrlSubirDatosCajamovi, cajamovi);
+  }
+
   eliminarCliente(data: any, id: any) {
     return this.http.post(UrleliminarCliente,
       {
@@ -178,6 +183,28 @@ export class SubirdataService {
     });
   }
 
+  eliminarCajaLista(id: any) {
+    return this.http.post(UrlEliminarCajaLista,
+      {
+        "id_caja": id
+      });
+  }
+
+  eliminarCajaconcepto(id: number) {
+    console.log("Enviando a eliminar ID:", id);
+   return this.http.post(UrlEliminarCajaconcepto,
+     {
+       "id_concepto": id
+     });
+ }
+
+ eliminarCajamovi(id: number) {
+  // El backend espera un objeto con la clave "id_movimiento"
+  return this.http.post(UrlEliminarCajamovi, {
+    "id_movimiento": id
+  });
+}
+
   subirDatosRubroPrincipal(rubroprincipal: any){
     console.log(rubroprincipal);
    
@@ -219,6 +246,25 @@ export class SubirdataService {
       });
   }
 
+  subirDatosCajaLista(cajaLista: any){
+    console.log(cajaLista);
+    // El backend espera directamente el objeto
+    return this.http.post(UrlSubirDatosCajaLista, cajaLista);
+  }
+
+  subirDatosCajaconcepto(cajaconcepto: any){
+    console.log("Enviando a guardar:", cajaconcepto);
+    return this.http.post(UrlSubirDatosCajaconcepto,
+      {
+        "descripcion": cajaconcepto.descripcion,
+        "tipo_concepto": cajaconcepto.tipo_concepto,
+        "fija": cajaconcepto.fija,
+        "ingreso_egreso": cajaconcepto.ingreso_egreso,
+        "id_caja": cajaconcepto.id_caja
+        // id_concepto es autoincremental en la BD
+      });
+  }
+  
   editarRubroPrincipal(id: any,rubro: any ) {
     return this.http.post(UrlUpdateRubroPrincipal,
       {
@@ -419,5 +465,27 @@ export class SubirdataService {
       "tipo_moneda": articulo.tipo_moneda
     });
   }
+
+  updateCajaLista(cajaLista: any) {
+    // El backend espera directamente el objeto con id_caja
+   return this.http.post(UrlUpdateCajaLista, cajaLista);
+ }
+
+ updateCajaconcepto(cajaconcepto: any) {
+  console.log("Enviando a actualizar:", cajaconcepto);
+  return this.http.post(UrlUpdateCajaconcepto, {
+    "id_concepto": cajaconcepto.id_concepto, // Necesario para identificar el registro
+    "descripcion": cajaconcepto.descripcion,
+    "tipo_concepto": cajaconcepto.tipo_concepto,
+    "fija": cajaconcepto.fija,
+    "ingreso_egreso": cajaconcepto.ingreso_egreso,
+    "id_caja": cajaconcepto.id_caja
+  });
+}
+
+updateCajamovi(cajamovi: any) {
+  // El backend espera el objeto completo incluyendo id_movimiento
+  return this.http.post(UrlUpdateCajamovi, cajamovi);
+}
 
 }

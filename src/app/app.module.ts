@@ -91,6 +91,10 @@ import { ArticulosComponent } from './components/articulos/articulos.component';
 import { NewarticuloComponent } from './components/newarticulo/newarticulo.component';
 import { EditarticuloComponent } from './components/editarticulo/editarticulo.component';
 
+import { CajaListaComponent } from './components/cajalista/cajalista.component';
+import { EditCajaListaComponent } from './components/editcajalista/editcajalista.component';
+import { NewCajaListaComponent } from './components/newcajalista/newcajalista.component';
+
 // Nuevos componentes para autenticación
 import { Login2Component } from './components/auth/login2/login2.component';
 import { UserManagementComponent } from './components/auth/user-management/user-management.component';
@@ -98,6 +102,13 @@ import { UserManagementComponent } from './components/auth/user-management/user-
 // Servicios y Guards
 import { AuthService } from './services/auth.service';
 import { AuthGuard } from './guards/auth.guard';
+import { CajaconceptoComponent } from './components/cajaconcepto/cajaconcepto.component';
+import { NewcajaconceptoComponent } from './components/newcajaconcepto/newcajaconcepto.component';
+import { EditcajaconceptoComponent } from './components/editcajaconcepto/editcajaconcepto.component';
+import { CajamoviComponent } from './components/cajamovi/cajamovi.component';
+import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.component';
+import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
+
 
 @NgModule({
   declarations: [
@@ -167,6 +178,15 @@ import { AuthGuard } from './guards/auth.guard';
     // Nuevos componentes
     Login2Component,
     UserManagementComponent,
+    CajaListaComponent,
+    EditCajaListaComponent,
+    NewCajaListaComponent,
+    CajaconceptoComponent,
+    NewcajaconceptoComponent,
+    EditcajaconceptoComponent,
+    CajamoviComponent,
+    NewCajamoviComponent,
+    EditCajamoviComponent,
   ],
   imports: [
     ButtonModule,

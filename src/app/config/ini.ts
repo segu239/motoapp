@@ -165,7 +165,11 @@ export const UrlProveedor ='https://motoapp.loclx.io/APIAND/index.php/Carga/Prov
 export const UrlTipoMoneda ='https://motoapp.loclx.io/APIAND/index.php/Carga/TipoMoneda';
 export const UrlValorCambio ='https://motoapp.loclx.io/APIAND/index.php/Carga/ValorCambio';
 export const UrlArticulos = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Articulos';
+export const UrlCajaLista = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajalista';
+export const UrlCajaconcepto = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajaconcepto';
 export const UrlArticuloById = 'https://motoapp.loclx.io/APIAND/index.php/Carga/ArticuloById';
+
+export const UrlCajamovi = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajamovi';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
 
@@ -179,6 +183,8 @@ export const UrleliminarRubroPrincipal= "https://motoapp.loclx.io/APIAND/index.p
 export  const UrlEliminarArtIva = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarArtIva';
 export  const UrlEliminarProveedor = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarProveedor';
 export  const UrlEliminarTipoMoneda = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarTipoMoneda';
+export  const UrlEliminarCajamovi = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarCajamovi';
+
 
 export const UrlSubirDatosRubro = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubro';
 export const UrlSubirDatosMarca = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosMarca';
@@ -188,6 +194,11 @@ export const UrlSubirDatosTipoMoneda = 'https://motoapp.loclx.io/APIAND/index.ph
 export const UrlSubirDatosValorCambio = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosValorCambio';
 export const UrlSubirDatosConflista = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosConflista';
 export const UrlSubirDatosArticulo = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosArticulo';
+export const UrlSubirDatosCajaconcepto = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosCajaconcepto';
+export const UrlSubirDatosCajamovi = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosCajamovi';
+
+
+export const UrlSubirDatosCajaLista = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosCajalista';
 
 export const UrlRubroPorId= "https://motoapp.loclx.io/APIAND/index.php/Carga/RubroPorId";
 
@@ -200,6 +211,9 @@ export const UrlEliminarValorCambio= "https://motoapp.loclx.io/APIAND/index.php/
 export const UrlEliminarConflista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarConflista";
 export const UrlEliminarArticulo= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarArticulo";
 
+export const UrlEliminarCajaconcepto= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarCajaconcepto";
+export const UrlEliminarCajaLista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/EliminarCajalista";
+
 export const UrlUpdateRubro= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateRubro";
 
 export const UrlUpdateMarca= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateMarca";
@@ -208,3 +222,6 @@ export const UrlUpdateTipoMoneda= "https://motoapp.loclx.io/APIAND/index.php/Des
 export const UrlUpdateValorCambio= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateValorCambio";
 export const UrlUpdateConflista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateConflista";
 export const UrlUpdateArticulo= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateArticulo";
+export const UrlUpdateCajamovi= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajamovi";
+export const UrlUpdateCajaLista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajalista";
+export const UrlUpdateCajaconcepto= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajaconcepto";

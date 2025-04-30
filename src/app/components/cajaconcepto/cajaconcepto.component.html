@@ -1,0 +1,56 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Conceptos de Caja</h4>
+                <p-table #dtable [value]="cajaconceptos" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
+                    [rows]="10"
+                    [globalFilterFields]="['descripcion','tipo_concepto', 'fija', 'ingreso_egreso', 'id_caja', 'id_concepto']">
+                    <ng-template pTemplate="caption">
+                        <div class="p-d-flex">
+                            <span class="p-input-icon-left ml-auto">
+                                <input pInputText type="text"
+                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                    placeholder="Buscar.." />
+                            </span>
+                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                styleClass="p-button-sm p-button-success ml-4"></p-button>
+                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajaconcepto']"
+                                styleClass="p-button-sm p-button-info ml-2"></p-button>
+                        </div>
+                    </ng-template>
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th pSortableColumn="descripcion">Descripción<p-sortIcon field="descripcion"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_concepto">Tipo Concepto<p-sortIcon field="tipo_concepto"></p-sortIcon></th>
+                            <th pSortableColumn="fija">Fijo<p-sortIcon field="fija"></p-sortIcon></th>
+                            <th pSortableColumn="ingreso_egreso">Ingreso/Egreso<p-sortIcon field="ingreso_egreso"></p-sortIcon></th>
+                            <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th>
+                            <!-- <th pSortableColumn="id_concepto">ID Concepto<p-sortIcon field="id_concepto"></p-sortIcon></th> -->
+                            <th>Editar</th>
+                            <th>Eliminar</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-cajaconcepto>
+                        <tr>
+                            <td>{{ cajaconcepto.descripcion }}</td>
+                            <td>{{ cajaconcepto.tipo_concepto }}</td>
+                            <td>{{ cajaconcepto.fija }}</td>
+                            <td>{{ cajaconcepto.ingreso_egreso }}</td>
+                            <td>{{ cajaconcepto.id_caja }}</td>
+                            <!-- <td>{{ cajaconcepto.id_concepto }}</td> -->
+                            <td>
+                                <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                                    (click)="editCajaconcepto(cajaconcepto)"></p-button>
+                            </td>
+                            <td>
+                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
+                                (click)="confirmDelete(cajaconcepto)"></p-button>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>

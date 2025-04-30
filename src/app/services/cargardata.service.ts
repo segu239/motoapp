@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
+import {UrlCajamovi, UrlCajaconcepto,UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
 import { map } from "rxjs/operators";
 
 @Injectable({
@@ -63,6 +63,16 @@ export class CargardataService {
     return this.http.get(UrlArticulos);
   }
 
+  getCajaLista() {
+    return this.http.get(UrlCajaLista);
+  }
+  getCajaconcepto() {
+    return this.http.get(UrlCajaconcepto); // Asumiendo que esta URL devuelve todos los conceptos
+  }
+
+  getCajamovi() {
+    return this.http.get(UrlCajamovi);
+  }
   getArticuloById(id_articulo: number) {
     return this.http.post(UrlArticuloById, {
       "id_articulo": id_articulo
