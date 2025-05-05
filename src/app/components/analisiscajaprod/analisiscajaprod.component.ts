@@ -63,11 +63,8 @@ export class AnalisiscajaprodComponent {
     ];
     this._selectedColumns = this.cols;
     this.getClientes();
-    this.sucursal = [
-      { label: 'Suc. Valle Viejo', value: 2 },
-      { label: 'Suc. Guemes', value: 3 },
-      { label: 'Deposito', value: 4 }
-    ];
+    this.sucursal = [];
+    this.loadSucursales();
   }
   ngOnInit(): void {
     console.log(this.sucursal);
@@ -91,6 +88,24 @@ export class AnalisiscajaprodComponent {
   
       return cellDate >= startDate && cellDate <= endDate;
     });
+  }
+  
+  loadSucursales(): void {
+    this._crud.getListSnap('sucursales').subscribe(
+      data => {
+        this.sucursal = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            label: payload.nombre,
+            value: payload.value
+          };
+        });
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        this.showNotification('Error al cargar las sucursales');
+      }
+    );
   }
   onDateSelect() {
     if (this.dateRange && this.dateRange.length === 2) {

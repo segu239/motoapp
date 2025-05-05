@@ -115,18 +115,35 @@ export class CabecerasComponent {
   }
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
-    if (this.sucursal == '1') {
-      this.sucursalNombre = 'Casa Central';
-    }
-    else if (this.sucursal == '2') {
-      this.sucursalNombre = 'Suc. Valle Viejo';
-    }
-    else if (this.sucursal == '3') {
-      this.sucursalNombre = 'Suc. Guemes';
-    }
-    else if (this.sucursal == '4') {
-      this.sucursalNombre = 'Deposito';
-    }
+    
+    this._crud.getListSnap('sucursales').subscribe(
+      data => {
+        const sucursales = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            nombre: payload.nombre,
+            value: payload.value
+          };
+        });
+        
+        // Buscar la sucursal correspondiente en los datos cargados
+        const sucursalEncontrada = sucursales.find(suc => suc.value.toString() === this.sucursal);
+        if (sucursalEncontrada) {
+          this.sucursalNombre = sucursalEncontrada.nombre;
+        } else {
+          // Guardar ID de sucursal para debugging
+          console.warn('No se encontró la sucursal con ID:', this.sucursal);
+          this.sucursalNombre = 'Sucursal ' + this.sucursal;
+        }
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        this.showNotification('Error al cargar las sucursales');
+        
+        // En caso de error, usamos un valor genérico como fallback
+        this.sucursalNombre = 'Sucursal ' + this.sucursal;
+      }
+    );
   }
   filterByDay() {
     const dayOfWeek = new Date().getDay(); // Domingo - 0, Lunes - 1, ..., Sábado - 6

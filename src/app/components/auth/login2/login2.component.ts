@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { CryptoService } from '../../../services/crypto.service';
+import { CrudService } from '../../../services/crud.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -16,12 +17,14 @@ export class Login2Component implements OnInit {
   rememberMe = false;
   sucursal: string | null = null;
   errorMessage: string | null = null;
+  sucursales: any[] = [];
   
   constructor(
     private fb: FormBuilder,
     private authService: AuthService,
     private router: Router,
-    private cryptoService: CryptoService
+    private cryptoService: CryptoService,
+    private crudService: CrudService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -33,6 +36,26 @@ export class Login2Component implements OnInit {
     // Recuperar datos de sesión anterior si existe
     this.checkRememberMe();
     this.loadSavedCredentials();
+    this.loadSucursales();
+  }
+  
+  loadSucursales(): void {
+    this.crudService.getListSnap('sucursales').subscribe(
+      data => {
+        this.sucursales = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            key: item.key,
+            nombre: payload.nombre,
+            value: payload.value
+          };
+        });
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        this.showError('Error al cargar las sucursales');
+      }
+    );
   }
   
   checkRememberMe(): void {

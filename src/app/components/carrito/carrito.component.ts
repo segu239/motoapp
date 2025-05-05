@@ -120,18 +120,35 @@ export class CarritoComponent {
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
     console.log(this.sucursal);
-    if (this.sucursal == '1') {
-      this.sucursalNombre = 'Casa Central';
-    }
-    else if (this.sucursal == '2') {
-      this.sucursalNombre = 'Suc. Valle Viejo';
-    }
-    else if (this.sucursal == '3') {
-      this.sucursalNombre = 'Suc. Guemes';
-    }
-    else if (this.sucursal == '4') {
-      this.sucursalNombre = 'Deposito';
-    }
+
+    this._crud.getListSnap('sucursales').subscribe(
+      data => {
+        const sucursales = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            nombre: payload.nombre,
+            value: payload.value
+          };
+        });
+        
+        // Buscar la sucursal correspondiente en los datos cargados
+        const sucursalEncontrada = sucursales.find(suc => suc.value.toString() === this.sucursal);
+        if (sucursalEncontrada) {
+          this.sucursalNombre = sucursalEncontrada.nombre;
+        } else {
+          // Guardar ID de sucursal para debugging
+          console.warn('No se encontró la sucursal con ID:', this.sucursal);
+          this.sucursalNombre = 'Sucursal ' + this.sucursal;
+        }
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        this.showNotification('Error al cargar las sucursales');
+        
+        // En caso de error, usamos un valor genérico como fallback
+        this.sucursalNombre = 'Sucursal ' + this.sucursal;
+      }
+    );
   }
 
   initLetraValue() {
@@ -292,16 +309,17 @@ export class CarritoComponent {
           sessionStorage.setItem('carrito', JSON.stringify(result));
           console.log(result);
           let sucursal = sessionStorage.getItem('sucursal');
-          let exi = 0;  // ESTO LO HAGO POR QUE NO HAY CORRESPONDENCIA ENTRE EXI Y SUCURSAL
-          if (sucursal == "2") {
-            exi = 3;
-          }
-          else if (sucursal == "3") {
-            exi = 4;
-          }
-          else if (sucursal == "4") {
-            exi = 1;
-          }
+          // Mapeado de sucursal a exi - Lo mantenemos hasta que se pueda cambiar en la base de datos
+          let exi = 0;
+          // Usando un objeto de mapeo en lugar de condicionales
+          const mappedValues = {
+            "2": 3,  // Suc. Valle Viejo
+            "3": 4,  // Suc. Guemes
+            "4": 1   // Deposito
+          };
+          
+          // Usamos el objeto de mapeo, con fallback a 0 si no existe
+          exi = mappedValues[sucursal] || 0;
           this._subirdata.editarStockArtSucxManagedPHP(result, exi).pipe(take(1)).subscribe((data: any) => {
             console.log(data);
           });

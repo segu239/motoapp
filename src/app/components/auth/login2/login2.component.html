@@ -35,9 +35,7 @@
                     <div class="col-xs-12">
                         <select class="form-control" (change)="onSucursalChange($event)">
                             <option value="" disabled selected>Seleccione sucursal</option>
-                            <option value="2">Suc. Valle Viejo</option>
-                            <option value="3">Suc. Guemes</option>
-                            <option value="4">Deposito</option>
+                            <option *ngFor="let suc of sucursales" [value]="suc.value">{{suc.nombre}}</option>
                         </select>
                     </div>
                 </div>
