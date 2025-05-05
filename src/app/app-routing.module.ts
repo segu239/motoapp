@@ -67,6 +67,7 @@ import { EditcajaconceptoComponent } from './components/editcajaconcepto/editcaj
 import { CajamoviComponent } from './components/cajamovi/cajamovi.component';
 import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.component';
 import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
+import { SucursalesComponent } from './components/sucursales/sucursales.component';
 
 
 //nuevouser role
@@ -137,6 +138,7 @@ children:[
     {path: 'cajamovi', component: CajamoviComponent, data: { titulo: "Cajamovi" } },
     { path: 'newcajamovi', component: NewCajamoviComponent, data: { titulo: "Nuevo Cajamovi" } },
     { path: 'editcajamovi', component: EditCajamoviComponent, data: { titulo: "Editar Cajamovi" } },
+    { path: 'sucursales', component: SucursalesComponent, data: { titulo: "Sucursales" } },
     // Nuevas rutas para la administración de usuarios
     { path: 'user-management', component: UserManagementComponent, data: { titulo: "Administración de Usuarios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
 ]

@@ -108,6 +108,7 @@ import { EditcajaconceptoComponent } from './components/editcajaconcepto/editcaj
 import { CajamoviComponent } from './components/cajamovi/cajamovi.component';
 import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.component';
 import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
+import { SucursalesComponent } from './components/sucursales/sucursales.component';
 
 
 @NgModule({
@@ -187,6 +188,7 @@ import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.co
     CajamoviComponent,
     NewCajamoviComponent,
     EditCajamoviComponent,
+    SucursalesComponent,
   ],
   imports: [
     ButtonModule,

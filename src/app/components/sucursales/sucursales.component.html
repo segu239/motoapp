@@ -1,0 +1,94 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Administración de Sucursales</h4>
+                <h6 class="card-subtitle">Gestione las sucursales del sistema</h6>
+
+                <!-- Formulario para crear/editar sucursal -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">{{ editMode ? 'Editar Sucursal' : 'Crear Sucursal' }}</h4>
+                                <form [formGroup]="sucursalForm" (ngSubmit)="onSubmit()">
+                                    <div class="form-group">
+                                        <label for="nombre">Nombre*</label>
+                                        <input type="text" class="form-control" id="nombre" formControlName="nombre" 
+                                               [ngClass]="{'is-invalid': sucursalForm.get('nombre')?.invalid && sucursalForm.get('nombre')?.touched}">
+                                        <div *ngIf="sucursalForm.get('nombre')?.invalid && sucursalForm.get('nombre')?.touched" class="invalid-feedback">
+                                            El nombre es obligatorio
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="value">Código*</label>
+                                        <input type="number" class="form-control" id="value" formControlName="value"
+                                               [ngClass]="{'is-invalid': sucursalForm.get('value')?.invalid && sucursalForm.get('value')?.touched}">
+                                        <div *ngIf="sucursalForm.get('value')?.invalid && sucursalForm.get('value')?.touched" class="invalid-feedback">
+                                            El código es obligatorio y debe ser un número válido
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group mt-4">
+                                        <button type="submit" class="btn btn-primary" [disabled]="sucursalForm.invalid || loading">
+                                            <i *ngIf="loading" class="fa fa-spinner fa-spin me-1"></i>
+                                            {{ editMode ? 'Actualizar' : 'Crear' }}
+                                        </button>
+                                        <button type="button" class="btn btn-secondary ms-2" (click)="resetForm()">
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de sucursales -->
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">Sucursales Registradas</h4>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Nombre</th>
+                                                <th>Código</th>
+                                                <th>Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr *ngIf="loading">
+                                                <td colspan="3" class="text-center">
+                                                    <i class="fa fa-spinner fa-spin"></i> Cargando...
+                                                </td>
+                                            </tr>
+                                            <tr *ngIf="!loading && sucursales.length === 0">
+                                                <td colspan="3" class="text-center">
+                                                    No hay sucursales registradas
+                                                </td>
+                                            </tr>
+                                            <tr *ngFor="let sucursal of sucursales">
+                                                <td>{{ sucursal.nombre }}</td>
+                                                <td>{{ sucursal.value }}</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info me-1" (click)="editSucursal(sucursal)" title="Editar">
+                                                        <i class="fa fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn btn-sm btn-danger" (click)="deleteSucursal(sucursal)" title="Eliminar">
+                                                        <i class="fa fa-trash"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
