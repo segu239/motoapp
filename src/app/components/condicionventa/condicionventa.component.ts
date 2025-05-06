@@ -219,8 +219,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     });
   }
   
-  // Nuevo método para manejar errores con opciones
-  handleLoadError(message: string, retry: () => void) {
+  // Método estandarizado para manejar errores con opciones
+  handleLoadError(message: string, retry: () => void, maxRetries: number = 3) {
     console.error('Error de carga:', message);
     
     // Cerrar el loading si está visible
@@ -231,6 +231,29 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Verificar si hay datos en caché
     const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
     const hasCachedData = cachedArticulosSucursal && cachedArticulosSucursal.length > 0;
+    
+    // Variable para controlar los reintentos
+    let retryAttempt = 0;
+    
+    // Función estandarizada para reintentar
+    const standardRetry = () => {
+      // Incrementar el contador de intentos
+      retryAttempt++;
+      
+      // Mostrar indicador de carga
+      this.mostrarLoading();
+      
+      // Limpiar caché antes de reintentar si ya hemos intentado más de una vez
+      if (retryAttempt > 1) {
+        console.log(`Limpiando caché en intento #${retryAttempt}`);
+        this.articulosCacheService.clearAllCaches();
+      }
+      
+      console.log(`Reintento #${retryAttempt} de ${maxRetries}`);
+      
+      // Ejecutar la función de reintento proporcionada
+      retry();
+    };
     
     if (hasCachedData) {
       // Ofrecer opciones si hay datos en caché
@@ -246,7 +269,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         if (result.isConfirmed) {
           // Reintentar la carga
           console.log('Reintentando carga de datos');
-          retry();
+          standardRetry();
         } else {
           // Usar datos de caché
           console.log(`Usando ${cachedArticulosSucursal.length} productos de caché como respaldo`);
@@ -264,7 +287,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         cancelButtonText: 'Aceptar'
       }).then((result) => {
         if (result.isConfirmed) {
-          retry();
+          standardRetry();
         }
       });
     }
@@ -386,9 +409,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
             } else {
               console.error('Error o respuesta vacía al cargar productos');
               this.handleLoadError('No se pudieron cargar los productos', () => {
-                // Función de reintento
-                this.mostrarLoading();
-                this.articulosCacheService.clearAllCaches(); // Limpiar caché antes de reintentar
+                // Función de reintento estandarizada
                 this.articulosCacheService.loadArticulosSucursal().subscribe({
                   next: (articulosSucursal: any[]) => {
                     if (articulosSucursal && articulosSucursal.length > 0) {
@@ -396,12 +417,33 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                       this.productos = this.procesarProductosConMoneda(productos);
                       Swal.close();
                     } else {
-                      this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
+                      // Usar el mismo método handleLoadError con la misma función de reintento
+                      this.handleLoadError('No se pudieron cargar los productos en el reintento', 
+                        () => this.articulosCacheService.loadArticulosSucursal().subscribe({
+                          next: (data) => {
+                            if (data && data.length > 0) {
+                              this.productos = this.procesarProductosConMoneda([...data]);
+                              Swal.close();
+                            }
+                          },
+                          error: (err) => Swal.close()
+                        })
+                      );
                     }
                   },
                   error: (error) => {
                     console.error('Error en reintento de carga:', error);
-                    this.handleLoadError('Error en el reintento de carga', () => {});
+                    this.handleLoadError('Error en el reintento de carga', 
+                      () => this.articulosCacheService.loadArticulosSucursal().subscribe({
+                        next: (data) => {
+                          if (data && data.length > 0) {
+                            this.productos = this.procesarProductosConMoneda([...data]);
+                            Swal.close();
+                          }
+                        },
+                        error: (err) => Swal.close()
+                      })
+                    );
                   }
                 });
               });
@@ -412,8 +454,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error('Error al cargar productos:', error);
             this.handleLoadError('No se pudieron cargar los productos', () => {
-              // Función de reintento
-              this.mostrarLoading();
+              // Función de reintento estandarizada
               this.articulosCacheService.loadArticulosSucursal().subscribe({
                 next: (articulosSucursal: any[]) => {
                   if (articulosSucursal && articulosSucursal.length > 0) {
@@ -421,12 +462,33 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                     this.productos = this.procesarProductosConMoneda(productos);
                     Swal.close();
                   } else {
-                    this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
+                    // Usar el mismo método handleLoadError con la misma función de reintento
+                    this.handleLoadError('No se pudieron cargar los productos en el reintento', 
+                      () => this.articulosCacheService.loadArticulosSucursal().subscribe({
+                        next: (data) => {
+                          if (data && data.length > 0) {
+                            this.productos = this.procesarProductosConMoneda([...data]);
+                            Swal.close();
+                          }
+                        },
+                        error: (err) => Swal.close()
+                      })
+                    );
                   }
                 },
                 error: (error) => {
                   console.error('Error en reintento de carga:', error);
-                  this.handleLoadError('Error en el reintento de carga', () => {});
+                  this.handleLoadError('Error en el reintento de carga', 
+                    () => this.articulosCacheService.loadArticulosSucursal().subscribe({
+                      next: (data) => {
+                        if (data && data.length > 0) {
+                          this.productos = this.procesarProductosConMoneda([...data]);
+                          Swal.close();
+                        }
+                      },
+                      error: (err) => Swal.close()
+                    })
+                  );
                 }
               });
             });
