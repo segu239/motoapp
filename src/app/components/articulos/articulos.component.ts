@@ -146,6 +146,9 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('ArticulosComponent initialized');
     
+    // Reiniciar el contador de reintentos
+    this.resetRetryCount();
+    
     // Subscribe to loading state
     this.subscriptions.push(
       this.articulosCacheService.loading$.subscribe(loading => {
@@ -156,6 +159,12 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     
     // Load data from cache or API
     this.loadData();
+  }
+  
+  // Método para reiniciar el contador de reintentos
+  private resetRetryCount() {
+    this.retryCount = 0;
+    console.log('Contador de reintentos reiniciado');
   }
   
   ngOnDestroy() {
@@ -175,6 +184,9 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   // Force refresh all data from API
   forceRefresh() {
     console.log('Force refresh requested');
+    
+    // Reiniciar el contador de reintentos al forzar recarga
+    this.resetRetryCount();
     
     // Show loading indicator
     Swal.fire({
@@ -366,12 +378,51 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     this.loading = false;
   }
   
-  // Nuevo método para reintentar la carga
+  // Contador de reintentos
+  private retryCount = 0;
+  private maxRetries = 3; // Número máximo de reintentos
+
+  // Método para reintentar la carga con límite de reintentos
   retryLoading() {
-    console.log('Ejecutando reintento de carga de datos');
+    // Incrementar contador de reintentos
+    this.retryCount++;
+    
+    console.log(`Ejecutando reintento de carga de datos (${this.retryCount}/${this.maxRetries})`);
+    
+    // Verificar si se alcanzó el límite de reintentos
+    if (this.retryCount > this.maxRetries) {
+      console.warn(`Se alcanzó el límite máximo de ${this.maxRetries} reintentos`);
+      
+      // Mostrar mensaje al usuario indicando que se alcanzó el límite
+      Swal.fire({
+        title: 'Límite de reintentos alcanzado',
+        text: 'No fue posible conectar con el servidor después de varios intentos. Por favor, seleccione una opción:',
+        icon: 'warning',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: 'Usar datos en caché',
+        denyButtonText: 'Refrescar página',
+        cancelButtonText: 'Intentar más tarde',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Usar datos en caché si están disponibles
+          const cachedArticulos = this.articulosCacheService.getArticulos();
+          this.useFallbackData(cachedArticulos);
+        } else if (result.isDenied) {
+          // Refrescar la página
+          window.location.reload();
+        }
+        // Si cancela, simplemente no hace nada (intentar más tarde)
+      });
+      
+      return; // Salir sin intentar cargar de nuevo
+    }
+    
+    // Si no se ha alcanzado el límite, mostrar indicador de carga y reintentar
     Swal.fire({
       title: 'Reintentando',
-      text: 'Reintentando cargar datos desde el servidor...',
+      text: `Reintentando cargar datos desde el servidor... (Intento ${this.retryCount}/${this.maxRetries})`,
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => {

@@ -909,3 +909,21 @@ INFORME 2
 
   Recomendamos implementar estas mejoras de forma incremental, comenzando por los aspectos de mayor impacto como el
    manejo estandarizado de errores y la centralización de la lógica de cálculo de precios.
+
+   SOLUCIONES:
+
+   1- 
+   
+   Las mejoras implementadas incluyen:
+
+  1. Contador de reintentos (máximo 3 intentos)
+  2. Reinicio del contador al iniciar el componente, para tener una cuenta limpia cada vez
+  3. Reinicio del contador al ejecutar forceRefresh manualmente
+  4. Mensaje claro al usuario cuando se alcanza el límite con 3 opciones:
+    - Usar datos en caché
+    - Refrescar la página (reinicia el componente y contador)
+    - Intentar más tarde (deja todo como está)
+  5. Información visual del número de intentos que se han realizado
+
+  Esta implementación evita el ciclo infinito de reintentos, proporciona opciones claras al usuario y mantiene un
+  seguimiento del estado de los reintentos, sin afectar la funcionalidad existente de manejo de caché.

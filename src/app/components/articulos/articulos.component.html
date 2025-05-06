@@ -32,26 +32,42 @@
                     [rows]="10" [loading]="loading"
                     [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo']">
                     <ng-template pTemplate="caption">
-                        <div class="p-d-flex justify-content-between align-items-center">
-                            <div>
-                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
-                                    selectedItemsLabel="{0} Columnas Seleccionadas" [style]="{'min-width': '200px'}"
-                                    placeholder="Elija Columnas">
-                                </p-multiSelect>
-                                <button class="btn btn-primary ml-2" (click)="forceRefresh()" [disabled]="loading">
-                                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i> Actualizar
-                                </button>
-                            </div>
-                            <div>
-                                <span class="p-input-icon-left ml-2">
-                                    <input pInputText type="text"
+                        <div class="d-flex flex-row align-items-center">
+                            <!-- Caja de búsqueda -->
+                            <div class="search-container">
+                                <span class="p-input-icon-left w-100">
+                                    <i class="pi pi-search"></i>
+                                    <input pInputText type="text" 
                                         (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
                                         placeholder="Buscar.." />
                                 </span>
+                            </div>
+                            
+                            <!-- Columnas selector -->
+                            <div class="ml-2 columnas-container">
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
+                                    selectedItemsLabel="{0} Columnas Seleccionadas" 
+                                    placeholder="Elija Columnas">
+                                </p-multiSelect>
+                            </div>
+                            
+                            <!-- Botón actualizar -->
+                            <div class="ml-2">
+                                <button class="btn btn-primary btn-actualizar" (click)="forceRefresh()" [disabled]="loading">
+                                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i> Actualizar
+                                </button>
+                            </div>
+                            
+                            <!-- Botón exportar Excel -->
+                            <div class="ml-2">
                                 <p-button icon="pi pi-file-excel" (click)="exportExcel()"
-                                    styleClass="p-button-sm p-button-success ml-2"></p-button>
+                                    styleClass="p-button-success"></p-button>
+                            </div>
+                            
+                            <!-- Botón agregar artículo -->
+                            <div class="ml-2">
                                 <p-button icon="pi pi-plus-circle" [routerLink]="['../newarticulo']"
-                                    styleClass="p-button-sm p-button-info ml-2"></p-button>
+                                    styleClass="p-button-info"></p-button>
                             </div>
                         </div>
                     </ng-template>

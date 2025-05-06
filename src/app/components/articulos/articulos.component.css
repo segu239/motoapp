@@ -1,0 +1,72 @@
+/* Estilos para la barra de herramientas */
+.d-flex {
+    display: flex !important;
+}
+
+.flex-row {
+    flex-direction: row !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.justify-content-start {
+    justify-content: flex-start !important;
+}
+
+.ml-2 {
+    margin-left: 0.5rem !important;
+}
+
+.w-100 {
+    width: 100% !important;
+}
+
+/* Contenedores de ancho fijo */
+.search-container, .columnas-container {
+    width: 240px !important;
+}
+
+/* Estilo para controles PrimeNG */
+:host ::ng-deep .p-multiselect {
+    width: 100%;
+}
+
+/* Estilo para la caja de búsqueda */
+:host ::ng-deep .p-input-icon-left {
+    width: 100%;
+}
+
+:host ::ng-deep .p-input-icon-left input {
+    width: 100%;
+    padding-left: 2.5rem;
+}
+
+:host ::ng-deep .p-input-icon-left i {
+    left: 0.75rem;
+}
+
+/* Asegurar que los botones tengan el mismo tamaño */
+:host ::ng-deep .p-button {
+    height: 2.357rem;
+}
+
+/* Ajuste para el botón principal */
+.btn-primary {
+    display: flex;
+    align-items: center;
+    height: 2.357rem;
+}
+
+/* Ajuste para el botón actualizar */
+.btn-actualizar {
+    display: flex;
+    align-items: center;
+    height: 2.357rem;
+    white-space: nowrap;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    font-size: 1rem;
+}
