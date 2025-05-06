@@ -133,6 +133,27 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       });
       this.subscriptions.push(subscription);
     }
+    
+    // Si tenemos ambos datos de moneda en caché, verificar su integridad
+    if (cachedValoresCambio.length > 0 && cachedTiposMoneda.length > 0) {
+      setTimeout(() => {
+        // Usamos setTimeout para asegurar que ambos arrays ya estén cargados
+        const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+        if (!datosCambioValidos) {
+          console.warn('Los datos de cambio en caché no son completamente válidos');
+          // Notificación no bloqueante para el usuario
+          Swal.fire({
+            title: 'Advertencia',
+            text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios de productos en moneda extranjera podrían no ser precisos.',
+            icon: 'warning',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000
+          });
+        }
+      }, 500);
+    }
 
     // Definir todas las columnas disponibles
     this.cols = [
@@ -293,8 +314,60 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     }
   }
   
+  /**
+   * Verifica la integridad de los datos críticos para los cambios de moneda
+   * @param valoresCambio Lista de valores de cambio
+   * @param tiposMoneda Lista de tipos de moneda
+   * @returns boolean indicando si los datos son válidos
+   */
+  verificarIntegridadDatosCambio(valoresCambio: any[], tiposMoneda: any[]): boolean {
+    if (!valoresCambio || valoresCambio.length === 0) {
+      console.warn('verificarIntegridadDatosCambio: No hay datos de valores de cambio');
+      return false;
+    }
+
+    if (!tiposMoneda || tiposMoneda.length === 0) {
+      console.warn('verificarIntegridadDatosCambio: No hay datos de tipos de moneda');
+      return false;
+    }
+
+    // Verificar que exista al menos la moneda base (generalmente cod_mone = 1)
+    const tieneMonedasBase = tiposMoneda.some(m => m.cod_mone === 1);
+    if (!tieneMonedasBase) {
+      console.warn('verificarIntegridadDatosCambio: No se encontró la moneda base (cod_mone=1)');
+      return false;
+    }
+
+    // Obtener tipos de moneda extranjera (diferentes a la moneda base)
+    const monedasExtranjeras = tiposMoneda.filter(m => m.cod_mone !== 1);
+    
+    // Verificar que todas las monedas extranjeras tengan al menos un valor de cambio
+    let todasMonedasTienenCambio = true;
+    monedasExtranjeras.forEach(moneda => {
+      const tieneValorCambio = valoresCambio.some(vc => vc.codmone === moneda.cod_mone);
+      if (!tieneValorCambio) {
+        console.warn(`verificarIntegridadDatosCambio: La moneda ${moneda.moneda} (cod=${moneda.cod_mone}) no tiene valor de cambio configurado`);
+        todasMonedasTienenCambio = false;
+      }
+    });
+
+    // Verificar que los valores de cambio tengan el campo vcambio definido y mayor a cero
+    let todosValoresCambioValidos = true;
+    valoresCambio.forEach(vc => {
+      if (!vc.vcambio || parseFloat(vc.vcambio) <= 0) {
+        console.warn(`verificarIntegridadDatosCambio: Valor de cambio para moneda cod=${vc.codmone} inválido: ${vc.vcambio}`);
+        todosValoresCambioValidos = false;
+      }
+    });
+
+    return todasMonedasTienenCambio && todosValoresCambioValidos;
+  }
+
   // Método para usar datos de caché
   useCachedData(cachedData: any[]) {
+    // Verificar la integridad de los datos críticos de moneda
+    const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+    
     // Hacer una copia de los productos originales desde la caché
     let productos = [...cachedData];
     
@@ -304,53 +377,120 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Actualizar la interfaz
     this.cdr.detectChanges();
     
+    // Determinar el mensaje según la validación de datos
+    let mensaje = 'Usando datos almacenados en caché.';
+    let icono = 'info';
+    
+    if (!datosCambioValidos) {
+      mensaje += ' ADVERTENCIA: Los datos de tipos de cambio pueden estar incompletos o ser incorrectos. Los precios de productos en moneda extranjera podrían no ser precisos.';
+      icono = 'warning';
+    } else {
+      mensaje += ' Algunos precios podrían no estar actualizados.';
+    }
+    
     // Informar al usuario
     Swal.fire({
-      title: 'Información',
-      text: 'Usando datos almacenados en caché. Algunos precios podrían no estar actualizados.',
-      icon: 'info',
+      title: datosCambioValidos ? 'Información' : 'Advertencia',
+      text: mensaje,
+      icon: icono as any,
       confirmButtonText: 'Entendido'
     });
   }
   
-  // Método para procesar productos con su moneda
+  /**
+   * Método para procesar productos con su moneda
+   * Aplica el multiplicador de cambio correspondiente a los productos con moneda extranjera
+   * @param productos Lista de productos a procesar
+   * @returns Lista de productos con precios procesados
+   */
   procesarProductosConMoneda(productos: any[]) {
-    productos.forEach(producto => {
-      // Verificar si el producto tiene un tipo de moneda
-      if (producto.tipo_moneda) {
-        // Filtrar los valores de cambio para este tipo de moneda
-        const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
-        
-        // Si hay valores de cambio para este tipo de moneda
-        if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
-          let valorCambioSeleccionado;
-          
-          // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
-          if (valoresCambioMoneda.length > 1) {
-            // Ordenar por fecha descendente (más reciente primero)
-            valoresCambioMoneda.sort((a, b) => {
-              const fechaA = new Date(a.fecdesde);
-              const fechaB = new Date(b.fecdesde);
-              return fechaB.getTime() - fechaA.getTime();
-            });
+    // Verificar si tenemos datos válidos para conversión
+    const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+    
+    // Crear copia para no modificar originales
+    const productosConversiones = [...productos];
+    
+    // Contador para productos con problemas de conversión
+    let productosConProblemas = 0;
+    
+    // Procesar cada producto
+    productosConversiones.forEach(producto => {
+      try {
+        // Verificar si el producto tiene un tipo de moneda extranjera
+        if (producto.tipo_moneda && producto.tipo_moneda !== 1) {
+          // Si los datos de cambio no son válidos, marcar el producto
+          if (!datosCambioValidos) {
+            producto._precioConversionSospechosa = true;
+            productosConProblemas++;
           }
           
-          // Tomar el primer valor (el más reciente después de ordenar)
-          valorCambioSeleccionado = valoresCambioMoneda[0];
+          // Filtrar los valores de cambio para este tipo de moneda
+          const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
           
-          if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
-            // Aplicar el multiplicador a todos los precios
-            producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
-            producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
-            producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
-            producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
-            producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
+          // Si hay valores de cambio para este tipo de moneda
+          if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
+            let valorCambioSeleccionado;
+            
+            // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+            if (valoresCambioMoneda.length > 1) {
+              // Ordenar por fecha descendente (más reciente primero)
+              valoresCambioMoneda.sort((a, b) => {
+                const fechaA = new Date(a.fecdesde);
+                const fechaB = new Date(b.fecdesde);
+                return fechaB.getTime() - fechaA.getTime();
+              });
+            }
+            
+            // Tomar el primer valor (el más reciente después de ordenar)
+            valorCambioSeleccionado = valoresCambioMoneda[0];
+            
+            if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
+              const multiplicador = parseFloat(valorCambioSeleccionado.vcambio);
+              
+              // Verificar multiplicador válido
+              if (multiplicador <= 0) {
+                console.warn(`Multiplicador inválido (${multiplicador}) para moneda ${producto.tipo_moneda}`);
+                producto._precioConversionSospechosa = true;
+                productosConProblemas++;
+              } else {
+                // Guardar copia de precios originales
+                producto._preconOriginal = producto.precon;
+                producto._prefi1Original = producto.prefi1;
+                producto._prefi2Original = producto.prefi2;
+                producto._prefi3Original = producto.prefi3;
+                producto._prefi4Original = producto.prefi4;
+                
+                // Aplicar el multiplicador a todos los precios
+                producto.precon = producto.precon ? producto.precon * multiplicador : producto.precon;
+                producto.prefi1 = producto.prefi1 ? producto.prefi1 * multiplicador : producto.prefi1;
+                producto.prefi2 = producto.prefi2 ? producto.prefi2 * multiplicador : producto.prefi2;
+                producto.prefi3 = producto.prefi3 ? producto.prefi3 * multiplicador : producto.prefi3;
+                producto.prefi4 = producto.prefi4 ? producto.prefi4 * multiplicador : producto.prefi4;
+              }
+            } else {
+              console.warn(`Valor de cambio no encontrado o inválido para moneda ${producto.tipo_moneda}`);
+              producto._precioConversionSospechosa = true;
+              productosConProblemas++;
+            }
+          } else {
+            console.warn(`No hay valores de cambio para moneda ${producto.tipo_moneda}`);
+            producto._precioConversionSospechosa = true;
+            productosConProblemas++;
           }
         }
+      } catch (error) {
+        console.error('Error al procesar producto con moneda:', error);
+        producto._precioConversionSospechosa = true;
+        productosConProblemas++;
       }
     });
     
-    return productos; // Devolver productos procesados en lugar de asignarlos directamente
+    // Registrar estadísticas de conversión
+    if (productosConProblemas > 0) {
+      console.warn(`Se encontraron ${productosConProblemas} productos con problemas de conversión de moneda`);
+    }
+    
+    return productosConversiones;
   }
 
   selectTipo(item: any) {
@@ -379,6 +519,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       if (cachedArticulosSucursal.length > 0) {
         console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para CondicionVenta`);
         
+        // Verificar integridad de datos de cambio antes de procesar
+        const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+        
         // Hacer una copia de los productos originales desde la caché
         let productos = [...cachedArticulosSucursal];
         
@@ -390,6 +533,21 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         
         // Cerrar loading
         Swal.close();
+        
+        // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
+        if (!datosCambioValidos) {
+          setTimeout(() => {
+            Swal.fire({
+              title: 'Advertencia',
+              text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
+              icon: 'warning',
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false,
+              timer: 5000
+            });
+          }, 500);
+        }
       } else {
         console.log('No hay productos en caché, cargando desde API');
         
@@ -557,6 +715,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         if (cachedArticulosSucursal.length > 0) {
           console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioTarj`);
           
+          // Verificar integridad de datos de cambio antes de procesar
+          const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+          
           // Hacer una copia de los productos originales desde la caché y procesarlos
           let productos = [...cachedArticulosSucursal];
           this.productos = this.procesarProductosConMoneda(productos);
@@ -565,6 +726,21 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           
           // Cerrar loading
           Swal.close();
+          
+          // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
+          if (!datosCambioValidos) {
+            setTimeout(() => {
+              Swal.fire({
+                title: 'Advertencia',
+                text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 5000
+              });
+            }, 500);
+          }
         } else {
           // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
           this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
@@ -683,6 +859,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         if (cachedArticulosSucursal.length > 0) {
           console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioCheque`);
           
+          // Verificar integridad de datos de cambio antes de procesar
+          const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+          
           // Hacer una copia de los productos originales desde la caché y procesarlos
           let productos = [...cachedArticulosSucursal];
           this.productos = this.procesarProductosConMoneda(productos);
@@ -691,6 +870,21 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           
           // Cerrar loading
           Swal.close();
+          
+          // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
+          if (!datosCambioValidos) {
+            setTimeout(() => {
+              Swal.fire({
+                title: 'Advertencia',
+                text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
+                icon: 'warning',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 5000
+              });
+            }, 500);
+          }
         } else {
           // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
           this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
