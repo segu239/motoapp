@@ -237,6 +237,23 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         this.confLista = cachedConfLista;
         this.articulosOriginal = cachedArticulos;
         
+        // Verificar la integridad de los datos críticos
+        const confListaValida = this.verificarIntegridadConfLista(cachedConfLista);
+        if (!confListaValida) {
+          console.warn('La configuración de listas en caché está incompleta o es inválida');
+          // No bloqueamos el uso, pero registramos la advertencia y notificamos al usuario
+          const notificacion = 'La configuración de precios puede estar incompleta. Considere actualizar los datos.';
+          setTimeout(() => {
+            Swal.fire({
+              title: 'Advertencia',
+              text: notificacion,
+              icon: 'warning',
+              confirmButtonText: 'Entendido',
+              timer: 5000
+            });
+          }, 1000);
+        }
+        
         // Process the data
         this.processArticulos();
         
@@ -246,6 +263,11 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         return;
       } else {
         console.log('Incomplete cached data, loading from API');
+        // Log específicamente qué datos faltan para mejor diagnóstico
+        if (cachedValoresCambio.length === 0) console.warn('Faltan valores de cambio en caché');
+        if (cachedTiposMoneda.length === 0) console.warn('Faltan tipos de moneda en caché');
+        if (cachedConfLista.length === 0) console.warn('Falta configuración de listas en caché');
+        if (cachedArticulos.length === 0) console.warn('Faltan artículos en caché');
       }
     } else {
       console.log('Force refresh requested, loading from API');
@@ -335,13 +357,34 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     }
     
     const cachedArticulos = this.articulosCacheService.getArticulos();
-    const hasCachedData = this.articulosOriginal.length > 0 || cachedArticulos.length > 0;
+    const cachedConfLista = this.articulosCacheService.getConfLista();
+    const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
+    const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
+    
+    // Verificar disponibilidad de todos los conjuntos de datos
+    const hasCachedArticulos = this.articulosOriginal.length > 0 || cachedArticulos.length > 0;
+    const hasCachedConfLista = this.confLista.length > 0 || cachedConfLista.length > 0;
+    const hasCachedValoresCambio = this.valoresCambio.length > 0 || cachedValoresCambio.length > 0;
+    const hasCachedTiposMoneda = this.tiposMoneda.length > 0 || cachedTiposMoneda.length > 0;
+    
+    // Consideramos que hay datos en caché si al menos tenemos artículos
+    const hasCachedData = hasCachedArticulos;
+    
+    // Construir mensaje descriptivo
+    let messageDetail = message;
+    if (hasCachedData) {
+      messageDetail += '\n\nDatos disponibles en caché:';
+      messageDetail += hasCachedArticulos ? '\n✓ Artículos' : '\n✗ Faltan artículos';
+      messageDetail += hasCachedConfLista ? '\n✓ Configuración de listas' : '\n✗ Falta configuración de listas';
+      messageDetail += hasCachedValoresCambio ? '\n✓ Valores de cambio' : '\n✗ Faltan valores de cambio';
+      messageDetail += hasCachedTiposMoneda ? '\n✓ Tipos de moneda' : '\n✗ Faltan tipos de moneda';
+    }
     
     if (hasCachedData) {
       // Si hay datos en caché, ofrecer opciones para mantenerlos o reintentar
       Swal.fire({
         title: 'Error',
-        text: message,
+        text: messageDetail,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Reintentar carga',
@@ -437,33 +480,79 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   // Nuevo método para usar datos de respaldo
   useFallbackData(cachedArticulos: any[]) {
     if (this.articulosOriginal.length > 0) {
-      // Si ya tenemos datos cargados, simplemente procesar
+      // Si ya tenemos datos cargados, verificar que todos los datos relacionados estén disponibles
       console.log('Usando artículos ya cargados en memoria como alternativa');
+      if (this.confLista.length === 0) {
+        // Si falta confLista, intentar cargar desde caché
+        const cachedConfLista = this.articulosCacheService.getConfLista();
+        if (cachedConfLista.length > 0) {
+          console.log('Cargando confLista desde caché para completar datos');
+          this.confLista = cachedConfLista;
+        } else {
+          console.warn('No se encontró confLista en caché. Los precios de lista podrían ser incorrectos.');
+        }
+      }
       this.processArticulos();
     } else if (cachedArticulos.length > 0) {
       // Si hay datos en caché, usarlos
       console.log('Usando artículos en caché como alternativa');
       this.articulosOriginal = cachedArticulos;
       
-      // Intentar cargar otros datos relacionados desde caché
+      // Intentar cargar TODOS los datos relacionados desde caché
       const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
       const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
+      const cachedConfLista = this.articulosCacheService.getConfLista();
       
+      // Verificar y cargar cada conjunto de datos
       if (cachedValoresCambio.length > 0) {
+        console.log(`Cargando ${cachedValoresCambio.length} registros de valoresCambio desde caché`);
         this.valoresCambio = cachedValoresCambio;
+      } else {
+        console.warn('No se encontraron datos de valores de cambio en caché');
       }
       
       if (cachedTiposMoneda.length > 0) {
+        console.log(`Cargando ${cachedTiposMoneda.length} registros de tiposMoneda desde caché`);
         this.tiposMoneda = cachedTiposMoneda;
+      } else {
+        console.warn('No se encontraron datos de tipos de moneda en caché');
       }
+      
+      if (cachedConfLista.length > 0) {
+        console.log(`Cargando ${cachedConfLista.length} registros de confLista desde caché`);
+        this.confLista = cachedConfLista;
+      } else {
+        console.warn('No se encontraron datos de configuración de listas en caché');
+      }
+      
+      // Verificar si tenemos datos críticos antes de procesar
+      const datosCompletos = this.valoresCambio.length > 0 && 
+                             this.tiposMoneda.length > 0 && 
+                             this.confLista.length > 0;
       
       this.processArticulos();
       
-      // Informar al usuario
+      // Informar al usuario con mensaje específico según los datos disponibles
+      let mensaje = 'Usando datos almacenados en caché.';
+      if (!datosCompletos) {
+        mensaje += ' ADVERTENCIA: Algunos datos de configuración están incompletos.';
+        if (this.confLista.length === 0) {
+          mensaje += ' Falta configuración de listas de precios.';
+        }
+        if (this.valoresCambio.length === 0) {
+          mensaje += ' Faltan valores de cambio.';
+        }
+        if (this.tiposMoneda.length === 0) {
+          mensaje += ' Faltan tipos de moneda.';
+        }
+      } else {
+        mensaje += ' Algunos precios podrían no estar actualizados.';
+      }
+      
       Swal.fire({
         title: 'Información',
-        text: 'Usando datos almacenados en caché. Algunos precios podrían no estar actualizados.',
-        icon: 'info',
+        text: mensaje,
+        icon: datosCompletos ? 'info' : 'warning',
         confirmButtonText: 'Entendido'
       });
     }
@@ -672,5 +761,47 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     
     const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
     return moneda && moneda.simbolo ? moneda.simbolo : '$';
+  }
+
+  /**
+   * Verifica que la configuración de listas de precios tenga todas las entradas necesarias
+   * @param confLista Array con la configuración de listas de precios
+   * @returns boolean indicando si la configuración es válida
+   */
+  verificarIntegridadConfLista(confLista: any[]): boolean {
+    if (!confLista || confLista.length === 0) {
+      console.warn('verificarIntegridadConfLista: No hay datos de configuración');
+      return false;
+    }
+
+    // Verificar que haya al menos una configuración para cada lista y cada moneda común
+    // Típicamente deberíamos tener al menos 4 listas (1-4) para moneda base (1)
+    const tiposMonedasDisponibles = this.tiposMoneda.length > 0 ? 
+      this.tiposMoneda.map(m => Number(m.cod_mone)) : [1]; // Si no hay monedas, al menos verificar moneda base
+    
+    // Verificar que existan configuraciones para las listas 1-4 en la moneda principal
+    const listasNecesarias = [1, 2, 3, 4]; // Listas críticas que deberían estar configuradas
+    let configuracionCompleta = true;
+    
+    // Verificar cada lista necesaria para la moneda base (tipomone=1)
+    listasNecesarias.forEach(lista => {
+      const configLista = confLista.find((config: any) => 
+        Number(config.listap) === lista && Number(config.tipomone) === 1
+      );
+      
+      if (!configLista) {
+        console.warn(`verificarIntegridadConfLista: Falta configuración para lista ${lista} en moneda base`);
+        configuracionCompleta = false;
+      } else {
+        // Verificar que tenga los campos necesarios
+        if (typeof configLista.preciof21 === 'undefined' || 
+            typeof configLista.preciof105 === 'undefined') {
+          console.warn(`verificarIntegridadConfLista: Configuración incompleta para lista ${lista}`);
+          configuracionCompleta = false;
+        }
+      }
+    });
+    
+    return configuracionCompleta;
   }
 }
