@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
 import { FormGroup, FormControl } from '@angular/forms';
+import { ArticulosCacheService } from '../../services/articulos-cache.service';
+import { Subscription } from 'rxjs';
 
 import Swal from 'sweetalert2';
 
@@ -78,7 +80,7 @@ interface TipoMoneda {
   templateUrl: './articulos.component.html',
   styleUrls: ['./articulos.component.css']
 })
-export class ArticulosComponent {
+export class ArticulosComponent implements OnInit, OnDestroy {
   
   public articulos: Articulo[] = [];
   public articulosOriginal: Articulo[] = [];
@@ -88,17 +90,19 @@ export class ArticulosComponent {
   cols: Column[];
   _selectedColumns: Column[];
   
+  // New properties for caching
+  public loading = false;
+  public fromCache = false;
+  
+  // Subscriptions for clean up
+  private subscriptions: Subscription[] = [];
+  
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
-    private cargardataService: CargardataService
+    private cargardataService: CargardataService,
+    private articulosCacheService: ArticulosCacheService
   ) {
-    // Mostrar mensaje de carga
-    this.mostrarCargando();
-    
-    // Cargamos primero los valores de cambio y tipos de moneda antes de cargar artículos
-    this.cargarValoresCambio();
-    
     this.cols = [
       { field: 'cd_articulo', header: 'Código' },
       { field: 'nomart', header: 'Nombre' },
@@ -139,6 +143,26 @@ export class ArticulosComponent {
     ];
   }
 
+  ngOnInit() {
+    console.log('ArticulosComponent initialized');
+    
+    // Subscribe to loading state
+    this.subscriptions.push(
+      this.articulosCacheService.loading$.subscribe(loading => {
+        this.loading = loading;
+        console.log('Loading state changed:', loading);
+      })
+    );
+    
+    // Load data from cache or API
+    this.loadData();
+  }
+  
+  ngOnDestroy() {
+    // Clean up subscriptions
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
   get selectedColumns(): Column[] {
     return this._selectedColumns;
   }
@@ -148,148 +172,250 @@ export class ArticulosComponent {
     this._selectedColumns = this.cols.filter((col) => val.includes(col));
   }
 
-  mostrarCargando() {
+  // Force refresh all data from API
+  forceRefresh() {
+    console.log('Force refresh requested');
+    
+    // Show loading indicator
     Swal.fire({
-      title: 'Cargando artículos',
-      text: 'Por favor espere mientras se cargan los datos...',
+      title: 'Actualizando datos',
+      text: 'Obteniendo datos actualizados del servidor...',
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => {
         Swal.showLoading();
       }
     });
+    
+    // Clear cache and reload from API
+    this.articulosCacheService.clearAllCaches();
+    this.loadData(true);
   }
-
-  cargarValoresCambio() {
-    this.cargardataService.getValorCambio().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          this.valoresCambio = response.mensaje;
-          console.log('Valores de cambio cargados:', this.valoresCambio);
-          // Una vez cargados los valores de cambio, cargar tipos de moneda
-          this.cargarTiposMoneda();
-        } else {
-          Swal.close();
-          console.error('Error loading valores de cambio:', response.mensaje);
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudieron cargar los valores de cambio',
-            icon: 'error'
+  
+  // Load data from cache or API
+  loadData(forceRefresh = false) {
+    console.log('Loading data, forceRefresh:', forceRefresh);
+    this.loading = true;
+    this.fromCache = false;
+    
+    // If not forcing refresh, try to get from cache first
+    if (!forceRefresh) {
+      console.log('Checking for cached data');
+      const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
+      const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
+      const cachedConfLista = this.articulosCacheService.getConfLista();
+      const cachedArticulos = this.articulosCacheService.getArticulos();
+      
+      console.log('Cache check results:', {
+        valoresCambio: cachedValoresCambio.length,
+        tiposMoneda: cachedTiposMoneda.length,
+        confLista: cachedConfLista.length,
+        articulos: cachedArticulos.length
+      });
+      
+      // If we have all cached data, use it
+      if (cachedValoresCambio.length > 0 && 
+          cachedTiposMoneda.length > 0 && 
+          cachedConfLista.length > 0 && 
+          cachedArticulos.length > 0) {
+        
+        console.log('Using cached data');
+        this.valoresCambio = cachedValoresCambio;
+        this.tiposMoneda = cachedTiposMoneda;
+        this.confLista = cachedConfLista;
+        this.articulosOriginal = cachedArticulos;
+        
+        // Process the data
+        this.processArticulos();
+        
+        // Mark as loaded from cache
+        this.fromCache = true;
+        this.loading = false;
+        return;
+      } else {
+        console.log('Incomplete cached data, loading from API');
+      }
+    } else {
+      console.log('Force refresh requested, loading from API');
+    }
+    
+    // If we got here, we need to load from API
+    console.log('Loading data from API');
+    this.subscriptions.push(
+      this.articulosCacheService.loadAllData().subscribe({
+        next: (success) => {
+          console.log('Data loaded from API, success:', success);
+          
+          // Get data from cache service
+          this.valoresCambio = this.articulosCacheService.getValoresCambio();
+          this.tiposMoneda = this.articulosCacheService.getTiposMoneda();
+          this.confLista = this.articulosCacheService.getConfLista();
+          this.articulosOriginal = this.articulosCacheService.getArticulos();
+          
+          console.log('Retrieved data from cache service:', {
+            valoresCambio: this.valoresCambio.length,
+            tiposMoneda: this.tiposMoneda.length,
+            confLista: this.confLista.length,
+            articulos: this.articulosOriginal.length
           });
+          
+          // Check if we actually got data
+          if (this.valoresCambio.length > 0 && 
+              this.tiposMoneda.length > 0 && 
+              this.articulosOriginal.length > 0) {
+            
+            // Process the data
+            this.processArticulos();
+            this.loading = false;
+            
+            // Close loading if active
+            if (Swal.isVisible()) {
+              Swal.close();
+            }
+          } else {
+            console.error('Data loading incomplete, some arrays are empty');
+            this.handleLoadError('Error al cargar los datos: información incompleta');
+          }
+        },
+        error: (error) => {
+          console.error('Error loading data:', error);
+          this.handleLoadError('Error al cargar los datos desde el servidor');
         }
-      },
-      error: (error) => {
-        Swal.close();
-        console.error('Error in API call:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los valores de cambio',
-          icon: 'error'
-        });
+      })
+    );
+  }
+  
+  // Process articles with prices
+  processArticulos() {
+    console.log('Processing articulos, original count:', this.articulosOriginal.length);
+    
+    if (!this.articulosOriginal || this.articulosOriginal.length === 0) {
+      console.warn('No original articulos to process');
+      this.articulos = [];
+      return;
+    }
+    
+    try {
+      // Make a copy of the original articles
+      let articulosConPrecios = [...this.articulosOriginal];
+      
+      // Apply exchange rate multiplier to each article
+      articulosConPrecios = this.aplicarMultiplicadorPrecio(articulosConPrecios);
+      
+      // Assign the articles with updated prices
+      this.articulos = articulosConPrecios;
+      
+      console.log('Artículos procesados correctamente:', this.articulos.length);
+    } catch (error) {
+      console.error('Error processing articulos:', error);
+      // Use originals as fallback
+      this.articulos = [...this.articulosOriginal]; 
+      console.log('Using original articles as fallback due to processing error');
+    }
+  }
+  
+  handleLoadError(message: string) {
+    console.error('Error handler called:', message);
+    
+    // Close loading if active
+    if (Swal.isVisible()) {
+      Swal.close();
+    }
+    
+    const cachedArticulos = this.articulosCacheService.getArticulos();
+    const hasCachedData = this.articulosOriginal.length > 0 || cachedArticulos.length > 0;
+    
+    if (hasCachedData) {
+      // Si hay datos en caché, ofrecer opciones para mantenerlos o reintentar
+      Swal.fire({
+        title: 'Error',
+        text: message,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reintentar carga',
+        cancelButtonText: 'Usar datos anteriores',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Reintentar la carga
+          console.log('Reintentando carga de datos desde API');
+          this.retryLoading();
+        } else {
+          // Usar datos anteriores (caché o los actuales ya cargados)
+          console.log('Usando datos anteriores como alternativa');
+          this.useFallbackData(cachedArticulos);
+        }
+      });
+    } else {
+      // Si no hay datos en caché, solo ofrecer la opción de reintentar
+      Swal.fire({
+        title: 'Error',
+        text: message,
+        icon: 'error',
+        confirmButtonText: 'Reintentar',
+        showCancelButton: true,
+        cancelButtonText: 'Aceptar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Reintentar la carga
+          this.retryLoading();
+        }
+      });
+    }
+    
+    this.loading = false;
+  }
+  
+  // Nuevo método para reintentar la carga
+  retryLoading() {
+    console.log('Ejecutando reintento de carga de datos');
+    Swal.fire({
+      title: 'Reintentando',
+      text: 'Reintentando cargar datos desde el servidor...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
       }
     });
+    
+    // Reintento sin limpiar caché (útil cuando el problema fue de conexión temporal)
+    this.loadData(true);
   }
-
-  cargarTiposMoneda() {
-    this.cargardataService.getTipoMoneda().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          this.tiposMoneda = response.mensaje;
-          console.log('Tipos de moneda cargados:', this.tiposMoneda);
-          // Una vez cargados los tipos de moneda, cargamos la configuración de listas
-          this.cargarConfLista();
-        } else {
-          Swal.close();
-          console.error('Error loading tipos de moneda:', response.mensaje);
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudieron cargar los tipos de moneda',
-            icon: 'error'
-          });
-        }
-      },
-      error: (error) => {
-        Swal.close();
-        console.error('Error in API call:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los tipos de moneda',
-          icon: 'error'
-        });
+  
+  // Nuevo método para usar datos de respaldo
+  useFallbackData(cachedArticulos: any[]) {
+    if (this.articulosOriginal.length > 0) {
+      // Si ya tenemos datos cargados, simplemente procesar
+      console.log('Usando artículos ya cargados en memoria como alternativa');
+      this.processArticulos();
+    } else if (cachedArticulos.length > 0) {
+      // Si hay datos en caché, usarlos
+      console.log('Usando artículos en caché como alternativa');
+      this.articulosOriginal = cachedArticulos;
+      
+      // Intentar cargar otros datos relacionados desde caché
+      const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
+      const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
+      
+      if (cachedValoresCambio.length > 0) {
+        this.valoresCambio = cachedValoresCambio;
       }
-    });
-  }
-
-  cargarConfLista() {
-    this.cargardataService.getConflista().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          this.confLista = response.mensaje;
-          console.log('Configuración de listas cargada:', this.confLista);
-          // Una vez cargada la configuración de listas, cargamos los artículos
-          this.loadArticulos();
-        } else {
-          Swal.close();
-          console.error('Error loading conf_lista:', response.mensaje);
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo cargar la configuración de listas de precio',
-            icon: 'error'
-          });
-        }
-      },
-      error: (error) => {
-        Swal.close();
-        console.error('Error in API call:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo cargar la configuración de listas de precio',
-          icon: 'error'
-        });
+      
+      if (cachedTiposMoneda.length > 0) {
+        this.tiposMoneda = cachedTiposMoneda;
       }
-    });
-  }
-
-  loadArticulos() {
-    this.cargardataService.getArticulos().subscribe({
-      next: (response: any) => {
-        if (!response.error) {
-          // Guardar los artículos originales sin transformación
-          this.articulosOriginal = [...response.mensaje];
-          
-          console.log('Datos originales cargados:', this.articulosOriginal.length);
-          
-          // Hacer una copia de los artículos originales
-          let articulosConPrecios = [...response.mensaje];
-          
-          // Aplicar multiplicador de tipo de moneda a cada artículo
-          articulosConPrecios = this.aplicarMultiplicadorPrecio(articulosConPrecios);
-          
-          // Asignar los artículos con precios actualizados
-          this.articulos = articulosConPrecios;
-          
-          // Cerrar el mensaje de carga
-          Swal.close();
-        } else {
-          Swal.close();
-          console.error('Error loading articulos:', response.mensaje);
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudieron cargar los artículos',
-            icon: 'error'
-          });
-        }
-      },
-      error: (error) => {
-        Swal.close();
-        console.error('Error in API call:', error);
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los artículos',
-          icon: 'error'
-        });
-      }
-    });
+      
+      this.processArticulos();
+      
+      // Informar al usuario
+      Swal.fire({
+        title: 'Información',
+        text: 'Usando datos almacenados en caché. Algunos precios podrían no estar actualizados.',
+        icon: 'info',
+        confirmButtonText: 'Entendido'
+      });
+    }
   }
 
   aplicarMultiplicadorPrecio(articulos: Articulo[]): Articulo[] {
@@ -298,6 +424,8 @@ export class ArticulosComponent {
       return articulos;
     }
 
+    console.log(`Aplicando multiplicador de precio a ${articulos.length} artículos`);
+    
     return articulos.map(articulo => {
       try {
         // Crear una copia del artículo para no modificar el original
@@ -307,8 +435,6 @@ export class ArticulosComponent {
         if (articuloCopy.tipo_moneda && articuloCopy.tipo_moneda !== 1) {
           // Buscar el valor de cambio correspondiente directamente usando tipo_moneda como codmone
           const valorCambio = this.obtenerValorCambio(articuloCopy.tipo_moneda);
-          
-          console.log(`Artículo ${articuloCopy.id_articulo || 'N/A'} - ${articuloCopy.nomart || 'Sin nombre'}: Aplicando valor de cambio ${valorCambio}`);
           
           // Si se encontró un valor de cambio válido y tiene un multiplicador
           if (valorCambio && valorCambio > 0) {
@@ -323,40 +449,15 @@ export class ArticulosComponent {
             articuloCopy.prefi2 = articuloCopy.prefi2 ? articuloCopy.prefi2 * valorCambio : 0;
             articuloCopy.prefi3 = articuloCopy.prefi3 ? articuloCopy.prefi3 * valorCambio : 0;
             articuloCopy.prefi4 = articuloCopy.prefi4 ? articuloCopy.prefi4 * valorCambio : 0;
-            
-            // Verificar que los valores existen antes de llamar a toFixed
-            const preconStr = articuloCopy.precon !== undefined ? articuloCopy.precon.toFixed(2) : '0.00';
-            const prefi1Str = articuloCopy.prefi1 !== undefined ? articuloCopy.prefi1.toFixed(2) : '0.00';
-            const prefi2Str = articuloCopy.prefi2 !== undefined ? articuloCopy.prefi2.toFixed(2) : '0.00';
-            const prefi3Str = articuloCopy.prefi3 !== undefined ? articuloCopy.prefi3.toFixed(2) : '0.00';
-            const prefi4Str = articuloCopy.prefi4 !== undefined ? articuloCopy.prefi4.toFixed(2) : '0.00';
-            
-            console.log(`Precios convertidos: precon=${preconStr}, prefi1=${prefi1Str}, prefi2=${prefi2Str}, prefi3=${prefi3Str}, prefi4=${prefi4Str}`);
           }
-        } else {
-          // Para artículos en moneda local, no es necesario hacer nada
-          // No recalcular los precios ya que deben mantenerse como están
-          console.log(`Artículo en moneda local (${articuloCopy.id_articulo || 'N/A'} - ${articuloCopy.nomart || 'Sin nombre'}): Se mantienen los precios originales`);
         }
         
         return articuloCopy;
       } catch (error) {
-        console.error('Error al procesar artículo:', articulo, error);
+        console.error('Error al procesar artículo:', error);
         return articulo; // Devolver el artículo original en caso de error
       }
     });
-  }
-
-  // Método auxiliar para obtener el porcentaje de IVA (simplificado)
-  private obtenerPorcentajeIva(codIva: number): number {
-    // Valor por defecto es 21%
-    if (codIva === 5) { // Si es EXENTO (código 5)
-      return 0;
-    }
-    
-    // Aquí podríamos buscar en una lista de tipos de IVA, pero para simplificar:
-    // Por defecto retornamos 21%
-    return 21;
   }
 
   obtenerValorCambio(codMoneda: number): number {
@@ -453,6 +554,7 @@ export class ArticulosComponent {
   }
 
   deleteArticulo(articulo: Articulo) {
+    this.loading = true;
     this.subirdataService.eliminarArticulo(articulo.id_articulo).subscribe({
       next: (response: any) => {
         if (!response.error) {
@@ -462,8 +564,11 @@ export class ArticulosComponent {
             icon: 'success',
             confirmButtonText: 'Aceptar'
           });
-          this.loadArticulos(); // Reload the table after deletion
+          // Clear cache and reload after deletion
+          this.articulosCacheService.clearAllCaches();
+          this.loadData(true);
         } else {
+          this.loading = false;
           Swal.fire({
             title: '¡Error!',
             text: 'El artículo no se pudo eliminar',
@@ -474,6 +579,7 @@ export class ArticulosComponent {
         }
       },
       error: (error) => {
+        this.loading = false;
         Swal.fire({
           title: '¡Error!',
           text: 'El artículo no se pudo eliminar',

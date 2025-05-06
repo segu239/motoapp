@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CargardataService } from '../../services/cargardata.service';
+import { ArticulosCacheService } from '../../services/articulos-cache.service';
 import { Producto } from '../../interfaces/producto';
 import Swal from 'sweetalert2';
 import * as FileSaver from 'file-saver';
@@ -8,6 +9,7 @@ import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
 import { filter } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 //importar componente calculoproducto
 import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -25,8 +27,9 @@ interface Column {
   styleUrls: ['./condicionventa.component.css'],
   providers: [DialogService]
 })
-export class CondicionventaComponent {
+export class CondicionventaComponent implements OnInit, OnDestroy {
   public tipoVal: string = 'Condicion de Venta';
+  private subscriptions: Subscription[] = [];
   public codTarj: string = '';
   public listaPrecio: string = '';
   public activaDatos: number;
@@ -70,7 +73,14 @@ export class CondicionventaComponent {
   cols: Column[];
   _selectedColumns: Column[];
 
-  constructor(public dialogService: DialogService, private cdr: ChangeDetectorRef, private router: Router, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService) {
+  constructor(
+    public dialogService: DialogService, 
+    private cdr: ChangeDetectorRef, 
+    private router: Router, 
+    private activatedRoute: ActivatedRoute, 
+    private _cargardata: CargardataService,
+    private articulosCacheService: ArticulosCacheService
+  ) {
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
     this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp: any) => {
@@ -88,17 +98,41 @@ export class CondicionventaComponent {
       });
     });
     
-    // Obtener los valores de cambio
-    this._cargardata.getValorCambio().pipe(take(1)).subscribe((resp: any) => {
-      this.valoresCambio = resp.mensaje;
-      console.log('Valores de cambio:', this.valoresCambio);
-    });
+    // Intentar obtener datos desde cache primero
+    const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
+    const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
     
-    // Obtener los tipos de moneda
-    this._cargardata.getTipoMoneda().pipe(take(1)).subscribe((resp: any) => {
-      this.tiposMoneda = resp.mensaje;
-      console.log('Tipos de moneda:', this.tiposMoneda);
-    });
+    if (cachedValoresCambio.length > 0) {
+      console.log('Usando valores de cambio desde caché en CondicionVenta');
+      this.valoresCambio = cachedValoresCambio;
+    } else {
+      // Obtener los valores de cambio
+      const subscription = this._cargardata.getValorCambio().pipe(take(1)).subscribe((resp: any) => {
+        if (resp && !resp.error) {
+          this.valoresCambio = resp.mensaje;
+          console.log('Valores de cambio cargados desde API en CondicionVenta:', this.valoresCambio.length);
+        } else {
+          console.error('Error al cargar valores de cambio en CondicionVenta');
+        }
+      });
+      this.subscriptions.push(subscription);
+    }
+    
+    if (cachedTiposMoneda.length > 0) {
+      console.log('Usando tipos de moneda desde caché en CondicionVenta');
+      this.tiposMoneda = cachedTiposMoneda;
+    } else {
+      // Obtener los tipos de moneda
+      const subscription = this._cargardata.getTipoMoneda().pipe(take(1)).subscribe((resp: any) => {
+        if (resp && !resp.error) {
+          this.tiposMoneda = resp.mensaje;
+          console.log('Tipos de moneda cargados desde API en CondicionVenta:', this.tiposMoneda.length);
+        } else {
+          console.error('Error al cargar tipos de moneda en CondicionVenta');
+        }
+      });
+      this.subscriptions.push(subscription);
+    }
 
     // Definir todas las columnas disponibles
     this.cols = [
@@ -157,14 +191,19 @@ export class CondicionventaComponent {
     this.filteredTipo = this.tipo.filter(item => item[dayField] === '1');
   }
 
+
+  ngOnInit() {
+    console.log('CondicionVentaComponent inicializado');
+  }
+  
   ngOnDestroy() {
+    // Limpiar el ref de diálogo si existe
     if (this.ref) {
       this.ref.close();
     }
-  }
-
-  ngOnInit() {
-
+    
+    // Limpiar todas las suscripciones
+    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   // Método para mostrar el indicador de carga
@@ -178,6 +217,117 @@ export class CondicionventaComponent {
         Swal.showLoading();
       }
     });
+  }
+  
+  // Nuevo método para manejar errores con opciones
+  handleLoadError(message: string, retry: () => void) {
+    console.error('Error de carga:', message);
+    
+    // Cerrar el loading si está visible
+    if (Swal.isVisible()) {
+      Swal.close();
+    }
+    
+    // Verificar si hay datos en caché
+    const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+    const hasCachedData = cachedArticulosSucursal && cachedArticulosSucursal.length > 0;
+    
+    if (hasCachedData) {
+      // Ofrecer opciones si hay datos en caché
+      Swal.fire({
+        title: 'Error',
+        text: message,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Reintentar carga',
+        cancelButtonText: 'Usar datos anteriores',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Reintentar la carga
+          console.log('Reintentando carga de datos');
+          retry();
+        } else {
+          // Usar datos de caché
+          console.log(`Usando ${cachedArticulosSucursal.length} productos de caché como respaldo`);
+          this.useCachedData(cachedArticulosSucursal);
+        }
+      });
+    } else {
+      // Si no hay datos en caché, solo mostrar error con opción de reintentar
+      Swal.fire({
+        title: 'Error',
+        text: message,
+        icon: 'error',
+        confirmButtonText: 'Reintentar',
+        showCancelButton: true,
+        cancelButtonText: 'Aceptar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          retry();
+        }
+      });
+    }
+  }
+  
+  // Método para usar datos de caché
+  useCachedData(cachedData: any[]) {
+    // Hacer una copia de los productos originales desde la caché
+    let productos = [...cachedData];
+    
+    // Procesar cada producto para ajustar el precio según su tipo de moneda
+    this.procesarProductosConMoneda(productos);
+    
+    // Actualizar la interfaz
+    this.cdr.detectChanges();
+    
+    // Informar al usuario
+    Swal.fire({
+      title: 'Información',
+      text: 'Usando datos almacenados en caché. Algunos precios podrían no estar actualizados.',
+      icon: 'info',
+      confirmButtonText: 'Entendido'
+    });
+  }
+  
+  // Método para procesar productos con su moneda
+  procesarProductosConMoneda(productos: any[]) {
+    productos.forEach(producto => {
+      // Verificar si el producto tiene un tipo de moneda
+      if (producto.tipo_moneda) {
+        // Filtrar los valores de cambio para este tipo de moneda
+        const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
+        
+        // Si hay valores de cambio para este tipo de moneda
+        if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
+          let valorCambioSeleccionado;
+          
+          // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+          if (valoresCambioMoneda.length > 1) {
+            // Ordenar por fecha descendente (más reciente primero)
+            valoresCambioMoneda.sort((a, b) => {
+              const fechaA = new Date(a.fecdesde);
+              const fechaB = new Date(b.fecdesde);
+              return fechaB.getTime() - fechaA.getTime();
+            });
+          }
+          
+          // Tomar el primer valor (el más reciente después de ordenar)
+          valorCambioSeleccionado = valoresCambioMoneda[0];
+          
+          if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
+            // Aplicar el multiplicador a todos los precios
+            producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
+            producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
+            producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
+            producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
+            producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
+          }
+        }
+      }
+    });
+    
+    this.productos = productos;
   }
 
   selectTipo(item: any) {
@@ -200,11 +350,14 @@ export class CondicionventaComponent {
       // Mostrar loading antes de cargar los productos
       this.mostrarLoading();
       
-      this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
-        console.log(resp.mensaje);
+      // Verificar si tenemos artículos en caché primero
+      const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+      
+      if (cachedArticulosSucursal.length > 0) {
+        console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para CondicionVenta`);
         
-        // Convertir a array y aplicar el cálculo de precios según tipo de moneda y valor de cambio
-        let productos = [...resp.mensaje];
+        // Hacer una copia de los productos originales desde la caché
+        let productos = [...cachedArticulosSucursal];
         
         // Procesar cada producto para ajustar el precio según su tipo de moneda
         productos.forEach(producto => {
@@ -248,14 +401,109 @@ export class CondicionventaComponent {
         
         // Cerrar loading
         Swal.close();
-      }, error => {
-        Swal.close();
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'No se pudieron cargar los productos'
+      } else {
+        console.log('No hay productos en caché, cargando desde API');
+        
+        // Si no hay datos en caché, cargar desde el servicio de caché que hará la llamada API
+        const subscription = this.articulosCacheService.loadArticulosSucursal().subscribe({
+          next: (articulosSucursal: any[]) => {
+            if (articulosSucursal && articulosSucursal.length > 0) {
+              console.log(`Productos cargados para CondicionVenta desde servicio: ${articulosSucursal.length}`);
+              
+              // Hacer una copia de los productos originales
+              let productos = [...articulosSucursal];
+              
+              // Procesar cada producto para ajustar el precio según su tipo de moneda
+              productos.forEach(producto => {
+                // Verificar si el producto tiene un tipo de moneda
+                if (producto.tipo_moneda) {
+                  // Filtrar los valores de cambio para este tipo de moneda
+                  const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
+                  
+                  // Si hay valores de cambio para este tipo de moneda
+                  if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
+                    let valorCambioSeleccionado;
+                    
+                    // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
+                    if (valoresCambioMoneda.length > 1) {
+                      // Ordenar por fecha descendente (más reciente primero)
+                      valoresCambioMoneda.sort((a, b) => {
+                        const fechaA = new Date(a.fecdesde);
+                        const fechaB = new Date(b.fecdesde);
+                        return fechaB.getTime() - fechaA.getTime();
+                      });
+                    }
+                    
+                    // Tomar el primer valor (el más reciente después de ordenar)
+                    valorCambioSeleccionado = valoresCambioMoneda[0];
+                    
+                    if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
+                      // Aplicar el multiplicador a todos los precios
+                      producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
+                      producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
+                      producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
+                      producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
+                      producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
+                    }
+                  }
+                }
+              });
+              
+              this.productos = productos;
+              // Forzar la detección de cambios
+              this.cdr.detectChanges();
+            } else {
+              console.error('Error o respuesta vacía al cargar productos');
+              this.handleLoadError('No se pudieron cargar los productos', () => {
+                // Función de reintento
+                this.mostrarLoading();
+                this.articulosCacheService.clearAllCaches(); // Limpiar caché antes de reintentar
+                this.articulosCacheService.loadArticulosSucursal().subscribe({
+                  next: (articulosSucursal: any[]) => {
+                    if (articulosSucursal && articulosSucursal.length > 0) {
+                      let productos = [...articulosSucursal];
+                      this.procesarProductosConMoneda(productos);
+                      Swal.close();
+                    } else {
+                      this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
+                    }
+                  },
+                  error: (error) => {
+                    console.error('Error en reintento de carga:', error);
+                    this.handleLoadError('Error en el reintento de carga', () => {});
+                  }
+                });
+              });
+            }
+            // Cerrar loading
+            Swal.close();
+          },
+          error: (error) => {
+            console.error('Error al cargar productos:', error);
+            this.handleLoadError('No se pudieron cargar los productos', () => {
+              // Función de reintento
+              this.mostrarLoading();
+              this.articulosCacheService.loadArticulosSucursal().subscribe({
+                next: (articulosSucursal: any[]) => {
+                  if (articulosSucursal && articulosSucursal.length > 0) {
+                    let productos = [...articulosSucursal];
+                    this.procesarProductosConMoneda(productos);
+                    Swal.close();
+                  } else {
+                    this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
+                  }
+                },
+                error: (error) => {
+                  console.error('Error en reintento de carga:', error);
+                  this.handleLoadError('Error en el reintento de carga', () => {});
+                }
+              });
+            });
+          }
         });
-      });
+        
+        this.subscriptions.push(subscription);
+      }
     }
   }
   abrirFormularioTarj() {
@@ -310,22 +558,41 @@ export class CondicionventaComponent {
         // Mostrar loading antes de cargar los productos
         this.mostrarLoading();
         
-        this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
-          console.log(resp.mensaje);
-          this.productos = [...resp.mensaje];
+        // Verificar si tenemos artículos en caché primero
+        const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+        
+        if (cachedArticulosSucursal.length > 0) {
+          console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioTarj`);
+          
+          // Usar datos de caché
+          this.productos = [...cachedArticulosSucursal];
           // Forzar la detección de cambios
           this.cdr.detectChanges();
           
           // Cerrar loading
           Swal.close();
-        }, error => {
-          Swal.close();
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar los productos'
+        } else {
+          // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
+          this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
+            next: (articulos: any[]) => {
+              this.productos = [...articulos];
+              // Forzar la detección de cambios
+              this.cdr.detectChanges();
+              
+              // Cerrar loading
+              Swal.close();
+            },
+            error: (error) => {
+              console.error('Error al cargar productos:', error);
+              Swal.close();
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los productos'
+              });
+            }
           });
-        });
+        }
       }
     });
   }
@@ -416,21 +683,41 @@ export class CondicionventaComponent {
         // Mostrar loading antes de cargar los productos
         this.mostrarLoading();
         
-        this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
-          console.log(resp.mensaje);
-          this.productos = [...resp.mensaje];
+        // Verificar si tenemos artículos en caché primero
+        const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+        
+        if (cachedArticulosSucursal.length > 0) {
+          console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioCheque`);
+          
+          // Usar datos de caché
+          this.productos = [...cachedArticulosSucursal];
+          // Forzar la detección de cambios
           this.cdr.detectChanges();
           
           // Cerrar loading
           Swal.close();
-        }, error => {
-          Swal.close();
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'No se pudieron cargar los productos'
+        } else {
+          // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
+          this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
+            next: (articulos: any[]) => {
+              this.productos = [...articulos];
+              // Forzar la detección de cambios
+              this.cdr.detectChanges();
+              
+              // Cerrar loading
+              Swal.close();
+            },
+            error: (error) => {
+              console.error('Error al cargar productos:', error);
+              Swal.close();
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los productos'
+              });
+            }
           });
-        });
+        }
       }
     });
   }

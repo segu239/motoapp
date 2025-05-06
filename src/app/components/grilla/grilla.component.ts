@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CargardataService } from 'src/app/services/cargardata.service';
+import { ArticulosCacheService } from 'src/app/services/articulos-cache.service';
+import { Subscription } from 'rxjs';
 import Swal from 'sweetalert2';
 
 interface ValorCambio {
@@ -24,22 +26,67 @@ interface TipoMoneda {
   templateUrl: './grilla.component.html',
   styleUrls: ['./grilla.component.css']
 })
-export class GrillaComponent implements OnInit {
+export class GrillaComponent implements OnInit, OnDestroy {
   productos: any[] = [];
   valoresCambio: ValorCambio[] = [];
   tiposMoneda: TipoMoneda[] = [];
   cargando: boolean = true;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private cargarDataService: CargardataService,
+    private articulosCacheService: ArticulosCacheService,
     public ref: DynamicDialogRef,
     public config: DynamicDialogConfig
   ) {}
 
   ngOnInit(): void {
+    console.log('GrillaComponent initialized');
     this.mostrarCargando();
-    // Primero cargar los valores de cambio y monedas antes de cargar productos
-    this.cargarValoresCambio();
+    // Intentar cargar datos desde caché primero
+    this.cargarDatosDesdeCache();
+  }
+  
+  ngOnDestroy(): void {
+    // Limpiar todas las suscripciones
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+  
+  cargarDatosDesdeCache(): void {
+    console.log('Intentando cargar datos desde caché para Grilla');
+    
+    // Obtener datos de caché
+    const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
+    const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
+    const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+    
+    // Verificar si tenemos datos en caché
+    if (cachedValoresCambio.length > 0 && 
+        cachedTiposMoneda.length > 0 && 
+        cachedArticulosSucursal.length > 0) {
+        
+      console.log('Datos completos encontrados en caché, usando caché para Grilla');
+      this.valoresCambio = cachedValoresCambio;
+      this.tiposMoneda = cachedTiposMoneda;
+      
+      // Usar artículos de sucursal desde la caché directamente
+      let productosConPrecios = [...cachedArticulosSucursal];
+      
+      // Aplicar multiplicador de tipo de moneda a cada producto
+      productosConPrecios = this.aplicarMultiplicadorPrecio(productosConPrecios);
+      
+      // Asignar los productos con precios actualizados
+      this.productos = productosConPrecios;
+      
+      // Cerrar loading
+      Swal.close();
+      this.cargando = false;
+      
+    } else {
+      console.log('No hay datos completos en caché, cargando desde API para Grilla');
+      // Primero cargar los valores de cambio y monedas antes de cargar productos
+      this.cargarValoresCambio();
+    }
   }
 
   mostrarCargando() {
@@ -55,11 +102,17 @@ export class GrillaComponent implements OnInit {
   }
 
   cargarValoresCambio() {
-    this.cargarDataService.getValorCambio().subscribe({
+    console.log('Cargando valores de cambio desde API para Grilla');
+    
+    const subscription = this.cargarDataService.getValorCambio().subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.valoresCambio = response.mensaje;
-          console.log('Valores de cambio cargados:', this.valoresCambio);
+          console.log('Valores de cambio cargados para Grilla:', this.valoresCambio.length);
+          
+          // Guardar en caché para uso futuro
+          this.articulosCacheService.clearAllCaches();
+          
           // Una vez cargados los valores de cambio, cargar tipos de moneda
           this.cargarTiposMoneda();
         } else {
@@ -76,14 +129,19 @@ export class GrillaComponent implements OnInit {
         this.showNotification('Error al cargar valores de cambio');
       }
     });
+    
+    this.subscriptions.push(subscription);
   }
 
   cargarTiposMoneda() {
-    this.cargarDataService.getTipoMoneda().subscribe({
+    console.log('Cargando tipos de moneda desde API para Grilla');
+    
+    const subscription = this.cargarDataService.getTipoMoneda().subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.tiposMoneda = response.mensaje;
-          console.log('Tipos de moneda cargados:', this.tiposMoneda);
+          console.log('Tipos de moneda cargados para Grilla:', this.tiposMoneda.length);
+          
           // Una vez cargados los tipos de moneda, cargamos los productos
           this.cargarProductos();
         } else {
@@ -100,21 +158,49 @@ export class GrillaComponent implements OnInit {
         this.showNotification('Error al cargar tipos de moneda');
       }
     });
+    
+    this.subscriptions.push(subscription);
   }
 
   cargarProductos() {
-    this.cargarDataService.artsucursal().subscribe({
-      next: (data: any) => {
-        console.log(data);
-        if (data && data.mensaje) {
+    console.log('Cargando productos desde API para Grilla');
+    
+    // Verificar si tenemos artículos en caché primero
+    const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
+    
+    if (cachedArticulosSucursal.length > 0) {
+      console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para Grilla`);
+      
+      // Hacer una copia de los productos originales
+      let productosConPrecios = [...cachedArticulosSucursal];
+      
+      // Aplicar multiplicador de tipo de moneda a cada producto
+      productosConPrecios = this.aplicarMultiplicadorPrecio(productosConPrecios);
+      
+      // Asignar los productos con precios actualizados
+      this.productos = productosConPrecios;
+      
+      Swal.close();
+      this.cargando = false;
+      return;
+    }
+    
+    // Si no hay caché, cargar desde API
+    const subscription = this.articulosCacheService.loadArticulosSucursal().subscribe({
+      next: (articulos: any[]) => {
+        if (articulos && articulos.length > 0) {
+          console.log(`Productos cargados para Grilla desde servicio de caché: ${articulos.length}`);
+          
           // Hacer una copia de los productos originales
-          let productosConPrecios = [...data.mensaje];
+          let productosConPrecios = [...articulos];
           
           // Aplicar multiplicador de tipo de moneda a cada producto
           productosConPrecios = this.aplicarMultiplicadorPrecio(productosConPrecios);
           
           // Asignar los productos con precios actualizados
           this.productos = productosConPrecios;
+        } else {
+          console.warn('No se obtuvieron productos o respuesta vacía');
         }
         Swal.close();
         this.cargando = false;
@@ -122,10 +208,12 @@ export class GrillaComponent implements OnInit {
       error: (error) => {
         Swal.close();
         this.cargando = false;
-        console.error('Error in API call:', error);
+        console.error('Error al cargar productos:', error);
         this.showNotification('Error al cargar los productos');
       }
     });
+    
+    this.subscriptions.push(subscription);
   }
 
   aplicarMultiplicadorPrecio(productos: any[]): any[] {
