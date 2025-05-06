@@ -276,7 +276,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     let productos = [...cachedData];
     
     // Procesar cada producto para ajustar el precio según su tipo de moneda
-    this.procesarProductosConMoneda(productos);
+    this.productos = this.procesarProductosConMoneda(productos);
     
     // Actualizar la interfaz
     this.cdr.detectChanges();
@@ -327,7 +327,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       }
     });
     
-    this.productos = productos;
+    return productos; // Devolver productos procesados en lugar de asignarlos directamente
   }
 
   selectTipo(item: any) {
@@ -359,43 +359,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         // Hacer una copia de los productos originales desde la caché
         let productos = [...cachedArticulosSucursal];
         
-        // Procesar cada producto para ajustar el precio según su tipo de moneda
-        productos.forEach(producto => {
-          // Verificar si el producto tiene un tipo de moneda
-          if (producto.tipo_moneda) {
-            // Filtrar los valores de cambio para este tipo de moneda
-            const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
-            
-            // Si hay valores de cambio para este tipo de moneda
-            if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
-              let valorCambioSeleccionado;
-              
-              // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
-              if (valoresCambioMoneda.length > 1) {
-                // Ordenar por fecha descendente (más reciente primero)
-                valoresCambioMoneda.sort((a, b) => {
-                  const fechaA = new Date(a.fecdesde);
-                  const fechaB = new Date(b.fecdesde);
-                  return fechaB.getTime() - fechaA.getTime();
-                });
-              }
-              
-              // Tomar el primer valor (el más reciente después de ordenar)
-              valorCambioSeleccionado = valoresCambioMoneda[0];
-              
-              if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
-                // Aplicar el multiplicador a todos los precios
-                producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
-                producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
-                producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
-                producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
-                producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
-              }
-            }
-          }
-        });
+        // Utilizar el método centralizado para procesar productos con moneda
+        this.productos = this.procesarProductosConMoneda(productos);
         
-        this.productos = productos;
         // Forzar la detección de cambios
         this.cdr.detectChanges();
         
@@ -413,43 +379,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
               // Hacer una copia de los productos originales
               let productos = [...articulosSucursal];
               
-              // Procesar cada producto para ajustar el precio según su tipo de moneda
-              productos.forEach(producto => {
-                // Verificar si el producto tiene un tipo de moneda
-                if (producto.tipo_moneda) {
-                  // Filtrar los valores de cambio para este tipo de moneda
-                  const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
-                  
-                  // Si hay valores de cambio para este tipo de moneda
-                  if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
-                    let valorCambioSeleccionado;
-                    
-                    // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
-                    if (valoresCambioMoneda.length > 1) {
-                      // Ordenar por fecha descendente (más reciente primero)
-                      valoresCambioMoneda.sort((a, b) => {
-                        const fechaA = new Date(a.fecdesde);
-                        const fechaB = new Date(b.fecdesde);
-                        return fechaB.getTime() - fechaA.getTime();
-                      });
-                    }
-                    
-                    // Tomar el primer valor (el más reciente después de ordenar)
-                    valorCambioSeleccionado = valoresCambioMoneda[0];
-                    
-                    if (valorCambioSeleccionado && valorCambioSeleccionado.vcambio) {
-                      // Aplicar el multiplicador a todos los precios
-                      producto.precon = producto.precon * parseFloat(valorCambioSeleccionado.vcambio);
-                      producto.prefi1 = producto.prefi1 * parseFloat(valorCambioSeleccionado.vcambio);
-                      producto.prefi2 = producto.prefi2 * parseFloat(valorCambioSeleccionado.vcambio);
-                      producto.prefi3 = producto.prefi3 * parseFloat(valorCambioSeleccionado.vcambio);
-                      producto.prefi4 = producto.prefi4 * parseFloat(valorCambioSeleccionado.vcambio);
-                    }
-                  }
-                }
-              });
-              
-              this.productos = productos;
+              // Utilizar el método centralizado para procesar productos con moneda
+              this.productos = this.procesarProductosConMoneda(productos);
               // Forzar la detección de cambios
               this.cdr.detectChanges();
             } else {
@@ -462,7 +393,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                   next: (articulosSucursal: any[]) => {
                     if (articulosSucursal && articulosSucursal.length > 0) {
                       let productos = [...articulosSucursal];
-                      this.procesarProductosConMoneda(productos);
+                      this.productos = this.procesarProductosConMoneda(productos);
                       Swal.close();
                     } else {
                       this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
@@ -487,7 +418,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                 next: (articulosSucursal: any[]) => {
                   if (articulosSucursal && articulosSucursal.length > 0) {
                     let productos = [...articulosSucursal];
-                    this.procesarProductosConMoneda(productos);
+                    this.productos = this.procesarProductosConMoneda(productos);
                     Swal.close();
                   } else {
                     this.handleLoadError('No se pudieron cargar los productos en el reintento', () => {});
@@ -564,8 +495,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         if (cachedArticulosSucursal.length > 0) {
           console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioTarj`);
           
-          // Usar datos de caché
-          this.productos = [...cachedArticulosSucursal];
+          // Hacer una copia de los productos originales desde la caché y procesarlos
+          let productos = [...cachedArticulosSucursal];
+          this.productos = this.procesarProductosConMoneda(productos);
           // Forzar la detección de cambios
           this.cdr.detectChanges();
           
@@ -689,8 +621,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         if (cachedArticulosSucursal.length > 0) {
           console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioCheque`);
           
-          // Usar datos de caché
-          this.productos = [...cachedArticulosSucursal];
+          // Hacer una copia de los productos originales desde la caché y procesarlos
+          let productos = [...cachedArticulosSucursal];
+          this.productos = this.procesarProductosConMoneda(productos);
           // Forzar la detección de cambios
           this.cdr.detectChanges();
           

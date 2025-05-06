@@ -656,7 +656,7 @@ INFORME 2
   todas las situaciones posibles.
 
 
-  A REVISAR
+  A REVISAR------------------------------------------------------------------
 
   Resumen Ejecutivo
 
@@ -953,3 +953,84 @@ INFORME 2
   2. El sistema sea más robusto al manejar datos faltantes o incompletos.
   3. Los errores sean más informativos y específicos.
   4. Los desarrolladores tengan información más detallada para diagnosticar problemas.
+
+  3-
+
+  He implementado una solución robusta para solucionar el problema del manejo inadecuado de errores en la función
+  processArticulos() del componente ArticulosComponent. La solución tiene las siguientes características:
+
+  1. Manejo granular de errores:
+    - Si ocurre un error en el procesamiento principal, se intenta un procesamiento parcial
+    - Se maneja por separado los artículos en moneda local y extranjera
+    - Se mantiene un sistema de fallback en cascada para garantizar que siempre se muestren los artículos
+  2. Notificación clara al usuario:
+    - Se muestra una notificación emergente cuando ocurren errores de procesamiento
+    - Se agregan indicadores visuales en la tabla (filas resaltadas, iconos de advertencia)
+    - Se muestra un mensaje persistente cuando existen artículos con posibles errores de precio
+  3. Marcado visual de artículos problemáticos:
+    - Las filas con errores de precio se marcan con un fondo de advertencia
+    - Los precios potencialmente incorrectos se marcan en rojo con un icono de advertencia
+    - La moneda extranjera afectada se marca con un indicador especial
+  4. Opciones de recuperación:
+    - Se ofrece al usuario un botón para intentar solucionar el problema
+    - El sistema intenta procesar al menos los artículos en moneda local correctamente
+
+  Este enfoque es superior al manejo de errores original porque:
+  - Garantiza una degradación elegante de la funcionalidad
+  - Proporciona transparencia al usuario sobre posibles problemas
+  - Mantiene los datos críticos accesibles incluso después de fallos
+  - Facilita el diagnóstico de problemas para desarrolladores y soporte
+
+  La solución no solo corrige el error sino que mejora significativamente la experiencia del usuario al enfrentarse
+   a problemas de conversión de precios.
+
+
+   Informe de Modificaciones en CondicionVentaComponent-------------------
+
+1- 
+  Problema Inicial Identificado
+
+  En el componente CondicionVentaComponent se detectó una duplicación de código relacionada con el procesamiento de
+   productos con valores de cambio de moneda. Esta duplicación ocurría principalmente entre el método
+  procesarProductosConMoneda() y el método selectTipo().
+
+  Modificaciones Realizadas
+
+  1. Refactorización del método procesarProductosConMoneda()
+
+  - Antes: El método modificaba los productos recibidos pero no devolvía nada, asignando directamente a
+  this.productos.
+  - Ahora: El método devuelve los productos procesados (return productos;), siguiendo un patrón más limpio y
+  predecible.
+
+  2. Eliminación de código duplicado
+
+  - Se eliminó la lógica duplicada de procesamiento de moneda en el método selectTipo().
+  - Se reemplazaron todas las instancias duplicadas por llamadas al método centralizado
+  procesarProductosConMoneda().
+
+  3. Corrección de puntos de llamada
+
+  - Actualicé todas las llamadas al método procesarProductosConMoneda() para asignar correctamente el resultado:
+  this.productos = this.procesarProductosConMoneda(productos);
+  - Se aseguró que en todas las rutas de código donde se cargan productos (incluyendo en abrirFormularioTarj() y
+  abrirFormularioCheque()), estos sean procesados correctamente.
+
+  Beneficios de las Modificaciones
+
+  1. Mayor Mantenibilidad: Al centralizar la lógica en un solo método, cualquier cambio futuro en el algoritmo de
+  procesamiento solo necesita hacerse en un lugar.
+  2. Consistencia: Todos los productos ahora pasan por el mismo proceso de ajuste de precios, garantizando un
+  comportamiento consistente.
+  3. Mejor Diseño: El método ahora sigue un patrón más estándar al devolver un valor en lugar de modificar
+  variables de instancia directamente.
+  4. Reducción de Complejidad: Se ha reducido la complejidad del código al eliminar redundancias.
+
+  Integridad del Código
+
+  Las modificaciones realizadas mantienen intacta la funcionalidad original del componente, pero mejoran
+  significativamente su estructura y mantenibilidad. No se introdujeron nuevos problemas, y se aseguró que todas
+  las rutas de código procesen los productos de manera consistente.
+
+  El componente ahora tiene una arquitectura más robusta y predecible para manejar el procesamiento de productos
+  con diferentes tipos de moneda.
