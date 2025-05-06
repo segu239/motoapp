@@ -93,6 +93,7 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   // New properties for caching
   public loading = false;
   public fromCache = false;
+  public tienePreciosConError = false;
   
   // Subscriptions for clean up
   private subscriptions: Subscription[] = [];
@@ -339,12 +340,37 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       // Assign the articles with updated prices
       this.articulos = articulosConPrecios;
       
+      // Restablecer indicador de error
+      this.tienePreciosConError = false;
+      
       console.log('Artículos procesados correctamente:', this.articulos.length);
     } catch (error) {
       console.error('Error processing articulos:', error);
-      // Use originals as fallback
-      this.articulos = [...this.articulosOriginal]; 
-      console.log('Using original articles as fallback due to processing error');
+      
+      // Intento de solución parcial: procesar solo artículos en moneda local
+      try {
+        console.log('Intentando procesamiento parcial (solo artículos en moneda local)');
+        const articulosMonedaLocal = this.articulosOriginal.filter(a => !a.tipo_moneda || a.tipo_moneda === 1);
+        const articulosMonedaExtranjera = this.articulosOriginal.filter(a => a.tipo_moneda && a.tipo_moneda !== 1);
+        
+        // Usar artículos en moneda local sin cambios
+        this.articulos = [
+          ...articulosMonedaLocal,
+          ...articulosMonedaExtranjera.map(a => ({ ...a, _precioError: true })) // Marcar con error
+        ];
+        
+        // Actualizar indicador de errores de precio
+        this.tienePreciosConError = true;
+        
+        // Notificar al usuario del problema
+        this.mostrarNotificacionErrorPrecios();
+      } catch (fallbackError) {
+        console.error('Error en procesamiento de fallback:', fallbackError);
+        // Como último recurso, usar originales
+        this.articulos = [...this.articulosOriginal];
+        this.tienePreciosConError = true;
+        this.mostrarNotificacionErrorPrecios(true);
+      }
     }
   }
   
@@ -761,6 +787,26 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     
     const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
     return moneda && moneda.simbolo ? moneda.simbolo : '$';
+  }
+  
+  /**
+   * Muestra una notificación al usuario sobre problemas con el procesamiento de precios
+   * @param errorTotal Si es true, indica un error total en el procesamiento de precios
+   */
+  private mostrarNotificacionErrorPrecios(errorTotal = false) {
+    const mensaje = errorTotal 
+      ? 'Error grave al procesar precios. Los precios mostrados pueden ser incorrectos.'
+      : 'Algunos precios en moneda extranjera podrían no mostrarse correctamente.';
+      
+    Swal.fire({
+      title: 'Advertencia',
+      text: mensaje,
+      icon: 'warning',
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 5000
+    });
   }
 
   /**

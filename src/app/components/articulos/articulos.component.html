@@ -27,6 +27,18 @@
                     </small>
                 </div>
                 
+                <!-- Price error warning -->
+                <div class="alert alert-warning mb-3" *ngIf="tienePreciosConError">
+                    <small>
+                        <i class="fa fa-exclamation-triangle"></i> <strong>Advertencia:</strong> 
+                        Algunos artículos con moneda extranjera podrían mostrar precios incorrectos debido a un error en el procesamiento.
+                        Las filas marcadas con <i class="fa fa-exclamation-triangle text-danger"></i> requieren atención.
+                        <button class="btn btn-sm btn-outline-primary ml-2" (click)="forceRefresh()">
+                            <i class="fa fa-refresh mr-1"></i> Intentar solucionar
+                        </button>
+                    </small>
+                </div>
+                
                 <!-- Table with data -->
                 <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
                     [rows]="10" [loading]="loading"
@@ -83,17 +95,28 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-articulo let-columns="columns">
-                        <tr>
+                        <tr [class.table-warning]="articulo?._precioError">
                             <td *ngFor="let col of columns">
                                 <!-- Mostrar precios con formato numérico si el campo es un precio -->
                                 <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4' || col.field === 'precostosi'">
-                                    {{ articulo[col.field] | number:'1.2-2' }}
+                                    <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                        {{ articulo[col.field] | number:'1.2-2' }}
+                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                           class="fa fa-exclamation-triangle text-danger" 
+                                           title="Posible error en precio por falla en la conversión de moneda"></i>
+                                    </span>
                                 </ng-container>
                                 
                                 <!-- Si es tipo_moneda, mostrar el nombre de la moneda en lugar del código -->
                                 <ng-container *ngIf="col.field === 'tipo_moneda'">
-                                    <span [ngClass]="{'badge badge-secondary': articulo.tipo_moneda !== 1, 'text-muted': articulo.tipo_moneda === 1}">
+                                    <span [class.badge]="true" 
+                                          [class.badge-secondary]="articulo?.tipo_moneda !== 1" 
+                                          [class.text-muted]="articulo?.tipo_moneda === 1" 
+                                          [class.badge-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
                                         {{ obtenerNombreMoneda(articulo.tipo_moneda) }}
+                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                           class="fa fa-exclamation-triangle" 
+                                           title="Error en conversión de moneda"></i>
                                     </span>
                                 </ng-container>
                                 
