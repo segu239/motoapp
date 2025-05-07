@@ -216,8 +216,7 @@ import { ArticulosPaginadosService } from './services/articulos-paginados.servic
     DialogService, 
     DatePipe, 
     AngularFireAuthGuard, 
-    { provide: FIREBASE_OPTIONS, useValue: environment.firebase},
-    ArticulosPaginadosService
+    { provide: FIREBASE_OPTIONS, useValue: environment.firebase}
   ],
   bootstrap: [AppComponent]
 })
