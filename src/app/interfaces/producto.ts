@@ -12,6 +12,6 @@ export interface Producto {
     exi4?:number;
     exi5?:number;
     idart?:number;
-    tipo_moneda?:string;
-   
+    tipo_moneda?:number;  // Cambiado de string a number para corresponder con el tipo en la base de datos
+    _precioConversionSospechosa?: boolean; // Flag para marcar precios con conversión sospechosa
 }

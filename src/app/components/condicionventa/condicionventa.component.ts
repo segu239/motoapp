@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CargardataService } from '../../services/cargardata.service';
-import { ArticulosCacheService } from '../../services/articulos-cache.service';
+import { ArticulosPaginadosService } from '../../services/articulos-paginados.service';
 import { Producto } from '../../interfaces/producto';
 import Swal from 'sweetalert2';
 import * as FileSaver from 'file-saver';
@@ -9,11 +9,16 @@ import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
 import { filter } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 //importar componente calculoproducto
 import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
-import { ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+
+// Método auxiliar para PrimeNG
+function $any(val: any): any {
+  return val;
+}
 
 // Definir la interfaz Column para la selección de columnas
 interface Column {
@@ -65,9 +70,16 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   public previousUrl: string = "";
   filteredTipo: any[] = [];
   
-  // Nuevas propiedades para manejar los valores de cambio
+  // Propiedades para valores de cambio
   public valoresCambio: any[] = [];
   public tiposMoneda: any[] = [];
+  
+  // Propiedades para paginación
+  public paginaActual = 1;
+  public totalPaginas = 0;
+  public totalItems = 0;
+  public terminoBusqueda = '';
+  public loading = false;
 
   // Añadir nuevas propiedades para la selección de columnas
   cols: Column[];
@@ -79,7 +91,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     private router: Router, 
     private activatedRoute: ActivatedRoute, 
     private _cargardata: CargardataService,
-    private articulosCacheService: ArticulosCacheService
+    private articulosPaginadosService: ArticulosPaginadosService
   ) {
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
@@ -98,63 +110,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       });
     });
     
-    // Intentar obtener datos desde cache primero
-    const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
-    const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
-    
-    if (cachedValoresCambio.length > 0) {
-      console.log('Usando valores de cambio desde caché en CondicionVenta');
-      this.valoresCambio = cachedValoresCambio;
-    } else {
-      // Obtener los valores de cambio
-      const subscription = this._cargardata.getValorCambio().pipe(take(1)).subscribe((resp: any) => {
-        if (resp && !resp.error) {
-          this.valoresCambio = resp.mensaje;
-          console.log('Valores de cambio cargados desde API en CondicionVenta:', this.valoresCambio.length);
-        } else {
-          console.error('Error al cargar valores de cambio en CondicionVenta');
-        }
-      });
-      this.subscriptions.push(subscription);
-    }
-    
-    if (cachedTiposMoneda.length > 0) {
-      console.log('Usando tipos de moneda desde caché en CondicionVenta');
-      this.tiposMoneda = cachedTiposMoneda;
-    } else {
-      // Obtener los tipos de moneda
-      const subscription = this._cargardata.getTipoMoneda().pipe(take(1)).subscribe((resp: any) => {
-        if (resp && !resp.error) {
-          this.tiposMoneda = resp.mensaje;
-          console.log('Tipos de moneda cargados desde API en CondicionVenta:', this.tiposMoneda.length);
-        } else {
-          console.error('Error al cargar tipos de moneda en CondicionVenta');
-        }
-      });
-      this.subscriptions.push(subscription);
-    }
-    
-    // Si tenemos ambos datos de moneda en caché, verificar su integridad
-    if (cachedValoresCambio.length > 0 && cachedTiposMoneda.length > 0) {
-      setTimeout(() => {
-        // Usamos setTimeout para asegurar que ambos arrays ya estén cargados
-        const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
-        if (!datosCambioValidos) {
-          console.warn('Los datos de cambio en caché no son completamente válidos');
-          // Notificación no bloqueante para el usuario
-          Swal.fire({
-            title: 'Advertencia',
-            text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios de productos en moneda extranjera podrían no ser precisos.',
-            icon: 'warning',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 5000
-          });
-        }
-      }, 500);
-    }
-
     // Definir todas las columnas disponibles
     this.cols = [
       { field: 'nomart', header: 'Nombre' },
@@ -185,6 +140,84 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.cols[9], // exi3
       this.cols[10], // exi4
     ];
+    
+    // Suscribirse a los observables del servicio de paginación
+    this.subscriptions.push(
+      this.articulosPaginadosService.cargando$.subscribe(loading => {
+        this.loading = loading;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.articulos$.subscribe(articulos => {
+        // Aplicar el procesamiento necesario
+        this.productos = this.procesarProductosConMoneda(articulos);
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.paginaActual$.subscribe(pagina => {
+        this.paginaActual = pagina;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.totalPaginas$.subscribe(total => {
+        this.totalPaginas = total;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.totalItems$.subscribe(total => {
+        this.totalItems = total;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.terminoBusqueda$.subscribe(termino => {
+        this.terminoBusqueda = termino;
+      })
+    );
+    
+    // Cargar datos adicionales (valores de cambio, tipos de moneda)
+    this.loadAdditionalData();
+  }
+
+  // Cargar datos adicionales
+  loadAdditionalData() {
+    forkJoin({
+      valoresCambio: this.articulosPaginadosService.getValoresCambio(),
+      tiposMoneda: this.articulosPaginadosService.getTiposMoneda()
+    }).subscribe(
+      results => {
+        if (results.valoresCambio && !results.valoresCambio['error']) {
+          this.valoresCambio = results.valoresCambio['mensaje'];
+        }
+        
+        if (results.tiposMoneda && !results.tiposMoneda['error']) {
+          this.tiposMoneda = results.tiposMoneda['mensaje'];
+        }
+        
+        // Verificar integridad de datos de cambio
+        const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
+        if (!datosCambioValidos) {
+          console.warn('Los datos de cambio no son completamente válidos');
+          // Notificación no bloqueante para el usuario
+          Swal.fire({
+            title: 'Advertencia',
+            text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios de productos en moneda extranjera podrían no ser precisos.',
+            icon: 'warning',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000
+          });
+        }
+      },
+      error => {
+        console.error('Error al cargar datos adicionales:', error);
+      }
+    );
   }
 
   // Getters y setters para las columnas seleccionadas
@@ -212,9 +245,17 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.filteredTipo = this.tipo.filter(item => item[dayField] === '1');
   }
 
-
   ngOnInit() {
     console.log('CondicionVentaComponent inicializado');
+    
+    // Recuperar la condición de venta seleccionada de sessionStorage
+    const condicionGuardada = sessionStorage.getItem('condicionVentaSeleccionada');
+    if (condicionGuardada) {
+      const condicion = JSON.parse(condicionGuardada);
+      this.tipoVal = condicion.tarjeta;
+      this.codTarj = condicion.cod_tarj;
+      this.listaPrecio = condicion.listaprecio;
+    }
   }
   
   ngOnDestroy() {
@@ -240,78 +281,252 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     });
   }
   
-  // Método estandarizado para manejar errores con opciones
-  handleLoadError(message: string, retry: () => void, maxRetries: number = 3) {
-    console.error('Error de carga:', message);
-    
-    // Cerrar el loading si está visible
-    if (Swal.isVisible()) {
-      Swal.close();
+  // Variables para la búsqueda a nivel de cliente
+  productosCompletos: any[] = [];
+  productosFiltrados: any[] = [];
+
+  // Buscar artículos - implementado como en el componente articulos
+  buscar() {
+    if (!this.terminoBusqueda.trim()) {
+      this.limpiarBusqueda();
+      return;
     }
     
-    // Verificar si hay datos en caché
-    const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
-    const hasCachedData = cachedArticulosSucursal && cachedArticulosSucursal.length > 0;
+    // Mostrar indicador de carga
+    this.loading = true;
     
-    // Variable para controlar los reintentos
-    let retryAttempt = 0;
+    // Intentar primero buscar en el servidor si estuviera implementado
+    // Nota: Si el API soporta la búsqueda, se debería usar en el servicio como en articulos
     
-    // Función estandarizada para reintentar
-    const standardRetry = () => {
-      // Incrementar el contador de intentos
-      retryAttempt++;
-      
-      // Mostrar indicador de carga
+    // Si no tenemos todos los productos cargados, los cargamos primero
+    if (this.productosCompletos.length === 0) {
       this.mostrarLoading();
       
-      // Limpiar caché antes de reintentar si ya hemos intentado más de una vez
-      if (retryAttempt > 1) {
-        console.log(`Limpiando caché en intento #${retryAttempt}`);
-        this.articulosCacheService.clearAllCaches();
-      }
-      
-      console.log(`Reintento #${retryAttempt} de ${maxRetries}`);
-      
-      // Ejecutar la función de reintento proporcionada
-      retry();
-    };
-    
-    if (hasCachedData) {
-      // Ofrecer opciones si hay datos en caché
-      Swal.fire({
-        title: 'Error',
-        text: message,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Reintentar carga',
-        cancelButtonText: 'Usar datos anteriores',
-        reverseButtons: true
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Reintentar la carga
-          console.log('Reintentando carga de datos');
-          standardRetry();
-        } else {
-          // Usar datos de caché
-          console.log(`Usando ${cachedArticulosSucursal.length} productos de caché como respaldo`);
-          this.useCachedData(cachedArticulosSucursal);
+      // Cargar todos los productos una sola vez
+      this._cargardata.artsucursal().subscribe({
+        next: (response: any) => {
+          console.log('Respuesta de artsucursal para condicionventa:', response);
+          
+          // Verificar si la respuesta tiene el formato esperado (puede variar)
+          let articulos = [];
+          
+          if (response && Array.isArray(response)) {
+            // Es un array directo
+            articulos = response;
+          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
+            // Tiene formato { mensaje: [...] }
+            articulos = response.mensaje;
+          } else if (response && !response.error && response.mensaje) {
+            // Otro formato posible
+            articulos = response.mensaje;
+          }
+          
+          console.log('Artículos extraídos para condicionventa:', articulos.length);
+          
+          if (articulos && articulos.length > 0) {
+            // Guardar la lista completa
+            this.productosCompletos = [...articulos];
+            
+            // Realizar la búsqueda local
+            this.buscarLocal();
+            
+            Swal.close();
+          } else {
+            Swal.close();
+            this.loading = false;
+            console.warn('No se obtuvieron productos o respuesta vacía');
+            Swal.fire({
+              title: 'Advertencia',
+              text: 'No se pudieron cargar productos para buscar',
+              icon: 'warning',
+              confirmButtonText: 'Aceptar'
+            });
+          }
+        },
+        error: (error) => {
+          Swal.close();
+          this.loading = false;
+          console.error('Error al cargar productos:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Error al cargar productos para buscar',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
         }
       });
     } else {
-      // Si no hay datos en caché, solo mostrar error con opción de reintentar
-      Swal.fire({
-        title: 'Error',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'Reintentar',
-        showCancelButton: true,
-        cancelButtonText: 'Aceptar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          standardRetry();
-        }
-      });
+      // Ya tenemos los productos, solo realizamos la búsqueda local
+      this.buscarLocal();
     }
+  }
+  
+  // Realizar búsqueda local (implementado como en articulos)
+  buscarLocal() {
+    const termino = this.terminoBusqueda.toLowerCase().trim();
+    console.log('Buscando el término en condicionventa:', termino);
+    console.log('En total productos para condicionventa:', this.productosCompletos.length);
+    
+    // Usar setTimeout para permitir que se muestre el indicador de carga
+    setTimeout(() => {
+      try {
+        // Filtrar productos localmente
+        this.productosFiltrados = this.productosCompletos.filter(producto => {
+          // Primero verificamos si el producto tiene los campos necesarios
+          if (!producto) return false;
+          
+          // Asegurar que todos los campos se conviertan a string para búsqueda segura
+          // Buscar principalmente en nomart y marca
+          const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
+          const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
+          
+          // Adicionales por si acaso
+          const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
+          const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
+          const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
+          
+          // Devolver true si alguno de los campos contiene el término de búsqueda
+          return (
+            nombreArt.includes(termino) || 
+            marca.includes(termino) || 
+            codigo.includes(termino) || 
+            codigoBarra.includes(termino) || 
+            rubro.includes(termino)
+          );
+        });
+        
+        console.log('Productos filtrados encontrados en condicionventa:', this.productosFiltrados.length);
+        
+        // Actualizar contadores de paginación para la UI
+        this.totalItems = this.productosFiltrados.length;
+        this.totalPaginas = Math.ceil(this.totalItems / 10); // 10 ítems por página
+        this.paginaActual = 1;
+        
+        // Aplicar paginación a los resultados
+        this.paginarResultadosLocales();
+        
+        // Quitar indicador de carga
+        this.loading = false;
+        
+        // Si no hay resultados, mostrar un mensaje amigable
+        if (this.productos.length === 0) {
+          Swal.fire({
+            title: 'Sin resultados',
+            text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
+            icon: 'info',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      } catch (error) {
+        console.error('Error en la búsqueda local:', error);
+        this.loading = false;
+        Swal.fire({
+          title: 'Error',
+          text: 'Error al procesar la búsqueda',
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    }, 100); // Pequeño retraso para permitir que se muestre el indicador de carga
+  }
+  
+  // Paginar resultados localmente
+  paginarResultadosLocales() {
+    const inicio = (this.paginaActual - 1) * 10;
+    const fin = inicio + 10;
+    
+    // Obtener los productos para la página actual
+    const productosPagina = this.productosFiltrados.slice(inicio, fin);
+    
+    // Aplicar multiplicador y actualizar la variable productos
+    this.productos = this.procesarProductosConMoneda(productosPagina);
+  }
+  
+  // Limpiar búsqueda (similar a articulos)
+  limpiarBusqueda() {
+    this.terminoBusqueda = '';
+    this.productosFiltrados = [];
+    
+    // Mostrar indicador de carga
+    this.loading = true;
+    
+    // Volver a cargar la primera página desde el servidor
+    this.articulosPaginadosService.cargarPagina(1).subscribe(
+      () => {
+        this.loading = false;
+      },
+      error => {
+        this.loading = false;
+        Swal.fire({
+          title: 'Error',
+          text: 'Error al cargar productos',
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    );
+  }
+  
+  // Métodos de paginación sobrescritos para búsqueda local
+  irAPagina(pagina: number) {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (pagina >= 1 && pagina <= this.totalPaginas) {
+        this.paginaActual = pagina;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.irAPagina(pagina);
+    }
+  }
+  
+  paginaSiguiente() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual < this.totalPaginas) {
+        this.paginaActual++;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.paginaSiguiente();
+    }
+  }
+  
+  paginaAnterior() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual > 1) {
+        this.paginaActual--;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.paginaAnterior();
+    }
+  }
+  
+  // Obtener números de página visibles en la paginación (igual que en articulos)
+  getPaginasVisibles(): number[] {
+    const paginas: number[] = [];
+    // Ampliar de 5 a 10 páginas visibles (mostrar 10 páginas a la vez)
+    const numerosPaginasVisibles = 10;
+    const paginasACadaLado = Math.floor(numerosPaginasVisibles / 2);
+    
+    let inicio = Math.max(1, this.paginaActual - paginasACadaLado);
+    let fin = Math.min(this.totalPaginas, inicio + numerosPaginasVisibles - 1);
+    
+    // Ajustar inicio si fin está al límite
+    if (fin === this.totalPaginas) {
+      inicio = Math.max(1, fin - numerosPaginasVisibles + 1);
+    }
+    
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    
+    return paginas;
   }
   
   /**
@@ -331,20 +546,30 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    // Verificar que exista al menos la moneda base (generalmente cod_mone = 1)
-    const tieneMonedasBase = tiposMoneda.some(m => m.cod_mone === 1);
+    // Verificar que exista al menos la moneda base (cod_mone = 1)
+    // En los productos el campo es tipo_moneda, pero en tiposMoneda el campo es cod_mone
+    const tieneMonedasBase = tiposMoneda.some(m => Number(m.cod_mone) === 1);
+    
+    // Si no encontramos moneda base, registramos pero continuamos
     if (!tieneMonedasBase) {
       console.warn('verificarIntegridadDatosCambio: No se encontró la moneda base (cod_mone=1)');
-      return false;
+      console.log('Monedas disponibles:', tiposMoneda.map(m => ({
+        moneda: m.moneda,
+        cod_mone: m.cod_mone,
+        tipo: typeof m.cod_mone
+      })));
     }
 
     // Obtener tipos de moneda extranjera (diferentes a la moneda base)
-    const monedasExtranjeras = tiposMoneda.filter(m => m.cod_mone !== 1);
+    const monedasExtranjeras = tiposMoneda.filter(m => Number(m.cod_mone) !== 1);
     
     // Verificar que todas las monedas extranjeras tengan al menos un valor de cambio
     let todasMonedasTienenCambio = true;
     monedasExtranjeras.forEach(moneda => {
-      const tieneValorCambio = valoresCambio.some(vc => vc.codmone === moneda.cod_mone);
+      // Aseguramos comparar números, no strings
+      const codMonedaNum = Number(moneda.cod_mone);
+      const tieneValorCambio = valoresCambio.some(vc => Number(vc.codmone) === codMonedaNum);
+      
       if (!tieneValorCambio) {
         console.warn(`verificarIntegridadDatosCambio: La moneda ${moneda.moneda} (cod=${moneda.cod_mone}) no tiene valor de cambio configurado`);
         todasMonedasTienenCambio = false;
@@ -360,43 +585,17 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Incluso si no hay moneda base, permitimos continuar con una advertencia
+    // No bloqueamos completamente la funcionalidad si faltan datos
+    if (!tieneMonedasBase) {
+      console.warn('ADVERTENCIA: Funcionando sin moneda base definida. Los cálculos de precios pueden ser imprecisos.');
+      // Retornamos verdadero si al menos el resto de validaciones son correctas
+      return todasMonedasTienenCambio && todosValoresCambioValidos;
+    }
+
     return todasMonedasTienenCambio && todosValoresCambioValidos;
   }
 
-  // Método para usar datos de caché
-  useCachedData(cachedData: any[]) {
-    // Verificar la integridad de los datos críticos de moneda
-    const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
-    
-    // Hacer una copia de los productos originales desde la caché
-    let productos = [...cachedData];
-    
-    // Procesar cada producto para ajustar el precio según su tipo de moneda
-    this.productos = this.procesarProductosConMoneda(productos);
-    
-    // Actualizar la interfaz
-    this.cdr.detectChanges();
-    
-    // Determinar el mensaje según la validación de datos
-    let mensaje = 'Usando datos almacenados en caché.';
-    let icono = 'info';
-    
-    if (!datosCambioValidos) {
-      mensaje += ' ADVERTENCIA: Los datos de tipos de cambio pueden estar incompletos o ser incorrectos. Los precios de productos en moneda extranjera podrían no ser precisos.';
-      icono = 'warning';
-    } else {
-      mensaje += ' Algunos precios podrían no estar actualizados.';
-    }
-    
-    // Informar al usuario
-    Swal.fire({
-      title: datosCambioValidos ? 'Información' : 'Advertencia',
-      text: mensaje,
-      icon: icono as any,
-      confirmButtonText: 'Entendido'
-    });
-  }
-  
   /**
    * Método para procesar productos con su moneda
    * Aplica el multiplicador de cambio correspondiente a los productos con moneda extranjera
@@ -404,6 +603,10 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
    * @returns Lista de productos con precios procesados
    */
   procesarProductosConMoneda(productos: any[]) {
+    if (!productos || productos.length === 0) {
+      return [];
+    }
+    
     // Verificar si tenemos datos válidos para conversión
     const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
     
@@ -416,16 +619,19 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Procesar cada producto
     productosConversiones.forEach(producto => {
       try {
-        // Verificar si el producto tiene un tipo de moneda extranjera
-        if (producto.tipo_moneda && producto.tipo_moneda !== 1) {
-          // Si los datos de cambio no son válidos, marcar el producto
+        // Asegurarse de que tipo_moneda sea tratado como número
+        const tipoMoneda = producto.tipo_moneda !== undefined ? Number(producto.tipo_moneda) : undefined;
+        
+        // Verificar si el producto tiene un tipo de moneda extranjera (diferente de 1 o moneda base)
+        if (tipoMoneda !== undefined && tipoMoneda !== 1) {
+          // Si los datos de cambio no son válidos, marcar el producto pero continuar intentando
           if (!datosCambioValidos) {
             producto._precioConversionSospechosa = true;
-            productosConProblemas++;
+            // No incrementamos contador aquí para evitar doble conteo
           }
           
-          // Filtrar los valores de cambio para este tipo de moneda
-          const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === producto.tipo_moneda);
+          // Filtrar los valores de cambio para este tipo de moneda (siempre comparamos números)
+          const valoresCambioMoneda = this.valoresCambio.filter(vc => Number(vc.codmone) === tipoMoneda);
           
           // Si hay valores de cambio para este tipo de moneda
           if (valoresCambioMoneda && valoresCambioMoneda.length > 0) {
@@ -449,7 +655,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
               
               // Verificar multiplicador válido
               if (multiplicador <= 0) {
-                console.warn(`Multiplicador inválido (${multiplicador}) para moneda ${producto.tipo_moneda}`);
+                console.warn(`Multiplicador inválido (${multiplicador}) para moneda ${tipoMoneda}`);
                 producto._precioConversionSospechosa = true;
                 productosConProblemas++;
               } else {
@@ -468,18 +674,18 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                 producto.prefi4 = producto.prefi4 ? producto.prefi4 * multiplicador : producto.prefi4;
               }
             } else {
-              console.warn(`Valor de cambio no encontrado o inválido para moneda ${producto.tipo_moneda}`);
+              console.warn(`Valor de cambio no encontrado o inválido para moneda ${tipoMoneda}`);
               producto._precioConversionSospechosa = true;
               productosConProblemas++;
             }
           } else {
-            console.warn(`No hay valores de cambio para moneda ${producto.tipo_moneda}`);
+            console.warn(`No hay valores de cambio para moneda ${tipoMoneda}`);
             producto._precioConversionSospechosa = true;
             productosConProblemas++;
           }
         }
       } catch (error) {
-        console.error('Error al procesar producto con moneda:', error);
+        console.error('Error al procesar producto con moneda:', error, producto);
         producto._precioConversionSospechosa = true;
         productosConProblemas++;
       }
@@ -488,6 +694,18 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Registrar estadísticas de conversión
     if (productosConProblemas > 0) {
       console.warn(`Se encontraron ${productosConProblemas} productos con problemas de conversión de moneda`);
+      // Agregar notificación no bloqueante si hay problemas
+      setTimeout(() => {
+        Swal.fire({
+          title: 'Información',
+          text: `Algunos productos (${productosConProblemas}) podrían mostrar precios incorrectos debido a problemas con los tipos de cambio.`,
+          icon: 'info',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 5000
+        });
+      }, 1000);
     }
     
     return productosConversiones;
@@ -500,6 +718,14 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.codTarj = item.cod_tarj;
     this.listaPrecio = item.listaprecio;
     this.activaDatos = item.activadatos;
+    
+    // Guardar la condición de venta seleccionada en sessionStorage
+    sessionStorage.setItem('condicionVentaSeleccionada', JSON.stringify({
+      tarjeta: this.tipoVal,
+      cod_tarj: this.codTarj,
+      listaprecio: this.listaPrecio
+    }));
+    
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
     if (this.activaDatos == 1) {
       this.abrirFormularioTarj();
@@ -513,150 +739,25 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       // Mostrar loading antes de cargar los productos
       this.mostrarLoading();
       
-      // Verificar si tenemos artículos en caché primero
-      const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
-      
-      if (cachedArticulosSucursal.length > 0) {
-        console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para CondicionVenta`);
-        
-        // Verificar integridad de datos de cambio antes de procesar
-        const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
-        
-        // Hacer una copia de los productos originales desde la caché
-        let productos = [...cachedArticulosSucursal];
-        
-        // Utilizar el método centralizado para procesar productos con moneda
-        this.productos = this.procesarProductosConMoneda(productos);
-        
-        // Forzar la detección de cambios
-        this.cdr.detectChanges();
-        
-        // Cerrar loading
-        Swal.close();
-        
-        // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
-        if (!datosCambioValidos) {
-          setTimeout(() => {
-            Swal.fire({
-              title: 'Advertencia',
-              text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
-              icon: 'warning',
-              toast: true,
-              position: 'top-end',
-              showConfirmButton: false,
-              timer: 5000
-            });
-          }, 500);
+      // Cargar la primera página de productos paginados
+      this.articulosPaginadosService.cargarPagina(1).subscribe(
+        () => {
+          Swal.close();
+        },
+        error => {
+          console.error('Error al cargar productos:', error);
+          Swal.close();
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los productos',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
         }
-      } else {
-        console.log('No hay productos en caché, cargando desde API');
-        
-        // Si no hay datos en caché, cargar desde el servicio de caché que hará la llamada API
-        const subscription = this.articulosCacheService.loadArticulosSucursal().subscribe({
-          next: (articulosSucursal: any[]) => {
-            if (articulosSucursal && articulosSucursal.length > 0) {
-              console.log(`Productos cargados para CondicionVenta desde servicio: ${articulosSucursal.length}`);
-              
-              // Hacer una copia de los productos originales
-              let productos = [...articulosSucursal];
-              
-              // Utilizar el método centralizado para procesar productos con moneda
-              this.productos = this.procesarProductosConMoneda(productos);
-              // Forzar la detección de cambios
-              this.cdr.detectChanges();
-            } else {
-              console.error('Error o respuesta vacía al cargar productos');
-              this.handleLoadError('No se pudieron cargar los productos', () => {
-                // Función de reintento estandarizada
-                this.articulosCacheService.loadArticulosSucursal().subscribe({
-                  next: (articulosSucursal: any[]) => {
-                    if (articulosSucursal && articulosSucursal.length > 0) {
-                      let productos = [...articulosSucursal];
-                      this.productos = this.procesarProductosConMoneda(productos);
-                      Swal.close();
-                    } else {
-                      // Usar el mismo método handleLoadError con la misma función de reintento
-                      this.handleLoadError('No se pudieron cargar los productos en el reintento', 
-                        () => this.articulosCacheService.loadArticulosSucursal().subscribe({
-                          next: (data) => {
-                            if (data && data.length > 0) {
-                              this.productos = this.procesarProductosConMoneda([...data]);
-                              Swal.close();
-                            }
-                          },
-                          error: (err) => Swal.close()
-                        })
-                      );
-                    }
-                  },
-                  error: (error) => {
-                    console.error('Error en reintento de carga:', error);
-                    this.handleLoadError('Error en el reintento de carga', 
-                      () => this.articulosCacheService.loadArticulosSucursal().subscribe({
-                        next: (data) => {
-                          if (data && data.length > 0) {
-                            this.productos = this.procesarProductosConMoneda([...data]);
-                            Swal.close();
-                          }
-                        },
-                        error: (err) => Swal.close()
-                      })
-                    );
-                  }
-                });
-              });
-            }
-            // Cerrar loading
-            Swal.close();
-          },
-          error: (error) => {
-            console.error('Error al cargar productos:', error);
-            this.handleLoadError('No se pudieron cargar los productos', () => {
-              // Función de reintento estandarizada
-              this.articulosCacheService.loadArticulosSucursal().subscribe({
-                next: (articulosSucursal: any[]) => {
-                  if (articulosSucursal && articulosSucursal.length > 0) {
-                    let productos = [...articulosSucursal];
-                    this.productos = this.procesarProductosConMoneda(productos);
-                    Swal.close();
-                  } else {
-                    // Usar el mismo método handleLoadError con la misma función de reintento
-                    this.handleLoadError('No se pudieron cargar los productos en el reintento', 
-                      () => this.articulosCacheService.loadArticulosSucursal().subscribe({
-                        next: (data) => {
-                          if (data && data.length > 0) {
-                            this.productos = this.procesarProductosConMoneda([...data]);
-                            Swal.close();
-                          }
-                        },
-                        error: (err) => Swal.close()
-                      })
-                    );
-                  }
-                },
-                error: (error) => {
-                  console.error('Error en reintento de carga:', error);
-                  this.handleLoadError('Error en el reintento de carga', 
-                    () => this.articulosCacheService.loadArticulosSucursal().subscribe({
-                      next: (data) => {
-                        if (data && data.length > 0) {
-                          this.productos = this.procesarProductosConMoneda([...data]);
-                          Swal.close();
-                        }
-                      },
-                      error: (err) => Swal.close()
-                    })
-                  );
-                }
-              });
-            });
-          }
-        });
-        
-        this.subscriptions.push(subscription);
-      }
+      );
     }
   }
+  
   abrirFormularioTarj() {
     Swal.fire({
       title: 'Ingrese los datos de la tarjeta',
@@ -709,60 +810,21 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         // Mostrar loading antes de cargar los productos
         this.mostrarLoading();
         
-        // Verificar si tenemos artículos en caché primero
-        const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
-        
-        if (cachedArticulosSucursal.length > 0) {
-          console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioTarj`);
-          
-          // Verificar integridad de datos de cambio antes de procesar
-          const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
-          
-          // Hacer una copia de los productos originales desde la caché y procesarlos
-          let productos = [...cachedArticulosSucursal];
-          this.productos = this.procesarProductosConMoneda(productos);
-          // Forzar la detección de cambios
-          this.cdr.detectChanges();
-          
-          // Cerrar loading
-          Swal.close();
-          
-          // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
-          if (!datosCambioValidos) {
-            setTimeout(() => {
-              Swal.fire({
-                title: 'Advertencia',
-                text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
-                icon: 'warning',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 5000
-              });
-            }, 500);
+        // Cargar la primera página
+        this.articulosPaginadosService.cargarPagina(1).subscribe(
+          () => {
+            Swal.close();
+          },
+          error => {
+            console.error('Error al cargar productos:', error);
+            Swal.close();
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudieron cargar los productos'
+            });
           }
-        } else {
-          // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
-          this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
-            next: (articulos: any[]) => {
-              this.productos = [...articulos];
-              // Forzar la detección de cambios
-              this.cdr.detectChanges();
-              
-              // Cerrar loading
-              Swal.close();
-            },
-            error: (error) => {
-              console.error('Error al cargar productos:', error);
-              Swal.close();
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los productos'
-              });
-            }
-          });
-        }
+        );
       }
     });
   }
@@ -853,60 +915,21 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         // Mostrar loading antes de cargar los productos
         this.mostrarLoading();
         
-        // Verificar si tenemos artículos en caché primero
-        const cachedArticulosSucursal = this.articulosCacheService.getArticulosSucursal();
-        
-        if (cachedArticulosSucursal.length > 0) {
-          console.log(`Usando ${cachedArticulosSucursal.length} productos de la caché para abrirFormularioCheque`);
-          
-          // Verificar integridad de datos de cambio antes de procesar
-          const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
-          
-          // Hacer una copia de los productos originales desde la caché y procesarlos
-          let productos = [...cachedArticulosSucursal];
-          this.productos = this.procesarProductosConMoneda(productos);
-          // Forzar la detección de cambios
-          this.cdr.detectChanges();
-          
-          // Cerrar loading
-          Swal.close();
-          
-          // Si hay problemas con los datos de cambio, mostrar una notificación no bloqueante
-          if (!datosCambioValidos) {
-            setTimeout(() => {
-              Swal.fire({
-                title: 'Advertencia',
-                text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios mostrados podrían no ser precisos.',
-                icon: 'warning',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 5000
-              });
-            }, 500);
+        // Cargar la primera página
+        this.articulosPaginadosService.cargarPagina(1).subscribe(
+          () => {
+            Swal.close();
+          },
+          error => {
+            console.error('Error al cargar productos:', error);
+            Swal.close();
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudieron cargar los productos'
+            });
           }
-        } else {
-          // Cargar datos desde el servicio de caché que hará la llamada API si es necesario
-          this.articulosCacheService.loadArticulosSucursal().pipe(take(1)).subscribe({
-            next: (articulos: any[]) => {
-              this.productos = [...articulos];
-              // Forzar la detección de cambios
-              this.cdr.detectChanges();
-              
-              // Cerrar loading
-              Swal.close();
-            },
-            error: (error) => {
-              console.error('Error al cargar productos:', error);
-              Swal.close();
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los productos'
-              });
-            }
-          });
-        }
+        );
       }
     });
   }
@@ -985,6 +1008,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.prefi3 = this.listaPrecio === '3';
     this.prefi4 = this.listaPrecio === '4';
   }
+  
   selectProducto(producto) {
     let datoscondicionventa: any =
     {
@@ -1014,6 +1038,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       maximizable: true
     });
   }
+  
   exportExcel() {
     import('xlsx').then((xlsx) => {
       const worksheet = xlsx.utils.json_to_sheet(this.productos);
@@ -1022,6 +1047,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.saveAsExcelFile(excelBuffer, 'products');
     });
   }
+  
   saveAsExcelFile(buffer: any, fileName: string): void {
     let EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8';
     let EXCEL_EXTENSION = '.xlsx';

@@ -70,3 +70,63 @@
     transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
     font-size: 1rem;
 }
+
+/* Estilos para overlay de carga */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Estilo para la tabla con overlay */
+.position-relative {
+  position: relative;
+  min-height: 200px;
+}
+
+/* Controles de paginación */
+.pagination {
+  margin-bottom: 0;
+}
+
+.pagination .page-link {
+  cursor: pointer;
+}
+
+.pagination .disabled .page-link {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Estilo para los botones de acción */
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.765625rem;
+}
+
+/* Estilos para campos de precios */
+.text-danger i {
+  margin-left: 3px;
+}
+
+/* Estilo para advertencias */
+.table-warning {
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+/* Mejorar espacio en el botón de actualizar */
+.btn-actualizar i {
+  margin-right: 0.25rem;
+}
+
+/* Estilo para el selector de columnas */
+select[multiple] {
+  height: 150px;
+}

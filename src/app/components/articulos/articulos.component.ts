@@ -1,11 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
 import { FormGroup, FormControl } from '@angular/forms';
-import { ArticulosCacheService } from '../../services/articulos-cache.service';
-import { Subscription } from 'rxjs';
+import { ArticulosPaginadosService } from '../../services/articulos-paginados.service';
+import { Subscription, forkJoin } from 'rxjs';
 
 import Swal from 'sweetalert2';
 
@@ -57,6 +57,7 @@ interface Articulo {
   cod_deposito: number;
   tipo_moneda: number;
   id_articulo: number;
+  _precioError?: boolean; // Flag para marcar precios con error de conversión
 }
 
 interface ValorCambio {
@@ -90,7 +91,13 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   cols: Column[];
   _selectedColumns: Column[];
   
-  // New properties for caching
+  // Propiedades para paginación
+  public paginaActual = 1;
+  public totalPaginas = 0;
+  public totalItems = 0;
+  public terminoBusqueda = '';
+  
+  // Propiedades para carga
   public loading = false;
   public fromCache = false;
   public tienePreciosConError = false;
@@ -102,7 +109,8 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     private router: Router,
     private subirdataService: SubirdataService,
     private cargardataService: CargardataService,
-    private articulosCacheService: ArticulosCacheService
+    private articulosPaginadosService: ArticulosPaginadosService,
+    private cdr: ChangeDetectorRef
   ) {
     this.cols = [
       { field: 'cd_articulo', header: 'Código' },
@@ -152,14 +160,107 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     
     // Subscribe to loading state
     this.subscriptions.push(
-      this.articulosCacheService.loading$.subscribe(loading => {
+      this.articulosPaginadosService.cargando$.subscribe(loading => {
         this.loading = loading;
         console.log('Loading state changed:', loading);
       })
     );
     
-    // Load data from cache or API
-    this.loadData();
+    // Subscribe to articulos
+    this.subscriptions.push(
+      this.articulosPaginadosService.articulos$.subscribe(articulos => {
+        this.articulos = articulos;
+        this.articulosOriginal = articulos;
+        console.log('Articulos updated:', articulos.length);
+        this.processArticulos();
+      })
+    );
+    
+    // Subscribe to pagination data
+    this.subscriptions.push(
+      this.articulosPaginadosService.paginaActual$.subscribe(pagina => {
+        this.paginaActual = pagina;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.totalPaginas$.subscribe(total => {
+        this.totalPaginas = total;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.totalItems$.subscribe(total => {
+        this.totalItems = total;
+      })
+    );
+    
+    this.subscriptions.push(
+      this.articulosPaginadosService.terminoBusqueda$.subscribe(termino => {
+        this.terminoBusqueda = termino;
+      })
+    );
+    
+    // Load additional data needed (valores cambio, tipos moneda, conf lista)
+    this.loadAdditionalData();
+    
+    // Load initial page of data
+    this.articulosPaginadosService.cargarPagina(1).subscribe(
+      () => {},
+      error => {
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los artículos',
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    );
+  }
+  
+  // Load additional data needed for price conversion
+  loadAdditionalData() {
+    Swal.fire({
+      title: 'Cargando datos',
+      text: 'Cargando información adicional...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    
+    // Load all additional data in parallel
+    forkJoin({
+      valoresCambio: this.articulosPaginadosService.getValoresCambio(),
+      tiposMoneda: this.articulosPaginadosService.getTiposMoneda(),
+      confLista: this.articulosPaginadosService.getConfLista()
+    }).subscribe(
+      results => {
+        if (results.valoresCambio && !results.valoresCambio['error']) {
+          this.valoresCambio = results.valoresCambio['mensaje'];
+        }
+        
+        if (results.tiposMoneda && !results.tiposMoneda['error']) {
+          this.tiposMoneda = results.tiposMoneda['mensaje'];
+        }
+        
+        if (results.confLista && !results.confLista['error']) {
+          this.confLista = results.confLista['mensaje'];
+        }
+        
+        Swal.close();
+      },
+      error => {
+        console.error('Error loading additional data:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Error al cargar datos adicionales',
+          icon: 'warning',
+          confirmButtonText: 'Continuar de todos modos'
+        });
+      }
+    );
   }
   
   // Método para reiniciar el contador de reintentos
@@ -182,6 +283,229 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     this._selectedColumns = this.cols.filter((col) => val.includes(col));
   }
 
+  // Variables para la búsqueda a nivel de cliente
+  productosCompletos: any[] = [];
+  productosFiltrados: any[] = [];
+
+  // Buscar artículos
+  buscar() {
+    if (!this.terminoBusqueda.trim()) {
+      this.limpiarBusqueda();
+      return;
+    }
+    
+    // Si no tenemos todos los productos cargados, los cargamos primero
+    if (this.productosCompletos.length === 0) {
+      this.mostrarLoading();
+      
+      // Cargar todos los productos una sola vez
+      this.cargardataService.artsucursal().subscribe({
+        next: (response: any) => {
+          console.log('Respuesta de artsucursal para articulos:', response);
+          
+          // Verificar si la respuesta tiene el formato esperado (puede variar)
+          let articulos = [];
+          
+          if (response && Array.isArray(response)) {
+            // Es un array directo
+            articulos = response;
+          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
+            // Tiene formato { mensaje: [...] }
+            articulos = response.mensaje;
+          } else if (response && !response.error && response.mensaje) {
+            // Otro formato posible
+            articulos = response.mensaje;
+          }
+          
+          console.log('Artículos extraídos para búsqueda:', articulos.length);
+          
+          if (articulos && articulos.length > 0) {
+            // Guardar la lista completa
+            this.productosCompletos = [...articulos];
+            
+            // Realizar la búsqueda local
+            this.buscarLocal();
+            
+            Swal.close();
+          } else {
+            Swal.close();
+            console.warn('No se obtuvieron productos o respuesta vacía');
+            Swal.fire({
+              title: 'Advertencia',
+              text: 'No se pudieron cargar productos para buscar',
+              icon: 'warning',
+              confirmButtonText: 'Aceptar'
+            });
+          }
+        },
+        error: (error) => {
+          Swal.close();
+          console.error('Error al cargar productos:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Error al cargar productos para buscar',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      });
+    } else {
+      // Ya tenemos los productos, solo realizamos la búsqueda local
+      this.buscarLocal();
+    }
+  }
+  
+  // Realizar búsqueda local
+  buscarLocal() {
+    const termino = this.terminoBusqueda.toLowerCase().trim();
+    console.log('Buscando el término en articulos:', termino);
+    console.log('En total productos para articulos:', this.productosCompletos.length);
+    
+    // Inspeccionar los primeros 5 productos para entender la estructura
+    console.log('Muestra de productos:', this.productosCompletos.slice(0, 5));
+    
+    // Filtrar productos localmente
+    this.productosFiltrados = this.productosCompletos.filter(producto => {
+      // Primero verificamos si el producto tiene los campos necesarios
+      if (!producto) return false;
+      
+      // Asegurar que todos los campos se conviertan a string para búsqueda segura
+      // Buscar principalmente en nomart y marca
+      const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
+      const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
+      
+      // Adicionales por si acaso
+      const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
+      const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
+      const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
+      
+      // Devolver true si alguno de los campos contiene el término de búsqueda
+      return (
+        nombreArt.includes(termino) || 
+        marca.includes(termino) || 
+        codigo.includes(termino) || 
+        codigoBarra.includes(termino) || 
+        rubro.includes(termino)
+      );
+    });
+    
+    console.log('Productos filtrados encontrados en articulos:', this.productosFiltrados.length);
+    
+    // Actualizar contadores de paginación para la UI
+    this.totalItems = this.productosFiltrados.length;
+    this.totalPaginas = Math.ceil(this.totalItems / 50); // 50 ítems por página por defecto
+    this.paginaActual = 1;
+    
+    // Aplicar paginación a los resultados
+    this.paginarResultadosLocales();
+    
+    // Si no hay resultados, mostrar un mensaje amigable
+    if (this.articulos.length === 0) {
+      Swal.fire({
+        title: 'Sin resultados',
+        text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
+        icon: 'info',
+        confirmButtonText: 'Aceptar'
+      });
+    }
+  }
+  
+  // Paginar resultados localmente
+  paginarResultadosLocales() {
+    const inicio = (this.paginaActual - 1) * 50; // 50 ítems por página por defecto
+    const fin = inicio + 50;
+    
+    // Obtener los productos para la página actual
+    const productosPagina = this.productosFiltrados.slice(inicio, fin);
+    
+    // Aplicar multiplicador y actualizar la variable articulos
+    this.articulos = this.aplicarMultiplicadorPrecio(productosPagina);
+  }
+  
+  // Limpiar búsqueda
+  limpiarBusqueda() {
+    this.terminoBusqueda = '';
+    this.productosFiltrados = [];
+    
+    // Volver a cargar la primera página desde el servidor
+    this.articulosPaginadosService.cargarPagina(1).subscribe();
+  }
+  
+  // Método para mostrar el indicador de carga
+  mostrarLoading() {
+    Swal.fire({
+      title: 'Cargando datos',
+      text: 'Por favor espere...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+  }
+  
+  // Métodos de paginación sobrescritos para búsqueda local
+  irAPagina(pagina: number) {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (pagina >= 1 && pagina <= this.totalPaginas) {
+        this.paginaActual = pagina;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.irAPagina(pagina);
+    }
+  }
+  
+  paginaSiguiente() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual < this.totalPaginas) {
+        this.paginaActual++;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.paginaSiguiente();
+    }
+  }
+  
+  paginaAnterior() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual > 1) {
+        this.paginaActual--;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.articulosPaginadosService.paginaAnterior();
+    }
+  }
+  
+  // Obtener números de página visibles en la paginación
+  getPaginasVisibles(): number[] {
+    const paginas: number[] = [];
+    // Ampliar de 5 a 10 páginas visibles (mostrar 10 páginas a la vez)
+    const numerosPaginasVisibles = 10;
+    const paginasACadaLado = Math.floor(numerosPaginasVisibles / 2);
+    
+    let inicio = Math.max(1, this.paginaActual - paginasACadaLado);
+    let fin = Math.min(this.totalPaginas, inicio + numerosPaginasVisibles - 1);
+    
+    // Ajustar inicio si fin está al límite
+    if (fin === this.totalPaginas) {
+      inicio = Math.max(1, fin - numerosPaginasVisibles + 1);
+    }
+    
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    
+    return paginas;
+  }
+
   // Force refresh all data from API
   forceRefresh() {
     console.log('Force refresh requested');
@@ -200,129 +524,43 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       }
     });
     
-    // Clear cache and reload from API
-    this.articulosCacheService.clearAllCaches();
-    this.loadData(true);
-  }
-  
-  // Load data from cache or API
-  loadData(forceRefresh = false) {
-    console.log('Loading data, forceRefresh:', forceRefresh);
-    this.loading = true;
-    this.fromCache = false;
-    
-    // If not forcing refresh, try to get from cache first
-    if (!forceRefresh) {
-      console.log('Checking for cached data');
-      const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
-      const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
-      const cachedConfLista = this.articulosCacheService.getConfLista();
-      const cachedArticulos = this.articulosCacheService.getArticulos();
-      
-      console.log('Cache check results:', {
-        valoresCambio: cachedValoresCambio.length,
-        tiposMoneda: cachedTiposMoneda.length,
-        confLista: cachedConfLista.length,
-        articulos: cachedArticulos.length
-      });
-      
-      // If we have all cached data, use it
-      if (cachedValoresCambio.length > 0 && 
-          cachedTiposMoneda.length > 0 && 
-          cachedConfLista.length > 0 && 
-          cachedArticulos.length > 0) {
-        
-        console.log('Using cached data');
-        this.valoresCambio = cachedValoresCambio;
-        this.tiposMoneda = cachedTiposMoneda;
-        this.confLista = cachedConfLista;
-        this.articulosOriginal = cachedArticulos;
-        
-        // Verificar la integridad de los datos críticos
-        const confListaValida = this.verificarIntegridadConfLista(cachedConfLista);
-        if (!confListaValida) {
-          console.warn('La configuración de listas en caché está incompleta o es inválida');
-          // No bloqueamos el uso, pero registramos la advertencia y notificamos al usuario
-          const notificacion = 'La configuración de precios puede estar incompleta. Considere actualizar los datos.';
-          setTimeout(() => {
-            Swal.fire({
-              title: 'Advertencia',
-              text: notificacion,
-              icon: 'warning',
-              confirmButtonText: 'Entendido',
-              timer: 5000
-            });
-          }, 1000);
+    // Reload additional data and current page
+    forkJoin({
+      valoresCambio: this.articulosPaginadosService.getValoresCambio(),
+      tiposMoneda: this.articulosPaginadosService.getTiposMoneda(),
+      confLista: this.articulosPaginadosService.getConfLista(),
+      articulos: this.articulosPaginadosService.cargarPagina(1)
+    }).subscribe(
+      results => {
+        if (results.valoresCambio && !results.valoresCambio['error']) {
+          this.valoresCambio = results.valoresCambio['mensaje'];
         }
         
-        // Process the data
-        this.processArticulos();
+        if (results.tiposMoneda && !results.tiposMoneda['error']) {
+          this.tiposMoneda = results.tiposMoneda['mensaje'];
+        }
         
-        // Mark as loaded from cache
-        this.fromCache = true;
-        this.loading = false;
-        return;
-      } else {
-        console.log('Incomplete cached data, loading from API');
-        // Log específicamente qué datos faltan para mejor diagnóstico
-        if (cachedValoresCambio.length === 0) console.warn('Faltan valores de cambio en caché');
-        if (cachedTiposMoneda.length === 0) console.warn('Faltan tipos de moneda en caché');
-        if (cachedConfLista.length === 0) console.warn('Falta configuración de listas en caché');
-        if (cachedArticulos.length === 0) console.warn('Faltan artículos en caché');
+        if (results.confLista && !results.confLista['error']) {
+          this.confLista = results.confLista['mensaje'];
+        }
+        
+        Swal.close();
+      },
+      error => {
+        console.error('Error refreshing data:', error);
+        Swal.fire({
+          title: 'Error',
+          text: 'Error al actualizar los datos',
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
       }
-    } else {
-      console.log('Force refresh requested, loading from API');
-    }
-    
-    // If we got here, we need to load from API
-    console.log('Loading data from API');
-    this.subscriptions.push(
-      this.articulosCacheService.loadAllData().subscribe({
-        next: (success) => {
-          console.log('Data loaded from API, success:', success);
-          
-          // Get data from cache service
-          this.valoresCambio = this.articulosCacheService.getValoresCambio();
-          this.tiposMoneda = this.articulosCacheService.getTiposMoneda();
-          this.confLista = this.articulosCacheService.getConfLista();
-          this.articulosOriginal = this.articulosCacheService.getArticulos();
-          
-          console.log('Retrieved data from cache service:', {
-            valoresCambio: this.valoresCambio.length,
-            tiposMoneda: this.tiposMoneda.length,
-            confLista: this.confLista.length,
-            articulos: this.articulosOriginal.length
-          });
-          
-          // Check if we actually got data
-          if (this.valoresCambio.length > 0 && 
-              this.tiposMoneda.length > 0 && 
-              this.articulosOriginal.length > 0) {
-            
-            // Process the data
-            this.processArticulos();
-            this.loading = false;
-            
-            // Close loading if active
-            if (Swal.isVisible()) {
-              Swal.close();
-            }
-          } else {
-            console.error('Data loading incomplete, some arrays are empty');
-            this.handleLoadError('Error al cargar los datos: información incompleta');
-          }
-        },
-        error: (error) => {
-          console.error('Error loading data:', error);
-          this.handleLoadError('Error al cargar los datos desde el servidor');
-        }
-      })
     );
   }
-  
+
   // Process articles with prices
   processArticulos() {
-    console.log('Processing articulos, original count:', this.articulosOriginal.length);
+    console.log('Processing articulos, count:', this.articulosOriginal.length);
     
     if (!this.articulosOriginal || this.articulosOriginal.length === 0) {
       console.warn('No original articulos to process');
@@ -374,79 +612,6 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     }
   }
   
-  handleLoadError(message: string) {
-    console.error('Error handler called:', message);
-    
-    // Close loading if active
-    if (Swal.isVisible()) {
-      Swal.close();
-    }
-    
-    const cachedArticulos = this.articulosCacheService.getArticulos();
-    const cachedConfLista = this.articulosCacheService.getConfLista();
-    const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
-    const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
-    
-    // Verificar disponibilidad de todos los conjuntos de datos
-    const hasCachedArticulos = this.articulosOriginal.length > 0 || cachedArticulos.length > 0;
-    const hasCachedConfLista = this.confLista.length > 0 || cachedConfLista.length > 0;
-    const hasCachedValoresCambio = this.valoresCambio.length > 0 || cachedValoresCambio.length > 0;
-    const hasCachedTiposMoneda = this.tiposMoneda.length > 0 || cachedTiposMoneda.length > 0;
-    
-    // Consideramos que hay datos en caché si al menos tenemos artículos
-    const hasCachedData = hasCachedArticulos;
-    
-    // Construir mensaje descriptivo
-    let messageDetail = message;
-    if (hasCachedData) {
-      messageDetail += '\n\nDatos disponibles en caché:';
-      messageDetail += hasCachedArticulos ? '\n✓ Artículos' : '\n✗ Faltan artículos';
-      messageDetail += hasCachedConfLista ? '\n✓ Configuración de listas' : '\n✗ Falta configuración de listas';
-      messageDetail += hasCachedValoresCambio ? '\n✓ Valores de cambio' : '\n✗ Faltan valores de cambio';
-      messageDetail += hasCachedTiposMoneda ? '\n✓ Tipos de moneda' : '\n✗ Faltan tipos de moneda';
-    }
-    
-    if (hasCachedData) {
-      // Si hay datos en caché, ofrecer opciones para mantenerlos o reintentar
-      Swal.fire({
-        title: 'Error',
-        text: messageDetail,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Reintentar carga',
-        cancelButtonText: 'Usar datos anteriores',
-        reverseButtons: true
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Reintentar la carga
-          console.log('Reintentando carga de datos desde API');
-          this.retryLoading();
-        } else {
-          // Usar datos anteriores (caché o los actuales ya cargados)
-          console.log('Usando datos anteriores como alternativa');
-          this.useFallbackData(cachedArticulos);
-        }
-      });
-    } else {
-      // Si no hay datos en caché, solo ofrecer la opción de reintentar
-      Swal.fire({
-        title: 'Error',
-        text: message,
-        icon: 'error',
-        confirmButtonText: 'Reintentar',
-        showCancelButton: true,
-        cancelButtonText: 'Aceptar'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Reintentar la carga
-          this.retryLoading();
-        }
-      });
-    }
-    
-    this.loading = false;
-  }
-  
   // Contador de reintentos
   private retryCount = 0;
   private maxRetries = 3; // Número máximo de reintentos
@@ -469,15 +634,14 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         icon: 'warning',
         showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: 'Usar datos en caché',
+        confirmButtonText: 'Intentar con página diferente',
         denyButtonText: 'Refrescar página',
         cancelButtonText: 'Intentar más tarde',
         reverseButtons: true
       }).then((result) => {
         if (result.isConfirmed) {
-          // Usar datos en caché si están disponibles
-          const cachedArticulos = this.articulosCacheService.getArticulos();
-          this.useFallbackData(cachedArticulos);
+          // Intentar cargar otra página
+          this.articulosPaginadosService.cargarPagina(1).subscribe();
         } else if (result.isDenied) {
           // Refrescar la página
           window.location.reload();
@@ -499,89 +663,18 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       }
     });
     
-    // Reintento sin limpiar caché (útil cuando el problema fue de conexión temporal)
-    this.loadData(true);
-  }
-  
-  // Nuevo método para usar datos de respaldo
-  useFallbackData(cachedArticulos: any[]) {
-    if (this.articulosOriginal.length > 0) {
-      // Si ya tenemos datos cargados, verificar que todos los datos relacionados estén disponibles
-      console.log('Usando artículos ya cargados en memoria como alternativa');
-      if (this.confLista.length === 0) {
-        // Si falta confLista, intentar cargar desde caché
-        const cachedConfLista = this.articulosCacheService.getConfLista();
-        if (cachedConfLista.length > 0) {
-          console.log('Cargando confLista desde caché para completar datos');
-          this.confLista = cachedConfLista;
-        } else {
-          console.warn('No se encontró confLista en caché. Los precios de lista podrían ser incorrectos.');
-        }
+    // Reintento 
+    this.articulosPaginadosService.cargarPagina(this.paginaActual).subscribe(
+      () => {
+        Swal.close();
+      },
+      error => {
+        console.error('Error en reintento:', error);
+        // Reintentar de nuevo
+        Swal.close();
+        setTimeout(() => this.retryLoading(), 1000);
       }
-      this.processArticulos();
-    } else if (cachedArticulos.length > 0) {
-      // Si hay datos en caché, usarlos
-      console.log('Usando artículos en caché como alternativa');
-      this.articulosOriginal = cachedArticulos;
-      
-      // Intentar cargar TODOS los datos relacionados desde caché
-      const cachedValoresCambio = this.articulosCacheService.getValoresCambio();
-      const cachedTiposMoneda = this.articulosCacheService.getTiposMoneda();
-      const cachedConfLista = this.articulosCacheService.getConfLista();
-      
-      // Verificar y cargar cada conjunto de datos
-      if (cachedValoresCambio.length > 0) {
-        console.log(`Cargando ${cachedValoresCambio.length} registros de valoresCambio desde caché`);
-        this.valoresCambio = cachedValoresCambio;
-      } else {
-        console.warn('No se encontraron datos de valores de cambio en caché');
-      }
-      
-      if (cachedTiposMoneda.length > 0) {
-        console.log(`Cargando ${cachedTiposMoneda.length} registros de tiposMoneda desde caché`);
-        this.tiposMoneda = cachedTiposMoneda;
-      } else {
-        console.warn('No se encontraron datos de tipos de moneda en caché');
-      }
-      
-      if (cachedConfLista.length > 0) {
-        console.log(`Cargando ${cachedConfLista.length} registros de confLista desde caché`);
-        this.confLista = cachedConfLista;
-      } else {
-        console.warn('No se encontraron datos de configuración de listas en caché');
-      }
-      
-      // Verificar si tenemos datos críticos antes de procesar
-      const datosCompletos = this.valoresCambio.length > 0 && 
-                             this.tiposMoneda.length > 0 && 
-                             this.confLista.length > 0;
-      
-      this.processArticulos();
-      
-      // Informar al usuario con mensaje específico según los datos disponibles
-      let mensaje = 'Usando datos almacenados en caché.';
-      if (!datosCompletos) {
-        mensaje += ' ADVERTENCIA: Algunos datos de configuración están incompletos.';
-        if (this.confLista.length === 0) {
-          mensaje += ' Falta configuración de listas de precios.';
-        }
-        if (this.valoresCambio.length === 0) {
-          mensaje += ' Faltan valores de cambio.';
-        }
-        if (this.tiposMoneda.length === 0) {
-          mensaje += ' Faltan tipos de moneda.';
-        }
-      } else {
-        mensaje += ' Algunos precios podrían no estar actualizados.';
-      }
-      
-      Swal.fire({
-        title: 'Información',
-        text: mensaje,
-        icon: datosCompletos ? 'info' : 'warning',
-        confirmButtonText: 'Entendido'
-      });
-    }
+    );
   }
 
   aplicarMultiplicadorPrecio(articulos: Articulo[]): Articulo[] {
@@ -597,10 +690,13 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         // Crear una copia del artículo para no modificar el original
         const articuloCopy = { ...articulo };
         
+        // Asegurarse de que tipo_moneda sea tratado como número
+        const tipoMoneda = articuloCopy.tipo_moneda !== undefined ? Number(articuloCopy.tipo_moneda) : undefined;
+        
         // Verificar si el artículo tiene tipo_moneda y es diferente de 1 (asumiendo que 1 es la moneda local)
-        if (articuloCopy.tipo_moneda && articuloCopy.tipo_moneda !== 1) {
-          // Buscar el valor de cambio correspondiente directamente usando tipo_moneda como codmone
-          const valorCambio = this.obtenerValorCambio(articuloCopy.tipo_moneda);
+        if (tipoMoneda !== undefined && tipoMoneda !== 1) {
+          // Buscar el valor de cambio correspondiente
+          const valorCambio = this.obtenerValorCambio(tipoMoneda);
           
           // Si se encontró un valor de cambio válido y tiene un multiplicador
           if (valorCambio && valorCambio > 0) {
@@ -632,8 +728,11 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       return 1;
     }
     
-    // Filtrar todos los valores de cambio para esta moneda
-    const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === codMoneda);
+    // Asegurar que codMoneda sea un número
+    const codMonedaNum = Number(codMoneda);
+    
+    // Filtrar todos los valores de cambio para esta moneda, asegurando comparación numérica
+    const valoresCambioMoneda = this.valoresCambio.filter(vc => Number(vc.codmone) === codMonedaNum);
     
     // Si no hay valores para esta moneda, devolver 1
     if (!valoresCambioMoneda || valoresCambioMoneda.length === 0) {
@@ -730,9 +829,8 @@ export class ArticulosComponent implements OnInit, OnDestroy {
             icon: 'success',
             confirmButtonText: 'Aceptar'
           });
-          // Clear cache and reload after deletion
-          this.articulosCacheService.clearAllCaches();
-          this.loadData(true);
+          // Reload current page
+          this.articulosPaginadosService.cargarPagina(this.paginaActual).subscribe();
         } else {
           this.loading = false;
           Swal.fire({
@@ -778,14 +876,20 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   obtenerNombreMoneda(codMoneda: number): string {
     if (!codMoneda) return 'Peso';
     
-    const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
-    return moneda ? moneda.moneda : `Moneda ${codMoneda}`;
+    // Asegurar que codMoneda sea un número
+    const codMonedaNum = Number(codMoneda);
+    
+    const moneda = this.tiposMoneda.find(m => Number(m.cod_mone) === codMonedaNum);
+    return moneda ? moneda.moneda : `Moneda ${codMonedaNum}`;
   }
 
   obtenerSimboloMoneda(codMoneda: number): string {
-    if (!codMoneda || codMoneda === 1) return '$';
+    // Asegurar que codMoneda sea un número
+    const codMonedaNum = Number(codMoneda);
     
-    const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
+    if (!codMonedaNum || codMonedaNum === 1) return '$';
+    
+    const moneda = this.tiposMoneda.find(m => Number(m.cod_mone) === codMonedaNum);
     return moneda && moneda.simbolo ? moneda.simbolo : '$';
   }
   
@@ -849,5 +953,27 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     });
     
     return configuracionCompleta;
+  }
+  
+  // Ver detalles de un artículo
+  verDetalles(articulo: any) {
+    Swal.fire({
+      title: articulo.nomart,
+      html: `
+        <div class="text-left">
+          <p><strong>Código:</strong> ${articulo.cd_articulo}</p>
+          <p><strong>Marca:</strong> ${articulo.marca}</p>
+          <p><strong>Precio:</strong> ${articulo.precon}</p>
+          <p><strong>Stock:</strong> ${articulo.exi1}</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Cerrar'
+    });
+  }
+  
+  // Método auxiliar para PrimeNG
+  $any(val: any): any {
+    return val;
   }
 }

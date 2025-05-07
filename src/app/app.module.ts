@@ -110,6 +110,8 @@ import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.compo
 import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
 import { SucursalesComponent } from './components/sucursales/sucursales.component';
 
+// Nuevo servicio de paginación
+import { ArticulosPaginadosService } from './services/articulos-paginados.service';
 
 @NgModule({
   declarations: [
@@ -210,7 +212,13 @@ import { SucursalesComponent } from './components/sucursales/sucursales.componen
     provideMessaging(() => getMessaging()),
     provideStorage(() => getStorage())
   ],
-  providers: [DialogService,  DatePipe, AngularFireAuthGuard, { provide: FIREBASE_OPTIONS, useValue: environment.firebase}],
+  providers: [
+    DialogService, 
+    DatePipe, 
+    AngularFireAuthGuard, 
+    { provide: FIREBASE_OPTIONS, useValue: environment.firebase},
+    ArticulosPaginadosService
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

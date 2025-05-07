@@ -169,6 +169,11 @@ export const UrlCajaLista = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Caj
 export const UrlCajaconcepto = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajaconcepto';
 export const UrlArticuloById = 'https://motoapp.loclx.io/APIAND/index.php/Carga/ArticuloById';
 
+// APIs para paginación de artículos
+export const UrlArticulosPaginados = 'https://motoapp.loclx.io/APIAND/index.php/Carga/ArticulosPaginados';
+export const UrlBuscarArticulos = 'https://motoapp.loclx.io/APIAND/index.php/Carga/BuscarArticulos';
+export const UrlBuscarArticulosTexto = 'https://motoapp.loclx.io/APIAND/index.php/Carga/BuscarArticulosTexto';
+
 export const UrlCajamovi = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajamovi';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
