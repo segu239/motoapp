@@ -77,9 +77,10 @@ interface TipoMoneda {
 }
 
 @Component({
-  selector: 'app-articulo',
+  selector: 'app-articulos',
   templateUrl: './articulos.component.html',
-  styleUrls: ['./articulos.component.css']
+  styleUrls: ['./articulos.component.css'],
+  providers: [ArticulosPaginadosService]
 })
 export class ArticulosComponent implements OnInit, OnDestroy {
   
