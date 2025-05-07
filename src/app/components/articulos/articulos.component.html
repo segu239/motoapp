@@ -3,29 +3,90 @@
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title">Artículos</h4>
+                
+                <!-- Loading indicator -->
+                <div class="alert alert-warning mb-3" *ngIf="loading">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> 
+                    Cargando datos, por favor espere...
+                </div>
+                
+                <!-- Cache info message -->
+                <div class="alert alert-success mb-3" *ngIf="!loading && fromCache">
+                    <small>
+                        <i class="fa fa-check-circle mr-1"></i> Datos cargados desde caché local para acceso rápido.
+                        <button class="btn btn-sm btn-outline-primary ml-2" (click)="forceRefresh()">
+                            <i class="fa fa-refresh mr-1"></i> Actualizar datos
+                        </button>
+                    </small>
+                </div>
+                
+                <!-- Foreign currency info -->
                 <div class="alert alert-info mb-3" *ngIf="valoresCambio && valoresCambio.length > 0">
                     <small>
                         <i class="fa fa-info-circle"></i> Los precios de los artículos con moneda extranjera han sido convertidos automáticamente según el valor de cambio actual.
                     </small>
                 </div>
-                <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
-                    [rows]="10"
+                
+                <!-- Price error warning -->
+                <div class="alert alert-warning mb-3" *ngIf="tienePreciosConError">
+                    <small>
+                        <i class="fa fa-exclamation-triangle"></i> <strong>Advertencia:</strong> 
+                        Algunos artículos con moneda extranjera podrían mostrar precios incorrectos debido a un error en el procesamiento.
+                        Las filas marcadas con <i class="fa fa-exclamation-triangle text-danger"></i> requieren atención.
+                        <button class="btn btn-sm btn-outline-primary ml-2" (click)="forceRefresh()">
+                            <i class="fa fa-refresh mr-1"></i> Intentar solucionar
+                        </button>
+                    </small>
+                </div>
+                
+                <!-- Table with data -->
+                <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" 
+                    [paginator]="false" [loading]="loading"
                     [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo']">
                     <ng-template pTemplate="caption">
-                        <div class="p-d-flex justify-content-between align-items-center">
-                            <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
-                                selectedItemsLabel="{0} Columnas Seleccionadas" [style]="{'min-width': '200px'}"
-                                placeholder="Elija Columnas">
-                            </p-multiSelect>
-                            <span class="p-input-icon-left ml-2">
-                                <input pInputText type="text"
-                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
-                                    placeholder="Buscar.." />
-                            </span>
-                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
-                                styleClass="p-button-sm p-button-success ml-4"></p-button>
-                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newarticulo']"
-                                styleClass="p-button-sm p-button-info ml-2"></p-button>
+                        <div class="d-flex flex-row align-items-center">
+                            <!-- Caja de búsqueda -->
+                            <div class="search-container">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" 
+                                        [(ngModel)]="terminoBusqueda"
+                                        placeholder="Buscar en servidor..." 
+                                        (keyup.enter)="buscar()" />
+                                    <div class="input-group-append">
+                                        <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
+                                            (click)="buscar()" [disabled]="loading"></p-button>
+                                        <p-button icon="pi pi-times" styleClass="p-button-sm p-button-secondary ml-1" 
+                                            (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="loading"></p-button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Columnas selector -->
+                            <div class="ml-2 columnas-container">
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
+                                    selectedItemsLabel="{0} Columnas Seleccionadas" 
+                                    placeholder="Elija Columnas">
+                                </p-multiSelect>
+                            </div>
+                            
+                            <!-- Botón actualizar -->
+                            <div class="ml-2">
+                                <button class="btn btn-primary btn-actualizar" (click)="forceRefresh()" [disabled]="loading">
+                                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i> Actualizar
+                                </button>
+                            </div>
+                            
+                            <!-- Botón exportar Excel -->
+                            <div class="ml-2">
+                                <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                    styleClass="p-button-success"></p-button>
+                            </div>
+                            
+                            <!-- Botón agregar artículo -->
+                            <div class="ml-2">
+                                <p-button icon="pi pi-plus-circle" [routerLink]="['../newarticulo']"
+                                    styleClass="p-button-info"></p-button>
+                            </div>
                         </div>
                     </ng-template>
                     <ng-template pTemplate="header" let-columns>
@@ -40,17 +101,28 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-articulo let-columns="columns">
-                        <tr>
+                        <tr [class.table-warning]="articulo?._precioError">
                             <td *ngFor="let col of columns">
                                 <!-- Mostrar precios con formato numérico si el campo es un precio -->
                                 <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4' || col.field === 'precostosi'">
-                                    {{ articulo[col.field] | number:'1.2-2' }}
+                                    <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                        {{ articulo[col.field] | number:'1.2-2' }}
+                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                           class="fa fa-exclamation-triangle text-danger" 
+                                           title="Posible error en precio por falla en la conversión de moneda"></i>
+                                    </span>
                                 </ng-container>
                                 
                                 <!-- Si es tipo_moneda, mostrar el nombre de la moneda en lugar del código -->
                                 <ng-container *ngIf="col.field === 'tipo_moneda'">
-                                    <span [ngClass]="{'badge badge-secondary': articulo.tipo_moneda !== 1, 'text-muted': articulo.tipo_moneda === 1}">
+                                    <span [class.badge]="true" 
+                                          [class.badge-secondary]="articulo?.tipo_moneda !== 1" 
+                                          [class.text-muted]="articulo?.tipo_moneda === 1" 
+                                          [class.badge-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
                                         {{ obtenerNombreMoneda(articulo.tipo_moneda) }}
+                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                           class="fa fa-exclamation-triangle" 
+                                           title="Error en conversión de moneda"></i>
                                     </span>
                                 </ng-container>
                                 
@@ -69,7 +141,66 @@
                             </td>
                         </tr>
                     </ng-template>
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="12" class="text-center p-4">
+                                <div *ngIf="loading">
+                                    <i class="fa fa-spinner fa-spin fa-2x mb-2"></i>
+                                    <p>Cargando artículos...</p>
+                                </div>
+                                <div *ngIf="!loading">
+                                    <i class="fa fa-database fa-2x mb-2"></i>
+                                    <p>No se encontraron artículos</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
                 </p-table>
+
+                <!-- Paginación personalizada que usa los datos del servidor -->
+                <div class="pagination-container mt-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="pagination-info">
+                            Mostrando página {{ paginaActual }} de {{ totalPaginas }} | Total: {{ totalItems }} artículos
+                        </span>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0">
+                            <!-- Botón para primera página -->
+                            <li class="page-item" [class.disabled]="paginaActual === 1">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(1)">
+                                    <i class="fa fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Botón página anterior -->
+                            <li class="page-item" [class.disabled]="paginaActual === 1">
+                                <a class="page-link" href="javascript:void(0)" (click)="paginaAnterior()">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Páginas numeradas -->
+                            <li class="page-item" [class.active]="paginaActual === p" *ngFor="let p of getPaginasVisibles()">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(p)">{{ p }}</a>
+                            </li>
+                            
+                            <!-- Botón página siguiente -->
+                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                                <a class="page-link" href="javascript:void(0)" (click)="paginaSiguiente()">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Botón para última página -->
+                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(totalPaginas)">
+                                    <i class="fa fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
