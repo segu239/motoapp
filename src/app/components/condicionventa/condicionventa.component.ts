@@ -1021,8 +1021,11 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       listaPrecio: this.listaPrecio,
     };
     this.ref = this.dialogService.open(CalculoproductoComponent, {
-      header: 'Producto',
-      width: '70%',
+      header: 'Detalle del Producto',
+      width: '80%',
+      style: { 
+        'max-width': '900px' 
+      },
       data:
       {
         producto: producto,
@@ -1033,9 +1036,15 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         codTarj: this.codTarj,
         listaPrecio: this.listaPrecio,
       },
-      contentStyle: { overflow: 'auto' },
+      contentStyle: { 
+        overflow: 'auto',
+        padding: '0',
+        borderRadius: '8px'
+      },
       baseZIndex: 10000,
-      maximizable: true
+      maximizable: true,
+      closeOnEscape: true,
+      dismissableMask: true
     });
   }
   

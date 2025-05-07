@@ -134,3 +134,40 @@
 select[multiple] {
   height: 150px;
 }
+
+/* Estilos para el Dialog de PrimeNG */
+:host ::ng-deep .p-dialog {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:host ::ng-deep .p-dialog .p-dialog-header {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  padding: 1.25rem;
+}
+
+:host ::ng-deep .p-dialog .p-dialog-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+  color: #343a40;
+}
+
+:host ::ng-deep .p-dialog .p-dialog-header-icons {
+  color: #6c757d;
+}
+
+:host ::ng-deep .p-dialog .p-dialog-header-icon:hover {
+  background-color: #e9ecef;
+  color: #343a40;
+}
+
+:host ::ng-deep .p-dialog .p-dialog-content {
+  padding: 0;
+}
+
+:host ::ng-deep .p-dialog-mask.p-component-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+}

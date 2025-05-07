@@ -4,127 +4,159 @@
             <div class="card-body">
                 <form class="form-horizontal" role="form">
                     <div class="form-body">
-                        <hr class="m-t-0 m-b-40">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h3 class="box-title product-title">Información del Producto</h3>
+                                <hr class="m-t-0 m-b-40">
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Nombre:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-tag mr-1"></i> Nombre:
+                                    </label>
                                     <div class="col-md-9">
                                         <p class="form-control-static"> {{producto.nomart}} </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Marca:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-copyright mr-1"></i> Marca:
+                                    </label>
                                     <div class="col-md-9">
                                         <p class="form-control-static"> {{producto.marca}} </p>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Precio:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-money-bill mr-1"></i> Precio:
+                                    </label>
                                     <div class="col-md-9">
-                                        <p class="form-control-static"> {{precio}} </p>
+                                        <p class="form-control-static price-value"> {{precio}} </p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="row" *ngIf="tipoMoneda">
-                            <div class="col-md-6">
+                            <div class="col-md-6" *ngIf="tipoMoneda">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Tipo Moneda:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-coins mr-1"></i> Tipo Moneda:
+                                    </label>
                                     <div class="col-md-9">
                                         <p class="form-control-static"> {{tipoMoneda}} </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stk Deposito:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.exi1}} </p>
+
+                        <div class="card stock-panel mt-3 mb-3">
+                            <div class="card-header inventory-header">
+                                <i class="fa fa-warehouse mr-2"></i> Información de Stock
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stk Deposito:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static stock-value"> {{producto.exi1}} </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stk C.Central:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static stock-value"> {{producto.exi2}} </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stk C.Central:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.exi2}} </p>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stk V.Viejo:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static stock-value"> {{producto.exi3}} </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stk V.Viejo:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.exi3}} </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Stk Guemes:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.exi4}} </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Pcio Contado:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.precon}} </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Pcio Tarjeta:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.prefi2}} </p>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Stk Guemes:</label>
+                                            <div class="col-md-9">
+                                                <p class="form-control-static stock-value"> {{producto.exi4}} </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Pcio Lista:</label>
-                                    <div class="col-md-9">
-                                        <p class="form-control-static"> {{producto.prefi1}} </p>
+
+                        <div class="card price-panel mb-4">
+                            <div class="card-header price-header">
+                                <i class="fa fa-tag mr-2"></i> Precios Disponibles
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-5">Pcio Contado:</label>
+                                            <div class="col-md-7">
+                                                <p class="form-control-static price-value"> {{producto.precon}} </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-5">Pcio Tarjeta:</label>
+                                            <div class="col-md-7">
+                                                <p class="form-control-static price-value"> {{producto.prefi2}} </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-5">Pcio Lista:</label>
+                                            <div class="col-md-7">
+                                                <p class="form-control-static price-value"> {{producto.prefi1}} </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <h3 class="box-title">Calculo - {{tipoPrecioString}}</h3>
+
+                        <h3 class="box-title calc-title">
+                            <i class="fa fa-calculator mr-2"></i> Cálculo - {{tipoPrecioString}}
+                        </h3>
                         <hr class="m-t-0 m-b-40">
-                        <div class="row">
+                        <div class="row mt-4">
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Cantidad:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-sort-numeric-up mr-1"></i> Cantidad:
+                                    </label>
                                     <div class="col-md-9">
                                         <input type="number" name="cantidad" [(ngModel)]="cantidad"
                                             (ngModelChange)="calcularPrecioTotal($event)"
-                                            placeholder="Introduce un número">
+                                            placeholder="Introduzca cantidad" class="form-control">
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">TOTAL:</label>
+                                    <label class="control-label text-right col-md-3">
+                                        <i class="fa fa-money-bill-wave mr-1"></i> TOTAL:
+                                    </label>
                                     <div class="col-md-9">
-                                        <p class="form-control-static">{{precioTotal}}</p>
+                                        <p class="form-control-static total-price">{{precioTotal}}</p>
                                     </div>
                                 </div>
                             </div>
@@ -135,8 +167,9 @@
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-offset-3 col-md-9">
-                                        <button type="submit" class="btn btn-success" (click)="comprar($event)"> <i
-                                                class="fa fa-shopping-cart"></i> Comprar</button>
+                                        <button type="submit" class="btn btn-success" (click)="comprar($event)">
+                                            <i class="fa fa-shopping-cart"></i> Agregar al Carrito
+                                        </button>
                                     </div>
                                 </div>
                             </div>
