@@ -1,54 +1,75 @@
 <div class="row">
     <div class="col-lg-12">
-        <div class="card">
-            <div class="card-body">
-                <h4 class="card-title">Carrito</h4>
-                <h6 class="card-subtitle">Lista de Productos</h6>
+        <!-- Contenedor principal -->
+        <div class="carrito-container">
+            
+            <!-- Sección de productos -->
+            <div class="productos-section">
+                <div class="carrito-header">
+                    <div>
+                        <h4 class="carrito-title"><i class="fa fa-shopping-cart mr-2"></i>Carrito de Compras</h4>
+                        <p class="carrito-subtitle">Productos seleccionados</p>
+                    </div>
+                    <button class="btn btn-warning" (click)="agregarProductos()">
+                        <i class="fa fa-plus"></i> Agregar Productos
+                    </button>
+                </div>
+                
                 <div class="table-responsive">
                     <table class="table">
                         <thead>
                             <tr>
                                 <th>Cantidad</th>
-                                <th>Articulo</th>
+                                <th>Producto</th>
                                 <th>Tipo Pago</th>
                                 <th>Precio</th>
-                                <th>Eliminar</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- <tr *ngFor="let item of this.itemsEnCarrito"> -->
                             <tr *ngFor="let item of itemsConTipoPago">    
                                 <td>
                                     <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad"
                                         (change)="calculoTotal()" min="1">
                                 </td>
-                                <td>{{item.nomart}}</td>
-                                <td>{{item.tipoPago}}</td>
-                                <td>{{item.precio * item.cantidad}}</td>
-                                <td><button class="btn btn-danger" (click)="eliminarItem(item)">Eliminar</button></td>
+                                <td><span class="producto-nombre">{{item.nomart}}</span></td>
+                                <td><span class="tipo-pago">{{item.tipoPago}}</span></td>
+                                <td><span class="precio">${{item.precio * item.cantidad}}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger" (click)="eliminarItem(item)">
+                                        <i class="fa fa-trash"></i> Eliminar
+                                    </button>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="row mt-4">
-                    <div class="col-lg-6">
-                        <h3><strong>TOTAL: {{this.suma}}</strong></h3>
-                    </div>
-                    <div class="col-lg-6 text-right">
-                        <button class="btn btn-warning" (click)="agregarProductos()">Agregar Productos</button>
-                    </div>
+                
+                <div class="total-summary">
+                    <div class="total-price">Total: ${{this.suma}}</div>
                 </div>
-                <hr>
-                <div class="row justify-content-center mt-2">
-                    <div class="col-md-6 mt-5">
-                        <div class="form-group row">
-                            <label *ngIf="this.letras_flag" class="control-label text-right col-md-3">Fecha:</label>
-                            <div *ngIf="this.letras_flag" class="col-md-9">
+            </div>
+            
+            <!-- Sección de detalles de venta -->
+            <div class="detalle-section">
+                <div class="carrito-header">
+                    <h4 class="carrito-title">Detalles de la Venta</h4>
+                </div>
+                
+                <div class="grid-form">
+                    <!-- Columna izquierda -->
+                    <div>
+                        <div class="form-row" *ngIf="this.letras_flag">
+                            <label>Fecha:</label>
+                            <div class="input-container">
                                 <p-calendar class="ml-0" [(ngModel)]="FechaCalend" [showIcon]="true"
                                     dateFormat="dd/mm/yy"></p-calendar>
                             </div>
-                            <label class="control-label text-right col-md-3 mt-1">OP:</label>
-                            <div class="col-md-9 mt-1">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label>Operación:</label>
+                            <div class="input-container">
                                 <select class="form-control custom-select" (change)="tipoDocChange($event)">
                                     <option value="FC">FACTURA</option>
                                     <option value="ND">NOTA DEBITO</option>
@@ -58,43 +79,46 @@
                                     <option value="CS">CONSULTA</option>
                                 </select>
                             </div>
-                            <label class="control-label text-right col-md-3 mt-1">Vendedor:</label>
-                            <div class="col-md-9 mt-1 ">
-                                <select class="form-control form-control-danger" [(ngModel)]="vendedoresV">
+                        </div>
+                        
+                        <div class="form-row">
+                            <label>Vendedor:</label>
+                            <div class="input-container">
+                                <select class="form-control custom-select" [(ngModel)]="vendedoresV">
                                     <option *ngFor="let vendedor of vendedores" [value]="vendedor.cod_ven">
-                                        {{vendedor.vendedor}}</option>
+                                        {{vendedor.vendedor}}
+                                    </option>
                                 </select>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-6 mt-5">
-                        <div class="form-group row">
-                            <!-- <label *ngIf="this.puntoVenta_flag"
-                                class="control-label text-right col-md-3">P.Venta:</label>
-                            <div *ngIf="this.puntoVenta_flag" class="col-md-9">
-                                <input type="number" class="form-control form-control-danger" [(ngModel)]="puntoventa"
-                                    (ngModelChange)="validateValue($event)" placeholder="">
-                            </div> -->
-                            <label *ngIf="this.letras_flag"
-                                class="control-label text-right col-md-3 mt-1">Letra:</label>
-                            <div *ngIf="this.letras_flag" class="col-md-9 mt-1">
-                                <select class="form-control form-control-danger" [(ngModel)]="letraValue">
+                    
+                    <!-- Columna derecha -->
+                    <div>
+                        <div class="form-row" *ngIf="this.letras_flag">
+                            <label>Letra:</label>
+                            <div class="input-container">
+                                <select class="form-control custom-select" [(ngModel)]="letraValue">
                                     <option *ngFor="let letra of letras" [value]="letra">{{letra}}</option>
                                 </select>
                             </div>
-                            <label class="control-label text-right col-md-3 mt-1">N.Comp:</label>
-                            <div class="col-md-9 mt-1">
-                                <input type="number" class="form-control form-control-danger"
+                        </div>
+                        
+                        <div class="form-row">
+                            <label>N° Comprobante:</label>
+                            <div class="input-container">
+                                <input type="number" class="form-control"
                                     [(ngModel)]="numerocomprobante" (ngModelChange)="validateValue($event)"
                                     placeholder="" [disabled]="!inputOPFlag">
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="row mt-2 justify-content-end">
-                    <div>
-                        <button class="btn btn-info mr-3" (click)="finalizar()">Finalizar Venta</button>
-                    </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-info" (click)="finalizar()">
+                        <i class="fa fa-check-circle"></i> Finalizar Venta
+                    </button>
                 </div>
             </div>
         </div>
