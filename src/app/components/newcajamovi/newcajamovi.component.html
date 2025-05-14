@@ -13,8 +13,13 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Código Mov.</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codigo_mov" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de movimiento (numérico)</small>
+                                        <select class="form-control" formControlName="codigo_mov">
+                                            <option [ngValue]="null">Seleccione un concepto</option>
+                                            <option *ngFor="let concepto of conceptos" [value]="concepto.id_concepto">
+                                                {{ concepto.descripcion }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione el concepto de movimiento</small>
                                     </div>
                                 </div>
                             </div>
@@ -76,8 +81,13 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Banco</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="banco" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de banco (numérico, opcional)</small>
+                                        <select class="form-control" formControlName="banco">
+                                            <option [ngValue]="null">Seleccione un banco</option>
+                                            <option *ngFor="let banco of bancos" [value]="banco.codigo_banco">
+                                                {{ banco.descripcion }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione un banco (opcional)</small>
                                     </div>
                                 </div>
                             </div>
@@ -107,8 +117,13 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Cliente</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="cliente" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de cliente (numérico, opcional)</small>
+                                        <select class="form-control" formControlName="cliente">
+                                            <option [ngValue]="null">Seleccione un cliente</option>
+                                            <option *ngFor="let cliente of clientes" [value]="cliente.cliente">
+                                                {{ cliente.nombre }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione un cliente</small>
                                     </div>
                                 </div>
                             </div>
@@ -116,8 +131,13 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Proveedor</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="proveedor" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de proveedor (numérico, opcional)</small>
+                                        <select class="form-control" formControlName="proveedor">
+                                            <option [ngValue]="null">Seleccione un proveedor</option>
+                                            <option *ngFor="let proveedor of proveedores" [value]="proveedor.cod_prov">
+                                                {{ proveedor.nombre }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione un proveedor</small>
                                     </div>
                                 </div>
                             </div>

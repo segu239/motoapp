@@ -14,6 +14,10 @@ export class NewCajamoviComponent {
   public cajamoviForm!: FormGroup;
   public loading: boolean = false;
   public sucursal: number = 0;
+  public conceptos: any[] = [];
+  public bancos: any[] = [];
+  public clientes: any[] = []; // Array para almacenar la lista de clientes
+  public proveedores: any[] = []; // Nueva propiedad para almacenar la lista de proveedores
 
   constructor(
     private subirdata: SubirdataService,
@@ -27,6 +31,10 @@ export class NewCajamoviComponent {
       this.sucursal = parseInt(sucursalStr, 10);
     }
     this.cargarForm();
+    this.loadConceptos();
+    this.loadBancos();
+    this.loadClientes(); // Cargar los clientes al inicializar el componente
+    this.loadProveedores(); // Cargar los proveedores al inicializar el componente
   }
 
   cargarForm() {
@@ -126,6 +134,77 @@ export class NewCajamoviComponent {
       text: message,
       icon: 'error',
       confirmButtonText: 'Aceptar'
+    });
+  }
+
+  loadConceptos() {
+    this.cargardata.getCajaconcepto().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.conceptos = response.mensaje;
+        } else {
+          console.error('Error loading conceptos:', response.mensaje);
+          this.showErrorMessage('No se pudieron cargar los conceptos de caja');
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+        this.showErrorMessage('Error en la conexión con el servidor');
+      }
+    });
+  }
+
+  loadBancos() {
+    this.cargardata.getBancos().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.bancos = response.mensaje;
+        } else {
+          console.error('Error loading bancos:', response.mensaje);
+          this.showErrorMessage('No se pudieron cargar los bancos');
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+        this.showErrorMessage('Error en la conexión con el servidor');
+      }
+    });
+  }
+
+  loadClientes() {
+    const sucursalStr = sessionStorage.getItem('sucursal');
+    if (sucursalStr) {
+      this.cargardata.clisucx(sucursalStr).subscribe({
+        next: (response: any) => {
+          if (!response.error) {
+            this.clientes = response.mensaje;
+          } else {
+            console.error('Error loading clientes:', response.mensaje);
+            this.showErrorMessage('No se pudieron cargar los clientes');
+          }
+        },
+        error: (error) => {
+          console.error('Error in API call:', error);
+          this.showErrorMessage('Error en la conexión con el servidor');
+        }
+      });
+    }
+  }
+
+  loadProveedores() {
+    this.cargardata.getProveedor().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.proveedores = response.mensaje;
+        } else {
+          console.error('Error loading proveedores:', response.mensaje);
+          this.showErrorMessage('No se pudieron cargar los proveedores');
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+        this.showErrorMessage('Error en la conexión con el servidor');
+      }
     });
   }
 }

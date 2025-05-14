@@ -26,7 +26,7 @@
                             <th pSortableColumn="fija">Fijo<p-sortIcon field="fija"></p-sortIcon></th>
                             <th pSortableColumn="ingreso_egreso">Ingreso/Egreso<p-sortIcon field="ingreso_egreso"></p-sortIcon></th>
                             <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th>
-                            <!-- <th pSortableColumn="id_concepto">ID Concepto<p-sortIcon field="id_concepto"></p-sortIcon></th> -->
+                            <th pSortableColumn="id_concepto">ID Concepto<p-sortIcon field="id_concepto"></p-sortIcon></th>
                             <th>Editar</th>
                             <th>Eliminar</th>
                         </tr>
@@ -38,7 +38,7 @@
                             <td>{{ cajaconcepto.fija }}</td>
                             <td>{{ cajaconcepto.ingreso_egreso }}</td>
                             <td>{{ cajaconcepto.id_caja }}</td>
-                            <!-- <td>{{ cajaconcepto.id_concepto }}</td> -->
+                            <td>{{ cajaconcepto.id_concepto }}</td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
                                     (click)="editCajaconcepto(cajaconcepto)"></p-button>
