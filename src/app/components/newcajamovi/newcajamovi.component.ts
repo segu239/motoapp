@@ -19,6 +19,8 @@ export class NewCajamoviComponent {
   public clientes: any[] = []; // Array para almacenar la lista de clientes
   public proveedores: any[] = []; // Nueva propiedad para almacenar la lista de proveedores
   public cajas: any[] = []; // Array para almacenar las cajas
+  public isClienteSelected: boolean = true; // Por defecto se selecciona cliente
+  public isEgreso: boolean = false; // Por defecto no es egreso
 
   constructor(
     private subirdata: SubirdataService,
@@ -50,8 +52,8 @@ export class NewCajamoviComponent {
       banco: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
       num_cheque: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
       cuenta_mov: new FormControl(null, Validators.pattern(/^[0-9]{1,6}$/)),
-      cliente: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
-      proveedor: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
+      cliente: new FormControl({value: null, disabled: false}, Validators.pattern(/^[0-9]{1,10}$/)),
+      proveedor: new FormControl({value: null, disabled: true}, Validators.pattern(/^[0-9]{1,10}$/)),
       plaza_cheque: new FormControl('', Validators.maxLength(30)),
       codigo_mbco: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
       desc_bancaria: new FormControl('', Validators.maxLength(80)),
@@ -67,12 +69,42 @@ export class NewCajamoviComponent {
       fecha_proceso: new FormControl(null)
     });
   }
+  
+  // Método para cambiar entre cliente y proveedor
+  toggleClienteProveedor() {
+    this.isClienteSelected = !this.isClienteSelected;
+    
+    if (this.isClienteSelected) {
+      this.cajamoviForm.get('cliente')?.enable();
+      this.cajamoviForm.get('proveedor')?.disable();
+      this.cajamoviForm.get('proveedor')?.setValue(null);
+    } else {
+      this.cajamoviForm.get('proveedor')?.enable();
+      this.cajamoviForm.get('cliente')?.disable();
+      this.cajamoviForm.get('cliente')?.setValue(null);
+    }
+  }
+
+  // Método para cambiar entre ingreso y egreso
+  toggleEgreso() {
+    this.isEgreso = !this.isEgreso;
+  }
 
   guardar(form: FormGroup) {
     if (form.valid) {
       this.loading = true;
-      // Crear el objeto directamente desde el form value
-      const nuevoCajamovi = { ...form.value };
+      // Crear el objeto directamente desde el form value y el rawValue (para obtener valores de controles deshabilitados)
+      const nuevoCajamovi = {
+        ...form.value,
+        // Incluir valores de los controles deshabilitados del formulario
+        cliente: this.isClienteSelected ? this.cajamoviForm.get('cliente')?.value : null,
+        proveedor: !this.isClienteSelected ? this.cajamoviForm.get('proveedor')?.value : null
+      };
+      
+      // Aplicar factor de -1 si es un egreso
+      if (this.isEgreso && nuevoCajamovi.importe_mov !== null) {
+        nuevoCajamovi.importe_mov = parseFloat(nuevoCajamovi.importe_mov) * -1;
+      }
       
       // Agregar la sucursal desde sessionStorage
       nuevoCajamovi.sucursal = this.sucursal;
@@ -211,8 +243,8 @@ export class NewCajamoviComponent {
   }
 
   loadCajas() {
-    // Utilizamos getCajaconcepto() ya que parece contener los datos de las cajas
-    this.cargardata.getCajaconcepto().subscribe({
+    // Utilizamos getCajaLista() para obtener datos de la tabla caja_lista
+    this.cargardata.getCajaLista().subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.cajas = response.mensaje;

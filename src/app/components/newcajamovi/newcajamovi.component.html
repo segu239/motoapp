@@ -66,6 +66,19 @@
                                     </div>
                                 </div>
                                 
+                                <div class="row mb-3">
+                                    <div class="col-md-6 offset-md-3">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="switchClienteProveedor" 
+                                                [checked]="isClienteSelected" (change)="toggleClienteProveedor()">
+                                            <label class="custom-control-label" for="switchClienteProveedor">
+                                                <span *ngIf="isClienteSelected">Cliente seleccionado</span>
+                                                <span *ngIf="!isClienteSelected">Proveedor seleccionado</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group row">
@@ -154,7 +167,7 @@
                                             <div class="col-md-9">
                                                 <select class="form-control" formControlName="banco">
                                                     <option *ngFor="let banco of bancos" [value]="banco.codigo_banco">
-                                                        {{ banco.nombre }}
+                                                        {{ banco.descripcion }}
                                                     </option>
                                                 </select>
                                                 <small class="form-control-feedback">Seleccione un banco (opcional)</small>
@@ -182,6 +195,34 @@
                                             <div class="col-md-9">
                                                 <input type="date" class="form-control" formControlName="fecha_proceso" placeholder="">
                                                 <small class="form-control-feedback">Seleccione la fecha de proceso (opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Descripción</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="descripcion_mov" placeholder="">
+                                                <small class="form-control-feedback">Ingrese una descripción para el movimiento</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Importe</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="importe_mov" placeholder="">
+                                                <div class="mt-2">
+                                                    <div class="custom-control custom-checkbox">
+                                                        <input type="checkbox" class="custom-control-input" id="checkboxEgreso" 
+                                                            [checked]="isEgreso" (change)="toggleEgreso()">
+                                                        <label class="custom-control-label" for="checkboxEgreso">Egreso</label>
+                                                    </div>
+                                                </div>
+                                                <small class="form-control-feedback">Ingrese el importe del movimiento</small>
                                             </div>
                                         </div>
                                     </div>
