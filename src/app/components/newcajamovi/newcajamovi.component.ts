@@ -18,6 +18,7 @@ export class NewCajamoviComponent {
   public bancos: any[] = [];
   public clientes: any[] = []; // Array para almacenar la lista de clientes
   public proveedores: any[] = []; // Nueva propiedad para almacenar la lista de proveedores
+  public cajas: any[] = []; // Array para almacenar las cajas
 
   constructor(
     private subirdata: SubirdataService,
@@ -35,6 +36,7 @@ export class NewCajamoviComponent {
     this.loadBancos();
     this.loadClientes(); // Cargar los clientes al inicializar el componente
     this.loadProveedores(); // Cargar los proveedores al inicializar el componente
+    this.loadCajas(); // Cargar las cajas al inicializar el componente
   }
 
   cargarForm() {
@@ -199,6 +201,24 @@ export class NewCajamoviComponent {
         } else {
           console.error('Error loading proveedores:', response.mensaje);
           this.showErrorMessage('No se pudieron cargar los proveedores');
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+        this.showErrorMessage('Error en la conexión con el servidor');
+      }
+    });
+  }
+
+  loadCajas() {
+    // Utilizamos getCajaconcepto() ya que parece contener los datos de las cajas
+    this.cargardata.getCajaconcepto().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.cajas = response.mensaje;
+        } else {
+          console.error('Error loading cajas:', response.mensaje);
+          this.showErrorMessage('No se pudieron cargar las cajas');
         }
       },
       error: (error) => {

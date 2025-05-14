@@ -156,8 +156,8 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Código MBco</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codigo_mbco" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código MBco (numérico, opcional)</small>
+                                        <input type="number" class="form-control" formControlName="codigo_mbco" placeholder="" readonly>
+                                        <small class="form-control-feedback">Código MBco (solo lectura)</small>
                                     </div>
                                 </div>
                             </div>
@@ -167,8 +167,8 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Desc. Bancaria</label>
                                     <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="desc_bancaria" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la descripción bancaria (máx. 80 caracteres, opcional)</small>
+                                        <input type="text" class="form-control" formControlName="desc_bancaria" placeholder="" readonly>
+                                        <small class="form-control-feedback">Descripción bancaria (solo lectura)</small>
                                     </div>
                                 </div>
                             </div>
@@ -176,8 +176,11 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Marca Cerrado</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="marca_cerrado" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la marca de cerrado (0 o 1)</small>
+                                        <select class="form-control" formControlName="marca_cerrado">
+                                            <option value="0">ABIERTA</option>
+                                            <option value="1">CERRADA</option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione el estado de cierre</small>
                                     </div>
                                 </div>
                             </div>
@@ -207,8 +210,11 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Tipo Movi</label>
                                     <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="tipo_movi" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el tipo de movimiento (1 caracter)</small>
+                                        <select class="form-control" formControlName="tipo_movi">
+                                            <option value="M">MANUAL</option>
+                                            <option value="A">AUTOMATICO</option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione el tipo de movimiento</small>
                                     </div>
                                 </div>
                             </div>
@@ -216,8 +222,13 @@
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Caja</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="caja" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de caja (numérico)</small>
+                                        <select class="form-control" formControlName="caja">
+                                            <option [ngValue]="null">Seleccione una caja</option>
+                                            <option *ngFor="let caja of cajas" [value]="caja.id_caja">
+                                                {{ caja.descripcion }}
+                                            </option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione una caja</small>
                                     </div>
                                 </div>
                             </div>
