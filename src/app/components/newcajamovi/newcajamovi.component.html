@@ -8,15 +8,7 @@
                         <h3 class="box-title">Nuevo Movimiento de Caja</h3>
                         <hr class="m-t-0 m-b-40">
                         <div class="row">
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Sucursal</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="sucursal" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la sucursal (numérico)</small>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Se ocultó el campo de sucursal, ahora se obtiene del sessionStorage -->
                             <div class="col-md-6">
                                 <div class="form-group row">
                                     <label class="control-label text-right col-md-3">Código Mov.</label>
@@ -25,6 +17,9 @@
                                         <small class="form-control-feedback">Ingrese el código de movimiento (numérico)</small>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="col-md-6">
+                                <!-- Espacio disponible para otro campo si se necesita -->
                             </div>
                         </div>
                         <div class="row">

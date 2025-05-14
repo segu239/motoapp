@@ -13,6 +13,7 @@ import Swal from 'sweetalert2';
 export class NewCajamoviComponent {
   public cajamoviForm!: FormGroup;
   public loading: boolean = false;
+  public sucursal: number = 0;
 
   constructor(
     private subirdata: SubirdataService,
@@ -20,12 +21,16 @@ export class NewCajamoviComponent {
     private fb: FormBuilder,
     private cargardata: CargardataService
   ) {
+    // Obtener la sucursal del sessionStorage
+    const sucursalStr = sessionStorage.getItem('sucursal');
+    if (sucursalStr) {
+      this.sucursal = parseInt(sucursalStr, 10);
+    }
     this.cargarForm();
   }
 
   cargarForm() {
     this.cajamoviForm = this.fb.group({
-      sucursal: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       codigo_mov: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       num_operacion: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       fecha_mov: new FormControl('', Validators.required),
@@ -58,6 +63,9 @@ export class NewCajamoviComponent {
       this.loading = true;
       // Crear el objeto directamente desde el form value
       const nuevoCajamovi = { ...form.value };
+      
+      // Agregar la sucursal desde sessionStorage
+      nuevoCajamovi.sucursal = this.sucursal;
       
       // Convertir campos vacíos a null para la base de datos
       for (const key in nuevoCajamovi) {
