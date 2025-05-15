@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
 import {UrlBancos, UrlCajamovi, UrlCajaconcepto,UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera} from '../config/ini'
 import { map } from "rxjs/operators";
+import { TarjCredito } from '../interfaces/tarjcredito';
 
 @Injectable({
   providedIn: 'root'
@@ -20,9 +21,9 @@ export class CargardataService {
   {
     return this.http.get(Urlartsucursal);
   }
-  tarjcredito()
+  tarjcredito(): Observable<any>
   {
-    return this.http.get(Urltarjcredito);
+    return this.http.get<{error: boolean, mensaje: TarjCredito[]}>(Urltarjcredito);
   }
   vendedores()
   {

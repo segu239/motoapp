@@ -86,6 +86,14 @@ public function Tarjcredito_get() //TOMA DE artprev los datos y los sube a la ap
   $query = $this->db->get('tarjcredito');  // Produces: SELECT * FROM mytable
   $resp=$query->result_array();
 
+  // Comprobar que todos los campos estén definidos
+  foreach ($resp as $key => $tarjeta) {
+    // Asegurarse de que el campo id_forma_pago esté definido
+    if (!isset($tarjeta['id_forma_pago'])) {
+      $resp[$key]['id_forma_pago'] = 0; // valor por defecto
+    }
+  }
+
   if (isset($resp)){
     $respuesta=array
     ("error"=>false,
@@ -170,8 +178,11 @@ public function CabecerasucNombreTarj_post()
     if (isset($sucursal)) {
         $tabla = "factcab" . $sucursal;
 
-        // Modificamos la consulta para incluir la tabla tarjcredito
-        $this->db->select($tabla . '.*, tarjcredito.tarjeta')
+        // Modificamos la consulta para incluir la tabla tarjcredito con todos sus campos
+        $this->db->select($tabla . '.*, tarjcredito.tarjeta, tarjcredito.listaprecio, tarjcredito.activadatos, 
+                           tarjcredito.d1, tarjcredito.d2, tarjcredito.d3, tarjcredito.d4, tarjcredito.d5, 
+                           tarjcredito.d6, tarjcredito.d7, tarjcredito.idcp_ingreso, tarjcredito.idcp_egreso, 
+                           tarjcredito.id_forma_pago')
                  ->from($tabla)
                  ->join('tarjcredito', $tabla . '.cod_condvta = tarjcredito.cod_tarj', 'left');
 
@@ -207,8 +218,11 @@ public function PedidosucNombreTarj_post()
     if (isset($sucursal)) {
         $tabla = "psucursal" . $sucursal;
 
-        // Modificamos la consulta para incluir la tabla tarjcredito
-        $this->db->select($tabla . '.*, tarjcredito.tarjeta')
+        // Modificamos la consulta para incluir la tabla tarjcredito con todos sus campos
+        $this->db->select($tabla . '.*, tarjcredito.tarjeta, tarjcredito.listaprecio, tarjcredito.activadatos, 
+                           tarjcredito.d1, tarjcredito.d2, tarjcredito.d3, tarjcredito.d4, tarjcredito.d5, 
+                           tarjcredito.d6, tarjcredito.d7, tarjcredito.idcp_ingreso, tarjcredito.idcp_egreso, 
+                           tarjcredito.id_forma_pago')
                  ->from($tabla)
                  ->join('tarjcredito', $tabla . '.cod_tar = tarjcredito.cod_tarj', 'left');
 
@@ -454,7 +468,10 @@ public function PedidoxComprobante_post() {
         $tabla = "psucursal" . $sucursal;
 
         // Realizamos la consulta con JOIN para obtener los datos de las tres tablas
-        $this->db->select('ps.*, art.nomart, tc.*');
+        // Seleccionamos campos específicos para evitar colisiones de nombres
+        $this->db->select('ps.*, art.nomart, tc.tarjeta, tc.listaprecio, tc.activadatos, 
+                           tc.d1, tc.d2, tc.d3, tc.d4, tc.d5, tc.d6, tc.d7, 
+                           tc.idcp_ingreso, tc.idcp_egreso, tc.id_forma_pago');
         $this->db->from($tabla . ' as ps');
         $this->db->join('artsucursal as art', 'ps.idart = art.idart', 'left');
         $this->db->join('tarjcredito as tc', 'ps.cod_tar = tc.cod_tarj', 'left');
@@ -464,6 +481,13 @@ public function PedidoxComprobante_post() {
         $resp = $query->result_array();
 
         if (!empty($resp)) {
+            // Asegurar que el campo id_forma_pago existe en cada registro
+            foreach ($resp as $key => $item) {
+                if (!isset($item['id_forma_pago'])) {
+                    $resp[$key]['id_forma_pago'] = 0; // valor por defecto
+                }
+            }
+
             $respuesta = array(
                 "error" => false,
                 "mensaje" => $resp

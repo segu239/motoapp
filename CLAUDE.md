@@ -52,6 +52,7 @@ MotoApp es una aplicación Angular que implementa un sistema de gestión complet
 - `/src/app/guards`: Guards para protección de rutas
 - `/src/app/pipes`: Pipes personalizados para transformación de datos
 - `/src/app/shared`: Componentes compartidos (header, footer, sidebar)
+- `/src/`: Se incorporan Carga.php.txt y Descarga.php.txt, son los archivos del backend. 
 
 ### Módulos Principales
 
@@ -100,6 +101,8 @@ La aplicación utiliza Firebase Realtime Database para almacenar:
 - Transacciones de ventas
 - Datos de clientes y proveedores
 - Configuraciones de la aplicación
+
+La aplicacion utiliza codeigniter para interactuar con la base de datos postgres, una copia de los archivos estan en src/ se llaman Carga.php.txt y Descarga.php.txt
 
 ## Convenciones del Proyecto
 
@@ -156,3 +159,5 @@ El enrutamiento está configurado en `app-routing.module.ts` y todas las rutas p
 4. **Cache de artículos**: El proyecto implementa un sistema de cache para artículos, documentado en `src/INFORME_CACHE_ARTICULOS.md`.
 
 5. **Responder en español**: Las interacciones con los usuarios deben ser en español, ya que es el idioma principal de la aplicación.
+
+6. **Postgres**: Siempre que diga ingresa a postgres Ingresaras a la base utilizando el MCP postgres.
