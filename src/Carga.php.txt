@@ -1,0 +1,1340 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+require_once(APPPATH.'/libraries/REST_Controller.php');
+use Restserver\libraries\REST_Controller;
+
+class Carga extends REST_Controller {
+
+public function __construct()
+{
+header("Access-Control-Allow-Origin: *");
+  header("Access-Control-Allow-Methods: PUT, GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Content-Length, Accept-Encoding");
+
+
+  parent::__construct();
+  $this->load->database();
+}
+
+public function Arconmov_get() //TOMA DE artprev los datos y los sube a la app
+{
+  $query = $this->db->get('arconmov');  // Produces: SELECT * FROM mytable
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"error"
+    );
+  $this->response($respuesta);
+  }
+}
+
+public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la app
+{
+  $query = $this->db->get('artsucursal');  // Produces: SELECT * FROM mytable
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"error"
+    );
+  $this->response($respuesta);
+  }
+}
+
+public function Bancos_get() 
+{
+  $query = $this->db->get('bancos');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "No se encontraron registros de bancos"
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function Tarjcredito_get() //TOMA DE artprev los datos y los sube a la app
+{
+  $query = $this->db->get('tarjcredito');  // Produces: SELECT * FROM mytable
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"error"
+    );
+  $this->response($respuesta);
+  }
+}
+
+public function Vendedores_get() //TOMA DE artprev los datos y los sube a la app
+{
+  $query = $this->db->get('vendedores');  // Produces: SELECT * FROM mytable
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"error"
+    );
+  $this->response($respuesta);
+  }
+}
+public function Cabecerax_post() //TOMA DE cabecera los datos y los sube a la app
+{
+  $data = $this->post();
+  $sucursal = $data["sucursal"];
+  $cliente = $data["cliente"];
+
+  if(isset($sucursal) && isset($cliente)){
+    $tabla = "factcab".$sucursal;
+
+    // Modified query to filter by client and non-zero balance
+    $this->db->where('cliente', $cliente);
+    $this->db->where('saldo !=', 0);
+    $query = $this->db->get($tabla);
+    $resp = $query->result_array();
+
+    if (isset($resp)){
+      $respuesta = array(
+        "error" => false,
+        "mensaje" => $resp
+      );
+      $this->response($respuesta);
+    }
+    else {
+      $respuesta = array(
+        "error" => true,
+        "mensaje" => "No se encontraron registros"
+      );
+      $this->response($respuesta);
+    }
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "Faltan parámetros requeridos"
+    );
+    $this->response($respuesta);
+  }
+}
+public function CabecerasucNombreTarj_post()
+{
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+
+    if (isset($sucursal)) {
+        $tabla = "factcab" . $sucursal;
+
+        // Modificamos la consulta para incluir la tabla tarjcredito
+        $this->db->select($tabla . '.*, tarjcredito.tarjeta')
+                 ->from($tabla)
+                 ->join('tarjcredito', $tabla . '.cod_condvta = tarjcredito.cod_tarj', 'left');
+
+        $query = $this->db->get();
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+            $this->response($respuesta);
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros"
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el parámetro de sucursal"
+        );
+        $this->response($respuesta);
+    }
+}
+public function PedidosucNombreTarj_post()
+{
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+
+    if (isset($sucursal)) {
+        $tabla = "psucursal" . $sucursal;
+
+        // Modificamos la consulta para incluir la tabla tarjcredito
+        $this->db->select($tabla . '.*, tarjcredito.tarjeta')
+                 ->from($tabla)
+                 ->join('tarjcredito', $tabla . '.cod_tar = tarjcredito.cod_tarj', 'left');
+
+        $query = $this->db->get();
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+            $this->response($respuesta);
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros"
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el parámetro de sucursal"
+        );
+        $this->response($respuesta);
+    }
+}
+public function Cabecerasuc_post() //TOMA DE cabecera los datos y los sube a la app
+{
+  $data = $this->post();
+  $sucursal = $data["sucursal"];
+ 
+
+  if(isset($sucursal)){
+    $tabla = "factcab".$sucursal;
+
+    // Modified query to filter by client and non-zero balance
+    
+    $query = $this->db->get($tabla);
+    $resp = $query->result_array();
+
+    if (isset($resp)){
+      $respuesta = array(
+        "error" => false,
+        "mensaje" => $resp
+      );
+      $this->response($respuesta);
+    }
+    else {
+      $respuesta = array(
+        "error" => true,
+        "mensaje" => "No se encontraron registros"
+      );
+      $this->response($respuesta);
+    }
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "Faltan parámetros requeridos"
+    );
+    $this->response($respuesta);
+  }
+}
+public function LastIdnum_post()
+{
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+
+    if (isset($sucursal)) {
+        $tabla = "factcab" . $sucursal;
+
+        $this->db->select_max('id_num');
+        $query = $this->db->get($tabla);
+        $result = $query->row_array();
+
+        if (isset($result['id_num'])) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $result['id_num']
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontró ningún registro en la tabla " . $tabla
+            );
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el parámetro 'sucursal'"
+        );
+    }
+
+    $this->response($respuesta);
+}
+public function Clisucx_post() //TOMA DE artprev los datos y los sube a la app
+{
+  $data=$this->post();
+  $sucursal=$data["sucursal"];
+
+  if(isset($sucursal) ){
+
+  //$tabla= "clisuc".$sucursal; //ESTA ES LA QUE USABA CON VARIAS TABLAS AHORA SE CAMBIO POR UNA SOLA
+  $tabla= "clisuc";
+  
+
+  $query = $this->db->get($tabla);  // Produces: SELECT * FROM mytable
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"error"
+    );
+  $this->response($respuesta);
+  }
+}
+ // fin de if isset
+else
+{
+  $respuesta=array
+  ( "error"=>true,
+    "mensaje"=>"error"
+  );
+   $this->response($respuesta);
+}
+
+}
+
+/* public function Pedidox_post() {
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+
+    if (isset($sucursal)) {
+        $tabla = "psucursal" . $sucursal;
+
+        $query = $this->db->get($tabla);  // Produces: SELECT * FROM psucursalX (where X is the sucursal number)
+        $resp = $query->result_array();
+
+        if (isset($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+            $this->response($respuesta);
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "error"
+            );
+            $this->response($respuesta);
+        }
+    }
+} */
+
+public function Pedidox_post() {
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+
+    if (isset($sucursal)) {
+        $tabla = "psucursal" . $sucursal;
+
+        // Realizamos la consulta con JOIN para obtener los datos de ambas tablas
+        $this->db->select('ps.*, art.nomart');
+        $this->db->from($tabla . ' as ps');
+        $this->db->join('artsucursal as art', 'ps.idart = art.idart', 'left');
+        $query = $this->db->get();
+
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros."
+            );
+        }
+        $this->response($respuesta);
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal no especificada."
+        );
+        $this->response($respuesta);
+    }
+}
+/* public function PedidoxComprobante_post() {
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+    $comprobante = $data["comprobante"];
+
+    if (isset($sucursal) && isset($comprobante)) {
+        $tabla = "psucursal" . $sucursal;
+
+        // Realizamos la consulta con JOIN para obtener los datos de ambas tablas
+        $this->db->select('ps.*, art.nomart');
+        $this->db->from($tabla . ' as ps');
+        $this->db->join('artsucursal as art', 'ps.idart = art.idart', 'left');
+        $this->db->where('ps.numerocomprobante', $comprobante);
+        $query = $this->db->get();
+
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros para el comprobante especificado."
+            );
+        }
+        $this->response($respuesta);
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal o comprobante no especificados."
+        );
+        $this->response($respuesta);
+    }
+} */
+public function PedidoxComprobante_post() {
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+    $comprobante = $data["comprobante"];
+
+    if (isset($sucursal) && isset($comprobante)) {
+        $tabla = "psucursal" . $sucursal;
+
+        // Realizamos la consulta con JOIN para obtener los datos de las tres tablas
+        $this->db->select('ps.*, art.nomart, tc.*');
+        $this->db->from($tabla . ' as ps');
+        $this->db->join('artsucursal as art', 'ps.idart = art.idart', 'left');
+        $this->db->join('tarjcredito as tc', 'ps.cod_tar = tc.cod_tarj', 'left');
+        $this->db->where('ps.numerocomprobante', $comprobante);
+        $query = $this->db->get();
+
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros para el comprobante especificado."
+            );
+        }
+        $this->response($respuesta);
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal o comprobante no especificados."
+        );
+        $this->response($respuesta);
+    }
+}
+public function ReciboxComprobante_post() {
+    $data = $this->post();
+    $sucursal = $data["sucursal"];
+    $comprobante = $data["comprobante"];
+
+    if (isset($sucursal) && isset($comprobante)) {
+        $tabla = "recibos". $sucursal;
+
+        // Realizamos la consulta para obtener los datos de la tabla recibos
+        $this->db->select('*');
+        $this->db->from($tabla);
+        $this->db->where('recibo', $comprobante);
+        $query = $this->db->get();
+
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron registros para el comprobante especificado."
+            );
+        }
+        $this->response($respuesta);
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal o comprobante no especificados."
+        );
+        $this->response($respuesta);
+    }
+}
+
+
+/* public function Stockpedido_post() {
+    $data = $this->post();
+    $sucursal = isset($data["sucursal"]) ? $data["sucursal"] : null;
+    if ($sucursal !== null) {
+        try {
+            // 1. Obtener el id_aso de pedidoscb a partir de la sucursal
+            $this->db->select('id_aso');
+            $this->db->from('pedidoscb');
+            $this->db->where('sucursalh', $sucursal);
+            $query_pedidoscb = $this->db->get();
+            if ($query_pedidoscb->num_rows() == 0) {
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "No se encontraron pedidos para la sucursal especificada."
+                );
+                $this->response($respuesta, 404); // Devuelve un código 404 Not Found
+                return;
+            }
+            $id_aso_array = $query_pedidoscb->result_array();
+            // Extraer los id_aso en un array simple para usarlo en la consulta IN
+            $id_aso_values = array_column($id_aso_array, 'id_aso');
+            
+            // 2. Obtener los items de pedidoitem relacionados con los id_aso encontrados
+            // y con estado "Solicitado"
+            $this->db->select('*');
+            $this->db->from('pedidoitem');
+            $this->db->where_in('id_items', $id_aso_values); // Buscar múltiples id_aso
+            $this->db->where('estado', 'Solicitado'); // Añadir condición de estado
+            $query_pedidoitem = $this->db->get();
+            $resp = $query_pedidoitem->result_array();
+            
+            if (!empty($resp)) {
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => $resp
+                );
+            } else {
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "No se encontraron items Solicitados para la sucursal especificada."
+                );
+            }
+            $this->response($respuesta);
+        } catch (Exception $e) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al realizar la consulta: " . $e->getMessage()
+            );
+            $this->response($respuesta, 500); // Devuelve un código 500 Internal Server Error
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal no especificada."
+        );
+        $this->response($respuesta, 400); // Devuelve un código 400 Bad Request
+    }
+} */
+
+public function Stockpedido_post() {
+    $data = $this->post();
+    $sucursal = isset($data["sucursal"]) ? $data["sucursal"] : null;
+    if ($sucursal !== null) {
+        try {
+            // 1. Obtener el id_aso de pedidoscb a partir de la sucursal
+            $this->db->select('id_aso');
+            $this->db->from('pedidoscb');
+            $this->db->where('sucursalh', $sucursal);
+            $query_pedidoscb = $this->db->get();
+            if ($query_pedidoscb->num_rows() == 0) {
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "No se encontraron pedidos para la sucursal especificada."
+                );
+                $this->response($respuesta, 404); // Devuelve un código 404 Not Found
+                return;
+            }
+            $id_aso_array = $query_pedidoscb->result_array();
+            // Extraer los id_aso en un array simple para usarlo en la consulta IN
+            $id_aso_values = array_column($id_aso_array, 'id_aso');
+            
+            // 2. Obtener los items de pedidoitem relacionados con los id_aso encontrados
+            // y con estado "Solicitado"
+            $this->db->select('*');
+            $this->db->from('pedidoitem');
+            $this->db->where_in('id_items', $id_aso_values); // Buscar múltiples id_aso
+            $this->db->where('estado', 'Solicitado'); // Añadir condición de estado
+            $query_pedidoitem = $this->db->get();
+            $resp = $query_pedidoitem->result_array();
+            
+            if (!empty($resp)) {
+                // Integrar el campo sucursalh en cada elemento de la respuesta
+                foreach ($resp as &$item) { // Usamos & para modificar el elemento original por referencia
+                    $item['sucursalh'] = $sucursal; 
+                }
+                unset($item); // Romper la referencia después del bucle
+
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => $resp
+                );
+            } else {
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "No se encontraron items Solicitados para la sucursal especificada."
+                );
+            }
+            $this->response($respuesta);
+        } catch (Exception $e) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al realizar la consulta: " . $e->getMessage()
+            );
+            $this->response($respuesta, 500); // Devuelve un código 500 Internal Server Error
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Sucursal no especificada."
+        );
+        $this->response($respuesta, 400); // Devuelve un código 400 Bad Request
+    }
+}
+
+/* public function PedidoItemsPorSucursal_post() {
+    $data = $this->post();
+    $sucursal = isset($data["sucursal"]) ? $data["sucursal"] : null;
+
+    if ($sucursal === null) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El parámetro 'sucursal' es obligatorio."
+        );
+        $this->response($respuesta, 400); // Bad Request
+        return;
+    }
+
+    try {
+        // 1. Obtener los id_num de pedidoscb que coinciden con la sucursal.
+        $this->db->select('id_num');
+        $this->db->from('pedidoscb');
+        $this->db->where('sucursald', $sucursal); // Usamos 'sucursald' según tu requerimiento
+        $query_pedidoscb = $this->db->get();
+
+        if ($query_pedidoscb->num_rows() === 0) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron pedidos para la sucursal especificada."
+            );
+            $this->response($respuesta, 404); // Not Found
+            return;
+        }
+
+        $id_num_array = $query_pedidoscb->result_array();
+        $id_num_values = array_column($id_num_array, 'id_num');
+
+
+        // 2. Obtener los items de pedidoitem relacionados con los id_num encontrados.
+        //  Asumo que 'id_num' en 'pedidoitem' es la clave foránea que conecta con 'pedidoscb'.
+        //  Si es un campo diferente, ajusta este nombre en el `where` a continuación.
+
+        $this->db->select('*');
+        $this->db->from('pedidoitem');
+        $this->db->where_in('id_num', $id_num_values); //  'id_num'  debe coincidir con el nombre del campo en pedidoitem
+        $query_pedidoitem = $this->db->get();
+        $resp = $query_pedidoitem->result_array();
+
+        if (!empty($resp)) {
+            // Agregar el campo 'sucursal' a la respuesta para mayor claridad.
+            foreach ($resp as &$item) {
+                $item['sucursal'] = $sucursal;
+            }
+            unset($item);
+
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron items de pedido para la sucursal especificada."
+            );
+        }
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error en la base de datos: " . $e->getMessage()
+        );
+        $this->response($respuesta, 500); // Internal Server Error
+    }
+} */
+public function PedidoItemsPorSucursal_post() {
+    $data = $this->post();
+    $sucursal = isset($data["sucursal"]) ? $data["sucursal"] : null;
+
+    if ($sucursal === null) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El parámetro 'sucursal' es obligatorio."
+        );
+        $this->response($respuesta, 400); // Bad Request
+        return;
+    }
+
+    try {
+        // ÚNICA CONSULTA:  Realizamos un JOIN para obtener datos de ambas tablas
+        $this->db->select('pi.*, pc.sucursalh, , pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
+        $this->db->from('pedidoitem AS pi');
+        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner'); // INNER JOIN para asegurar que solo se devuelven filas con coincidencias en ambas tablas
+        $this->db->where('pc.sucursald', $sucursal); // Filtro por sucursal en pedidoscb
+
+        $query = $this->db->get();
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron items de pedido para la sucursal especificada."
+            );
+        }
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error en la base de datos: " . $e->getMessage()
+        );
+        $this->response($respuesta, 500); // Internal Server Error
+    }
+}
+
+public function PedidoItemsPorSucursalh_post() {
+    $data = $this->post();
+    $sucursal = isset($data["sucursal"]) ? $data["sucursal"] : null;
+
+    if ($sucursal === null) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El parámetro 'sucursal' es obligatorio."
+        );
+        $this->response($respuesta, 400); // Bad Request
+        return;
+    }
+
+    try {
+        // ÚNICA CONSULTA:  Realizamos un JOIN para obtener datos de ambas tablas
+        $this->db->select('pi.*, pc.sucursalh, pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
+        $this->db->from('pedidoitem AS pi');
+        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner'); // INNER JOIN para asegurar que solo se devuelven filas con coincidencias en ambas tablas
+        $this->db->where('pc.sucursalh', $sucursal); // Filtro por sucursal en pedidoscb
+
+        $query = $this->db->get();
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron items de pedido para la sucursal especificada."
+            );
+        }
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error en la base de datos: " . $e->getMessage()
+        );
+        $this->response($respuesta, 500); // Internal Server Error
+    }
+}
+
+
+public function RubroPrincipal_get() 
+{
+  $query = $this->db->get('rubro_principal');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+public function RubroCompleto_get() 
+{
+    // Join rubros with rubro_principal using clearer aliases
+    $this->db->select('rubros.id_rubro, rubros.cod_rubro, rubros.rubro, 
+                       rubros.numerador, rubros.modiprecio, rubros.modidescri, rubros.cod_depo, 
+                       rubros.mustuni, rubros.id_rubro_p,
+                       rubro_principal.rubro as rubro_principal, 
+                       rubro_principal.cod_rubro as cod_rubro_principal');
+    $this->db->from('rubros');
+    $this->db->join('rubro_principal', 'rubros.id_rubro_p = rubro_principal.id_rubro_p', 'left');
+    $query = $this->db->get();
+    $resp = $query->result_array();
+
+    if (!empty($resp)) {
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => $resp
+        );
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se encontraron registros"
+        );
+    }
+    
+    $this->response($respuesta);
+}
+public function Rubro_get() 
+{
+  $query = $this->db->get('rubros');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function ArtIva_get() 
+{
+  $query = $this->db->get('artiva');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function Marca_get() 
+{
+  $query = $this->db->get('marcas');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function Proveedor_get() 
+{
+  $query = $this->db->get('proveedores');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+public function TipoMoneda_get() 
+{
+  $query = $this->db->get('tipomone');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+public function ValorCambio_get() 
+{
+  $query = $this->db->get('valorcambio');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function Conflista_get() 
+{
+  $query = $this->db->get('conf_lista');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+public function Articulos_get() 
+{
+  $query = $this->db->get('artsucursal');
+  $resp = $query->result_array();
+
+  if (isset($resp)){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "error"
+    );
+    $this->response($respuesta);
+  }
+}
+// --- NUEVA FUNCIÓN ---
+public function Cajalista_get() // Obtener todos los registros de cajalistas
+{
+  $query = $this->db->get('caja_lista');  // Nombre de la tabla en plural y minúsculas
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+    $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"No se encontraron registros en caja_lista" // Mensaje más específico
+    );
+    $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND); // Mejor código de estado
+  }
+}
+// --- FIN NUEVA FUNCIÓN ---
+// --- Funciones para CajaConcepto ---
+public function Cajaconcepto_get()
+{
+  $query = $this->db->get('caja_conceptos'); // Nombre de tabla plural y minúscula
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"No se encontraron registros en cajaconceptos"
+    );
+  $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND); // Mejor código de error
+  }
+}
+
+public function Cajamovi_get()
+{
+  $query = $this->db->get('caja_movi'); // Nombre de la tabla en plural y minúscula
+  $resp=$query->result_array();
+
+  if (isset($resp)){
+    $respuesta=array
+    ("error"=>false,
+      "mensaje"=>$resp
+    );
+  $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta=array
+    ( "error"=>true,
+      "mensaje"=>"No se encontraron registros en cajamovis" // Mensaje más específico
+    );
+    $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND); // Mejor código de estado
+  }
+}
+
+
+public function RubroPrincipalPorId_post() 
+{
+    $data = $this->post();
+    $id_rubro_p = $data["id_rubro_p"];
+
+    if (isset($id_rubro_p)) {
+        $this->db->where('id_rubro_p', $id_rubro_p);
+        $query = $this->db->get('rubro_principal');
+        $resp = $query->result_array();
+
+        if (!empty($resp)) {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $resp
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontró el rubro principal especificado."
+            );
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el parámetro id_rubro_p"
+        );
+    }
+    
+    $this->response($respuesta);
+}
+
+
+public function ArticulosPaginados_post() {
+  // Obtener los parámetros del POST
+  $data = $this->post();
+  $pagina = isset($data['pagina']) ? intval($data['pagina']) : 1;
+  $porPagina = isset($data['porPagina']) ? intval($data['porPagina']) : 50;
+
+  // Validar parámetros
+  $pagina = max(1, $pagina);
+  $porPagina = max(10, min(100, $porPagina));
+
+  // Calcular el offset para la consulta
+  $offset = ($pagina - 1) * $porPagina;
+
+  // Obtener el total de artículos
+  $totalArticulos = $this->db->count_all('artsucursal');
+
+  // Calcular el total de páginas
+  $totalPaginas = ceil($totalArticulos / $porPagina);
+
+  // Obtener los artículos de la página actual
+  $this->db->limit($porPagina, $offset);
+  $this->db->order_by('id_articulo', 'DESC'); // Ordenar por ID descendente
+  $query = $this->db->get('artsucursal');
+  $articulos = $query->result_array();
+
+  // Preparar la respuesta
+  $respuesta = array(
+      "error" => false,
+      "mensaje" => $articulos,
+      "metadatos" => array(
+          "pagina_actual" => $pagina,
+          "por_pagina" => $porPagina,
+          "total_paginas" => $totalPaginas,
+          "total_articulos" => $totalArticulos
+      )
+  );
+
+  $this->response($respuesta);
+}
+
+public function BuscarArticulos_post() {
+  // Obtener los parámetros del POST
+  $data = $this->post();
+  $termino = isset($data['termino']) ? trim($data['termino']) : '';
+  $pagina = isset($data['pagina']) ? intval($data['pagina']) : 1;
+  $porPagina = isset($data['porPagina']) ? intval($data['porPagina']) : 50;
+
+  // Validación básica
+  if (empty($termino)) {
+      $respuesta = array(
+          "error" => true,
+          "mensaje" => "El término de búsqueda es requerido"
+      );
+      $this->response($respuesta);
+      return;
+  }
+
+  // Validar parámetros
+  $termino = $this->db->escape_like_str($termino);
+  $pagina = max(1, $pagina);
+  $porPagina = max(10, min(100, $porPagina));
+
+  // Calcular el offset para la consulta
+  $offset = ($pagina - 1) * $porPagina;
+
+  // Construir la consulta de búsqueda para contar resultados
+  $this->db->where("(
+      nomart LIKE '%{$termino}%' OR
+      cd_articulo LIKE '%{$termino}%' OR
+      cd_barra LIKE '%{$termino}%' OR
+      marca LIKE '%{$termino}%' OR
+      rubro LIKE '%{$termino}%'
+  )");
+  $totalArticulos = $this->db->count_all_results('artsucursal');
+
+  // Calcular el total de páginas
+  $totalPaginas = ceil($totalArticulos / $porPagina);
+
+  // Obtener los artículos de la página actual que coinciden con la búsqueda
+  $this->db->where("(
+      nomart LIKE '%{$termino}%' OR
+      cd_articulo LIKE '%{$termino}%' OR
+      cd_barra LIKE '%{$termino}%' OR
+      marca LIKE '%{$termino}%' OR
+      rubro LIKE '%{$termino}%'
+  )");
+  $this->db->limit($porPagina, $offset);
+  $this->db->order_by('id_articulo', 'DESC'); // Ordenar por ID descendente
+  $query = $this->db->get('artsucursal');
+  $articulos = $query->result_array();
+
+  // Preparar la respuesta
+  $respuesta = array(
+      "error" => false,
+      "mensaje" => $articulos,
+      "metadatos" => array(
+          "pagina_actual" => $pagina,
+          "por_pagina" => $porPagina,
+          "total_paginas" => $totalPaginas,
+          "total_articulos" => $totalArticulos,
+          "termino_busqueda" => $termino
+      )
+  );
+
+  $this->response($respuesta);
+}
+
+public function BuscarArticulosTexto_post()
+  {
+      // Validar que tengamos los parámetros necesarios
+      $this->form_validation->set_rules('termino', 'Término de búsqueda', 'required');
+      $this->form_validation->set_rules('pagina', 'Página', 'numeric');
+      $this->form_validation->set_rules('porPagina', 'Items por página', 'numeric');
+
+      if ($this->form_validation->run() === FALSE) {
+          $this->response([
+              'error' => TRUE,
+              'mensaje' => validation_errors()
+          ], REST_Controller::HTTP_BAD_REQUEST);
+          return;
+      }
+
+      // Obtener datos de la solicitud
+      $termino = $this->post('termino');
+      $pagina = $this->post('pagina') ? $this->post('pagina') : 1;
+      $porPagina = $this->post('porPagina') ? $this->post('porPagina') : 50;
+
+      // Calcular offset para paginación
+      $offset = ($pagina - 1) * $porPagina;
+
+      // Crear término de búsqueda con comodines
+      $terminoBusqueda = '%' . $termino . '%';
+
+      // Construir la consulta SQL base
+      $this->db->select('*');
+      $this->db->from('artsucursal');
+
+      // Aplicar condiciones solo a campos de texto
+      $this->db->group_start();
+      $this->db->like('nomart', $termino);
+      $this->db->or_like('marca', $termino);
+      // Convertir campo cd_articulo a texto antes de aplicar LIKE
+      $this->db->or_where("CAST(cd_articulo AS VARCHAR) LIKE", $terminoBusqueda);
+      // Convertir campo cd_barra a texto antes de aplicar LIKE
+      $this->db->or_where("CAST(cd_barra AS VARCHAR) LIKE", $terminoBusqueda);
+      $this->db->or_like('rubro', $termino);
+      $this->db->group_end();
+
+      // Consulta para contar total de registros
+      $totalRegistros = $this->db->count_all_results('', false);
+
+      // Aplicar límites para paginación
+      $this->db->limit($porPagina, $offset);
+
+      // Ejecutar la consulta
+      $query = $this->db->get();
+
+      if ($query->num_rows() > 0) {
+          // Calcular total de páginas
+          $totalPaginas = ceil($totalRegistros / $porPagina);
+
+          // Preparar respuesta
+          $this->response([
+              'error' => FALSE,
+              'mensaje' => $query->result(),
+              'metadatos' => [
+                  'total_articulos' => $totalRegistros,
+                  'total_paginas' => $totalPaginas,
+                  'pagina_actual' => $pagina,
+                  'por_pagina' => $porPagina
+              ]
+          ], REST_Controller::HTTP_OK);
+      } else {
+          $this->response([
+              'error' => FALSE,
+              'mensaje' => [],
+              'metadatos' => [
+                  'total_articulos' => 0,
+                  'total_paginas' => 0,
+                  'pagina_actual' => $pagina,
+                  'por_pagina' => $porPagina
+              ]
+          ], REST_Controller::HTTP_OK);
+      }
+  }
+  
+public function ArticuloById_post() {
+  $data = $this->post();
+  $idArticulo = isset($data['idArticulo']) ? intval($data['idArticulo']) : 0;
+
+  if ($idArticulo <= 0) {
+      $respuesta = array(
+          "error" => true,
+          "mensaje" => "ID de artículo inválido o no proporcionado"
+      );
+      $this->response($respuesta);
+      return;
+  }
+
+  $this->db->where('id_articulo', $idArticulo);
+  $query = $this->db->get('artsucursal');
+  $articulo = $query->row_array();
+
+  if (!$articulo) {
+      $respuesta = array(
+          "error" => true,
+          "mensaje" => "Artículo no encontrado"
+      );
+  } else {
+      $respuesta = array(
+          "error" => false,
+          "mensaje" => $articulo
+      );
+  }
+
+  $this->response($respuesta);
+}
+
+
+}//fin

@@ -1,0 +1,2996 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+require_once(APPPATH.'/libraries/REST_Controller.php');
+use Restserver\libraries\REST_Controller;
+
+class Descarga extends REST_Controller {
+
+public function __construct()
+{
+
+header("Access-Control-Allow-Origin:*");
+header("Access-Control-Allow-Methods:PUT, GET, POST, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers:Content-Type, Content-Length, Accept-Encoding");
+
+
+/* header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept, Authorization"); */
+
+  parent::__construct();
+  $this->load->database();
+}
+
+public function Clisucxapp_post()//Aca se procesan los envios de clientes de la app y se los inserta en las talaba clientesapp
+{
+$data=$this->post();
+if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
+// para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
+
+$datos=$data["clientes"];
+$id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
+$tabla='clisucapp'.$id_vend;
+
+//$this->db->query("DELETE FROM $tabla");//PRUEBA
+
+
+$jsondata=json_decode($datos);
+  foreach ($jsondata as  $valor)
+  {
+    $this->db->insert($tabla, $valor);// valor es un objeto
+
+  }
+$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
+
+  $respuesta=array(
+    "error"=>false,
+    "mensaje"=>$rows
+  );
+   $this->response($respuesta);
+}
+else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
+{
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"faltan datos en el post"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+}
+
+   //$this->response($this->db->insert_id());
+  // $this->db->insert('prueba', $jsondata);
+}
+public function ClisucxappWeb_post()//Aca se procesan los envios de clientes de la app y se los inserta en las talaba clientesapp
+{
+$data=$this->post();
+if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
+// para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
+
+$datos=$data["clientes"];
+$id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
+$tabla='clisuc';//$tabla='clisuc'.$id_vend;//ESTA ES LA QUE USABA CON VARIAS TABLAS AHORA SE CAMBIO POR UNA SOLA
+
+//$this->db->query("DELETE FROM $tabla");//PRUEBA
+
+
+#$jsondata=json_decode($datos);
+$datos;
+  #foreach ($jsondata as  $valor)
+  #{
+    $this->db->insert($tabla, $datos);// valor es un objeto
+
+  #}
+$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
+
+  $respuesta=array(
+    "error"=>false,
+    "mensaje"=>$rows
+  );
+   $this->response($respuesta);
+}
+else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
+{
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"faltan datos en el post"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+}
+
+   //$this->response($this->db->insert_id());
+  // $this->db->insert('prueba', $jsondata);
+}
+public function UpdateClisucxapp_post()//Función para modificar datos de un cliente en la tabla correspondiente SE AGREGO 10/07/23
+{
+  $data = $this->post();
+  if(isset($data) AND count($data)>0){ 
+    $datos = $data['clientes']; 
+    $id_vend = $data["id_vend"];
+    $tabla = 'clisuc';//$tabla = 'clisuc'.$id_vend;//ESTA ES LA QUE USABA CON VARIAS TABLAS AHORA SE CAMBIO POR UNA SOLA
+
+    if(isset($datos['idcli'])){ 
+      $this->db->where('idcli', $datos['idcli']); 
+      $this->db->update($tabla, $datos); 
+      $rows = $this->db->affected_rows();
+
+      $respuesta=array(
+        "error"=>false,
+        "mensaje"=>$rows,
+		"datoscliente"=>$datos['cliente'],
+		"datos"=>$datos,
+		"tabla"=>$tabla
+      );
+      $this->response($respuesta);
+    }
+    else{
+      $respuesta=array(
+        "error"=>true,
+        "mensaje"=>"No se especificó la clave de cliente"
+      );
+      $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+  else{  
+    $respuesta=array(
+      "error"=>true,
+      "mensaje"=>"Faltan datos en el POST"
+    );
+    $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+  }
+}
+
+public function UpdateArtsucxapp_post()//Función para modificar los stocks de la lista de productos  SE AGREGO 26/12/23
+{
+  $data = $this->post();
+  if(isset($data) AND count($data)>0){ 
+    $idart = $data['idart']; 
+    $exi = $data["exi"];
+    $op = $data["op"];
+    $tabla = 'artsucursal'; // exi es lo mismo que sucursal
+    
+
+    if(isset($idart)){
+      $campo= 'exi'.$exi;
+      if($op === '+')
+      {
+        $this->db->set($campo, "$campo + 1", FALSE);
+      }
+      else if ($op === '-')
+      {
+        $this->db->set($campo, "$campo - 1", FALSE);
+      }
+       
+      $this->db->where('idart', $idart); 
+      $this->db->update($tabla); 
+      $rows = $this->db->affected_rows();
+
+      $respuesta=array(
+        "error"=>false,
+        "mensaje"=>$rows,
+		    "tabla"=>$tabla
+      );
+      $this->response($respuesta);
+    }
+    else{
+      $respuesta=array(
+        "error"=>true,
+        "mensaje"=>"No se especificó la clave de cliente"
+      );
+      $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+    }
+  }
+  else{  
+    $respuesta=array(
+      "error"=>true,
+      "mensaje"=>"Faltan datos en el POST"
+    );
+    $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+  }
+}
+
+public function UpdateArtsucxappManagedPHP_post()//Función para modificar los stocks de la lista de productos  SE AGREGO 26/12/23
+{
+  $data = $this->post();
+
+  if (isset($data['result'], $data['exi']) AND is_array($data['result'])) {
+    $suc = $data['exi'];
+    $tabla = 'artsucursal';
+    $contador = 0;
+    
+    foreach ($data['result'] as $item) {
+      $idart = $item['idart'];
+      $cantidad = $item['cantidad']; 
+      $op = $item['tipodoc'];
+      $campo = "exi{$suc}";
+      
+      // Aumenta o disminuye el stock según el operador
+      if($op === "FC"  OR $op === "PR" OR $op === "MI-" OR $op === "ND" OR $op === "A-") {
+        $this->db->set($campo, "$campo - $cantidad", FALSE);
+      } else  {
+        $this->db->set($campo, "$campo + $cantidad", FALSE);
+      }
+      
+      $this->db->where('idart', $idart);
+      $this->db->update($tabla);
+      $contador += $this->db->affected_rows();
+    }
+    
+    $respuesta = [
+      "error" => false,
+      "mensaje" => "Se actualizaron {$contador} registros",
+      "tabla" => $tabla
+    ];
+    $this->response($respuesta);
+    
+  } else {
+    // Mensaje de error si faltan datos
+    $respuesta=array(
+      "error"=>true,
+      "mensaje"=>"Faltan datos en el POST o el formato no es correcto"
+    );
+    $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+  }
+}
+
+public function eliminarCliente_post()
+{
+  $data = $this->post();
+  if(isset($data) && count($data) > 0){
+     $datos = $data['clientes'];
+    $id_vend = $data["id_vend"];
+    $tabla = 'clisuc'.$id_vend;
+
+    if(isset($datos['idcli'])){ 
+      
+      $this->db->where('idcli', $datos['idcli']); 
+      $this->db->delete($tabla); 
+      $rows = $this->db->affected_rows();
+
+      $respuesta = array(
+        "error" => false,
+        "mensaje" => $rows,
+        "tabla" => $tabla
+      );
+      $this->response($respuesta);
+    } else {
+      $respuesta = array(
+        "error" => true,
+        "mensaje" => "No se especificó el ID del cliente"
+      );
+      $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+  } else {  
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "Faltan datos en el POST"
+    );
+    $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+  }
+}
+
+public function EliminarRubroPrincipal_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_rubro_p'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_rubro_p)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_rubro_p'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_rubro_p', $id);
+        $this->db->delete('rubro_principal');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el rubro principal"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarRubro_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_rubro)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_rubro'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_rubro', $id);
+        $this->db->delete('rubros');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarMarca_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_marca'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_marca)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_marca'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_marca', $id);
+        $this->db->delete('marcas');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar la marca"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+public function EliminarArtIva_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_ariva'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_marca)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_ariva'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_ariva', $id);
+        $this->db->delete('artiva');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el iva"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarTipoMoneda_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_moneda'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_moneda)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_moneda'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_moneda', $id);
+        $this->db->delete('tipomone');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el tipo de moneda"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarValorCambio_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_valor'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_valor)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_valor'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_valor', $id);
+        $this->db->delete('valorcambio');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el valor de cambio"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function EliminarProveedor_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_prov'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_marca)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_prov'];
+
+        $this->db->trans_start();
+
+        // Delete from rubro_principal
+        $this->db->where('id_prov', $id);
+        $this->db->delete('proveedores');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el proveedor"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function EliminarConflista_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_conflista'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_conflista)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_conflista'];
+
+        $this->db->trans_start();
+
+        // Delete from conflistas
+        $this->db->where('id_conflista', $id);
+        $this->db->delete('conf_lista');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar la conflista"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarArticulo_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_articulo'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_articulo)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_articulo'];
+
+        $this->db->trans_start();
+
+        // Delete from articulos
+        $this->db->where('id_articulo', $id);
+        $this->db->delete('artsucursal');
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el artículo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarCajaLista_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validación
+        if(!isset($data['id_caja'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_caja)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = (int)$data['id_caja'];
+
+        $this->db->trans_start();
+        $this->db->where('id_caja', $id);
+        $this->db->delete('caja_lista');
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar la caja lista"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            if ($rows > 0) {
+                 $respuesta = array(
+                    "error" => false,
+                    "mensaje" => $rows // Número de filas eliminadas
+                );
+                $this->response($respuesta);
+            } else {
+                 $respuesta = array(
+                    "error" => true, // O false si prefieres indicar que no se encontró pero no es un error del servidor
+                    "mensaje" => "No se encontró la caja lista con el ID proporcionado o ya fue eliminada"
+                );
+                $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND); // Opcional: HTTP Status
+            }
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarCajaconcepto_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        if(!isset($data['id_concepto'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_concepto)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_concepto'];
+
+        $this->db->trans_start();
+        $this->db->where('id_concepto', $id);
+        $this->db->delete('caja_conceptos');
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el concepto de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+             if ($rows > 0) {
+                 $respuesta = array(
+                    "error" => false,
+                    "mensaje" => $rows // Número de filas eliminadas
+                 );
+             } else {
+                  $respuesta = array(
+                    "error" => true, // Considerar si no encontrarlo es un error o no
+                    "mensaje" => "No se encontró el concepto de caja con el ID proporcionado."
+                 );
+             }
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function EliminarCajamovi_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validar que el ID esté presente
+        if(!isset($data['id_movimiento'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el campo requerido (id_movimiento)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_movimiento'];
+
+        $this->db->trans_start();
+
+        $this->db->where('id_movimiento', $id);
+        $this->db->delete('caja_movi'); // Nombre de la tabla
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al eliminar el movimiento de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+             if ($rows > 0) {
+                 $respuesta = array(
+                     "error" => false,
+                     "mensaje" => $rows // Filas afectadas (debería ser 1)
+                 );
+             } else {
+                  $respuesta = array(
+                     "error" => true, // Considerar error si no se encontró el ID
+                     "mensaje" => "No se encontró el movimiento con el ID especificado para eliminar."
+                 );
+                 // Podrías usar HTTP_NOT_FOUND aquí también
+                 $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+                 return;
+             }
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+public function PedidossucxappCompleto_post() {
+    $data = $this->post();
+    
+    // Verificar si se recibieron datos en el POST
+    if (isset($data) && count($data) > 0) {
+        // Extraer datos del POST
+        $pedidos = isset($data["pedidos"]) ? $data["pedidos"] : null;
+        $cabecera = isset($data["cabecera"]) ? $data["cabecera"] : null;
+        $id_vend = isset($data["id_vend"]) ? $data["id_vend"] : null;
+
+        // Verificar que los datos necesarios no sean nulos
+        if ($pedidos && $cabecera && $id_vend) {
+            $tabla = 'psucursal' . $id_vend;
+            $tabla_cabecera = 'factcab' . $id_vend;
+
+            $this->db->trans_start(); // Iniciar transacción
+
+            // Insertar cabecera y obtener el id_num generado
+            $this->db->set($cabecera);
+            $this->db->insert($tabla_cabecera);
+            if ($this->db->affected_rows() > 0) {
+                $id_num = $this->db->insert_id(); // Obtener el id_num generado
+                $contador_exitosas = $this->db->affected_rows();
+            } else {
+                log_message('error', 'Error al insertar en la tabla ' . $tabla_cabecera . ': ' . json_encode($cabecera));
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error al insertar cabecera, transacción revertida"
+                );
+                $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+                return;
+            }
+
+            // Insertar pedidos
+            foreach ($pedidos as &$valor) {
+                $valor['id_num'] = $id_num; // Asignar el id_num de la cabecera al pedido
+                $this->db->insert($tabla, $valor); // valor es un objeto
+                if ($this->db->affected_rows() > 0) {
+                    $contador_exitosas += $this->db->affected_rows();
+                } else {
+                    log_message('error', 'Error al insertar en la tabla ' . $tabla . ': ' . json_encode($valor));
+                }
+            }
+
+            $this->db->trans_complete(); // Completar transacción
+
+            if ($this->db->trans_status() === FALSE) {
+                // Si hubo un error, revertir la transacción
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error al insertar datos, transacción revertida"
+                );
+                $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+            } else {
+                // Respuesta exitosa
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => $contador_exitosas
+                );
+                $this->response($respuesta);
+            }
+        } else {
+            // Respuesta de error por datos incompletos
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Datos incompletos en el POST"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        }
+    } else {
+        // Respuesta de error por falta de datos en el POST
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function Pedidossucxapp_post()//Aca se procesan los envios de pedidos de la app y se los inserta en las talaba pedidosapp
+{
+$data=$this->post();
+if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
+// para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
+
+$datos=$data["pedidos"];
+$id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
+$tabla='psucursal'.$id_vend;
+
+//$this->db->query("DELETE FROM $tabla");//PRUEBA
+$contador_exitosas = 0; // Contador de inserciones exitosas
+//$jsondata=json_decode($datos);
+  foreach ($datos as  $valor)
+  {
+    $this->db->insert($tabla, $valor);// valor es un objeto
+    if ($this->db->affected_rows() > 0) { // Si la inserción fue exitosa
+        $contador_exitosas += $this->db->affected_rows();
+    }
+  }
+//$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
+
+  $respuesta=array(
+    "error"=>false,
+    "mensaje"=> $contador_exitosas//$rows
+  );
+   $this->response($respuesta);
+}
+else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
+{
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"faltan datos en el post"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+}
+
+}
+
+public function Mixto_post()
+{
+$data=$this->post();
+if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
+// para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
+
+$datos=$data["mixto"];
+$id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
+$tabla='mixto'.$id_vend;
+
+
+//$this->db->query("DELETE FROM $tabla");//PRUEBA
+
+$jsondata=json_decode($datos);
+  foreach ($jsondata as  $valor)
+  {
+    $this->db->insert($tabla, $valor);// valor es un objeto
+
+  }
+$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
+
+  $respuesta=array(
+    "error"=>false,
+    "mensaje"=>$rows
+  );
+   $this->response($respuesta);
+}
+else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
+{
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"faltan datos en el post"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+}
+
+}
+
+public function Articulossucxapp_post()//Aca se procesan los envios de pedidos de la app y se los inserta en las talaba pedidosapp
+{
+$data=$this->post();
+if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
+// para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
+
+$datos=$data["articulos"];
+$id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
+$tabla='artsucapp'.$id_vend;
+
+//$this->db->query("DELETE FROM $tabla");//PRUEBA
+
+$jsondata=json_decode($datos);
+  foreach ($jsondata as  $valor)
+  {
+    $this->db->insert($tabla, $valor);// valor es un objeto
+
+  }
+$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
+
+  $respuesta=array(
+    "error"=>false,
+    "mensaje"=>$rows
+  );
+   $this->response($respuesta);
+}
+else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
+{
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"faltan datos en el post"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+}
+
+}
+public function PagoCabecera_post()
+{
+    $data = $this->post();
+
+    // Verificar que los datos necesarios estén presentes
+    if (!isset($data['sucursal']) || !isset($data['pagoCC'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos requeridos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $sucursal = $data['sucursal'];
+    $pagoCC = $data['pagoCC'];
+
+    // Verificar que todos los componentes necesarios de pagoCC estén presentes
+    if (!isset($pagoCC['cabeceras']) || !isset($pagoCC['psucursal']) || !isset($pagoCC['cabecera']) || !isset($pagoCC['recibo'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan componentes en pagoCC"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Iniciar transacción
+    $this->db->trans_start();
+
+    $registros_afectados = array(
+        'factcab' => 0,
+        'psucursal' => 0,
+        'recibos' => 0
+    );
+
+    // 1. Actualizar cabeceras en factcab<sucursal>
+    foreach ($pagoCC['cabeceras'] as $cabecera) {
+        if (!isset($cabecera['id_num']) || !isset($cabecera['saldo']) || !isset($cabecera['id_aso'])) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Datos incompletos en una cabecera"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->where('id_num', $cabecera['id_num']);
+        $this->db->update('factcab' . $sucursal, array(
+            'saldo' => $cabecera['saldo'],
+            'id_aso' => $cabecera['id_aso'],
+			'anumero_com' => $cabecera['anumero_com'],
+			'atipo' => $cabecera['atipo']
+        ));
+        $registros_afectados['factcab'] += $this->db->affected_rows();
+    }
+
+    // 2. Insertar en psucursal<sucursal>
+    $this->db->insert('psucursal' . $sucursal, $pagoCC['psucursal']);
+    $registros_afectados['psucursal'] = $this->db->affected_rows();
+
+    // 3. Insertar en factcab<sucursal>
+    $this->db->insert('factcab' . $sucursal, $pagoCC['cabecera']);
+    $registros_afectados['factcab'] += $this->db->affected_rows();
+
+    // 4. Insertar en recibos<sucursal>
+    foreach ($pagoCC['recibo'] as $recibo) {
+        $this->db->insert('recibos' . $sucursal, $recibo);
+        $registros_afectados['recibos'] += $this->db->affected_rows();
+    }
+
+    // Completar transacción
+    $this->db->trans_complete();
+
+    // Verificar si la transacción fue exitosa
+    if ($this->db->trans_status() === FALSE) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error en la transacción. Se ha realizado un rollback."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    } else {
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Operación exitosa",
+            "registros_afectados" => $registros_afectados
+        );
+        $this->response($respuesta);
+    }
+}
+public function PedidoItemyCab_post() {
+        $data = $this->post();
+        
+        if(isset($data['pedidoItem']) && isset($data['pedidoscb'])) {
+            $pedidoItem = $data['pedidoItem'];
+            $pedidoscb = $data['pedidoscb'];
+
+            $this->db->trans_start(); // Iniciar transacción
+
+            // Insertar en la tabla pedidoitem y obtener el ID
+            $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
+            $query = $this->db->query($sql_pedidoitem, [
+                $pedidoItem['tipo'],
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art'],
+                $pedidoItem['descripcion'],
+                $pedidoItem['precio'],
+                $pedidoItem['fecha_resuelto'],
+                $pedidoItem['usuario_res'],
+                $pedidoItem['observacion'],
+                $pedidoItem['estado']
+            ]);
+            $result = $query->row_array();
+            $id_items = $result['id_items'];
+
+            // Insertar en la tabla pedidoscb y obtener el ID
+            $sql_pedidoscb = "INSERT INTO pedidoscb (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_num";
+            $query = $this->db->query($sql_pedidoscb, [
+                $pedidoscb['tipo'],
+                //$pedidoscb['numero'],
+                $pedidoscb['sucursald'],
+                $pedidoscb['sucursalh'],
+                $pedidoscb['fecha'],
+                $pedidoscb['usuario'],
+                $pedidoscb['observacion'],
+                $pedidoscb['estado'],
+                $id_items
+            ]);
+            $result = $query->row_array();
+            $id_num = $result['id_num'];
+
+            // Actualizar id_num en pedidoitem
+            $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num, $id_items]);
+
+            $this->db->trans_complete(); // Completar transacción
+
+            if ($this->db->trans_status() === FALSE) {
+                // Si hubo un error en la transacción
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error al crear el pedido. La transacción ha sido revertida."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+            } else {
+                // Si la transacción fue exitosa
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => "Pedido creado exitosamente",
+                    "id_items" => $id_items,
+                    "id_num" => $id_num
+                );
+                $this->response($respuesta);
+            }
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan datos en el POST"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        }
+    }
+	public function PedidoItemyCabId_post() {
+       $data = $this->post();
+
+        // Validar que los datos necesarios estén presentes en la solicitud
+        if(isset($data['id_num']) && isset($data['pedidoItem']) && isset($data['pedidoscb'])) {
+            $id_num_parametro = $data['id_num'];
+            $pedidoItem = $data['pedidoItem'];
+            $pedidoscb = $data['pedidoscb'];
+
+            $this->db->trans_start(); // Iniciar transacción
+
+            // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
+            $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
+            $query = $this->db->query($sql_pedidoitem, [
+                $pedidoItem['tipo'],
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art'],
+                $pedidoItem['descripcion'],
+                $pedidoItem['precio'],
+                $pedidoItem['fecha_resuelto'],
+                $pedidoItem['usuario_res'],
+                $pedidoItem['observacion'],
+                  $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
+            ]);
+            $result = $query->row_array();
+            $id_items_nuevo = $result['id_items'];
+
+            // Insertar en la tabla pedidoscb y obtener el ID
+            $sql_pedidoscb = "INSERT INTO pedidoscb (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso) VALUES (?,?, ?, ?, ?, ?, ?, ?) RETURNING id_num";
+            $query = $this->db->query($sql_pedidoscb, [
+                $pedidoscb['tipo'],
+                //$pedidoscb['numero'],
+                $pedidoscb['sucursald'],
+                $pedidoscb['sucursalh'],
+                $pedidoscb['fecha'],
+                $pedidoscb['usuario'],
+                $pedidoscb['observacion'],
+                $pedidoscb['estado'],
+                $id_items_nuevo // Asociar con el nuevo id_items
+            ]);
+            $result = $query->row_array();
+            $id_num_generado = $result['id_num'];
+
+            // Actualizar id_num en el nuevo pedidoitem
+                $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
+
+            // Actualizar estado a "Solicitado-R" solo en el pedidoitem existente si se proporciona id_num
+            if ($id_num_parametro) {
+                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+             }
+             
+              // Actualizar estado a "Solicitado-R" solo en pedidoscb existentes si se proporciona id_num
+            if ($id_num_parametro) {
+                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+             }
+
+            $this->db->trans_complete(); // Completar transacción
+
+            if ($this->db->trans_status() === FALSE) {
+                // Si hubo un error en la transacción
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error al crear el pedido y actualizar estados. La transacción ha sido revertida."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+            } else {
+                // Si la transacción fue exitosa
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => "Pedido creado y estados actualizados exitosamente",
+                    "id_items_nuevo" => $id_items_nuevo,
+                    "id_num_generado" => $id_num_generado
+                );
+                $this->response($respuesta);
+            }
+        } else {
+            // Si faltan datos en la solicitud
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan datos en el POST. Se requieren 'id_num', 'pedidoItem' y 'pedidoscb'."
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        }
+    }
+	
+	public function PedidoItemyCabIdEnvio_post() {
+       $data = $this->post();
+
+        // Validar que los datos necesarios estén presentes en la solicitud
+        if(isset($data['id_num']) && isset($data['pedidoItem']) && isset($data['pedidoscb'])) {
+            $id_num_parametro = $data['id_num'];
+            $pedidoItem = $data['pedidoItem'];
+            $pedidoscb = $data['pedidoscb'];
+
+            $this->db->trans_start(); // Iniciar transacción
+
+            // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
+            $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
+            $query = $this->db->query($sql_pedidoitem, [
+                $pedidoItem['tipo'],
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art'],
+                $pedidoItem['descripcion'],
+                $pedidoItem['precio'],
+                $pedidoItem['fecha_resuelto'],
+                $pedidoItem['usuario_res'],
+                $pedidoItem['observacion'],
+                  $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
+            ]);
+            $result = $query->row_array();
+            $id_items_nuevo = $result['id_items'];
+
+            // Insertar en la tabla pedidoscb y obtener el ID
+            $sql_pedidoscb = "INSERT INTO pedidoscb (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_num";
+            $query = $this->db->query($sql_pedidoscb, [
+                $pedidoscb['tipo'],
+                //$pedidoscb['numero'],
+                $pedidoscb['sucursald'],
+                $pedidoscb['sucursalh'],
+                $pedidoscb['fecha'],
+                $pedidoscb['usuario'],
+                $pedidoscb['observacion'],
+                $pedidoscb['estado'],
+                $id_items_nuevo // Asociar con el nuevo id_items
+            ]);
+            $result = $query->row_array();
+            $id_num_generado = $result['id_num'];
+
+            // Actualizar id_num en el nuevo pedidoitem
+                $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
+
+            // Actualizar estado a "Solicitado-E" solo en el pedidoitem existente si se proporciona id_num
+            if ($id_num_parametro) {
+                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
+             }
+             
+              // Actualizar estado a "Solicitado-E" solo en pedidoscb existentes si se proporciona id_num
+            if ($id_num_parametro) {
+                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
+             }
+
+            $this->db->trans_complete(); // Completar transacción
+
+            if ($this->db->trans_status() === FALSE) {
+                // Si hubo un error en la transacción
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error al crear el pedido y actualizar estados. La transacción ha sido revertida."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+            } else {
+                // Si la transacción fue exitosa
+                $respuesta = array(
+                    "error" => false,
+                    "mensaje" => "Pedido creado y estados actualizados exitosamente",
+                    "id_items_nuevo" => $id_items_nuevo,
+                    "id_num_generado" => $id_num_generado
+                );
+                $this->response($respuesta);
+            }
+        } else {
+            // Si faltan datos en la solicitud
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan datos en el POST. Se requieren 'id_num', 'pedidoItem' y 'pedidoscb'."
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        }
+    }
+
+public function SubirDatosRubroPrincipal_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['cod_rubro']) || !isset($data['rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (cod_rubro, rubro)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new rubro
+        $this->db->insert('rubro_principal', array(
+            'cod_rubro' => $data['cod_rubro'],
+            'rubro' => $data['rubro']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el rubro principal"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function SubirDatosArticulo_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['nomart']) || !isset($data['marca']) || !isset($data['precon'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (nomart, marca, precon)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new articulo with all fields
+        $this->db->insert('artsucursal', array(
+            'nomart' => $data['nomart'],
+            'marca' => $data['marca'],
+            'precon' => $data['precon'],
+            'prefi1' => $data['prefi1'],
+            'prefi2' => $data['prefi2'],
+            'prefi3' => $data['prefi3'],
+            'prefi4' => $data['prefi4'],
+            'exi1' => $data['exi1'],
+            'exi2' => $data['exi2'],
+            'exi3' => $data['exi3'],
+            'exi4' => $data['exi4'],
+            'exi5' => $data['exi5'],
+            'stkmin1' => $data['stkmin1'],
+            'stkmax1' => $data['stkmax1'],
+            'stkprep1' => $data['stkprep1'],
+            'stkmin2' => $data['stkmin2'],
+            'stkmax2' => $data['stkmax2'],
+            'stkprep2' => $data['stkprep2'],
+            'stkmin3' => $data['stkmin3'],
+            'stkmax3' => $data['stkmax3'],
+            'stkprep3' => $data['stkprep3'],
+            'stkmin4' => $data['stkmin4'],
+            'stkmax4' => $data['stkmax4'],
+            'stkprep4' => $data['stkprep4'],
+            'stkmin5' => $data['stkmin5'],
+            'stkmax5' => $data['stkmax5'],
+            'stkprep5' => $data['stkprep5'],
+            'cd_articulo' => $data['cd_articulo'],
+            'cd_proveedor' => $data['cd_proveedor'],
+            'cd_barra' => $data['cd_barra'],
+            'idart' => $data['idart'],
+            'estado' => $data['estado'],
+            'rubro' => $data['rubro'],
+            'articulo' => $data['articulo'],
+            'cod_iva' => $data['cod_iva'],
+            'prebsiva' => $data['prebsiva'],
+            'precostosi' => $data['precostosi'],
+            'margen' => $data['margen'],
+            'descuento' => $data['descuento'],
+            'cod_deposito' => $data['cod_deposito'],
+            'tipo_moneda' => $data['tipo_moneda']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el artículo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function SubirDatosTipoMoneda_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['cod_mone']) || !isset($data['moneda']) || !isset($data['simbolo'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (cod_mone, moneda, simbolo)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new rubro
+        $this->db->insert('tipomone', array(
+            "cod_mone"=> $data['cod_mone'],
+        "moneda"=> $data['moneda'],
+        "simbolo"=> $data['simbolo'],
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el rubro principal"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosValorCambio_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['codmone']) || !isset($data['desvalor']) || !isset($data['vcambio'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (codmone, desvalor, vcambio)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new rubro
+        $this->db->insert('valorcambio', array(
+            "codmone"=> $data['codmone'],
+        "desvalor"=> $data['desvalor'],
+        "fecdesde"=> $data['fecdesde'],
+        "fechasta"=> $data['fechasta'],
+        "vcambio"=> $data['vcambio'],
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el rubro principal"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+public function SubirDatosProveedor_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['nombre']) || !isset($data['cuit'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (nombre, cuit)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new provider with all fields
+        $this->db->insert('proveedores', array(
+            'cod_prov' => $data['cod_prov'],
+            'nombre' => $data['nombre'],
+            'direccion' => $data['direccion'],
+            'codpos' => $data['codpos'],
+            'localidad' => $data['localidad'],
+            'telefono' => $data['telefono'],
+            'cuit' => $data['cuit'],
+            'contacto' => $data['contacto'],
+            'rubro' => $data['rubro'],
+            'cod_iva' => $data['cod_iva'],
+            'ganancias' => $data['ganancias'],
+            'ingbrutos' => $data['ingbrutos'],
+            'email' => $data['email'],
+            'www' => $data['www'],
+            'cta_proveedores' => $data['cta_proveedores'],
+            'fec_proceso' => $data['fec_proceso']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el proveedor"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosArtIva_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['cod_iva']) || !isset($data['descripcion'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (cod_iva, descripcion)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new artiva record
+        $this->db->insert('artiva', array(
+            'cod_iva' => $data['cod_iva'],
+            'descripcion' => $data['descripcion'],
+            // 'desde_date' => $data['desde_date'],
+           /*  'desde_date' => date('Y-m-d', strtotime($data['desde_date'])),
+            'hasta_date' => $data['hasta_date'], */
+    'desde' => !empty($data['desde']) ? date('Y-m-d', strtotime($data['desde'])) : null,
+'hasta' => !empty($data['hasta']) ? date('Y-m-d', strtotime($data['hasta'])) : null,
+            'tipo_ali_1' => $data['tipo_ali_1'],
+            'alicuota1' => $data['alicuota1'],
+            'tipo_ali_2' => $data['tipo_ali_2'],
+            'alicuota2' => $data['alicuota2'],
+            'tipo_ali_3' => $data['tipo_ali_3'],
+            'alicuota3' => $data['alicuota3'],
+            'cuit' => $data['cuit'] ? 't' : 'f'
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el registro de IVA"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosCajaconcepto_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validación básica de campos requeridos (se pueden añadir más)
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos para el concepto de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start();
+
+        // Insertar nuevo concepto
+        $this->db->insert('caja_conceptos', array(
+            'descripcion' => $data['descripcion'],
+            'tipo_concepto' => $data['tipo_concepto'],
+            'fija' => $data['fija'],
+            'ingreso_egreso' => $data['ingreso_egreso'],
+            'id_caja' => $data['id_caja']
+            // 'id_concepto' es serial y se genera automáticamente
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el concepto de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows // Indica cuántas filas se insertaron (debería ser 1)
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosCajamovi_post()
+{
+    $data = $this->post(); // Recibe el objeto JSON directamente del servicio Angular
+    if(isset($data) && count($data) > 0) {
+
+        // Validación básica (puedes añadir más validaciones según necesidad)
+        if(!isset($data['sucursal']) || !isset($data['codigo_mov']) || !isset($data['fecha_mov']) || !isset($data['importe_mov']) || !isset($data['descripcion_mov']) || !isset($data['marca_cerrado']) || !isset($data['tipo_movi']) || !isset($data['caja'])) {
+             $respuesta = array(
+                 "error" => true,
+                 "mensaje" => "Faltan campos requeridos para el movimiento de caja"
+             );
+             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+             return;
+         }
+
+        // Limpiar datos antes de insertar (ej: convertir fechas si vienen como string)
+        // Asumiendo que las fechas vienen en formato YYYY-MM-DD del form Angular
+        foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
+            if (isset($data[$dateField]) && empty($data[$dateField])) {
+                 $data[$dateField] = null; // Convertir strings vacíos a NULL para la DB
+            } elseif (isset($data[$dateField])) {
+                // Podrías añadir validación de formato de fecha aquí si es necesario
+                 //$date = DateTime::createFromFormat('Y-m-d', $data[$dateField]);
+                 //if ($date === false || $date->format('Y-m-d') !== $data[$dateField]) {
+                 //    // Error de formato
+                 //}
+            }
+        }
+         // Asegurar que los campos numéricos opcionales vacíos sean NULL
+         foreach(['banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'codigo_mbco', 'punto_venta', 'numero_comprobante'] as $numField) {
+             if (isset($data[$numField]) && $data[$numField] === '') {
+                  $data[$numField] = null;
+             }
+         }
+         // Asegurar que los campos string opcionales vacíos sean NULL o string vacío según prefieras
+         foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
+              if (isset($data[$strField]) && $data[$strField] === '') {
+                   $data[$strField] = null; // O mantener como '' si la DB lo permite/prefiere
+              }
+         }
+
+        $this->db->trans_start(); // Iniciar transacción
+
+        $this->db->insert('caja_movi', $data); // Insertar los datos recibidos
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Completar transacción
+
+        if ($this->db->trans_status() === FALSE) {
+            // Transaction failed
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el movimiento de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            // Success response
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows // Devuelve el número de filas afectadas (debería ser 1)
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+
+public function SubirDatosCajaLista_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validación básica (puedes añadir más según necesidad)
+        if(!isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (descripcion, fecha_cierre, especial, fija)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        // Preparar datos para insertar
+        $insert_data = array(
+            'descripcion' => trim($data['descripcion']),
+            'fecha_cierre' => $data['fecha_cierre'], // Asume que el formato es compatible con 'date' de PGSQL
+            'especial' => (int)$data['especial'], // Asegurar que sea entero (0 o 1)
+            'fija' => (int)$data['fija']          // Asegurar que sea entero (0 o 1)
+        );
+
+        $this->db->trans_start();
+        $this->db->insert('caja_lista', $insert_data);
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar la caja lista"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta, REST_Controller::HTTP_CREATED); // Opcional: HTTP Status 201
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosConflista_post()
+{
+    try {
+        $data = $this->post();
+        if (!isset($data) || count($data) === 0) {
+            $respuesta = [
+                "error"   => true,
+                "mensaje" => "No se recibieron datos en el POST"
+            ];
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+        // Validar campo obligatorio
+        if (!isset($data['listap'])) {
+            $respuesta = [
+                "error"   => true,
+                "mensaje" => "Faltan campos requeridos (listap)"
+            ];
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $listap     = $data['listap'];
+        $tipomone   = isset($data['tipomone'])   ? $data['tipomone']   : 0;
+        $preciof21  = isset($data['preciof21'])  ? (float)$data['preciof21']  : 0;
+        $preciof105 = isset($data['preciof105']) ? (float)$data['preciof105'] : 0;
+
+        // Diagnóstico
+        $diagnostico = [
+            'parametros_recibidos' => [
+                'listap'     => $listap,
+                'tipomone'   => $tipomone,
+                'preciof21'  => $preciof21,
+                'preciof105' => $preciof105
+            ],
+            'verificaciones' => []
+        ];
+
+        // Cuántos productos hay con ese tipo de moneda
+        $this->db->select('COUNT(*) as total');
+        $this->db->where('tipo_moneda', $tipomone);
+        $query_tipo_moneda = $this->db->get('artsucursal');
+        $diagnostico['verificaciones']['productos_con_tipo_moneda']
+            = $query_tipo_moneda->row()->total;
+
+        // Resultados que devolveremos
+        $resultados = [
+            'conflista_creada'         => false,
+            'productos_actualizados_21'  => 0,
+            'productos_actualizados_105' => 0
+        ];
+
+        $this->db->trans_start();
+
+        // Insertar la nueva conflista
+        $this->db->insert('conf_lista', [
+            'listap'     => $listap,
+            'activa'     => isset($data['activa'])     ? $data['activa']     : false,
+            'precosto21' => isset($data['precosto21']) ? $data['precosto21'] : 0,
+            'precosto105'=> isset($data['precosto105'])? $data['precosto105']: 0,
+            'pordcto'    => isset($data['pordcto'])    ? $data['pordcto']    : 0,
+            'margen'     => isset($data['margen'])     ? $data['margen']     : 0,
+            'preciof21'  => $preciof21,
+            'preciof105' => $preciof105,
+            'rmargen'    => isset($data['rmargen'])    ? $data['rmargen']    : false,
+            'tipomone'   => $tipomone,
+            'actprov'    => isset($data['actprov'])    ? $data['actprov']    : false,
+            'cod_marca'  => isset($data['cod_marca'])  ? $data['cod_marca']  : '',
+            'fecha'      => isset($data['fecha'])      ? $data['fecha']      : date('Y-m-d')
+        ]);
+        $conflista_id = $this->db->insert_id();
+        $resultados['conflista_creada'] = true;
+        $resultados['id_conflista']     = $conflista_id;
+
+        // Nombre del campo de precio dinámico
+        $campo_precio = 'prefi' . $listap;
+        $diagnostico['verificaciones']['campo_precio'] = $campo_precio;
+        // Verificar existencia del campo
+        $sql_check = "
+            SELECT column_name
+              FROM information_schema.columns
+             WHERE table_name = 'artsucursal'
+               AND column_name = ?
+        ";
+        $query_check = $this->db->query($sql_check, [$campo_precio]);
+        $campo_existe = $query_check->num_rows() > 0;
+        $diagnostico['verificaciones']['campo_existe'] = $campo_existe;
+
+        if (!$campo_existe) {
+            $diagnostico['verificaciones']['advertencia']
+                = "El campo {$campo_precio} no existe en artsucursal";
+            $this->db->trans_complete();
+
+            $respuesta = [
+                "error"      => false,
+                "mensaje"    => "Lista creada pero no se actualizaron precios porque el campo {$campo_precio} no existe",
+                "resultados" => $resultados,
+                "diagnostico"=> $diagnostico
+            ];
+            $this->response($respuesta);
+            return;
+        }
+
+        //
+        // === BLOQUE IVA 21% ===
+        //
+        $diagnostico['iva21_info'] = [];
+
+        $this->db->select('cod_iva');
+        $this->db->where("ROUND(CAST(alicuota1 AS numeric),2) =", 21.00);
+        $query_iva21 = $this->db->get('artiva');
+
+        $diagnostico['iva21_info']['registros_encontrados'] = $query_iva21->num_rows();
+
+        if ($query_iva21->num_rows() > 0) {
+            $iva21_records = [];
+            foreach ($query_iva21->result() as $row) {
+                $iva21_records[] = $row->cod_iva;
+            }
+            $diagnostico['iva21_info']['cod_iva_valores'] = $iva21_records;
+
+            if (!empty($iva21_records)) {
+                $factor21 = 1 + ($preciof21 / 100);
+                $diagnostico['iva21_info']['factor'] = $factor21;
+
+                // Contar productos elegibles con idart = 0
+                $this->db->where_in('cod_iva', $iva21_records);
+                $this->db->where('tipo_moneda', $tipomone);
+                $this->db->where('idart', 0);
+                $count_query = $this->db->get('artsucursal');
+                $diagnostico['iva21_info']['productos_elegibles']
+                    = $count_query->num_rows();
+
+                if ($count_query->num_rows() > 0) {
+                    $rows_affected = 0;
+                    foreach ($iva21_records as $iva_code) {
+                        $sql_update = "
+                            UPDATE artsucursal
+                               SET {$campo_precio} = precon * ?
+                             WHERE cod_iva     = ?
+                               AND tipo_moneda = ?
+                               AND idart        = 0
+                        ";
+                        $this->db->query($sql_update, [
+                            $factor21,
+                            $iva_code,
+                            $tipomone
+                        ]);
+                        $rows_affected += $this->db->affected_rows();
+                    }
+                    $resultados['productos_actualizados_21'] = $rows_affected;
+                    $diagnostico['iva21_info']['productos_actualizados'] = $rows_affected;
+                }
+            }
+        }
+
+        //
+        // === BLOQUE IVA 10.5% ===
+        //
+        $diagnostico['iva105_info'] = [];
+
+        $this->db->select('cod_iva');
+        $this->db->where("ROUND(CAST(alicuota1 AS numeric),2) =", 10.50);
+        $query_iva105 = $this->db->get('artiva');
+
+        $diagnostico['iva105_info']['registros_encontrados'] = $query_iva105->num_rows();
+
+        if ($query_iva105->num_rows() > 0) {
+            $iva105_records = [];
+            foreach ($query_iva105->result() as $row) {
+                $iva105_records[] = $row->cod_iva;
+            }
+            $diagnostico['iva105_info']['cod_iva_valores'] = $iva105_records;
+
+            if (!empty($iva105_records)) {
+                $factor105 = 1 + ($preciof105 / 100);
+                $diagnostico['iva105_info']['factor'] = $factor105;
+
+                // Contar productos elegibles con idart = 0
+                $this->db->where_in('cod_iva', $iva105_records);
+                $this->db->where('tipo_moneda', $tipomone);
+                $this->db->where('idart', 0);
+                $count_query = $this->db->get('artsucursal');
+                $diagnostico['iva105_info']['productos_elegibles']
+                    = $count_query->num_rows();
+
+                if ($count_query->num_rows() > 0) {
+                    $rows_affected = 0;
+                    foreach ($iva105_records as $iva_code) {
+                        $sql_update = "
+                            UPDATE artsucursal
+                               SET {$campo_precio} = precon * ?
+                             WHERE cod_iva     = ?
+                               AND tipo_moneda = ?
+                               AND idart        = 0
+                        ";
+                        $this->db->query($sql_update, [
+                            $factor105,
+                            $iva_code,
+                            $tipomone
+                        ]);
+                        $rows_affected += $this->db->affected_rows();
+                    }
+                    $resultados['productos_actualizados_105'] = $rows_affected;
+                    $diagnostico['iva105_info']['productos_actualizados'] = $rows_affected;
+                }
+            }
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = [
+                "error"      => true,
+                "mensaje"    => "Error al procesar la operación",
+                "diagnostico"=> $diagnostico
+            ];
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = [
+                "error"      => false,
+                "mensaje"    => "Operación completada exitosamente",
+                "resultados" => $resultados,
+                "diagnostico"=> $diagnostico
+            ];
+            $this->response($respuesta);
+        }
+    } catch (Exception $e) {
+        $respuesta = [
+            "error"   => true,
+            "mensaje" => "Error en el servidor: " . $e->getMessage(),
+            "file"    => $e->getFile(),
+            "line"    => $e->getLine()
+        ];
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+public function UpdateCajaLista_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validación básica
+        if(!isset($data['id_caja']) || !isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (id_caja, descripcion, fecha_cierre, especial, fija)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = (int)$data['id_caja'];
+
+        // Preparar datos para actualizar
+        $update_data = array(
+            'descripcion' => trim($data['descripcion']),
+            'fecha_cierre' => $data['fecha_cierre'],
+            'especial' => (int)$data['especial'],
+            'fija' => (int)$data['fija']
+        );
+
+        $this->db->trans_start();
+        $this->db->where('id_caja', $id);
+        $this->db->update('caja_lista', $update_data);
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar la caja lista"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+             // Incluso si no se modificó nada (rows=0), la operación fue exitosa si trans_status es TRUE
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows // Informa cuántas filas fueron realmente cambiadas
+                // "mensaje" => "Actualización completada" // Alternativa
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateRubroPrincipal_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_rubro_p']) || !isset($data['rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (id, datos)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_rubro_p'];
+        $datos = $data['rubro'];
+
+        // Validate datos structure
+        if(!isset($datos['cod_rubro']) || !isset($datos['rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "El objeto datos debe contener cod_rubro y rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start();
+
+        // Update rubro_principal
+        $this->db->where('id_rubro_p', $id);
+        $this->db->update('rubro_principal', array(
+            'cod_rubro' => $datos['cod_rubro'],
+            'rubro' => $datos['rubro']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el rubro principal"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $datos
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateProveedor_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_prov'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del proveedor"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_prov'];
+
+        $this->db->trans_start();
+
+        // Update proveedores table with all fields
+        $this->db->where('id_prov', $id);
+        $this->db->update('proveedores', array(
+            'cod_prov' => $data['cod_prov'],
+            'nombre' => $data['nombre'],
+            'direccion' => $data['direccion'],
+            'codpos' => $data['codpos'],
+            'localidad' => $data['localidad'],
+            'telefono' => $data['telefono'],
+            'cuit' => $data['cuit'],
+            'contacto' => $data['contacto'],
+            'rubro' => $data['rubro'],
+            'cod_iva' => $data['cod_iva'],
+            'ganancias' => $data['ganancias'],
+            'ingbrutos' => $data['ingbrutos'],
+            'email' => $data['email'],
+            'www' => $data['www'],
+            'cta_proveedores' => $data['cta_proveedores'],
+            'fec_proceso' => $data['fec_proceso']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el proveedor"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+public function UpdateRubro_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_rubro'];
+
+        $this->db->trans_start();
+
+        // Update rubros table with all fields
+        $this->db->where('id_rubro', $id);
+        $this->db->update('rubros', array(
+            'cod_rubro' => $data['cod_rubro'],
+            'rubro' => $data['rubro'],
+            'numerador' => $data['numerador'],
+            'modiprecio' => $data['modiprecio'],
+            'modidescri' => $data['modidescri'],
+            'cod_depo' => $data['cod_depo'],
+            'mustuni' => $data['mustuni']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateMarca_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_marca'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_marca'];
+
+        $this->db->trans_start();
+
+        // Update rubros table with all fields
+        $this->db->where('id_marca', $id);
+        $this->db->update('marcas', array(
+            'id_marca' => $data['id_marca'],
+            'cod_marca' => $data['cod_marca'],
+            'marca' => $data['marca'],
+            
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateTipoMoneda_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_moneda'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del tipo de moneda"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_moneda'];
+
+        $this->db->trans_start();
+
+        // Update tipomone table with all fields
+        $this->db->where('id_moneda', $id);
+        $this->db->update('tipomone', array(
+            'cod_mone' => $data['cod_mone'],
+            'moneda' => $data['moneda'],
+            'simbolo' => $data['simbolo']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el tipo de moneda"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateValorCambio_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['id_valor'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del valor de cambio"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_valor'];
+
+        $this->db->trans_start();
+
+        // Update valorcambio table with all fields
+        $this->db->where('id_valor', $id);
+        $this->db->update('valorcambio', array(
+            'codmone' => $data['codmone'],
+            'desvalor' => $data['desvalor'],
+            'fecdesde' => $data['fecdesde'],
+            'fechasta' => $data['fechasta'],
+            'vcambio' => $data['vcambio']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el valor de cambio"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateCajamovi_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validar que el ID esté presente
+        if(!isset($data['id_movimiento'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del movimiento para actualizar"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_movimiento'];
+        unset($data['id_movimiento']); // No se actualiza el ID
+
+       // Limpiar datos (similar a la inserción)
+       foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
+           if (isset($data[$dateField]) && empty($data[$dateField])) {
+                $data[$dateField] = null;
+           }
+       }
+       foreach(['banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'codigo_mbco', 'punto_venta', 'numero_comprobante'] as $numField) {
+             if (isset($data[$numField]) && ($data[$numField] === '' || $data[$numField] === null)) {
+                  $data[$numField] = null;
+             }
+         }
+        foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
+             if (isset($data[$strField]) && $data[$strField] === '') {
+                  $data[$strField] = null;
+             }
+        }
+
+        $this->db->trans_start();
+
+        $this->db->where('id_movimiento', $id);
+        $this->db->update('caja_movi', $data); // Actualiza con los datos recibidos
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el movimiento de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows, // Filas afectadas (puede ser 0 si no cambió nada, o 1)
+                "datos" => $this->post() // Devuelve los datos enviados para referencia
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+
+public function UpdateConflista_post()
+{
+    try {
+        $data = $this->post();
+        if (isset($data) && count($data) > 0) {
+            // Validar campos obligatorios
+            if (!isset($data['id_conflista'])) {
+                $respuesta = [
+                    'error'   => true,
+                    'mensaje' => 'Falta el ID de la conflista'
+                ];
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            $id             = $data['id_conflista'];
+            $listap         = $data['listap'];
+            $tipomone       = $data['tipomone'];
+            $recalcular_21  = isset($data['recalcular_21'])  ? (bool)$data['recalcular_21']  : false;
+            $recalcular_105 = isset($data['recalcular_105']) ? (bool)$data['recalcular_105'] : false;
+            $preciof21      = isset($data['preciof21'])      ? (float)$data['preciof21']     : 0;
+            $preciof105     = isset($data['preciof105'])     ? (float)$data['preciof105']    : 0;
+
+            // Inicializar resultados
+            $resultados = [
+                'conflista_actualizada'      => false,
+                'productos_actualizados_21'  => 0,
+                'productos_actualizados_105' => 0
+            ];
+
+            // 1) Actualizar conf_lista
+            $this->db->where('id_conflista', $id);
+            $this->db->update('conf_lista', [
+                'listap'      => $data['listap'],
+                'activa'      => $data['activa'],
+                'precosto21'  => $data['precosto21'],
+                'precosto105' => $data['precosto105'],
+                'pordcto'     => $data['pordcto'],
+                'margen'      => $data['margen'],
+                'preciof21'   => $data['preciof21'],
+                'preciof105'  => $data['preciof105'],
+                'rmargen'     => $data['rmargen'],
+                'tipomone'    => $data['tipomone'],
+                'actprov'     => $data['actprov'],
+                'cod_marca'   => $data['cod_marca'],
+                'fecha'       => $data['fecha']
+            ]);
+            $resultados['conflista_actualizada'] = true;
+
+            // Determinar campo de precio según lista
+            $campo_precio = 'prefi' . $listap;
+
+            // 2) Recalcular precios IVA 21%
+            if ($recalcular_21) {
+                $this->db->select('cod_iva');
+                $this->db->where('ROUND(alicuota1,2) =', 21.00);
+                $query_iva21 = $this->db->get('artiva');
+
+                $iva21_records = [];
+                if ($query_iva21->num_rows() > 0) {
+                    foreach ($query_iva21->result() as $row) {
+                        $iva21_records[] = $row->cod_iva;
+                    }
+                }
+
+                if (!empty($iva21_records)) {
+                    $factor21 = 1 + ($preciof21 / 100);
+
+                    $this->db->where_in('cod_iva', $iva21_records);
+                    $this->db->where('tipo_moneda', $tipomone);
+                    $this->db->where('idart', 0);                          // <-- nueva condición
+                    $this->db->set($campo_precio, "precon * {$factor21}", false);
+                    $this->db->update('artsucursal');
+
+                    $resultados['productos_actualizados_21'] = $this->db->affected_rows();
+                }
+            }
+
+            // 3) Recalcular precios IVA 10.5%
+            if ($recalcular_105) {
+                $this->db->select('cod_iva');
+                $this->db->where('ROUND(alicuota1,2) =', 10.50);
+                $query_iva105 = $this->db->get('artiva');
+
+                $iva105_records = [];
+                if ($query_iva105->num_rows() > 0) {
+                    foreach ($query_iva105->result() as $row) {
+                        $iva105_records[] = $row->cod_iva;
+                    }
+                }
+
+                if (!empty($iva105_records)) {
+                    $factor105 = 1 + ($preciof105 / 100);
+
+                    $this->db->where_in('cod_iva', $iva105_records);
+                    $this->db->where('tipo_moneda', $tipomone);
+                    $this->db->where('idart', 0);                          // <-- nueva condición
+                    $this->db->set($campo_precio, "precon * {$factor105}", false);
+                    $this->db->update('artsucursal');
+
+                    $resultados['productos_actualizados_105'] = $this->db->affected_rows();
+                }
+            }
+
+            // 4) Enviar respuesta final
+            $respuesta = [
+                'error'      => false,
+                'mensaje'    => 'Operación completada exitosamente',
+                'resultados' => $resultados
+            ];
+            $this->response($respuesta);
+
+        } else {
+            $respuesta = [
+                'error'   => true,
+                'mensaje' => 'No se recibieron datos en el POST'
+            ];
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        }
+
+    } catch (Exception $e) {
+        $respuesta = [
+            'error'   => true,
+            'mensaje' => 'Error en el servidor: ' . $e->getMessage(),
+            'file'    => $e->getFile(),
+            'line'    => $e->getLine()
+        ];
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+public function UpdateArticulo_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required field
+        if(!isset($data['id_articulo'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del artículo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_articulo'];
+
+        $this->db->trans_start();
+
+        // Update articulos table with all fields
+        $this->db->where('id_articulo', $id);
+        $this->db->update('artsucursal', array(
+            'nomart' => $data['nomart'],
+            'marca' => $data['marca'],
+            'precon' => $data['precon'],
+            'prefi1' => $data['prefi1'],
+            'prefi2' => $data['prefi2'],
+            'prefi3' => $data['prefi3'],
+            'prefi4' => $data['prefi4'],
+            'exi1' => $data['exi1'],
+            'exi2' => $data['exi2'],
+            'exi3' => $data['exi3'],
+            'exi4' => $data['exi4'],
+            'exi5' => $data['exi5'],
+            'stkmin1' => $data['stkmin1'],
+            'stkmax1' => $data['stkmax1'],
+            'stkprep1' => $data['stkprep1'],
+            'stkmin2' => $data['stkmin2'],
+            'stkmax2' => $data['stkmax2'],
+            'stkprep2' => $data['stkprep2'],
+            'stkmin3' => $data['stkmin3'],
+            'stkmax3' => $data['stkmax3'],
+            'stkprep3' => $data['stkprep3'],
+            'stkmin4' => $data['stkmin4'],
+            'stkmax4' => $data['stkmax4'],
+            'stkprep4' => $data['stkprep4'],
+            'stkmin5' => $data['stkmin5'],
+            'stkmax5' => $data['stkmax5'],
+            'stkprep5' => $data['stkprep5'],
+            'cd_articulo' => $data['cd_articulo'],
+            'cd_proveedor' => $data['cd_proveedor'],
+            'cd_barra' => $data['cd_barra'],
+            'idart' => $data['idart'],
+            'estado' => $data['estado'],
+            'rubro' => $data['rubro'],
+            'articulo' => $data['articulo'],
+            'cod_iva' => $data['cod_iva'],
+            'prebsiva' => $data['prebsiva'],
+            'precostosi' => $data['precostosi'],
+            'margen' => $data['margen'],
+            'descuento' => $data['descuento'],
+            'cod_deposito' => $data['cod_deposito'],
+            'tipo_moneda' => $data['tipo_moneda']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el artículo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows,
+                "datos" => $data
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function UpdateCajaconcepto_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validar ID requerido
+        if(!isset($data['id_concepto'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Falta el ID del concepto de caja (id_concepto)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+         // Validación básica de otros campos (se pueden añadir más)
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos para actualizar el concepto de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $id = $data['id_concepto'];
+
+        $this->db->trans_start();
+
+        // Actualizar tabla cajaconceptos
+        $this->db->where('id_concepto', $id);
+        $this->db->update('caja_conceptos', array(
+            'descripcion' => $data['descripcion'],
+            'tipo_concepto' => $data['tipo_concepto'],
+            'fija' => $data['fija'],
+            'ingreso_egreso' => $data['ingreso_egreso'],
+            'id_caja' => $data['id_caja']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al actualizar el concepto de caja"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+             $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows, // Número de filas afectadas
+                "datos_enviados" => $data // Opcional: devolver los datos enviados para depuración
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+
+public function SubirDatosRubro_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['cod_rubro']) || !isset($data['rubro'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (cod_rubro, rubro)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new rubro with all fields
+        $this->db->insert('rubros', array(
+            'cod_rubro' => $data['cod_rubro'],
+            'rubro' => $data['rubro'],
+            'cod_depo' => isset($data['cod_depo']) ? $data['cod_depo'] : 0,
+            'modidescri' => isset($data['modidescri']) ? $data['modidescri'] : 0,
+            'modiprecio' => isset($data['modiprecio']) ? $data['modiprecio'] : 0,
+            'mustuni' => isset($data['mustuni']) ? $data['mustuni'] : 0,
+            'numerador' => isset($data['numerador']) ? $data['numerador'] : 0,
+            'id_rubro_p' => $data['id_rubro_p']
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar el rubro"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+public function SubirDatosMarca_post()
+{
+    $data = $this->post();
+    if(isset($data) && count($data) > 0) {
+        // Validate required fields
+        if(!isset($data['cod_marca']) || !isset($data['marca'])) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Faltan campos requeridos (cod_marca, marca)"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        $this->db->trans_start(); // Start transaction
+
+        // Insert new rubro with all fields
+        $this->db->insert('marcas', array(
+            'cod_marca' => $data['cod_marca'],
+            'marca' => $data['marca'],
+        ));
+
+        $rows = $this->db->affected_rows();
+        $this->db->trans_complete(); // Complete transaction
+
+        if ($this->db->trans_status() === FALSE) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Error al insertar la marca"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $rows
+            );
+            $this->response($respuesta);
+        }
+    } else {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se recibieron datos en el POST"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+}
+
