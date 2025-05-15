@@ -15,6 +15,7 @@ import { MotomatchBotService } from 'src/app/services/motomatch-bot.service';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Text } from '@angular/compiler';
+import { TarjCredito } from 'src/app/interfaces/tarjcredito';
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 @Component({
   selector: 'app-cabeceras',
@@ -29,8 +30,8 @@ export class CabecerasComponent {
   public selectedCabecerasIniciales: any;
   public totalSum: number = null;
   public importe: number = null;
-  public tipo: any[] = [];
-  filteredTipo: any[] = [];
+  public tipo: TarjCredito[] = [];
+  filteredTipo: TarjCredito[] = [];
   public tipoVal: string = 'Condicion de Venta';
   public codTarj: string = '';
   public listaPrecio: string = '';

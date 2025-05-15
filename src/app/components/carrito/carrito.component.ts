@@ -14,6 +14,7 @@ import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { formatDate } from '@angular/common';
+import { TarjCredito } from 'src/app/interfaces/tarjcredito';
 interface Cliente {
   nombre: string;
   direccion: string;
@@ -31,7 +32,7 @@ export class CarritoComponent {
   ref: DynamicDialogRef | undefined;
   public FechaCalend: any;
   public itemsEnCarrito: any[] = [];
-  public tarjetas: any[] = [];
+  public tarjetas: TarjCredito[] = [];
   public suma: number = 0;
   public tipoDoc: string = "FC";
   public numerocomprobante: string;
