@@ -54,6 +54,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   };
   public cheque = {
     Banco: '',
+    CodigoBanco: '',
     Ncuenta: '',
     Ncheque: '',
     Nombre: '',
@@ -73,6 +74,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   // Propiedades para valores de cambio
   public valoresCambio: any[] = [];
   public tiposMoneda: any[] = [];
+  
+  // Propiedad para bancos
+  public bancos: any[] = [];
   
   // Propiedades para paginación
   public paginaActual = 1;
@@ -108,6 +112,18 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         title: 'Error',
         text: 'No se pudieron cargar los datos de tarjetas'
       });
+    });
+    
+    // Cargar los bancos
+    this._cargardata.getBancos().pipe(take(1)).subscribe((resp: any) => {
+      if (resp && !resp.error && resp.mensaje) {
+        this.bancos = resp.mensaje;
+        console.log('Bancos cargados:', this.bancos);
+      } else {
+        console.error('Error al cargar bancos o formato incorrecto:', resp);
+      }
+    }, error => {
+      console.error('Error al cargar bancos:', error);
     });
     
     // Definir todas las columnas disponibles
@@ -759,45 +775,196 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
   
   abrirFormularioTarj() {
+    // Estilos CSS para el modal
+    const styles = `
+      <style>
+        /* Container styling */
+        .tarjeta-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .tarjeta-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .tarjeta-header {
+          background-color: #d1ecf1;
+          color: #0c5460;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #bee5eb;
+          display: flex;
+          align-items: center;
+        }
+        
+        .tarjeta-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .tarjeta-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Credit card input styling */
+        .card-input {
+          border-left: 3px solid #17a2b8 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #17a2b8;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos de la tarjeta',
-      html: `<input type="text" id="titular" class="swal2-input" placeholder="Titular">
-           <input type="number" id="dni" class="swal2-input" placeholder="DNI">
-           <input type="number" id="numero" class="swal2-input" placeholder="Número Tarjeta">
-           <input type="number" id="autorizacion" class="swal2-input" placeholder="Autorización">`,
+      title: 'Datos de la Tarjeta',
+      width: 800,
+      html: styles + `
+        <div class="tarjeta-form">
+          <div class="tarjeta-card">
+            <div class="tarjeta-header">
+              <i class="fa fa-credit-card"></i> Información de la Tarjeta
+            </div>
+            <div class="tarjeta-section">
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="titular" class="form-control" placeholder="Ingrese el nombre completo">
+                </div>
+                <div class="form-group">
+                  <label for="dni"><i class="fa fa-id-card"></i> DNI</label>
+                  <input type="number" id="dni" class="form-control" placeholder="Ingrese el DNI">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos de la Tarjeta</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta</label>
+                  <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización</label>
+                  <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#17a2b8',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
         const titular = (<HTMLInputElement>document.getElementById('titular')).value;
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
         const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
+        
+        // Validación de campos
         if (!titular || !dni || !numero || !autorizacion) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
+        
+        // Validaciones específicas
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
         let reAutorizacion = new RegExp("^[0-9]{3}$");
-        if (!reNumero.test(numero)) {
-          Swal.showValidationMessage(`El número de la tarjeta no es válido`);
-          //return;
+        
+        if (!reTitular.test(titular)) {
+          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reDni.test(dni)) {
-          Swal.showValidationMessage(`El DNI no es válido`);
-          //return;
+          Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
+          return false;
         }
-        if (!reTitular.test(titular)) {
-          Swal.showValidationMessage(`El titular no es válido`);
-          //return;
+        if (!reNumero.test(numero)) {
+          Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
+          return false;
         }
         if (!reAutorizacion.test(autorizacion)) {
-          Swal.showValidationMessage(`La autorización no es válida`);
-          //return;
+          Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
+          return false;
         }
-        return { titular, dni, numero, autorizacion }
+        
+        return { titular, dni, numero, autorizacion };
       }
     }).then((result) => {
       if (result.value) {
@@ -807,49 +974,242 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         this.tarjeta.Autorizacion = result.value.autorizacion;
         console.log('Tarjeta guardada:', this.tarjeta);
         
-        // Mostrar loading antes de cargar los productos
-        this.mostrarLoading();
-        
-        // Cargar la primera página
-        this.articulosPaginadosService.cargarPagina(1).subscribe(
-          () => {
-            Swal.close();
-          },
-          error => {
-            console.error('Error al cargar productos:', error);
-            Swal.close();
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudieron cargar los productos'
-            });
-          }
-        );
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados correctamente',
+          text: 'Los datos de la tarjeta han sido registrados',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          // Mostrar loading antes de cargar los productos
+          this.mostrarLoading();
+          
+          // Cargar la primera página
+          this.articulosPaginadosService.cargarPagina(1).subscribe(
+            () => {
+              Swal.close();
+            },
+            error => {
+              console.error('Error al cargar productos:', error);
+              Swal.close();
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los productos'
+              });
+            }
+          );
+        });
       }
     });
   }
 
   abrirFormularioCheque() {
+    // Crear opciones de bancos para el select
+    let opcionesBancos = '';
+    if (this.bancos && this.bancos.length > 0) {
+      opcionesBancos = this.bancos.map(banco => 
+        `<option value="${banco.codigo_banco}">${banco.descripcion}</option>`
+      ).join('');
+    } else {
+      opcionesBancos = '<option value="">No hay bancos disponibles</option>';
+    }
+
+    // Estilos CSS para el modal
+    const styles = `
+      <style>
+        /* Container styling */
+        .cheque-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .cheque-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .cheque-header {
+          background-color: #cce5ff;
+          color: #004085;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #b8daff;
+          display: flex;
+          align-items: center;
+        }
+        
+        .cheque-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .cheque-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Select styling */
+        select.form-control {
+          background-color: white;
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control,
+        input[type="date"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #6c757d;
+        }
+        
+        /* Money inputs styling */
+        .money-input {
+          border-left: 3px solid #dc3545 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #007bff;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos del Cheque',
-      html:
-        `<input type="text" id="banco" class="swal2-input" placeholder="Banco">
-       <input type="number" id="ncuenta" class="swal2-input" placeholder="N° Cuenta">
-       <input type="number" id="ncheque" class="swal2-input" placeholder="N° Cheque">
-       <input type="text" id="nombre" class="swal2-input" placeholder="Nombre">
-       <input type="text" id="plaza" class="swal2-input" placeholder="Plaza">
-       <input type="number" id="importeimputar" class="swal2-input" placeholder="Importe a Imputar">
-       <input type="number" id="importecheque" class="swal2-input" placeholder="Importe del Cheque">
-       <input type="text" id="fechacheque" class="swal2-input" placeholder="Fecha del Cheque">`,
+      title: 'Datos del Cheque',
+      width: 800,
+      html: styles + `
+        <div class="cheque-form">
+          <div class="cheque-card">
+            <div class="cheque-header">
+              <i class="fa fa-money-check-alt"></i> Información del Cheque
+            </div>
+            <div class="cheque-section">
+              <h4 class="section-title">Datos del Banco</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="banco"><i class="fa fa-university"></i> Banco</label>
+                  <select id="banco" class="form-control">
+                    <option value="" selected disabled>Seleccione un banco</option>
+                    ${opcionesBancos}
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="ncuenta"><i class="fa fa-credit-card"></i> Número de Cuenta</label>
+                  <input type="number" id="ncuenta" class="form-control" placeholder="Ingrese el número de cuenta">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ncheque"><i class="fa fa-file-invoice-dollar"></i> Número de Cheque</label>
+                  <input type="number" id="ncheque" class="form-control" placeholder="Ingrese el número de cheque">
+                </div>
+                <div class="form-group">
+                  <label for="plaza"><i class="fa fa-map-marker-alt"></i> Plaza</label>
+                  <input type="text" id="plaza" class="form-control" placeholder="Ingrese la plaza">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nombre"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="nombre" class="form-control" placeholder="Ingrese el nombre completo">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos del Importe</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="importeimputar"><i class="fa fa-dollar-sign"></i> Importe a Imputar</label>
+                  <input type="number" id="importeimputar" class="form-control money-input" placeholder="$0.00">
+                </div>
+                <div class="form-group">
+                  <label for="importecheque"><i class="fa fa-dollar-sign"></i> Importe del Cheque</label>
+                  <input type="number" id="importecheque" class="form-control money-input" placeholder="$0.00">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fechacheque"><i class="fa fa-calendar-alt"></i> Fecha del Cheque</label>
+                  <input type="date" id="fechacheque" class="form-control">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       didOpen: () => {
-        // Cambiar el tipo de input a 'date' para activar el datepicker nativo
-        document.getElementById('fechacheque').setAttribute('type', 'date');
+        // Cualquier inicialización adicional puede ir aquí
       },
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#28a745',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
-        const banco = (<HTMLInputElement>document.getElementById('banco')).value;
+        const selectBanco = <HTMLSelectElement>document.getElementById('banco');
+        const banco = selectBanco.selectedIndex > 0 ? selectBanco.options[selectBanco.selectedIndex].text : '';
+        const codigo_banco = selectBanco.value;
         const ncuenta = (<HTMLInputElement>document.getElementById('ncuenta')).value;
         const ncheque = (<HTMLInputElement>document.getElementById('ncheque')).value;
         const nombre = (<HTMLInputElement>document.getElementById('nombre')).value;
@@ -857,52 +1217,52 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         const importeimputar = (<HTMLInputElement>document.getElementById('importeimputar')).value;
         const importecheque = (<HTMLInputElement>document.getElementById('importecheque')).value;
         const fechacheque = (<HTMLInputElement>document.getElementById('fechacheque')).value;
-        if (!banco || !ncuenta || !ncheque || !nombre || !plaza || !importeimputar || !importecheque || !fechacheque) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+        
+        // Validación de campos
+        if (!codigo_banco || !ncuenta || !ncheque || !nombre || !plaza || !importeimputar || !importecheque || !fechacheque) {
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
-        let reBanco = new RegExp("^[a-zA-Z ]{1,40}$");
+        
+        // Validaciones específicas
         let reNcuenta = new RegExp("^[0-9]{1,40}$");
         let reNcheque = new RegExp("^[0-9]{1,40}$");
         let reNombre = new RegExp("^[a-zA-Z ]{1,40}$");
         let rePlaza = new RegExp("^[a-zA-Z ]{1,40}$");
         let reImporteImputar = new RegExp("^[0-9]{1,40}$");
         let reImporteCheque = new RegExp("^[0-9]{1,40}$");
-        let reFechaCheque = new RegExp("^\\d{2}/\\d{2}/\\d{4}$");//("^[0-9]{1,40}$");
-
-        if (!reBanco.test(banco)) {
-          Swal.showValidationMessage(`El nombre del banco no es válido`);
-          //return;
-        }
+        
         if (!reNcuenta.test(ncuenta)) {
-          Swal.showValidationMessage(`El numero de cuenta no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cuenta no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNcheque.test(ncheque)) {
-          Swal.showValidationMessage(`El numero de cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cheque no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNombre.test(nombre)) {
-          Swal.showValidationMessage(`El nombre no es válido`);
-          //return;
+          Swal.showValidationMessage(`El nombre no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!rePlaza.test(plaza)) {
-          Swal.showValidationMessage(`La plaza no es válida`);
-          //return;
+          Swal.showValidationMessage(`La plaza no es válida. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reImporteImputar.test(importeimputar)) {
-          Swal.showValidationMessage(`El importe a imputar no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe a imputar no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reImporteCheque.test(importecheque)) {
-          Swal.showValidationMessage(`El importe del cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe del cheque no es válido. Debe contener solo dígitos.`);
+          return false;
         }
-        return { banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque }
+        
+        return { banco, codigo_banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque };
       }
     }).then((result) => {
       if (result.value) {
         this.cheque.Banco = result.value.banco;
+        this.cheque.CodigoBanco = result.value.codigo_banco;
         this.cheque.Ncuenta = result.value.ncuenta;
         this.cheque.Ncheque = result.value.ncheque;
         this.cheque.Nombre = result.value.nombre;
@@ -912,24 +1272,33 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         this.cheque.FechaCheque = result.value.fechacheque;
         console.log('Cheque guardado:', this.cheque);
         
-        // Mostrar loading antes de cargar los productos
-        this.mostrarLoading();
-        
-        // Cargar la primera página
-        this.articulosPaginadosService.cargarPagina(1).subscribe(
-          () => {
-            Swal.close();
-          },
-          error => {
-            console.error('Error al cargar productos:', error);
-            Swal.close();
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudieron cargar los productos'
-            });
-          }
-        );
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados correctamente',
+          text: 'Los datos del cheque han sido registrados',
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          // Mostrar loading antes de cargar los productos
+          this.mostrarLoading();
+          
+          // Cargar la primera página
+          this.articulosPaginadosService.cargarPagina(1).subscribe(
+            () => {
+              Swal.close();
+            },
+            error => {
+              console.error('Error al cargar productos:', error);
+              Swal.close();
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los productos'
+              });
+            }
+          );
+        });
       }
     });
   }
@@ -1010,8 +1379,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
   
   selectProducto(producto) {
-    let datoscondicionventa: any =
-    {
+    // Prepara los datos de la condición de venta
+    const datoscondicionventa: any = {
       producto: producto,
       cliente: this.clienteFrompuntoVenta,
       tarjeta: this.tarjeta,
@@ -1020,31 +1389,432 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       codTarj: this.codTarj,
       listaPrecio: this.listaPrecio,
     };
-    this.ref = this.dialogService.open(CalculoproductoComponent, {
-      header: 'Detalle del Producto',
-      width: '80%',
-      style: { 
-        'max-width': '900px' 
+    
+    // Determinar el precio a mostrar según la lista seleccionada
+    let precio = 0;
+    let tipoPrecioString = '';
+    
+    switch (this.listaPrecio) {
+      case '0':
+        precio = producto.precon || 0;
+        tipoPrecioString = 'Precio Contado';
+        break;
+      case '1':
+        precio = producto.prefi1 || 0;
+        tipoPrecioString = 'Precio Lista';
+        break;
+      case '2':
+        precio = producto.prefi2 || 0;
+        tipoPrecioString = 'Precio Tarjeta';
+        break;
+      case '3':
+        precio = producto.prefi3 || 0;
+        tipoPrecioString = 'Precio 3';
+        break;
+      case '4':
+        precio = producto.prefi4 || 0;
+        tipoPrecioString = 'Precio 4';
+        break;
+      default:
+        precio = producto.precon || 0;
+        tipoPrecioString = 'Precio Contado';
+    }
+    
+    // Formatear precio para mostrar
+    const precioFormateado = new Intl.NumberFormat('es-AR', { 
+      style: 'currency', 
+      currency: 'ARS',
+      minimumFractionDigits: 2 
+    }).format(precio);
+    
+    // Estilos CSS para el modal
+    const styles = `
+      <style>
+        /* Container styling */
+        .producto-form {
+          padding: 0 15px;
+          max-width: 900px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .producto-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .producto-header {
+          background-color: #e8f4f8;
+          color: #0c5460;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #bee5eb;
+          display: flex;
+          align-items: center;
+        }
+        
+        .producto-header i {
+          margin-right: 10px;
+        }
+        
+        /* Stock section header */
+        .stock-header {
+          background-color: #cce5ff;
+          color: #004085;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #b8daff;
+          display: flex;
+          align-items: center;
+        }
+        
+        /* Price section header */
+        .price-header {
+          background-color: #d4edda;
+          color: #155724;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #c3e6cb;
+          display: flex;
+          align-items: center;
+        }
+        
+        /* Form section styling */
+        .producto-section, .stock-section, .price-section, .calc-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Data display */
+        .data-display {
+          background-color: #f8f9fa;
+          border-radius: 4px;
+          border-left: 3px solid #6c757d;
+          padding: 10px;
+          font-size: 14px;
+          min-height: 36px;
+        }
+        
+        .precio-display {
+          font-weight: 600;
+          color: #28a745;
+          border-left-color: #28a745;
+          font-size: 16px;
+        }
+        
+        .stock-display {
+          font-weight: 600;
+          color: #0c5460;
+          border-left-color: #17a2b8;
+        }
+        
+        /* Total calculation section */
+        .total-section {
+          background-color: #f8f9fa;
+          border-radius: 8px;
+          padding: 15px;
+          margin-top: 15px;
+          border: 1px solid #e9ecef;
+        }
+        
+        .total-price {
+          font-size: 18px;
+          font-weight: 700;
+          color: #28a745;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #17a2b8;
+        }
+        
+        /* Action buttons */
+        .action-button {
+          background-color: #28a745;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 10px 20px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.2s ease;
+        }
+        
+        .action-button:hover {
+          background-color: #218838;
+        }
+        
+        /* Calculator styling */
+        .calculator {
+          background-color: #f8f9fa;
+          border-radius: 8px;
+          padding: 15px;
+          margin-top: 20px;
+          border: 1px solid #dee2e6;
+        }
+        
+        .calculator-title {
+          font-size: 16px;
+          color: #28a745;
+          margin-bottom: 15px;
+          font-weight: 600;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
+    // Usa SweetAlert2 para mostrar el modal estilizado
+    Swal.fire({
+      title: 'Detalle del Producto',
+      width: 900,
+      html: styles + `
+        <div class="producto-form">
+          <!-- Información del Producto -->
+          <div class="producto-card">
+            <div class="producto-header">
+              <i class="fa fa-box"></i> Información del Producto
+            </div>
+            <div class="producto-section">
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fa fa-tag"></i> Nombre</label>
+                  <div class="data-display">${producto.nomart || ''}</div>
+                </div>
+                <div class="form-group">
+                  <label><i class="fa fa-copyright"></i> Marca</label>
+                  <div class="data-display">${producto.marca || ''}</div>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label><i class="fa fa-barcode"></i> Código</label>
+                  <div class="data-display">${producto.cd_articulo || ''}</div>
+                </div>
+                <div class="form-group">
+                  <label><i class="fa fa-layer-group"></i> Rubro</label>
+                  <div class="data-display">${producto.rubro || ''}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información de Stock -->
+          <div class="producto-card">
+            <div class="stock-header">
+              <i class="fa fa-warehouse"></i> Información de Stock
+            </div>
+            <div class="stock-section">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Stock Depósito</label>
+                  <div class="data-display stock-display">${producto.exi1 || 0}</div>
+                </div>
+                <div class="form-group">
+                  <label>Stock C. Central</label>
+                  <div class="data-display stock-display">${producto.exi2 || 0}</div>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Stock V. Viejo</label>
+                  <div class="data-display stock-display">${producto.exi3 || 0}</div>
+                </div>
+                <div class="form-group">
+                  <label>Stock Guemes</label>
+                  <div class="data-display stock-display">${producto.exi4 || 0}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Información de Precios -->
+          <div class="producto-card">
+            <div class="price-header">
+              <i class="fa fa-tag"></i> Información de Precios
+            </div>
+            <div class="price-section">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Precio Contado</label>
+                  <div class="data-display precio-display">
+                    ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(producto.precon || 0)}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Precio Lista</label>
+                  <div class="data-display precio-display">
+                    ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(producto.prefi1 || 0)}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Precio Tarjeta</label>
+                  <div class="data-display precio-display">
+                    ${new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(producto.prefi2 || 0)}
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Precio Seleccionado (${tipoPrecioString})</label>
+                  <div class="data-display precio-display" style="font-size: 18px; font-weight: 700; color: #dc3545; border-left-color: #dc3545;">
+                    ${precioFormateado}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Calculadora -->
+          <div class="producto-card">
+            <div class="price-header">
+              <i class="fa fa-calculator"></i> Cálculo de Compra
+            </div>
+            <div class="calc-section">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="cantidad"><i class="fa fa-sort-numeric-up"></i> Cantidad</label>
+                  <input type="number" id="cantidad" class="form-control" value="1" min="1" onchange="actualizarTotal()">
+                </div>
+                <div class="form-group">
+                  <label><i class="fa fa-money-bill-wave"></i> Precio Total</label>
+                  <div id="precioTotal" class="data-display total-price">${precioFormateado}</div>
+                </div>
+              </div>
+              
+              <div style="text-align: center; margin-top: 20px;">
+                <button id="btnAgregarCarrito" class="action-button">
+                  <i class="fa fa-cart-plus"></i> Agregar al Carrito
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          // Función para actualizar el precio total
+          function actualizarTotal() {
+            const cantidad = document.getElementById('cantidad').value || 1;
+            const precio = ${precio};
+            const total = cantidad * precio;
+            
+            document.getElementById('precioTotal').textContent = new Intl.NumberFormat('es-AR', { 
+              style: 'currency', 
+              currency: 'ARS',
+              minimumFractionDigits: 2 
+            }).format(total);
+          }
+          
+          // Configurar evento de clic para el botón
+          document.getElementById('btnAgregarCarrito').addEventListener('click', function() {
+            const cantidad = document.getElementById('cantidad').value || 1;
+            Swal.clickConfirm(); // Cierra el diálogo con confirmación
+          });
+        </script>
+      `,
+      showConfirmButton: false,
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusCancel: false,
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+      didOpen: () => {
+        // Cualquier inicialización adicional puede ir aquí
       },
-      data:
-      {
-        producto: producto,
-        cliente: this.clienteFrompuntoVenta,
-        tarjeta: this.tarjeta,
-        cheque: this.cheque,
-        tipoVal: this.tipoVal,
-        codTarj: this.codTarj,
-        listaPrecio: this.listaPrecio,
-      },
-      contentStyle: { 
-        overflow: 'auto',
-        padding: '0',
-        borderRadius: '8px'
-      },
-      baseZIndex: 10000,
-      maximizable: true,
-      closeOnEscape: true,
-      dismissableMask: true
+      preConfirm: () => {
+        // Esta función se llama cuando el usuario hace clic en "Agregar al Carrito"
+        const cantidad = parseInt((<HTMLInputElement>document.getElementById('cantidad')).value) || 1;
+        return { cantidad };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const cantidad = result.value.cantidad;
+        
+        // Abrir una ventana de confirmación
+        Swal.fire({
+          icon: 'success',
+          title: 'Producto agregado',
+          text: `Se ha agregado ${cantidad} unidad(es) de ${producto.nomart} al carrito.`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Aquí puedes llamar a la función que agregaría el producto al carrito
+        // Por ejemplo, podrías redirigir al usuario a la misma página que se abriría
+        // con el DialogService pero implementando tu propia lógica
+        
+        // Si necesitas usar el componente original, puedes descomentar esta sección
+        this.ref = this.dialogService.open(CalculoproductoComponent, {
+          header: 'Detalle del Producto',
+          width: '80%',
+          style: { 
+            'max-width': '900px' 
+          },
+          data: datoscondicionventa,
+          contentStyle: { 
+            overflow: 'auto',
+            padding: '0',
+            borderRadius: '8px'
+          },
+          baseZIndex: 10000,
+          maximizable: true,
+          closeOnEscape: true,
+          dismissableMask: true
+        });
+      }
     });
   }
   
