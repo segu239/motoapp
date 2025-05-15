@@ -295,14 +295,19 @@ export class CarritoComponent {
           }
           let emailOp = sessionStorage.getItem('emailOp');
           let result = this.itemsEnCarrito.map(obj => {
+            // Crear una copia del objeto original sin el campo id_articulo
+            const { id_articulo, ...objSinIdArticulo } = obj;
+            
             return {
-              ...obj,
+              ...objSinIdArticulo,
               emailop: emailOp,
               tipodoc: this.tipoDoc,
               puntoventa: this.puntoventa,
               numerocomprobante: this.numerocomprobante,
               estado: "NP",
               idven: this.vendedoresV,
+              // Asignar al campo idart de psucursal3 el campo id_articulo de artsucursal
+              idart: id_articulo || obj.idart
             };
           });
           this.numerocomprobanteImpresion = this.numerocomprobante;

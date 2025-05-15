@@ -21,6 +21,7 @@ export class CalculoproductoComponent {
 
   public pedido: any = {
     'idart': 0,
+    'id_articulo': 0, // Agregamos id_articulo para la tabla psucursal3
     'cantidad': 0,
     'precio': 0,
     'idcli': 0,
@@ -128,6 +129,13 @@ export class CalculoproductoComponent {
     //completar los datos del objeto pedido en base a los datos recibidos de la pagina anterior
     if (this.producto.idart != undefined) {
       this.pedido.idart = parseInt(this.producto.idart);
+    }
+    // Agregar campo id_articulo si está disponible
+    if (this.producto.id_articulo != undefined) {
+      this.pedido.id_articulo = parseInt(this.producto.id_articulo);
+    } else if (this.producto.idart != undefined) {
+      // Si no está disponible id_articulo, usamos idart como fallback
+      this.pedido.id_articulo = parseInt(this.producto.idart);
     }
     if (this.producto.nomart != undefined) {
       this.pedido.nomart = this.producto.nomart;
