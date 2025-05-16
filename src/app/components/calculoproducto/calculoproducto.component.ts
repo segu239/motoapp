@@ -74,6 +74,9 @@ export class CalculoproductoComponent {
       this.tipoMoneda = this.producto.tipo_moneda;
     }
 
+    // Inicializar cantidad con 1
+    this.cantidad = 1;
+
     //case dependiente de this.listaPrecio en caso de 0 this.producto.precon , si es 1 this.producto.prefi1 , si es 2 this.producto.prefi2, si es 3 this.producto.prefi3, si es 4 this.producto.prefi4
     switch (this.listaPrecio) {
       case "0":
@@ -89,12 +92,17 @@ export class CalculoproductoComponent {
         this.precio = this.producto.prefi2;
         break;
       case "3":
+        this.tipoPrecioString = 'Precio 3';
         this.precio = this.producto.prefi3;
         break;
       case "4":
+        this.tipoPrecioString = 'Precio 4';
         this.precio = this.producto.prefi4;
         break;
     }
+    
+    // Calcular el precio total inicial
+    this.precioTotal = this.precio * this.cantidad;
   }
 
   ngOnDestroy() {
@@ -104,9 +112,16 @@ export class CalculoproductoComponent {
   }
 
   calcularPrecioTotal(newValue: number) {
-    console.log(newValue);
-    this.precioTotal = this.precio * this.cantidad;
-    console.log(this.precioTotal);
+    console.log('Calculando precio total con cantidad:', newValue);
+    // Asegurarnos de que la cantidad sea válida
+    if (newValue === undefined || newValue === null || isNaN(newValue) || newValue <= 0) {
+      newValue = 1; // Valor por defecto
+      this.cantidad = 1;
+    }
+    
+    // Calcular el precio total
+    this.precioTotal = this.precio * newValue;
+    console.log('Precio unitario:', this.precio, 'Cantidad:', newValue, 'Precio total:', this.precioTotal);
   }
 
   comprar(event: Event) {
