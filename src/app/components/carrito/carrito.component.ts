@@ -352,19 +352,38 @@ export class CarritoComponent {
     }
     else {
       numero_fac = Number(this.numerocomprobante);
+      // Limitar número de factura al máximo permitido
+      if (numero_fac > 999999) {
+        numero_fac = 999999;
+      }
     }
+    
+    // Función auxiliar para limitar valores numéricos
+    const limitNumericValue = (value: any, limit: number) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numValue = parseInt(value);
+      return !isNaN(numValue) ? Math.min(numValue, limit) : null;
+    };
+    
     let codvent = this.getCodVta();
     let saldo = this.sumarCuentaCorriente();
+    
+    // Asegurarse de que cliente.idcli no exceda el límite
+    let clienteId = this.cliente.idcli;
+    if (clienteId && parseInt(clienteId) > 999999) {
+      clienteId = '999999';
+    }
+    
     let cabecera = {
       tipo: this.tipoDoc,
-      numero_int: this.numerocomprobante,
-      puntoventa: this.puntoventa,
+      numero_int: limitNumericValue(this.numerocomprobante, 999999),
+      puntoventa: limitNumericValue(this.puntoventa, 9999),
       letra: this.letraValue,
       numero_fac: numero_fac,
       atipo: this.tipoDoc,
       anumero_com: numero_fac,
-      cliente: this.cliente.idcli,
-      cod_sucursal: this.sucursal,
+      cliente: clienteId,
+      cod_sucursal: limitNumericValue(this.sucursal, 999999),
       emitido: fecha,
       vencimiento: fecha,
       exento: 0,
@@ -376,9 +395,9 @@ export class CarritoComponent {
       interes: 0,
       saldo: saldo,//this.suma,
       dorigen: true,
-      cod_condvta: codvent,
-      cod_iva: this.cliente.cod_iva,
-      cod_vendedor: this.vendedoresV,//// aca hay que ver si se agrega un campo para elegir el nombre del vendedor
+      cod_condvta: limitNumericValue(codvent, 999),
+      cod_iva: limitNumericValue(this.cliente.cod_iva, 999),
+      cod_vendedor: limitNumericValue(this.vendedoresV, 999),//// aca hay que ver si se agrega un campo para elegir el nombre del vendedor
       anulado: false,
       cuit: this.cliente.cuit,
       usuario: this.usuario,//este es el que se logea?
@@ -386,7 +405,7 @@ export class CarritoComponent {
       pfiscal: `${year}${formattedMonth}`,
       mperc: 0,
       imp_int: 0,
-      fec_proceso: this.FechaCalend = formatDate(this.FechaCalend, 'dd/MM/yy', 'en-US'),//this.FechaCalend,//fecha de cierre con caja puede ser otro dia   ?
+      fec_proceso: formatDate(this.FechaCalend, 'dd/MM/yy', 'en-US'),//fecha de cierre con caja puede ser otro dia   ?
       fec_ultpago: null,
       estado: "",
       id_aso: 0,
@@ -434,7 +453,11 @@ export class CarritoComponent {
       year: 'numeric'
     });
     let cabecera = this.cabecera(fechaFormateada, fecha);
-    this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal).pipe(take(1)).subscribe((data: any) => {
+    
+    // Crear objeto caja_movi basado en los datos del pedido
+    let caja_movi = this.crearCajaMovi(pedido, cabecera, fecha);
+    
+    this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, caja_movi).pipe(take(1)).subscribe((data: any) => {
       console.log(data.mensaje);
       this.imprimir(this.itemsEnCarrito, this.numerocomprobante, fechaFormateada, this.suma);
       //actualizar indices
@@ -717,5 +740,68 @@ try {
       text: message,
       confirmButtonText: 'Aceptar'
     });
+  }
+  
+  // Método para crear el objeto caja_movi a partir de los datos del pedido
+  crearCajaMovi(pedido: any, cabecera: any, fecha: Date): any {
+    // Buscamos un artículo del pedido para obtener la información relevante
+    if (!pedido || pedido.length === 0) {
+      return null;
+    }
+
+    // Tomamos el primer item del pedido para base
+    const primerItem = pedido[0];
+    
+    // Buscamos la información de tarjeta asociada a este pedido
+    let tarjetaInfo: any = null;
+    if (primerItem.cod_tar) {
+      tarjetaInfo = this.tarjetas.find(t => t.cod_tarj.toString() === primerItem.cod_tar.toString());
+    }
+    
+    // Asegurarse de que fecha sea un objeto Date válido
+    const fechaObj = fecha instanceof Date ? fecha : new Date();
+    
+    // Formatear la fecha en formato YYYY-MM-DD
+    const fechaFormateada = fechaObj.toISOString().split('T')[0];
+    
+    // Función auxiliar para limitar valores numéricos
+    const limitNumericValue = (value: any, limit: number) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numValue = parseInt(value);
+      return !isNaN(numValue) ? Math.min(numValue, limit) : null;
+    };
+    
+    // Crear el objeto caja_movi con los campos solicitados
+    const cajaMovi = {
+      sucursal: limitNumericValue(this.sucursal, 999999),
+      codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
+      num_operacion: 0, // Se asignará en el backend cuando se genere el id_num
+      fecha_mov: fechaFormateada,
+      importe_mov: this.suma,
+      descripcion_mov: primerItem.nomart || '',
+      fecha_emibco: primerItem.fechacheque || null,
+      banco: limitNumericValue(primerItem.codigobanco, 9999999999),
+      num_cheque: limitNumericValue(primerItem.ncheque, 9999999999),
+      cuenta_mov: limitNumericValue(primerItem.ncuenta, 999999),
+      cliente: limitNumericValue(primerItem.idcli || cabecera.cliente, 9999999999),
+      proveedor: null, // Siempre null como indicado
+      plaza_cheque: primerItem.plaza || '',
+      codigo_mbco: null, // Siempre null como indicado
+      desc_bancaria: null, // Siempre null como indicado
+      filler: null, // Siempre null como indicado
+      fecha_cobro_bco: null, // Siempre null como indicado
+      fecha_vto_bco: null, // Siempre null como indicado
+      tipo_movi: 'A',
+      caja: null, // Siempre null como indicado
+      letra: cabecera.letra || '',
+      punto_venta: limitNumericValue(this.puntoventa, 9999),
+      tipo_comprobante: primerItem.tipodoc || this.tipoDoc,
+      numero_comprobante: limitNumericValue(this.numerocomprobante, 99999999),
+      marca_cerrado: null,
+      usuario: primerItem.emailop || sessionStorage.getItem('emailOp') || '',
+      fecha_proceso: fechaFormateada
+    };
+    
+    return cajaMovi;
   }
 }

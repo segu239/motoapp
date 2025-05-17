@@ -858,6 +858,7 @@ public function PedidossucxappCompleto_post() {
         $pedidos = isset($data["pedidos"]) ? $data["pedidos"] : null;
         $cabecera = isset($data["cabecera"]) ? $data["cabecera"] : null;
         $id_vend = isset($data["id_vend"]) ? $data["id_vend"] : null;
+        $caja_movi = isset($data["caja_movi"]) ? $data["caja_movi"] : null;
 
         // Verificar que los datos necesarios no sean nulos
         if ($pedidos && $cabecera && $id_vend) {
@@ -866,18 +867,43 @@ public function PedidossucxappCompleto_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
-            // Insertar cabecera y obtener el id_num generado
-            $this->db->set($cabecera);
-            $this->db->insert($tabla_cabecera);
-            if ($this->db->affected_rows() > 0) {
-                $id_num = $this->db->insert_id(); // Obtener el id_num generado
-                $contador_exitosas = $this->db->affected_rows();
-            } else {
-                log_message('error', 'Error al insertar en la tabla ' . $tabla_cabecera . ': ' . json_encode($cabecera));
+            // Validar valores numéricos para evitar desbordamientos
+            // Cliente, si es numérico, verificar límite
+            if (isset($cabecera['cliente']) && is_numeric($cabecera['cliente']) && $cabecera['cliente'] > 999999) {
+                $cabecera['cliente'] = substr($cabecera['cliente'], 0, 6); // Truncar a 6 dígitos
+            }
+            
+            // Controlar otros campos numéricos que puedan causar problemas
+            $numeric_fields_to_check = ['numero_int', 'numero_fac', 'anumero_com'];
+            foreach ($numeric_fields_to_check as $field) {
+                if (isset($cabecera[$field]) && is_numeric($cabecera[$field]) && $cabecera[$field] > 999999) {
+                    $cabecera[$field] = 999999; // Limitar al máximo permitido
+                }
+            }
+            
+            try {
+                // Insertar cabecera y obtener el id_num generado
+                $this->db->set($cabecera);
+                $this->db->insert($tabla_cabecera);
+                if ($this->db->affected_rows() > 0) {
+                    $id_num = $this->db->insert_id(); // Obtener el id_num generado
+                    $contador_exitosas = $this->db->affected_rows();
+                } else {
+                    log_message('error', 'Error al insertar en la tabla ' . $tabla_cabecera . ': ' . json_encode($cabecera));
+                    $this->db->trans_rollback();
+                    $respuesta = array(
+                        "error" => true,
+                        "mensaje" => "Error al insertar cabecera, transacción revertida"
+                    );
+                    $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+                    return;
+                }
+            } catch (Exception $e) {
+                log_message('error', 'Excepción al insertar en ' . $tabla_cabecera . ': ' . $e->getMessage());
                 $this->db->trans_rollback();
                 $respuesta = array(
                     "error" => true,
-                    "mensaje" => "Error al insertar cabecera, transacción revertida"
+                    "mensaje" => "Error al insertar cabecera: " . $e->getMessage()
                 );
                 $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
                 return;
@@ -891,6 +917,63 @@ public function PedidossucxappCompleto_post() {
                     $contador_exitosas += $this->db->affected_rows();
                 } else {
                     log_message('error', 'Error al insertar en la tabla ' . $tabla . ': ' . json_encode($valor));
+                }
+            }
+            
+            // Insertar caja_movi si está presente
+            if ($caja_movi) {
+                // Asignar el id_num de la cabecera al movimiento de caja
+                $caja_movi['num_operacion'] = $id_num;
+                
+                // Limpiar campos de fecha nulos o vacíos
+                foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
+                    if (isset($caja_movi[$dateField]) && empty($caja_movi[$dateField])) {
+                        $caja_movi[$dateField] = null;
+                    }
+                }
+                
+                // Validar campos numéricos para prevenir desbordamientos
+                $numeric_limit_fields = [
+                    'sucursal' => 999999,
+                    'codigo_mov' => 9999999999,
+                    'num_operacion' => 9999999999,
+                    'banco' => 9999999999,
+                    'num_cheque' => 9999999999,
+                    'cuenta_mov' => 999999,
+                    'cliente' => 9999999999,
+                    'proveedor' => 9999999999,
+                    'codigo_mbco' => 9999999999,
+                    'punto_venta' => 9999,
+                    'numero_comprobante' => 99999999
+                ];
+                
+                foreach ($numeric_limit_fields as $field => $limit) {
+                    if (isset($caja_movi[$field]) && !empty($caja_movi[$field])) {
+                        if (is_numeric($caja_movi[$field]) && $caja_movi[$field] > $limit) {
+                            $caja_movi[$field] = $limit;
+                        }
+                    } else {
+                        $caja_movi[$field] = null;
+                    }
+                }
+                
+                // Limpiar campos de texto nulos o vacíos
+                foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
+                    if (isset($caja_movi[$strField]) && $caja_movi[$strField] === '') {
+                        $caja_movi[$strField] = null;
+                    }
+                }
+                
+                try {
+                    $this->db->insert('caja_movi', $caja_movi);
+                    if ($this->db->affected_rows() > 0) {
+                        $contador_exitosas += $this->db->affected_rows();
+                    } else {
+                        log_message('error', 'Error al insertar en la tabla caja_movi: ' . json_encode($caja_movi));
+                    }
+                } catch (Exception $e) {
+                    log_message('error', 'Excepción al insertar en caja_movi: ' . $e->getMessage());
+                    // No hacemos rollback aquí, porque permitimos que continúe incluso si falla el insert de caja_movi
                 }
             }
 

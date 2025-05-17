@@ -161,3 +161,15 @@ El enrutamiento está configurado en `app-routing.module.ts` y todas las rutas p
 5. **Responder en español**: Las interacciones con los usuarios deben ser en español, ya que es el idioma principal de la aplicación.
 
 6. **Postgres**: Siempre que diga ingresa a postgres Ingresaras a la base utilizando el MCP postgres.
+
+## paths personalizados
+
+Claude, los siguientes paths son referencias cruciales para las operaciones dentro del proyecto. Utilízalos cuando se te indique o cuando la tarea lo requiera explícitamente:
+
+/PP (Path Principal del Proyecto): C:/Users/Telemetria/T49E2PT/angular/motoapp
+Este es el directorio raíz principal del proyecto motoapp.
+/PBC (Path Backend Carga): C:/Users/Telemetria/T49E2PT/angular/motoapp/src
+Este es el directorio donde se encuentra el archivo Carga.php.txt del backend.
+/PBD (Path Backend Descarga): C:/Users/Telemetria/T49E2PT/angular/motoapp/src
+Este es el directorio donde se encuentra el archivo Descarga.php.txt del backend.
+

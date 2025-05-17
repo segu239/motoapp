@@ -39,15 +39,15 @@ export class SubirdataService {
         "id_vend": id
       });
   }
-  subirDatosPedidos(data: any, cabecera: any, id: any) {
+  subirDatosPedidos(data: any, cabecera: any, id: any, caja_movi?: any) {
     console.log(data);
     console.log(id);
     return this.http.post(UrlpedidossucxappCompleto,
       {
         "pedidos": data,
         "cabecera": cabecera,
-        "id_vend": id
-
+        "id_vend": id,
+        "caja_movi": caja_movi
       });
   }
 
