@@ -2,264 +2,352 @@
     <div class="col-lg-12">
         <div class="card">
             <div class="card-body">
-                <form [formGroup]="cajamoviForm" (ngSubmit)="onSubmit()" class="form-horizontal">
+                <form ngNativeValidate [formGroup]="cajamoviForm" (ngSubmit)="onSubmit()" class="form-horizontal">
+                    <style>
+                        .ng-invalid.ng-touched:not(form) {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                        .form-group.has-danger .form-control {
+                            border-color: #f62d51;
+                            border-left: 5px solid #f62d51;
+                        }
+                    </style>
                     <div class="form-body">
                         <h3 class="box-title">Editar Movimiento de Caja</h3>
                         <hr class="m-t-0 m-b-40">
-                        <!-- Repetir la estructura de campos de newcajamovi.component.html -->
-                        <!-- Asegúrate de que los formControlName coincidan -->
-                         <div class="row">
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Sucursal</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="sucursal" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la sucursal (numérico)</small>
+                        
+                        <!-- SECCIÓN GENERAL -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h4 class="mb-0"><i class="fa fa-info-circle"></i> General</h4>
+                            </div>
+                            <div class="card-body">
+                                <!-- Se ocultó el campo de sucursal, ahora se obtiene del sessionStorage -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código Mov.</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="codigo_mov" (change)="onConceptoChange()">
+                                                    <option [ngValue]="null">Seleccione un concepto</option>
+                                                    <option *ngFor="let concepto of conceptos" [value]="concepto.id_concepto">
+                                                        {{ concepto.descripcion }} ({{ concepto.ingreso_egreso == '0' ? 'Ingreso' : 'Egreso' }})
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione un concepto de movimiento</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Espacio disponible para otro campo si se necesita -->
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código Mov.</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codigo_mov" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de movimiento (numérico)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">N° Operación</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="num_operacion" placeholder="">
+                                                <small class="form-control-feedback">Número de operación</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Fecha Mov.</label>
+                                            <div class="col-md-9">
+                                                <input type="date" class="form-control" formControlName="fecha_mov" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha del movimiento</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">N° Operación</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="num_operacion" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el número de operación (numérico)</small>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6 offset-md-3">
+                                        <div class="custom-control custom-switch">
+                                            <input type="checkbox" class="custom-control-input" id="switchClienteProveedor" 
+                                                [checked]="isClienteSelected" (change)="toggleClienteProveedor()">
+                                            <label class="custom-control-label" for="switchClienteProveedor">
+                                                <span *ngIf="isClienteSelected">Cliente seleccionado</span>
+                                                <span *ngIf="!isClienteSelected">Proveedor seleccionado</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Mov.</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" formControlName="fecha_mov" placeholder="">
-                                        <small class="form-control-feedback">Seleccione la fecha del movimiento</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Cliente</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="cliente">
+                                                    <option [ngValue]="null">Seleccione un cliente</option>
+                                                    <option *ngFor="let cliente of clientes" [value]="cliente.cliente">
+                                                        {{ cliente.nombre }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione un cliente</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Proveedor</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="proveedor">
+                                                    <option [ngValue]="null">Seleccione un proveedor</option>
+                                                    <option *ngFor="let proveedor of proveedores" [value]="proveedor.cod_prov">
+                                                        {{ proveedor.nombre }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione un proveedor</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Importe Mov.</label>
-                                    <div class="col-md-9">
-                                        <input type="number" step="0.01" class="form-control" formControlName="importe_mov" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el importe (numérico, 2 decimales)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Tipo Movi</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="tipo_movi" readonly>
+                                                <small class="form-control-feedback">Tipo de movimiento (fijado a MANUAL)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Caja</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="caja">
+                                                    <option [ngValue]="null">Seleccione una caja</option>
+                                                    <option *ngFor="let caja of cajas" [value]="caja.id_caja">
+                                                        {{ caja.descripcion }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione una caja</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Descripción</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="descripcion_mov" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la descripción (máx. 80 caracteres)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Código MBco</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="codigo_mbco" placeholder="" readonly>
+                                                <small class="form-control-feedback">Código MBco (solo lectura)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Desc. Bancaria</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="desc_bancaria" placeholder="" readonly>
+                                                <small class="form-control-feedback">Descripción bancaria (solo lectura)</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Emi. Bco</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" formControlName="fecha_emibco" placeholder="">
-                                        <small class="form-control-feedback">Seleccione la fecha de emisión bancaria (opcional)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Banco</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="banco">
+                                                    <option *ngFor="let banco of bancos" [value]="banco.codigo_banco">
+                                                        {{ banco.descripcion }}
+                                                    </option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione un banco (opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Marca Cerrado</label>
+                                            <div class="col-md-9">
+                                                <select class="form-control" formControlName="marca_cerrado">
+                                                    <option value="0">ABIERTA</option>
+                                                    <option value="1">CERRADA</option>
+                                                </select>
+                                                <small class="form-control-feedback">Seleccione el estado de cierre</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Banco</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="banco" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de banco (numérico, opcional)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Fecha Proceso</label>
+                                            <div class="col-md-9">
+                                                <input type="date" class="form-control" formControlName="fecha_proceso" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha de proceso (opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Descripción</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="descripcion_mov" placeholder="">
+                                                <small class="form-control-feedback">Ingrese una descripción para el movimiento</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">N° Cheque</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="num_cheque" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el número de cheque (numérico, opcional)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Importe</label>
+                                            <div class="col-md-9">
+                                                <input type="number" step="0.01" class="form-control" formControlName="importe_mov" placeholder="">
+                                                <small class="form-control-feedback">
+                                                    Ingrese el importe del movimiento. 
+                                                    <span *ngIf="conceptoSeleccionado" class="text-info">
+                                                        Tipo: {{ conceptoSeleccionado.ingreso_egreso == '0' ? 'Ingreso (+)' : 'Egreso (-)' }}
+                                                    </span>
+                                                </small>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Cuenta Mov.</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="cuenta_mov" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la cuenta de movimiento (numérico, máx 6 dígitos, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Cliente</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="cliente" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de cliente (numérico, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Proveedor</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="proveedor" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de proveedor (numérico, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Plaza Cheque</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="plaza_cheque" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la plaza del cheque (máx. 30 caracteres, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Código MBco</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="codigo_mbco" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código MBco (numérico, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                           <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Desc. Bancaria</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="desc_bancaria" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la descripción bancaria (máx. 80 caracteres, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                           <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Marca Cerrado</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="marca_cerrado" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la marca de cerrado (0 o 1)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Cobro Bco</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" formControlName="fecha_cobro_bco" placeholder="">
-                                        <small class="form-control-feedback">Seleccione la fecha de cobro bancaria (opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Vto Bco</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" formControlName="fecha_vto_bco" placeholder="">
-                                        <small class="form-control-feedback">Seleccione la fecha de vencimiento bancaria (opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Tipo Movi</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="tipo_movi" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el tipo de movimiento (1 caracter)</small>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Caja</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="caja" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el código de caja (numérico)</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Letra</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="letra" placeholder="">
-                                        <small class="form-control-feedback">Ingrese la letra (1 caracter, opcional)</small>
-                                    </div>
-                                </div>
-                            </div>
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Pto. Venta</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="punto_venta" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el punto de venta (numérico, 4 dígitos, opcional)</small>
+                                    <div class="col-md-6">
+                                        <!-- id_movimiento es serial, no se ingresa -->
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                           <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Tipo Comp.</label>
-                                    <div class="col-md-9">
-                                        <input type="text" class="form-control" formControlName="tipo_comprobante" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el tipo de comprobante (2 caracteres, opcional)</small>
+                        
+                        <!-- SECCIÓN CHEQUE -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-success text-white">
+                                <h4 class="mb-0"><i class="fa fa-credit-card"></i> Cheque</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Fecha Emi. Bco</label>
+                                            <div class="col-md-9">
+                                                <input type="date" class="form-control" formControlName="fecha_emibco" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha de emisión bancaria (opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">N° Cheque</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="num_cheque" placeholder="">
+                                                <small class="form-control-feedback">Ingrese el número de cheque (numérico, opcional)</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">N° Comp.</label>
-                                    <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="numero_comprobante" placeholder="">
-                                        <small class="form-control-feedback">Ingrese el número de comprobante (numérico, 8 dígitos, opcional)</small>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Cuenta Mov.</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="cuenta_mov" placeholder="">
+                                                <small class="form-control-feedback">Ingrese la cuenta de movimiento (numérico, máx 6 dígitos, opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Plaza Cheque</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="plaza_cheque" placeholder="">
+                                                <small class="form-control-feedback">Ingrese la plaza del cheque (máx. 30 caracteres, opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Fecha Cobro Bco</label>
+                                            <div class="col-md-9">
+                                                <input type="date" class="form-control" formControlName="fecha_cobro_bco" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha de cobro bancaria (opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Fecha Vto Bco</label>
+                                            <div class="col-md-9">
+                                                <input type="date" class="form-control" formControlName="fecha_vto_bco" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha de vencimiento bancaria (opcional)</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="row">
-                             <div class="col-md-6">
-                                <div class="form-group row">
-                                    <label class="control-label text-right col-md-3">Fecha Proceso</label>
-                                    <div class="col-md-9">
-                                        <input type="date" class="form-control" formControlName="fecha_proceso" placeholder="">
-                                        <small class="form-control-feedback">Seleccione la fecha de proceso (opcional)</small>
+                        
+                        <!-- SECCIÓN COMPROBANTE -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-warning text-white">
+                                <h4 class="mb-0"><i class="fa fa-file-text"></i> Comprobante</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Letra</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="letra" placeholder="">
+                                                <small class="form-control-feedback">Ingrese la letra (1 caracter, opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Pto. Venta</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="punto_venta" placeholder="">
+                                                <small class="form-control-feedback">Ingrese el punto de venta (numérico, 4 dígitos, opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">Tipo Comp.</label>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" formControlName="tipo_comprobante" placeholder="">
+                                                <small class="form-control-feedback">Ingrese el tipo de comprobante (2 caracteres, opcional)</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group row">
+                                            <label class="control-label text-right col-md-3">N° Comp.</label>
+                                            <div class="col-md-9">
+                                                <input type="number" class="form-control" formControlName="numero_comprobante" placeholder="">
+                                                <small class="form-control-feedback">Ingrese el número de comprobante (numérico, 8 dígitos, opcional)</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                           <!-- id_movimiento no se edita -->
                         </div>
+                        
                     </div>
                     <hr>
                     <div class="form-actions">
@@ -267,7 +355,7 @@
                             <div class="col-md-6">
                                 <div class="row">
                                     <div class="col-md-offset-3 col-md-9">
-                                        <button type="submit" class="btn btn-success" [disabled]="!cajamoviForm.valid">Actualizar</button>
+                                        <button type="submit" class="btn btn-success">Actualizar</button>
                                         <button type="button" class="btn btn-inverse" (click)="onCancel()">Cancelar</button>
                                     </div>
                                 </div>

@@ -1,0 +1,8 @@
+.ng-invalid.ng-touched:not(form) {
+    border-color: #f62d51;
+    border-left: 5px solid #f62d51;
+}
+.form-group.has-danger .form-control {
+    border-color: #f62d51;
+    border-left: 5px solid #f62d51;
+}
