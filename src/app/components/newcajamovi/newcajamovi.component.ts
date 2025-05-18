@@ -20,7 +20,7 @@ export class NewCajamoviComponent {
   public proveedores: any[] = []; // Nueva propiedad para almacenar la lista de proveedores
   public cajas: any[] = []; // Array para almacenar las cajas
   public isClienteSelected: boolean = true; // Por defecto se selecciona cliente
-  public isEgreso: boolean = false; // Por defecto no es egreso
+  public conceptoSeleccionado: any = null; // Para almacenar el concepto seleccionado
 
   constructor(
     private subirdata: SubirdataService,
@@ -85,9 +85,15 @@ export class NewCajamoviComponent {
     }
   }
 
-  // Método para cambiar entre ingreso y egreso
-  toggleEgreso() {
-    this.isEgreso = !this.isEgreso;
+  // Método para manejar el cambio de concepto seleccionado
+  onConceptoChange() {
+    const codigoMov = this.cajamoviForm.get('codigo_mov')?.value;
+    if (codigoMov) {
+      // Buscar el concepto seleccionado en la lista de conceptos
+      this.conceptoSeleccionado = this.conceptos.find(concepto => concepto.id_concepto == codigoMov);
+    } else {
+      this.conceptoSeleccionado = null;
+    }
   }
 
   guardar(form: FormGroup) {
@@ -101,13 +107,22 @@ export class NewCajamoviComponent {
         proveedor: !this.isClienteSelected ? this.cajamoviForm.get('proveedor')?.value : null
       };
       
-      // Aplicar factor de -1 si es un egreso
-      if (this.isEgreso && nuevoCajamovi.importe_mov !== null) {
-        nuevoCajamovi.importe_mov = parseFloat(nuevoCajamovi.importe_mov) * -1;
+      // Aplicar factor de -1 si es un egreso (ingreso_egreso = 1)
+      if (this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso === '1' && nuevoCajamovi.importe_mov !== null) {
+        nuevoCajamovi.importe_mov = Math.abs(parseFloat(nuevoCajamovi.importe_mov)) * -1;
+      } else if (nuevoCajamovi.importe_mov !== null) {
+        // Asegurar que el importe sea positivo para ingresos
+        nuevoCajamovi.importe_mov = Math.abs(parseFloat(nuevoCajamovi.importe_mov));
       }
       
       // Agregar la sucursal desde sessionStorage
       nuevoCajamovi.sucursal = this.sucursal;
+      
+      // Agregar el usuario desde sessionStorage
+      const emailOp = sessionStorage.getItem('emailOp');
+      if (emailOp) {
+        nuevoCajamovi.usuario = emailOp;
+      }
       
       // Convertir campos vacíos a null para la base de datos
       for (const key in nuevoCajamovi) {

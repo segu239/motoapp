@@ -30,10 +30,10 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Código Mov.</label>
                                             <div class="col-md-9">
-                                                <select class="form-control" formControlName="codigo_mov">
+                                                <select class="form-control" formControlName="codigo_mov" (change)="onConceptoChange()">
                                                     <option [ngValue]="null">Seleccione un concepto</option>
                                                     <option *ngFor="let concepto of conceptos" [value]="concepto.id_concepto">
-                                                        {{ concepto.descripcion }}
+                                                        {{ concepto.descripcion }} ({{ concepto.ingreso_egreso == '0' ? 'Ingreso' : 'Egreso' }})
                                                     </option>
                                                 </select>
                                                 <small class="form-control-feedback">Seleccione un concepto de movimiento</small>
@@ -218,14 +218,12 @@
                                             <label class="control-label text-right col-md-3">Importe</label>
                                             <div class="col-md-9">
                                                 <input type="number" step="0.01" class="form-control" formControlName="importe_mov" placeholder="">
-                                                <div class="mt-2">
-                                                    <div class="custom-control custom-checkbox">
-                                                        <input type="checkbox" class="custom-control-input" id="checkboxEgreso" 
-                                                            [checked]="isEgreso" (change)="toggleEgreso()">
-                                                        <label class="custom-control-label" for="checkboxEgreso">Egreso</label>
-                                                    </div>
-                                                </div>
-                                                <small class="form-control-feedback">Ingrese el importe del movimiento</small>
+                                                <small class="form-control-feedback">
+                                                    Ingrese el importe del movimiento. 
+                                                    <span *ngIf="conceptoSeleccionado" class="text-info">
+                                                        Tipo: {{ conceptoSeleccionado.ingreso_egreso == '0' ? 'Ingreso (+)' : 'Egreso (-)' }}
+                                                    </span>
+                                                </small>
                                             </div>
                                         </div>
                                     </div>
