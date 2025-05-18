@@ -60,7 +60,7 @@ export class NewCajamoviComponent {
       marca_cerrado: new FormControl(0, Validators.compose([Validators.required, Validators.pattern(/^[01]$/)])),
       fecha_cobro_bco: new FormControl(null),
       fecha_vto_bco: new FormControl(null),
-      tipo_movi: new FormControl('', Validators.compose([Validators.required, Validators.maxLength(1)])),
+      tipo_movi: new FormControl('M', Validators.compose([Validators.required, Validators.maxLength(1)])),
       caja: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       letra: new FormControl('', Validators.maxLength(1)),
       punto_venta: new FormControl(null, Validators.pattern(/^[0-9]{1,4}$/)),

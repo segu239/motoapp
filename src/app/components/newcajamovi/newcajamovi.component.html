@@ -115,11 +115,14 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Tipo Movi</label>
                                             <div class="col-md-9">
+                                                <!-- Comentado temporalmente
                                                 <select class="form-control" formControlName="tipo_movi">
                                                     <option value="M">MANUAL</option>
                                                     <option value="A">AUTOMATICO</option>
                                                 </select>
-                                                <small class="form-control-feedback">Seleccione el tipo de movimiento</small>
+                                                -->
+                                                <input type="text" class="form-control" formControlName="tipo_movi" readonly>
+                                                <small class="form-control-feedback">Tipo de movimiento (fijado a MANUAL)</small>
                                             </div>
                                         </div>
                                     </div>
