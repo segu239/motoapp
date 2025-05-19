@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SubirdataService } from '../../services/subirdata.service';
-// No se necesita CargardataService aquí si no hay datos que cargar (como dropdowns)
+import { CargardataService } from '../../services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -11,22 +11,45 @@ import Swal from 'sweetalert2';
   templateUrl: './newcajaconcepto.component.html',
   styleUrls: ['./newcajaconcepto.component.css'] // Asumiendo que existe o se creará un archivo CSS
 })
-export class NewcajaconceptoComponent {
+export class NewcajaconceptoComponent implements OnInit {
   public nuevocajaconceptoForm!: FormGroup;
   public descripcionFlag: boolean = false;
   public tipoConceptoFlag: boolean = false;
   public fijaFlag: boolean = false;
   public ingresoEgresoFlag: boolean = false;
   public idCajaFlag: boolean = false;
+  
+  // Lista de cajas para el select
+  public cajas: any[] = [];
 
   constructor(
     private subirdata: SubirdataService,
     private router: Router,
-    private fb: FormBuilder
-    // private cargardata: CargardataService // No necesario aquí por ahora
+    private fb: FormBuilder,
+    private cargardata: CargardataService
   ) {
     this.cargarForm();
     this.monitorFormChanges();
+  }
+  
+  ngOnInit(): void {
+    this.loadCajas();
+  }
+  
+  loadCajas(): void {
+    this.cargardata.getCajaLista().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.cajas = response.mensaje;
+          console.log('Cajas cargadas:', this.cajas);
+        } else {
+          console.error('Error loading cajas:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading cajas:', error);
+      }
+    });
   }
 
   cargarForm() {

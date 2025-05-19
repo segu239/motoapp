@@ -45,7 +45,8 @@
                             </td>
                             <td>
                                 <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
-                                (click)="confirmDelete(cajaconcepto)"></p-button>
+                                (click)="confirmDelete(cajaconcepto)" [disabled]="cajaconcepto.fija == 1"
+                                [title]="cajaconcepto.fija == 1 ? 'Este concepto es fijo y no puede ser eliminado' : 'Eliminar concepto'"></p-button>
                             </td>
                         </tr>
                     </ng-template>

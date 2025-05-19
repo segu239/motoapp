@@ -50,10 +50,12 @@
                          <div class="row">
                             <div class="col-md-6">
                                 <div [ngClass]="{'form-group row': true, 'has-danger': idCajaFlag}">
-                                    <label class="control-label text-right col-md-3">ID Caja</label>
+                                    <label class="control-label text-right col-md-3">Caja</label>
                                     <div class="col-md-9">
-                                        <input type="number" class="form-control" formControlName="id_caja" placeholder="">
-                                        <small class="form-control-feedback">Valor numérico (máx. 10 dígitos)</small>
+                                        <select class="form-control" formControlName="id_caja">
+                                            <option *ngFor="let caja of cajas" [value]="caja.id_caja">{{ caja.descripcion }}</option>
+                                        </select>
+                                        <small class="form-control-feedback">Seleccione una caja</small>
                                     </div>
                                 </div>
                             </div>

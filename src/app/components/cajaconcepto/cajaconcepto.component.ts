@@ -35,7 +35,12 @@ export class CajaconceptoComponent {
     this.cargardataService.getCajaconcepto().subscribe({
       next: (response: any) => {
         if (!response.error) {
-          this.cajaconceptos = response.mensaje;
+          // Asegurarse de que fija sea de tipo number
+          this.cajaconceptos = response.mensaje.map((concepto: any) => ({
+            ...concepto,
+            fija: typeof concepto.fija === 'string' ? parseInt(concepto.fija, 10) : concepto.fija
+          }));
+          console.log('Conceptos cargados:', this.cajaconceptos);
         } else {
           console.error('Error loading cajaconceptos:', response.mensaje);
           Swal.fire({
@@ -69,6 +74,21 @@ export class CajaconceptoComponent {
   }
 
   confirmDelete(cajaconcepto: CajaConcepto) {
+    // No permitir eliminar conceptos fijos
+    // Convertir a número si es necesario
+    const fijaValue = typeof cajaconcepto.fija === 'string' ? parseInt(cajaconcepto.fija, 10) : cajaconcepto.fija;
+    console.log('Valor de fija:', cajaconcepto.fija, 'Tipo:', typeof cajaconcepto.fija, 'Convertido:', fijaValue);
+    
+    if (fijaValue === 1) {
+      Swal.fire({
+        title: 'Operación no permitida',
+        text: 'Este concepto es fijo y no puede ser eliminado',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar'
+      });
+      return;
+    }
+    
     Swal.fire({
       title: '¿Está seguro?',
       text: `¿Desea eliminar el concepto "${cajaconcepto.descripcion}"?`,
@@ -86,6 +106,17 @@ export class CajaconceptoComponent {
   }
 
   deleteCajaconcepto(cajaconcepto: CajaConcepto) {
+    // Doble verificación para evitar eliminar conceptos fijos
+    const fijaValue = typeof cajaconcepto.fija === 'string' ? parseInt(cajaconcepto.fija, 10) : cajaconcepto.fija;
+    if (fijaValue === 1) {
+      Swal.fire({
+        title: 'Operación no permitida',
+        text: 'Este concepto es fijo y no puede ser eliminado',
+        icon: 'warning',
+        confirmButtonText: 'Aceptar'
+      });
+      return;
+    }
     this.subirdataService.eliminarCajaconcepto(cajaconcepto.id_concepto).subscribe({
       next: (response: any) => {
         if (!response.error) {
