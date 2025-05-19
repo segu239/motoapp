@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SubirdataService } from '../../services/subirdata.service';
-// No CargardataService si no se necesita cargar nada extra
+import { CargardataService } from '../../services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
@@ -25,14 +25,18 @@ export class EditcajaconceptoComponent implements OnInit {
     private subirdata: SubirdataService,
     private router: Router,
     private route: ActivatedRoute,
-    private fb: FormBuilder
-    // private cargardata: CargardataService, // No necesario aquí
+    private fb: FormBuilder,
+    private cargardata: CargardataService
   ) {}
 
   ngOnInit(): void {
     this.initForm();
     this.loadCajaConceptoData();
+    this.loadCajas();
   }
+
+  // Lista de cajas para el select
+  public cajas: any[] = [];
 
   initForm(): void {
     this.cajaconceptoForm = this.fb.group({
@@ -44,11 +48,11 @@ export class EditcajaconceptoComponent implements OnInit {
         Validators.required,
         Validators.maxLength(2)
       ])),
-      fija: new FormControl(0, Validators.compose([
+      fija: new FormControl({value: 0, disabled: true}, Validators.compose([
         Validators.required,
         Validators.pattern(/^[01]$/)
       ])),
-      ingreso_egreso: new FormControl(0, Validators.compose([
+      ingreso_egreso: new FormControl({value: 0, disabled: true}, Validators.compose([
         Validators.required,
         Validators.pattern(/^[01]$/)
       ])),
@@ -100,14 +104,29 @@ export class EditcajaconceptoComponent implements OnInit {
       });
     }
 
+  loadCajas(): void {
+    this.cargardata.getCajaLista().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.cajas = response.mensaje;
+        } else {
+          console.error('Error loading cajas:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading cajas:', error);
+      }
+    });
+  }
+
   onSubmit(): void {
     if (this.cajaconceptoForm.valid) {
       const cajaconceptoData = {
         id_concepto: this.id_concepto, // Incluir el ID para la actualización
         descripcion: this.cajaconceptoForm.value.descripcion,
         tipo_concepto: this.cajaconceptoForm.value.tipo_concepto,
-        fija: this.cajaconceptoForm.value.fija,
-        ingreso_egreso: this.cajaconceptoForm.value.ingreso_egreso,
+        fija: this.cajaconceptoForm.controls['fija'].value,
+        ingreso_egreso: this.cajaconceptoForm.controls['ingreso_egreso'].value,
         id_caja: this.cajaconceptoForm.value.id_caja
       };
       console.log("Updating with data:", cajaconceptoData);
