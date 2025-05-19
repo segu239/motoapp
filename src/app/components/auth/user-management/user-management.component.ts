@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { User, UserRole } from '../../../interfaces/user';
+import { CrudService } from '../../../services/crud.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -16,9 +17,12 @@ export class UserManagementComponent implements OnInit {
   currentUserId: string | null = null;
   loading = false;
   userRoles = Object.values(UserRole);
+  sucursales: any[] = [];
+  sucursalesSeleccionadas: number[] = [];
   
   constructor(
     private authService: AuthService,
+    private crudService: CrudService,
     private fb: FormBuilder
   ) {
     this.userForm = this.fb.group({
@@ -30,28 +34,48 @@ export class UserManagementComponent implements OnInit {
       nivel: [UserRole.USER, [Validators.required]],
       username: ['']
     });
+    
+    // Configuramos el comportamiento de password de manera segura
+    this.userForm.get('password')?.valueChanges.subscribe(val => {
+      // No usar updateValueAndValidity para evitar recursión
+      if (this.editMode) {
+        this.userForm.get('password')?.clearValidators();
+        if (val && val.length > 0) {
+          this.userForm.get('password')?.addValidators([Validators.minLength(6)]);
+        }
+      } else {
+        this.userForm.get('password')?.clearValidators();
+        this.userForm.get('password')?.addValidators([Validators.required, Validators.minLength(6)]);
+      }
+    });
   }
   
   ngOnInit(): void {
     this.loadUsers();
+    this.loadSucursales();
     
-    // El campo password es obligatorio solo al crear usuarios nuevos
-    this.userForm.get('password')?.valueChanges.subscribe(val => {
-      if (this.editMode) {
-        this.userForm.get('password')?.setValidators(val ? [Validators.minLength(6)] : null);
-      } else {
-        this.userForm.get('password')?.setValidators([Validators.required, Validators.minLength(6)]);
+    // Eliminamos los suscriptores que estaban causando el problema de recursión
+  }
+  
+  loadSucursales(): void {
+    this.crudService.getListSnap('sucursales').subscribe(
+      data => {
+        this.sucursales = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            key: item.key,
+            nombre: payload.nombre,
+            value: payload.value
+          };
+        });
+        // Ordenar por nombre
+        this.sucursales.sort((a, b) => a.nombre.localeCompare(b.nombre));
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        this.showError('Error al cargar las sucursales');
       }
-      this.userForm.get('password')?.updateValueAndValidity();
-    });
-
-    // Si no hay username, usar el nombre
-    this.userForm.get('nombre')?.valueChanges.subscribe(val => {
-      const usernameControl = this.userForm.get('username');
-      if (usernameControl && !usernameControl.value) {
-        usernameControl.setValue(val);
-      }
-    });
+    );
   }
   
   loadUsers(): void {
@@ -78,7 +102,8 @@ export class UserManagementComponent implements OnInit {
     this.loading = true;
     
     const userData: User = {
-      ...this.userForm.value
+      ...this.userForm.value,
+      sucursalesPermitidas: this.sucursalesSeleccionadas.length > 0 ? this.sucursalesSeleccionadas : undefined
     };
     
     if (this.editMode && this.currentUserId) {
@@ -123,6 +148,22 @@ export class UserManagementComponent implements OnInit {
     
     // Limpiar el campo de contraseña
     this.userForm.get('password')?.setValue('');
+    
+    // Cargar sucursales permitidas
+    this.sucursalesSeleccionadas = user.sucursalesPermitidas || [];
+    
+    // Marcar los checkboxes correspondientes
+    setTimeout(() => {
+      this.sucursalesSeleccionadas.forEach(sucursalId => {
+        const checkbox = document.getElementById('sucursal_' + sucursalId) as HTMLInputElement;
+        if (checkbox) {
+          checkbox.checked = true;
+        }
+      });
+      
+      // Actualizar el checkbox "seleccionar todas"
+      this.actualizarCheckboxSeleccionarTodas();
+    }, 100);
   }
   
   deleteUser(user: User): void {
@@ -159,6 +200,21 @@ export class UserManagementComponent implements OnInit {
     });
     this.editMode = false;
     this.currentUserId = null;
+    this.sucursalesSeleccionadas = [];
+    
+    // Desmarcar todos los checkboxes
+    this.sucursales.forEach(sucursal => {
+      const checkbox = document.getElementById('sucursal_' + sucursal.value) as HTMLInputElement;
+      if (checkbox) {
+        checkbox.checked = false;
+      }
+    });
+    
+    // Desmarcar el checkbox "seleccionar todas"
+    const checkboxAll = document.getElementById('todas_sucursales') as HTMLInputElement;
+    if (checkboxAll) {
+      checkboxAll.checked = false;
+    }
   }
 
   migrateUsers(): void {
@@ -241,5 +297,62 @@ export class UserManagementComponent implements OnInit {
       icon: 'error',
       confirmButtonText: 'Aceptar'
     });
+  }
+  
+  onSucursalChange(event: any, sucursalId: number): void {
+    if (event.target.checked) {
+      // Agregar sucursal si no está ya en el array
+      if (!this.sucursalesSeleccionadas.includes(sucursalId)) {
+        this.sucursalesSeleccionadas.push(sucursalId);
+      }
+    } else {
+      // Eliminar sucursal del array
+      this.sucursalesSeleccionadas = this.sucursalesSeleccionadas.filter(id => id !== sucursalId);
+    }
+    
+    // Actualizar estado del checkbox "seleccionar todas"
+    this.actualizarCheckboxSeleccionarTodas();
+  }
+  
+  seleccionarTodasSucursales(event: any): void {
+    const checked = event.target.checked;
+    
+    // Actualizar todos los checkboxes
+    this.sucursales.forEach(sucursal => {
+      const checkbox = document.getElementById('sucursal_' + sucursal.value) as HTMLInputElement;
+      if (checkbox) {
+        checkbox.checked = checked;
+      }
+      
+      // Actualizar el array de seleccionadas
+      if (checked) {
+        if (!this.sucursalesSeleccionadas.includes(sucursal.value)) {
+          this.sucursalesSeleccionadas.push(sucursal.value);
+        }
+      } else {
+        this.sucursalesSeleccionadas = [];
+      }
+    });
+  }
+  
+  actualizarCheckboxSeleccionarTodas(): void {
+    const checkboxAll = document.getElementById('todas_sucursales') as HTMLInputElement;
+    if (checkboxAll) {
+      // Marcar como seleccionado si todas las sucursales están seleccionadas
+      checkboxAll.checked = this.sucursalesSeleccionadas.length === this.sucursales.length;
+    }
+  }
+  
+  obtenerNombresSucursales(sucursalesIds: number[]): string {
+    if (!this.sucursales || this.sucursales.length === 0) {
+      return 'Cargando...';
+    }
+    
+    const nombres = sucursalesIds.map(id => {
+      const sucursal = this.sucursales.find(s => s.value === id);
+      return sucursal ? sucursal.nombre : id;
+    });
+    
+    return nombres.join(', ');
   }
 } 

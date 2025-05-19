@@ -100,7 +100,6 @@ export class Login2Component implements OnInit {
     
     this.loading = true;
     this.errorMessage = null;
-    sessionStorage.setItem('sucursal', this.sucursal);
     
     const { email, password } = this.loginForm.value;
     
@@ -109,6 +108,18 @@ export class Login2Component implements OnInit {
         this.loading = false;
         
         if (user) {
+          // Verificar si el usuario tiene acceso a la sucursal seleccionada
+          if (user.sucursalesPermitidas && user.sucursalesPermitidas.length > 0) {
+            const sucursalValue = parseInt(this.sucursal, 10);
+            if (!user.sucursalesPermitidas.includes(sucursalValue)) {
+              this.showError('No tiene acceso a la sucursal seleccionada');
+              return;
+            }
+          }
+          
+          // Guardar la sucursal seleccionada
+          sessionStorage.setItem('sucursal', this.sucursal);
+          
           // Guardar preferencia de recordar sesión
           sessionStorage.setItem('sddccasdf', this.rememberMe ? 'true' : 'false');
           

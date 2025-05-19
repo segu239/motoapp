@@ -67,6 +67,35 @@
                                         </select>
                                     </div>
 
+                                    <div class="form-group">
+                                        <label for="sucursales">Sucursales permitidas</label>
+                                        <div>
+                                            <div *ngIf="sucursales.length === 0" class="alert alert-info">
+                                                Cargando sucursales...
+                                            </div>
+                                            <div class="form-check" *ngFor="let sucursal of sucursales">
+                                                <input class="form-check-input" type="checkbox" 
+                                                    [id]="'sucursal_' + sucursal.value" 
+                                                    [value]="sucursal.value"
+                                                    (change)="onSucursalChange($event, sucursal.value)">
+                                                <label class="form-check-label" [for]="'sucursal_' + sucursal.value">
+                                                    {{ sucursal.nombre }}
+                                                </label>
+                                            </div>
+                                            <div *ngIf="sucursales.length > 0" class="form-check">
+                                                <input class="form-check-input" type="checkbox" 
+                                                    id="todas_sucursales" 
+                                                    (change)="seleccionarTodasSucursales($event)">
+                                                <label class="form-check-label" for="todas_sucursales">
+                                                    <strong>Seleccionar todas</strong>
+                                                </label>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                Si no se selecciona ninguna sucursal, el usuario tendrá acceso a todas.
+                                            </small>
+                                        </div>
+                                    </div>
+
                                     <div class="form-group mt-4">
                                         <button type="submit" class="btn btn-primary" [disabled]="userForm.invalid || loading">
                                             <i *ngIf="loading" class="fa fa-spinner fa-spin me-1"></i>
@@ -100,6 +129,7 @@
                                                 <th>Email</th>
                                                 <th>Usuario</th>
                                                 <th>Nivel</th>
+                                                <th>Sucursales</th>
                                                 <th>Acciones</th>
                                             </tr>
                                         </thead>
@@ -119,6 +149,14 @@
                                                 <td>{{ user.email }}</td>
                                                 <td>{{ user.username }}</td>
                                                 <td>{{ user.nivel }}</td>
+                                                <td>
+                                                    <span *ngIf="!user.sucursalesPermitidas || user.sucursalesPermitidas.length === 0">
+                                                        Todas
+                                                    </span>
+                                                    <span *ngIf="user.sucursalesPermitidas && user.sucursalesPermitidas.length > 0">
+                                                        {{ obtenerNombresSucursales(user.sucursalesPermitidas) }}
+                                                    </span>
+                                                </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-info me-1" (click)="editUser(user)" title="Editar">
                                                         <i class="fa fa-edit"></i>

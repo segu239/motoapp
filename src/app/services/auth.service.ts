@@ -37,6 +37,7 @@ export class AuthService {
                   telefono: userData.telefono || '',
                   username: userData.username || '',
                   emailVerified: user.emailVerified,
+                  sucursalesPermitidas: userData.sucursalesPermitidas || [],
                 } as User;
               }
               return null;
@@ -73,7 +74,8 @@ export class AuthService {
                 nivel: userData.nivel || 'none',
                 telefono: userData.telefono || '',
                 username: userData.username || '',
-                emailVerified: credential.user?.emailVerified
+                emailVerified: credential.user?.emailVerified,
+                sucursalesPermitidas: userData.sucursalesPermitidas || []
               } as User;
             }
             return null;
@@ -102,7 +104,8 @@ export class AuthService {
           nombre: user.nombre,
           password: user.password, // Nota: Por seguridad se recomienda no guardar passwords en la BD
           telefono: user.telefono || '',
-          username: user.username || user.nombre // Mantener username si existe
+          username: user.username || user.nombre, // Mantener username si existe
+          sucursalesPermitidas: user.sucursalesPermitidas || []
         });
       }
       return null;
@@ -180,7 +183,8 @@ export class AuthService {
           nombre: data.nombre,
           password: data.password,
           telefono: data.telefono,
-          username: data.username
+          username: data.username,
+          sucursalesPermitidas: data.sucursalesPermitidas || []
         });
       } catch (error) {
         console.error('Error al actualizar contraseña:', error);
@@ -233,7 +237,8 @@ export class AuthService {
           apellido: userData.apellido || '',
           nivel: userData.nivel || 'none',
           telefono: userData.telefono || '',
-          username: userData.username || ''
+          username: userData.username || '',
+          sucursalesPermitidas: userData.sucursalesPermitidas || []
         } as User;
       }),
       catchError(err => {
@@ -256,7 +261,8 @@ export class AuthService {
           apellido: data.apellido || '',
           nivel: data.nivel || 'none',
           telefono: data.telefono || '',
-          username: data.username || ''
+          username: data.username || '',
+          sucursalesPermitidas: data.sucursalesPermitidas || []
         } as User;
       }))
     );
