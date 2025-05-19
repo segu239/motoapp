@@ -146,23 +146,25 @@ export class EditCajamoviComponent implements OnInit {
     
     this.isClienteSelected = !this.isClienteSelected;
     
+    // Los campos de cliente y proveedor siempre están deshabilitados en la UI,
+    // pero internamente necesitamos habilitar/deshabilitar para gestionar el formulario correctamente
     if (this.isClienteSelected) {
-      // Cambio a modo cliente
-      this.cajamoviForm.get('cliente')?.enable();
-      this.cajamoviForm.get('proveedor')?.disable();
+      // Cambio a modo cliente - cliente está activo pero sigue siendo readonly en UI
+      this.cajamoviForm.get('cliente')?.enable({ emitEvent: false });
+      this.cajamoviForm.get('proveedor')?.disable({ emitEvent: false });
       
       // Si no hay cliente establecido pero había un cliente original, restaurarlo
       if (!clienteActual && this.clienteId) {
-        this.cajamoviForm.get('cliente')?.setValue(this.clienteId);
+        this.cajamoviForm.get('cliente')?.setValue(this.clienteId, { emitEvent: false });
       }
     } else {
-      // Cambio a modo proveedor
-      this.cajamoviForm.get('proveedor')?.enable();
-      this.cajamoviForm.get('cliente')?.disable();
+      // Cambio a modo proveedor - proveedor está activo pero sigue siendo readonly en UI
+      this.cajamoviForm.get('proveedor')?.enable({ emitEvent: false });
+      this.cajamoviForm.get('cliente')?.disable({ emitEvent: false });
       
       // Si no hay proveedor establecido pero había un proveedor original, restaurarlo
       if (!proveedorActual && this.proveedorId) {
-        this.cajamoviForm.get('proveedor')?.setValue(this.proveedorId);
+        this.cajamoviForm.get('proveedor')?.setValue(this.proveedorId, { emitEvent: false });
       }
     }
   }
@@ -230,6 +232,36 @@ export class EditCajamoviComponent implements OnInit {
   public getProveedorId(): string | null {
     return this.cajamoviForm.get('proveedor')?.value;
   }
+  
+  // Método para obtener el nombre del cliente seleccionado
+  public getNombreCliente(): string {
+    const clienteId = this.cajamoviForm.get('cliente')?.value;
+    if (!clienteId) return 'Sin cliente seleccionado';
+    
+    // Buscar el cliente en la lista
+    const clienteEncontrado = this.clientes.find(c => c.cliente == clienteId);
+    if (clienteEncontrado) {
+      return clienteEncontrado.nombre;
+    } else {
+      // Si no se encuentra en la lista, mostrar el ID
+      return `Cliente ID: ${clienteId}`;
+    }
+  }
+  
+  // Método para obtener el nombre del proveedor seleccionado
+  public getNombreProveedor(): string {
+    const proveedorId = this.cajamoviForm.get('proveedor')?.value;
+    if (!proveedorId) return 'Sin proveedor seleccionado';
+    
+    // Buscar el proveedor en la lista
+    const proveedorEncontrado = this.proveedores.find(p => p.cod_prov == proveedorId);
+    if (proveedorEncontrado) {
+      return proveedorEncontrado.nombre;
+    } else {
+      // Si no se encuentra en la lista, mostrar el ID
+      return `Proveedor ID: ${proveedorId}`;
+    }
+  }
 
   // Método para verificar si debe mostrar el indicador de cliente
   public mostrarIndicadorCliente(): boolean {
@@ -288,12 +320,13 @@ export class EditCajamoviComponent implements OnInit {
           this.proveedorId = formattedData.proveedor;
 
           // Configurar campos de cliente/proveedor según corresponda
+          // Necesitamos manipular el estado interno del FormControl, aunque en la UI siempre serán readonly
           if (this.isClienteSelected) {
-            this.cajamoviForm.get('cliente')?.enable();
-            this.cajamoviForm.get('proveedor')?.disable();
+            this.cajamoviForm.get('cliente')?.enable({ emitEvent: false });
+            this.cajamoviForm.get('proveedor')?.disable({ emitEvent: false });
           } else {
-            this.cajamoviForm.get('proveedor')?.enable();
-            this.cajamoviForm.get('cliente')?.disable();
+            this.cajamoviForm.get('proveedor')?.enable({ emitEvent: false });
+            this.cajamoviForm.get('cliente')?.disable({ emitEvent: false });
           }
 
           // Buscar el concepto seleccionado

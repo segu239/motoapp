@@ -83,16 +83,21 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Cliente</label>
                                             <div class="col-md-9">
-                                                <select class="form-control" formControlName="cliente">
+                                                <!-- Selector original comentado para futura referencia
+                                                <select class="form-control" formControlName="cliente" [attr.disabled]="true">
                                                     <option [ngValue]="null">Seleccione un cliente</option>
                                                     <option *ngFor="let cliente of clientes" [value]="cliente.cliente">
                                                         {{ cliente.nombre }}
                                                     </option>
                                                 </select>
-                                                <small class="form-control-feedback">Seleccione un cliente</small>
+                                                -->
+                                                <input type="text" class="form-control" [value]="getNombreCliente()" readonly>
+                                                <small class="form-control-feedback">Cliente (solo lectura)</small>
                                                 <div *ngIf="mostrarIndicadorCliente()" class="mt-1 alert alert-info p-1">
                                                     <small><strong>ID Cliente:</strong> {{ getClienteId() }}</small>
                                                 </div>
+                                                <!-- Campo oculto para mantener el valor en el formulario -->
+                                                <input type="hidden" formControlName="cliente">
                                             </div>
                                         </div>
                                     </div>
@@ -100,16 +105,21 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Proveedor</label>
                                             <div class="col-md-9">
-                                                <select class="form-control" formControlName="proveedor">
+                                                <!-- Selector original comentado para futura referencia
+                                                <select class="form-control" formControlName="proveedor" [attr.disabled]="true">
                                                     <option [ngValue]="null">Seleccione un proveedor</option>
                                                     <option *ngFor="let proveedor of proveedores" [value]="proveedor.cod_prov">
                                                         {{ proveedor.nombre }}
                                                     </option>
                                                 </select>
-                                                <small class="form-control-feedback">Seleccione un proveedor</small>
+                                                -->
+                                                <input type="text" class="form-control" [value]="getNombreProveedor()" readonly>
+                                                <small class="form-control-feedback">Proveedor (solo lectura)</small>
                                                 <div *ngIf="mostrarIndicadorProveedor()" class="mt-1 alert alert-info p-1">
                                                     <small><strong>ID Proveedor:</strong> {{ getProveedorId() }}</small>
                                                 </div>
+                                                <!-- Campo oculto para mantener el valor en el formulario -->
+                                                <input type="hidden" formControlName="proveedor">
                                             </div>
                                         </div>
                                     </div>
