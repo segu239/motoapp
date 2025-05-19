@@ -90,6 +90,9 @@
                                                     </option>
                                                 </select>
                                                 <small class="form-control-feedback">Seleccione un cliente</small>
+                                                <div *ngIf="mostrarIndicadorCliente()" class="mt-1 alert alert-info p-1">
+                                                    <small><strong>ID Cliente:</strong> {{ getClienteId() }}</small>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -104,6 +107,9 @@
                                                     </option>
                                                 </select>
                                                 <small class="form-control-feedback">Seleccione un proveedor</small>
+                                                <div *ngIf="mostrarIndicadorProveedor()" class="mt-1 alert alert-info p-1">
+                                                    <small><strong>ID Proveedor:</strong> {{ getProveedorId() }}</small>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -35,6 +35,16 @@ interface Cajamovi {
   id_movimiento: number;
 }
 
+interface Cliente {
+  cliente: number;
+  nombre: string;
+}
+
+interface Proveedor {
+  cod_prov: number;
+  nombre: string;
+}
+
 @Component({
   selector: 'app-editcajamovi',
   templateUrl: './editcajamovi.component.html',
@@ -48,11 +58,13 @@ export class EditCajamoviComponent implements OnInit {
   public sucursal: number = 0;
   public conceptos: any[] = [];
   public bancos: any[] = [];
-  public clientes: any[] = []; 
-  public proveedores: any[] = []; 
+  public clientes: Cliente[] = []; 
+  public proveedores: Proveedor[] = []; 
   public cajas: any[] = [];
   public isClienteSelected: boolean = true;
   public conceptoSeleccionado: any = null;
+  private clienteId: number | null = null;
+  private proveedorId: number | null = null;
 
   constructor(
     private subirdata: SubirdataService,
@@ -76,6 +88,25 @@ export class EditCajamoviComponent implements OnInit {
     this.loadProveedores();
     this.loadCajas();
     this.loadCajamoviData();
+    
+    // Suscribirse a cambios en los campos cliente y proveedor
+    this.setupFieldChangeListeners();
+  }
+  
+  setupFieldChangeListeners(): void {
+    // Actualizar clienteId cuando cambie el campo cliente
+    this.cajamoviForm.get('cliente')?.valueChanges.subscribe(value => {
+      if (value) {
+        this.clienteId = value;
+      }
+    });
+    
+    // Actualizar proveedorId cuando cambie el campo proveedor
+    this.cajamoviForm.get('proveedor')?.valueChanges.subscribe(value => {
+      if (value) {
+        this.proveedorId = value;
+      }
+    });
   }
 
   initForm(): void {
@@ -109,16 +140,30 @@ export class EditCajamoviComponent implements OnInit {
 
   // Método para cambiar entre cliente y proveedor
   toggleClienteProveedor() {
+    // Guardar los valores actuales antes de cambiar
+    const clienteActual = this.cajamoviForm.get('cliente')?.value;
+    const proveedorActual = this.cajamoviForm.get('proveedor')?.value;
+    
     this.isClienteSelected = !this.isClienteSelected;
     
     if (this.isClienteSelected) {
+      // Cambio a modo cliente
       this.cajamoviForm.get('cliente')?.enable();
       this.cajamoviForm.get('proveedor')?.disable();
-      this.cajamoviForm.get('proveedor')?.setValue(null);
+      
+      // Si no hay cliente establecido pero había un cliente original, restaurarlo
+      if (!clienteActual && this.clienteId) {
+        this.cajamoviForm.get('cliente')?.setValue(this.clienteId);
+      }
     } else {
+      // Cambio a modo proveedor
       this.cajamoviForm.get('proveedor')?.enable();
       this.cajamoviForm.get('cliente')?.disable();
-      this.cajamoviForm.get('cliente')?.setValue(null);
+      
+      // Si no hay proveedor establecido pero había un proveedor original, restaurarlo
+      if (!proveedorActual && this.proveedorId) {
+        this.cajamoviForm.get('proveedor')?.setValue(this.proveedorId);
+      }
     }
   }
 
@@ -162,6 +207,44 @@ export class EditCajamoviComponent implements OnInit {
     }
   }
 
+  // Método para verificar si un cliente existe en la lista
+  public clienteExisteEnLista(): boolean {
+    const clienteId = this.cajamoviForm.get('cliente')?.value;
+    if (!clienteId) return false;
+    return this.clientes.some(c => c.cliente === parseInt(clienteId));
+  }
+
+  // Método para verificar si un proveedor existe en la lista
+  public proveedorExisteEnLista(): boolean {
+    const proveedorId = this.cajamoviForm.get('proveedor')?.value;
+    if (!proveedorId) return false;
+    return this.proveedores.some(p => p.cod_prov === parseInt(proveedorId));
+  }
+
+  // Método para obtener el ID del cliente seleccionado
+  public getClienteId(): string | null {
+    return this.cajamoviForm.get('cliente')?.value;
+  }
+
+  // Método para obtener el ID del proveedor seleccionado
+  public getProveedorId(): string | null {
+    return this.cajamoviForm.get('proveedor')?.value;
+  }
+
+  // Método para verificar si debe mostrar el indicador de cliente
+  public mostrarIndicadorCliente(): boolean {
+    return this.isClienteSelected && 
+           this.cajamoviForm.get('cliente')?.value && 
+           !this.clienteExisteEnLista();
+  }
+
+  // Método para verificar si debe mostrar el indicador de proveedor
+  public mostrarIndicadorProveedor(): boolean {
+    return !this.isClienteSelected && 
+           this.cajamoviForm.get('proveedor')?.value && 
+           !this.proveedorExisteEnLista();
+  }
+
   loadCajamoviData(): void {
     this.route.queryParams.subscribe(params => {
       if (params['cajamovi']) {
@@ -199,6 +282,10 @@ export class EditCajamoviComponent implements OnInit {
 
           // Aplicar valores al formulario
           this.cajamoviForm.patchValue(formattedData);
+
+          // Guardar IDs para referencia
+          this.clienteId = formattedData.cliente;
+          this.proveedorId = formattedData.proveedor;
 
           // Configurar campos de cliente/proveedor según corresponda
           if (this.isClienteSelected) {
