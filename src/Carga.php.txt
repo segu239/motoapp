@@ -1087,6 +1087,39 @@ public function Cajaconcepto_get()
   }
 }
 
+public function CajaconceptoPorIdConcepto_post()
+{
+  $this->load->database();
+  $id_concepto = $this->post('id_concepto');
+  
+  if (!$id_concepto) {
+    $respuesta=array(
+      "error"=>true,
+      "mensaje"=>"No se proporcionó el id_concepto"
+    );
+    $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+    return;
+  }
+  
+  $this->db->where('id_concepto', $id_concepto);
+  $query = $this->db->get('caja_conceptos');
+  $resp = $query->result_array();
+  
+  if (count($resp) > 0) {
+    $respuesta=array(
+      "error"=>false,
+      "mensaje"=>$resp
+    );
+    $this->response($respuesta);
+  } else {
+    $respuesta=array(
+      "error"=>true,
+      "mensaje"=>"No se encontró el concepto de caja con id: " . $id_concepto
+    );
+    $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+  }
+}
+
 public function Cajamovi_get()
 {
   $query = $this->db->get('caja_movi'); // Nombre de la tabla en plural y minúscula

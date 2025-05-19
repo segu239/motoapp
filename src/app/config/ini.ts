@@ -231,3 +231,4 @@ export const UrlUpdateArticulo= "https://motoapp.loclx.io/APIAND/index.php/Desca
 export const UrlUpdateCajamovi= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajamovi";
 export const UrlUpdateCajaLista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajalista";
 export const UrlUpdateCajaconcepto= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajaconcepto";
+export const UrlCajaConceptoPorIdConcepto= "https://motoapp.loclx.io/APIAND/index.php/Carga/CajaconceptoPorIdConcepto";

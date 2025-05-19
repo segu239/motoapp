@@ -454,32 +454,55 @@ export class CarritoComponent {
     });
     let cabecera = this.cabecera(fechaFormateada, fecha);
     
-    // Crear objeto caja_movi basado en los datos del pedido
-    let caja_movi = this.crearCajaMovi(pedido, cabecera, fecha);
+    // Crear objeto caja_movi basado en los datos del pedido (ahora devuelve una promesa)
+    const cajaMoviPromise = this.crearCajaMovi(pedido, cabecera, fecha);
     
-    this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, caja_movi).pipe(take(1)).subscribe((data: any) => {
-      console.log(data.mensaje);
-      this.imprimir(this.itemsEnCarrito, this.numerocomprobante, fechaFormateada, this.suma);
-      //actualizar indices
-      if (this.indiceTipoDoc != "") {
-        this._crud.incrementarNumeroSecuencial(this.indiceTipoDoc, parseInt(this.numerocomprobante) + 1).then(() => {
-          console.log('Numero secuencial incrementado');
-          this.numerocomprobante = "";
+    // Manejar la promesa para obtener el objeto caja_movi con el id_caja correcto
+    if (cajaMoviPromise && cajaMoviPromise.then) {
+      // Es una promesa, esperamos a que se resuelva
+      cajaMoviPromise.then(caja_movi => {
+        console.log('Objeto caja_movi creado:', caja_movi);
+        
+        // Una vez tenemos el caja_movi con el id_caja correcto, continuamos
+        this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, caja_movi).pipe(take(1)).subscribe((data: any) => {
+          console.log(data.mensaje);
+          this.imprimir(this.itemsEnCarrito, this.numerocomprobante, fechaFormateada, this.suma);
+          //actualizar indices
+          if (this.indiceTipoDoc != "") {
+            this._crud.incrementarNumeroSecuencial(this.indiceTipoDoc, parseInt(this.numerocomprobante) + 1).then(() => {
+              console.log('Numero secuencial incrementado');
+              this.numerocomprobante = "";
+            });
+          }
+          Swal.fire({
+            icon: 'success',
+            title: 'Pedido enviado',
+            text: 'El pedido se envio correctamente!',
+            footer: 'Se envio el pedido a la sucursal ' + sessionStorage.getItem('sucursal')
+          })
+          this.itemsEnCarrito = [];
+          this.itemsConTipoPago = [];
+          sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+          this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
+          this.calculoTotal();
         });
-      }
+      }).catch(error => {
+        console.error('Error al crear el objeto caja_movi:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Ocurrió un error al crear el objeto de caja. Por favor, inténtelo de nuevo.'
+        });
+      });
+    } else {
+      // Si no hay items en el carrito, caja_movi puede ser null
+      console.warn('No se pudo crear el objeto caja_movi');
       Swal.fire({
-        icon: 'success',
-        title: 'Pedido enviado',
-        text: 'El pedido se envio correctamente!',
-        footer: 'Se envio el pedido a la sucursal ' + sessionStorage.getItem('sucursal')
-      })
-      this.itemsEnCarrito = [];
-      this.itemsConTipoPago = [];
-      sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
-      this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
-      this.calculoTotal();
+        icon: 'warning',
+        title: 'Advertencia',
+        text: 'No hay suficiente información para procesar el pedido.'
+      });
     }
-    );
   }
   pendientes() {
     let missingFields = [];
@@ -771,37 +794,67 @@ try {
       return !isNaN(numValue) ? Math.min(numValue, limit) : null;
     };
     
-    // Crear el objeto caja_movi con los campos solicitados
-    const cajaMovi = {
-      sucursal: limitNumericValue(this.sucursal, 999999),
-      codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
-      num_operacion: 0, // Se asignará en el backend cuando se genere el id_num
-      fecha_mov: fechaFormateada,
-      importe_mov: this.suma,
-      descripcion_mov: primerItem.nomart || '',
-      fecha_emibco: primerItem.fechacheque || null,
-      banco: limitNumericValue(primerItem.codigobanco, 9999999999),
-      num_cheque: limitNumericValue(primerItem.ncheque, 9999999999),
-      cuenta_mov: limitNumericValue(primerItem.ncuenta, 999999),
-      cliente: limitNumericValue(primerItem.idcli || cabecera.cliente, 9999999999),
-      proveedor: null, // Siempre null como indicado
-      plaza_cheque: primerItem.plaza || '',
-      codigo_mbco: null, // Siempre null como indicado
-      desc_bancaria: null, // Siempre null como indicado
-      filler: null, // Siempre null como indicado
-      fecha_cobro_bco: null, // Siempre null como indicado
-      fecha_vto_bco: null, // Siempre null como indicado
-      tipo_movi: 'A',
-      caja: null, // Siempre null como indicado
-      letra: cabecera.letra || '',
-      punto_venta: limitNumericValue(this.puntoventa, 9999),
-      tipo_comprobante: primerItem.tipodoc || this.tipoDoc,
-      numero_comprobante: limitNumericValue(this.numerocomprobante, 99999999),
-      marca_cerrado: null,
-      usuario: primerItem.emailop || sessionStorage.getItem('emailOp') || '',
-      fecha_proceso: fechaFormateada
-    };
+    // Obtener el id_caja de caja_conceptos basado en el idcp_ingreso de la tarjeta
+    let idCaja = null;
     
-    return cajaMovi;
+    // Creamos una promesa para obtener el id_caja de forma asíncrona pero esperando el resultado
+    const obtenerIdCaja = new Promise<number | null>((resolve) => {
+      if (tarjetaInfo && tarjetaInfo.idcp_ingreso) {
+        this._cargardata.getIdCajaFromConcepto(tarjetaInfo.idcp_ingreso).pipe(take(1)).subscribe(
+          (response: any) => {
+            if (response && response.mensaje && response.mensaje.length > 0) {
+              idCaja = response.mensaje[0].id_caja;
+              console.log(`ID de caja obtenido: ${idCaja} para el concepto: ${tarjetaInfo.idcp_ingreso}`);
+              resolve(idCaja);
+            } else {
+              console.error('No se pudo obtener el id_caja para el concepto:', tarjetaInfo.idcp_ingreso);
+              resolve(null);
+            }
+          },
+          error => {
+            console.error('Error al obtener id_caja:', error);
+            resolve(null);
+          }
+        );
+      } else {
+        resolve(null);
+      }
+    });
+    
+    // Esperar a que se resuelva la promesa antes de crear el objeto cajaMovi
+    return obtenerIdCaja.then(idCajaObtenido => {
+      // Crear el objeto caja_movi con los campos solicitados y el id_caja obtenido
+      const cajaMovi = {
+        sucursal: limitNumericValue(this.sucursal, 999999),
+        codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
+        num_operacion: 0, // Se asignará en el backend cuando se genere el id_num
+        fecha_mov: fechaFormateada,
+        importe_mov: this.suma,
+        descripcion_mov: primerItem.nomart || '',
+        fecha_emibco: primerItem.fechacheque || null,
+        banco: limitNumericValue(primerItem.codigobanco, 9999999999),
+        num_cheque: limitNumericValue(primerItem.ncheque, 9999999999),
+        cuenta_mov: limitNumericValue(primerItem.ncuenta, 999999),
+        cliente: limitNumericValue(primerItem.idcli || cabecera.cliente, 9999999999),
+        proveedor: null, // Siempre null como indicado
+        plaza_cheque: primerItem.plaza || '',
+        codigo_mbco: null, // Siempre null como indicado
+        desc_bancaria: null, // Siempre null como indicado
+        filler: null, // Siempre null como indicado
+        fecha_cobro_bco: null, // Siempre null como indicado
+        fecha_vto_bco: null, // Siempre null como indicado
+        tipo_movi: 'A',
+        caja: idCajaObtenido, // Asignamos el id_caja obtenido de caja_conceptos
+        letra: cabecera.letra || '',
+        punto_venta: limitNumericValue(this.puntoventa, 9999),
+        tipo_comprobante: primerItem.tipodoc || this.tipoDoc,
+        numero_comprobante: limitNumericValue(this.numerocomprobante, 99999999),
+        marca_cerrado: null,
+        usuario: primerItem.emailop || sessionStorage.getItem('emailOp') || '',
+        fecha_proceso: fechaFormateada
+      };
+      
+      return cajaMovi;
+    });
   }
 }
