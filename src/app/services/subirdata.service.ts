@@ -96,6 +96,16 @@ export class SubirdataService {
 
   subirDatosCajamovi(cajamovi: any) {
     // El backend espera un objeto con los datos del movimiento
+    console.log('subirDatosCajamovi - enviando al backend:', cajamovi);
+    console.log('importe_mov tipo:', typeof cajamovi.importe_mov);
+    console.log('importe_mov valor:', cajamovi.importe_mov);
+    // Verificar si es un objeto JSON válido
+    try {
+      const testJson = JSON.stringify(cajamovi);
+      console.log('JSON string válido:', testJson);
+    } catch (e) {
+      console.error('Error al convertir a JSON:', e);
+    }
     return this.http.post(UrlSubirDatosCajamovi, cajamovi);
   }
 
@@ -485,6 +495,16 @@ export class SubirdataService {
 
 updateCajamovi(cajamovi: any) {
   // El backend espera el objeto completo incluyendo id_movimiento
+  console.log('updateCajamovi - enviando al backend:', cajamovi);
+  console.log('importe_mov tipo:', typeof cajamovi.importe_mov);
+  console.log('importe_mov valor:', cajamovi.importe_mov);
+  // Verificar si es un objeto JSON válido
+  try {
+    const testJson = JSON.stringify(cajamovi);
+    console.log('JSON string válido:', testJson);
+  } catch (e) {
+    console.error('Error al convertir a JSON:', e);
+  }
   return this.http.post(UrlUpdateCajamovi, cajamovi);
 }
 

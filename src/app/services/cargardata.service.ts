@@ -74,6 +74,12 @@ export class CargardataService {
   getCajaconcepto() {
     return this.http.get(UrlCajaconcepto); // Asumiendo que esta URL devuelve todos los conceptos
   }
+  
+  getCajaconceptoPorId(id_concepto: number) {
+    return this.http.post(UrlCajaConceptoPorIdConcepto, {
+      "id_concepto": id_concepto
+    });
+  }
 
   getCajamovi() {
     return this.http.get(UrlCajamovi);

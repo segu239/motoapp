@@ -114,7 +114,11 @@ export class EditCajamoviComponent implements OnInit {
       codigo_mov: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       num_operacion: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       fecha_mov: new FormControl('', Validators.required),
-      importe_mov: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^-?\d{1,13}(\.\d{1,2})?$/)])),
+      importe_mov: new FormControl(null, Validators.compose([
+        Validators.required, 
+        Validators.pattern(/^\d{1,13}(\.\d{1,2})?$/),
+        Validators.min(0)
+      ])),
       descripcion_mov: new FormControl('', Validators.compose([Validators.required, Validators.maxLength(80)])),
       fecha_emibco: new FormControl(null),
       banco: new FormControl(null, Validators.pattern(/^[0-9]{1,10}$/)),
@@ -172,11 +176,34 @@ export class EditCajamoviComponent implements OnInit {
   // Método para manejar el cambio de concepto seleccionado
   onConceptoChange() {
     const codigoMov = this.cajamoviForm.get('codigo_mov')?.value;
+    console.log('onConceptoChange - código_mov:', codigoMov);
+    console.log('conceptos disponibles:', this.conceptos);
+    
     if (codigoMov) {
       // Buscar el concepto seleccionado en la lista de conceptos
       this.conceptoSeleccionado = this.conceptos.find(concepto => concepto.id_concepto == codigoMov);
+      console.log('Concepto seleccionado:', this.conceptoSeleccionado);
+      
+      // Si no se encuentra el concepto en la lista, cargarlo específicamente
+      if (!this.conceptoSeleccionado && this.conceptos.length > 0) {
+        console.log('Concepto no encontrado en la lista, consultando específicamente');
+        this.cargardata.getCajaconceptoPorId(codigoMov).subscribe({
+          next: (response: any) => {
+            if (!response.error && response.mensaje && response.mensaje.length > 0) {
+              this.conceptoSeleccionado = response.mensaje[0];
+              console.log('Concepto cargado específicamente:', this.conceptoSeleccionado);
+            } else {
+              console.error('No se pudo obtener el concepto específico:', response);
+            }
+          },
+          error: (error) => {
+            console.error('Error al obtener concepto específico:', error);
+          }
+        });
+      }
     } else {
       this.conceptoSeleccionado = null;
+      console.log('No hay concepto seleccionado');
     }
   }
 
@@ -300,6 +327,11 @@ export class EditCajamoviComponent implements OnInit {
             }
           });
 
+          // Mostrar valor absoluto del importe_mov (sin signo) para mejorar la UX
+          if (formattedData['importe_mov'] !== null && formattedData['importe_mov'] !== undefined) {
+            formattedData['importe_mov'] = Math.abs(parseFloat(formattedData['importe_mov']));
+          }
+
           // Asegurarse que los campos numéricos sean números
           Object.keys(formattedData).forEach(key => {
             // Asegurarse que los números sean números
@@ -360,12 +392,43 @@ export class EditCajamoviComponent implements OnInit {
         sucursal: this.sucursal
       };
       
+      // Siempre aseguramos trabajar con números para el importe
+      let importe = cajamoviData.importe_mov !== null ? Math.abs(parseFloat(cajamoviData.importe_mov)) : 0;
+      
+      console.log('Valor original del importe:', cajamoviData.importe_mov);
+      console.log('Valor del importe después de Math.abs():', importe);
+      console.log('Tipo de concepto seleccionado:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'ninguno');
+      
+      // VERIFICACIÓN DETALLADA DEL CONCEPTO
+      console.log('VERIFICACIÓN DE CONCEPTO:');
+      console.log('Código mov seleccionado:', cajamoviData.codigo_mov);
+      console.log('Concepto seleccionado completo:', this.conceptoSeleccionado);
+      console.log('Tipo de concepto.ingreso_egreso:', this.conceptoSeleccionado ? typeof this.conceptoSeleccionado.ingreso_egreso : 'N/A');
+      console.log('Valor de concepto.ingreso_egreso:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'N/A');
+      console.log('Comparación estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso === '1');
+      console.log('Comparación no estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso == '1');
+      
       // Aplicar factor de -1 si es un egreso (ingreso_egreso = 1)
-      if (this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso === '1' && cajamoviData.importe_mov !== null) {
-        cajamoviData.importe_mov = Math.abs(parseFloat(cajamoviData.importe_mov)) * -1;
-      } else if (cajamoviData.importe_mov !== null) {
-        // Asegurar que el importe sea positivo para ingresos
-        cajamoviData.importe_mov = Math.abs(parseFloat(cajamoviData.importe_mov));
+      let esEgreso = false;
+      if (this.conceptoSeleccionado) {
+        // Comprobar si es egreso, tanto con comparación estricta como no estricta
+        esEgreso = this.conceptoSeleccionado.ingreso_egreso === '1' || 
+                  this.conceptoSeleccionado.ingreso_egreso === 1 ||
+                  this.conceptoSeleccionado.ingreso_egreso == '1';
+      }
+      
+      if (esEgreso) {
+        // Para egresos, siempre debe ser negativo
+        cajamoviData.importe_mov = importe * -1;
+        console.log('Aplicando signo negativo para egreso:', cajamoviData.importe_mov);
+      } else if (this.conceptoSeleccionado && (this.conceptoSeleccionado.ingreso_egreso === '0' || this.conceptoSeleccionado.ingreso_egreso == '0')) {
+        // Para ingresos, siempre debe ser positivo
+        cajamoviData.importe_mov = importe;
+        console.log('Manteniendo signo positivo para ingreso:', cajamoviData.importe_mov);
+      } else {
+        // Si no hay concepto seleccionado, mantener el valor absoluto
+        cajamoviData.importe_mov = importe;
+        console.log('Sin concepto seleccionado o tipo desconocido, usando valor absoluto:', cajamoviData.importe_mov);
       }
       
       // Agregar el usuario desde sessionStorage
@@ -385,6 +448,7 @@ export class EditCajamoviComponent implements OnInit {
         }
       }
 
+      console.log('Objeto final enviado al backend:', JSON.stringify(cajamoviData));
       this.subirdata.updateCajamovi(cajamoviData).subscribe({
         next: (response: any) => {
           this.loading = false;
@@ -441,6 +505,14 @@ export class EditCajamoviComponent implements OnInit {
       next: (response: any) => {
         if (!response.error) {
           this.conceptos = response.mensaje;
+          console.log('Conceptos cargados:', this.conceptos);
+          
+          // Después de cargar los conceptos, verificar el concepto actual
+          const codigoMovActual = this.cajamoviForm.get('codigo_mov')?.value;
+          if (codigoMovActual) {
+            console.log('Recargando concepto actual después de cargar lista de conceptos');
+            this.onConceptoChange();
+          }
         } else {
           console.error('Error loading conceptos:', response.mensaje);
           this.showErrorMessage('No se pudieron cargar los conceptos de caja');
