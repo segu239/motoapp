@@ -11,6 +11,7 @@ export interface User {
   createdAt?: Date;
   lastLoginAt?: Date;
   username?: string;
+  sucursalesPermitidas?: number[]; // Array de IDs (value) de sucursales permitidas
 }
 
 export enum UserRole {
