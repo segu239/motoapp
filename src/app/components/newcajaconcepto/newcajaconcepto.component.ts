@@ -18,6 +18,7 @@ export class NewcajaconceptoComponent implements OnInit {
   public fijaFlag: boolean = false;
   public ingresoEgresoFlag: boolean = false;
   public idCajaFlag: boolean = false;
+  public activoInactivoFlag: boolean = false;
   
   // Lista de cajas para el select
   public cajas: any[] = [];
@@ -73,6 +74,10 @@ export class NewcajaconceptoComponent implements OnInit {
       id_caja: new FormControl(0, Validators.compose([ // Default a 0
         Validators.required,
         Validators.pattern(/^[0-9]{1,10}$/) // Numérico hasta 10 dígitos
+      ])),
+      activo_inactivo: new FormControl(0, Validators.compose([ // Default a 0 (activo)
+        Validators.required,
+        Validators.pattern(/^[01]$/) // Solo 0 o 1
       ]))
       // id_concepto es serial, no se incluye en el formulario de creación
     });
@@ -86,6 +91,7 @@ export class NewcajaconceptoComponent implements OnInit {
           "fija": form.value.fija,
           "ingreso_egreso": form.value.ingreso_egreso,
           "id_caja": form.value.id_caja,
+          "activo_inactivo": form.value.activo_inactivo,
           // id_concepto es generado por la BD
         }
       console.log(nuevoCajaConcepto);
@@ -146,6 +152,7 @@ export class NewcajaconceptoComponent implements OnInit {
         this.fijaFlag = this.nuevocajaconceptoForm.controls['fija'].invalid && this.nuevocajaconceptoForm.controls['fija'].touched;
         this.ingresoEgresoFlag = this.nuevocajaconceptoForm.controls['ingreso_egreso'].invalid && this.nuevocajaconceptoForm.controls['ingreso_egreso'].touched;
         this.idCajaFlag = this.nuevocajaconceptoForm.controls['id_caja'].invalid && this.nuevocajaconceptoForm.controls['id_caja'].touched;
+        this.activoInactivoFlag = this.nuevocajaconceptoForm.controls['activo_inactivo'].invalid && this.nuevocajaconceptoForm.controls['activo_inactivo'].touched;
       });
     });
   }

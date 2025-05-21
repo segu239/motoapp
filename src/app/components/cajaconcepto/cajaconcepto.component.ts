@@ -12,6 +12,7 @@ interface CajaConcepto {
   ingreso_egreso: number;
   id_caja: number;
   id_concepto: number;
+  activo_inactivo: number;
 }
 
 @Component({

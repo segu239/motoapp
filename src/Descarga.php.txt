@@ -1821,7 +1821,7 @@ public function SubirDatosCajaconcepto_post()
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
         // Validación básica de campos requeridos (se pueden añadir más)
-        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja'])) {
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos para el concepto de caja"
@@ -1838,7 +1838,8 @@ public function SubirDatosCajaconcepto_post()
             'tipo_concepto' => $data['tipo_concepto'],
             'fija' => $data['fija'],
             'ingreso_egreso' => $data['ingreso_egreso'],
-            'id_caja' => $data['id_caja']
+            'id_caja' => $data['id_caja'],
+            'activo_inactivo' => $data['activo_inactivo']
             // 'id_concepto' es serial y se genera automáticamente
         ));
 
@@ -2925,7 +2926,7 @@ public function UpdateCajaconcepto_post()
             return;
         }
          // Validación básica de otros campos (se pueden añadir más)
-        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja'])) {
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos para actualizar el concepto de caja"
@@ -2945,7 +2946,8 @@ public function UpdateCajaconcepto_post()
             'tipo_concepto' => $data['tipo_concepto'],
             'fija' => $data['fija'],
             'ingreso_egreso' => $data['ingreso_egreso'],
-            'id_caja' => $data['id_caja']
+            'id_caja' => $data['id_caja'],
+            'activo_inactivo' => $data['activo_inactivo']
         ));
 
         $rows = $this->db->affected_rows();

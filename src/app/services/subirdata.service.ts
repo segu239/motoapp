@@ -270,7 +270,8 @@ export class SubirdataService {
         "tipo_concepto": cajaconcepto.tipo_concepto,
         "fija": cajaconcepto.fija,
         "ingreso_egreso": cajaconcepto.ingreso_egreso,
-        "id_caja": cajaconcepto.id_caja
+        "id_caja": cajaconcepto.id_caja,
+        "activo_inactivo": cajaconcepto.activo_inactivo
         // id_concepto es autoincremental en la BD
       });
   }
@@ -489,7 +490,8 @@ export class SubirdataService {
     "tipo_concepto": cajaconcepto.tipo_concepto,
     "fija": cajaconcepto.fija,
     "ingreso_egreso": cajaconcepto.ingreso_egreso,
-    "id_caja": cajaconcepto.id_caja
+    "id_caja": cajaconcepto.id_caja,
+    "activo_inactivo": cajaconcepto.activo_inactivo
   });
 }
 

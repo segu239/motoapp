@@ -18,6 +18,7 @@ export class EditcajaconceptoComponent implements OnInit {
   public fijaFlag: boolean = false;
   public ingresoEgresoFlag: boolean = false;
   public idCajaFlag: boolean = false;
+  public activoInactivoFlag: boolean = false;
   public currentCajaConcepto: any = null;
   private id_concepto: number = 0;
 
@@ -40,11 +41,11 @@ export class EditcajaconceptoComponent implements OnInit {
 
   initForm(): void {
     this.cajaconceptoForm = this.fb.group({
-      descripcion: new FormControl('', Validators.compose([
+      descripcion: new FormControl({value: '', disabled: true}, Validators.compose([
         Validators.required,
         Validators.maxLength(80)
       ])),
-      tipo_concepto: new FormControl('', Validators.compose([
+      tipo_concepto: new FormControl({value: '', disabled: true}, Validators.compose([
         Validators.required,
         Validators.maxLength(2)
       ])),
@@ -56,9 +57,13 @@ export class EditcajaconceptoComponent implements OnInit {
         Validators.required,
         Validators.pattern(/^[01]$/)
       ])),
-      id_caja: new FormControl(0, Validators.compose([
+      id_caja: new FormControl({value: 0, disabled: true}, Validators.compose([
         Validators.required,
         Validators.pattern(/^[0-9]{1,10}$/)
+      ])),
+      activo_inactivo: new FormControl(0, Validators.compose([
+        Validators.required,
+        Validators.pattern(/^[01]$/) // Solo 0 o 1
       ]))
       // id_concepto no se edita directamente en el formulario, se usa para la actualización
     });
@@ -81,7 +86,8 @@ export class EditcajaconceptoComponent implements OnInit {
               tipo_concepto: this.currentCajaConcepto.tipo_concepto?.trim(),
               fija: this.currentCajaConcepto.fija, // Asumiendo que ya es número
               ingreso_egreso: this.currentCajaConcepto.ingreso_egreso,
-              id_caja: this.currentCajaConcepto.id_caja
+              id_caja: this.currentCajaConcepto.id_caja,
+              activo_inactivo: this.currentCajaConcepto.activo_inactivo || 0 // Default a 0 (activo) si no existe
             });
           } catch (error) {
             console.error('Error parsing cajaconcepto data:', error);
@@ -123,11 +129,12 @@ export class EditcajaconceptoComponent implements OnInit {
     if (this.cajaconceptoForm.valid) {
       const cajaconceptoData = {
         id_concepto: this.id_concepto, // Incluir el ID para la actualización
-        descripcion: this.cajaconceptoForm.value.descripcion,
-        tipo_concepto: this.cajaconceptoForm.value.tipo_concepto,
-        fija: this.cajaconceptoForm.controls['fija'].value,
-        ingreso_egreso: this.cajaconceptoForm.controls['ingreso_egreso'].value,
-        id_caja: this.cajaconceptoForm.value.id_caja
+        descripcion: this.currentCajaConcepto.descripcion,
+        tipo_concepto: this.currentCajaConcepto.tipo_concepto,
+        fija: this.currentCajaConcepto.fija,
+        ingreso_egreso: this.currentCajaConcepto.ingreso_egreso,
+        id_caja: this.currentCajaConcepto.id_caja,
+        activo_inactivo: this.cajaconceptoForm.value.activo_inactivo
       };
       console.log("Updating with data:", cajaconceptoData);
 
@@ -188,6 +195,7 @@ export class EditcajaconceptoComponent implements OnInit {
         this.fijaFlag = this.cajaconceptoForm.controls['fija'].invalid && this.cajaconceptoForm.controls['fija'].touched;
         this.ingresoEgresoFlag = this.cajaconceptoForm.controls['ingreso_egreso'].invalid && this.cajaconceptoForm.controls['ingreso_egreso'].touched;
         this.idCajaFlag = this.cajaconceptoForm.controls['id_caja'].invalid && this.cajaconceptoForm.controls['id_caja'].touched;
+        this.activoInactivoFlag = this.cajaconceptoForm.controls['activo_inactivo'].invalid && this.cajaconceptoForm.controls['activo_inactivo'].touched;
       });
     });
   }

@@ -27,8 +27,9 @@
                             <th pSortableColumn="ingreso_egreso">Ingreso/Egreso<p-sortIcon field="ingreso_egreso"></p-sortIcon></th>
                             <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th>
                             <th pSortableColumn="id_concepto">ID Concepto<p-sortIcon field="id_concepto"></p-sortIcon></th>
+                            <th pSortableColumn="activo_inactivo">Estado<p-sortIcon field="activo_inactivo"></p-sortIcon></th>
                             <th>Editar</th>
-                            <th>Eliminar</th>
+                            <!-- <th>Eliminar</th> -->
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-cajaconcepto>
@@ -39,15 +40,16 @@
                             <td>{{ cajaconcepto.ingreso_egreso }}</td>
                             <td>{{ cajaconcepto.id_caja }}</td>
                             <td>{{ cajaconcepto.id_concepto }}</td>
+                            <td>{{ cajaconcepto.activo_inactivo == 0 ? 'Activo' : 'Inactivo' }}</td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
                                     (click)="editCajaconcepto(cajaconcepto)"></p-button>
                             </td>
-                            <td>
+                            <!-- <td>
                                 <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
                                 (click)="confirmDelete(cajaconcepto)" [disabled]="cajaconcepto.fija == 1"
                                 [title]="cajaconcepto.fija == 1 ? 'Este concepto es fijo y no puede ser eliminado' : 'Eliminar concepto'"></p-button>
-                            </td>
+                            </td> -->
                         </tr>
                     </ng-template>
                 </p-table>
