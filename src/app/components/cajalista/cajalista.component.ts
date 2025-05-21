@@ -37,22 +37,12 @@ export class CajaListaComponent {
           this.cajasListas = response.mensaje;
         } else {
           console.error('Error loading cajas listas:', response.mensaje);
-          Swal.fire({
-            title: '¡Error!',
-            text: 'No se pudieron cargar las Cajas Listas',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
+          this.showErrorMessage('No se pudieron cargar las Cajas Listas');
         }
       },
       error: (error) => {
         console.error('Error in API call:', error);
-        Swal.fire({
-          title: '¡Error!',
-          text: 'Error en la conexión con el servidor',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
+        this.showErrorMessage('Error en la conexión con el servidor');
       }
     });
   }
@@ -66,6 +56,16 @@ export class CajaListaComponent {
   }
 
   confirmDelete(cajaLista: CajaLista) {
+    // Debug: imprimimos el valor y tipo de cajaLista.fija
+    console.log('Valor de fija:', cajaLista.fija, 'Tipo:', typeof cajaLista.fija);
+    
+    // Verificar si es una caja fija (fija=1)
+    if (cajaLista.fija == 1) {
+      this.showErrorMessage('No se pueden eliminar cajas marcadas como fijas');
+      return;
+    }
+    
+    // Confirmación normal
     Swal.fire({
       title: '¿Está seguro?',
       text: `¿Desea eliminar la caja "${cajaLista.descripcion}"?`,
@@ -83,6 +83,12 @@ export class CajaListaComponent {
   }
 
   deleteCajaLista(cajaLista: CajaLista) {
+    // Verificación adicional de seguridad
+    if (cajaLista.fija == 1) {
+      this.showErrorMessage('No se pueden eliminar cajas marcadas como fijas');
+      return;
+    }
+    
     this.subirdataService.eliminarCajaLista(cajaLista.id_caja).subscribe({
       next: (response: any) => {
         if (!response.error) {
@@ -94,22 +100,12 @@ export class CajaListaComponent {
           });
           this.loadCajasListas(); // Recargar la tabla
         } else {
-          Swal.fire({
-            title: '¡Error!',
-            text: 'La caja lista no se pudo eliminar',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
+          this.showErrorMessage('La caja lista no se pudo eliminar');
           console.error('Error deleting caja lista:', response.mensaje);
         }
       },
       error: (error) => {
-        Swal.fire({
-          title: '¡Error!',
-          text: 'La caja lista no se pudo eliminar',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
+        this.showErrorMessage('La caja lista no se pudo eliminar');
         console.error('Error in delete API call:', error);
       }
     });
@@ -131,5 +127,14 @@ export class CajaListaComponent {
       type: EXCEL_TYPE
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
+  }
+
+  private showErrorMessage(message: string): void {
+    Swal.fire({
+      title: '¡Error!',
+      text: message,
+      icon: 'error',
+      confirmButtonText: 'Aceptar'
+    });
   }
 }
