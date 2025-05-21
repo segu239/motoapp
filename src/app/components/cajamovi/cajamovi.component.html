@@ -27,6 +27,7 @@
                             <th pSortableColumn="fecha_mov">Fecha Mov.<p-sortIcon field="fecha_mov"></p-sortIcon></th>
                             <th pSortableColumn="importe_mov">Importe<p-sortIcon field="importe_mov"></p-sortIcon></th>
                             <th pSortableColumn="descripcion_mov">Descripción<p-sortIcon field="descripcion_mov"></p-sortIcon></th>
+                            <th pSortableColumn="tipo_movi">Tipo Movimiento<p-sortIcon field="tipo_movi"></p-sortIcon></th>
                             <!-- <th pSortableColumn="fecha_emibco">Fecha Emi. Bco<p-sortIcon field="fecha_emibco"></p-sortIcon></th>
                             <th pSortableColumn="banco">Banco<p-sortIcon field="banco"></p-sortIcon></th>
                             <th pSortableColumn="num_cheque">N° Cheque<p-sortIcon field="num_cheque"></p-sortIcon></th>
@@ -60,6 +61,7 @@
                             <td>{{ cajamovi.fecha_mov | date:'dd/MM/yyyy' }}</td>
                             <td>{{ cajamovi.importe_mov | number:'1.2-2' }}</td>
                             <td>{{ cajamovi.descripcion_mov }}</td>
+                            <td>{{ cajamovi.tipo_movi }}</td>
                            <!--  <td>{{ cajamovi.fecha_emibco | date:'dd/MM/yyyy' }}</td>
                             <td>{{ cajamovi.banco }}</td>
                             <td>{{ cajamovi.num_cheque }}</td>

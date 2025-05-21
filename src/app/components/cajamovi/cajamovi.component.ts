@@ -88,6 +88,32 @@ export class CajamoviComponent {
   }
 
   confirmDelete(cajamovi: Cajamovi) {
+    // Verificar restricciones de eliminación según tipo_movi
+    if (cajamovi.tipo_movi === 'A') {
+      this.showErrorMessage('No se pueden eliminar movimientos de tipo "A"');
+      return;
+    }
+    
+    if (cajamovi.tipo_movi !== 'M' && cajamovi.tipo_movi !== '') {
+      // Si el tipo no es 'M' ni vacío, confirmar si desean eliminarlo
+      Swal.fire({
+        title: 'Confirmación especial',
+        text: `Este movimiento no es de tipo "M". ¿Está seguro que desea eliminar "${cajamovi.descripcion_mov}" (ID: ${cajamovi.id_movimiento})?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.deleteCajamovi(cajamovi);
+        }
+      });
+      return;
+    }
+    
+    // Confirmación normal para tipo 'M'
     Swal.fire({
       title: '¿Está seguro?',
       text: `¿Desea eliminar el movimiento "${cajamovi.descripcion_mov}" (ID: ${cajamovi.id_movimiento})?`,
