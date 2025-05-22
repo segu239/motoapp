@@ -66,6 +66,10 @@ export class CajaListaComponent {
     });
   }
 
+  canEditOrDelete(cajaLista: CajaLista): boolean {
+    return this.isAdmin;
+  }
+
   editCajaLista(cajaLista: CajaLista) {
     this.router.navigate(['components/editcajalista'], { // Asegúrate que la ruta sea correcta
       queryParams: {

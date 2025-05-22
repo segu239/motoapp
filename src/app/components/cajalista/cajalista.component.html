@@ -26,8 +26,8 @@
                             <th pSortableColumn="especial">Especial<p-sortIcon field="especial"></p-sortIcon></th>
                             <th pSortableColumn="fija">Fija<p-sortIcon field="fija"></p-sortIcon></th>
                             <!-- <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th> -->
-                            <th *ngIf="isAdmin">Editar</th>
-                            <th *ngIf="isAdmin">Eliminar</th>
+                            <th>Editar</th>
+                            <th>Eliminar</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-cajaLista>
@@ -37,13 +37,17 @@
                             <td>{{ cajaLista.especial }}</td>
                             <td>{{ cajaLista.fija }}</td>
                             <!-- <td>{{ cajaLista.id_caja }}</td> -->
-                            <td *ngIf="isAdmin">
-                                <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                            <td>
+                                <p-button icon="pi pi-pencil" 
+                                    [styleClass]="canEditOrDelete(cajaLista) ? 'p-button-sm p-button-help' : 'p-button-sm p-button-help p-disabled'"
+                                    [disabled]="!canEditOrDelete(cajaLista)"
                                     (click)="editCajaLista(cajaLista)"></p-button>
                             </td>
-                            <td *ngIf="isAdmin">
-                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
-                                (click)="confirmDelete(cajaLista)"></p-button>
+                            <td>
+                                <p-button icon="pi pi-trash" 
+                                    [styleClass]="canEditOrDelete(cajaLista) ? 'p-button-sm p-button-danger' : 'p-button-sm p-button-danger p-disabled'"
+                                    [disabled]="!canEditOrDelete(cajaLista)"
+                                    (click)="confirmDelete(cajaLista)"></p-button>
                             </td>
                         </tr>
                     </ng-template>
