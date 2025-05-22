@@ -65,6 +65,7 @@ export class EditCajamoviComponent implements OnInit {
   public conceptoSeleccionado: any = null;
   private clienteId: number | null = null;
   private proveedorId: number | null = null;
+  public fechaMinima: string = ''; // Fecha mínima permitida para el input de fecha
 
   constructor(
     private subirdata: SubirdataService,
@@ -81,6 +82,8 @@ export class EditCajamoviComponent implements OnInit {
       this.sucursal = parseInt(sucursalStr, 10);
     }
     
+    // Configurar fecha mínima (hoy en Argentina)
+    this.setFechaMinima();
     this.initForm();
     this.loadConceptos();
     this.loadBancos();
@@ -140,6 +143,18 @@ export class EditCajamoviComponent implements OnInit {
       numero_comprobante: new FormControl(null, Validators.pattern(/^[0-9]{1,8}$/)),
       fecha_proceso: new FormControl(null)
     });
+  }
+
+  // Método para configurar la fecha mínima (hoy en Argentina UTC-3)
+  setFechaMinima() {
+    // Crear fecha actual en zona horaria de Argentina (UTC-3)
+    const now = new Date();
+    const argentinaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Argentina/Buenos_Aires"}));
+    
+    const year = argentinaTime.getFullYear();
+    const month = (argentinaTime.getMonth() + 1).toString().padStart(2, '0');
+    const day = argentinaTime.getDate().toString().padStart(2, '0');
+    this.fechaMinima = `${year}-${month}-${day}`;
   }
 
   // Método para cambiar entre cliente y proveedor
@@ -236,6 +251,32 @@ export class EditCajamoviComponent implements OnInit {
     }
   }
 
+  // Función para formatear fecha en formato DD/MM/YYYY para mostrar en input readonly
+  formatDateForDisplay(date: any): string {
+    if (!date) return '';
+    try {
+      let d: Date;
+      if (typeof date === 'string') {
+        d = new Date(date);
+      } else {
+        d = new Date(date);
+      }
+      
+      if (isNaN(d.getTime())) {
+        return '';
+      }
+      
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
+      
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      console.error('Error formatting date for display:', e);
+      return '';
+    }
+  }
+
   // Método para verificar si un cliente existe en la lista
   public clienteExisteEnLista(): boolean {
     const clienteId = this.cajamoviForm.get('cliente')?.value;
@@ -319,13 +360,18 @@ export class EditCajamoviComponent implements OnInit {
           // Formatear las fechas para el formulario
           const formattedData = { ...cajamoviData };
           
-          // Formatear todas las fechas
-          const dateFields = ['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'];
+          // Formatear fechas para inputs de tipo date
+          const dateFields = ['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco'];
           dateFields.forEach(field => {
             if (formattedData[field]) {
               formattedData[field] = this.formatDate(formattedData[field]);
             }
           });
+          
+          // Formatear fecha_proceso para mostrar en formato DD/MM/YYYY
+          if (formattedData['fecha_proceso']) {
+            formattedData['fecha_proceso'] = this.formatDateForDisplay(formattedData['fecha_proceso']);
+          }
 
           // Mostrar valor absoluto del importe_mov (sin signo) para mejorar la UX
           if (formattedData['importe_mov'] !== null && formattedData['importe_mov'] !== undefined) {

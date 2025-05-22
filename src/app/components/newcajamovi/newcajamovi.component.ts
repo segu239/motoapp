@@ -21,6 +21,7 @@ export class NewCajamoviComponent {
   public cajas: any[] = []; // Array para almacenar las cajas
   public isClienteSelected: boolean = true; // Por defecto se selecciona cliente
   public conceptoSeleccionado: any = null; // Para almacenar el concepto seleccionado
+  public fechaMinima: string = ''; // Fecha mínima permitida para el input de fecha
 
   constructor(
     private subirdata: SubirdataService,
@@ -33,6 +34,8 @@ export class NewCajamoviComponent {
     if (sucursalStr) {
       this.sucursal = parseInt(sucursalStr, 10);
     }
+    // Configurar fecha mínima (hoy)
+    this.setFechaMinima();
     this.cargarForm();
     this.loadConceptos();
     this.loadBancos();
@@ -42,6 +45,13 @@ export class NewCajamoviComponent {
   }
 
   cargarForm() {
+    // Obtener la fecha actual en formato DD/MM/YYYY usando zona horaria de Argentina
+    const now = new Date();
+    const argentinaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Argentina/Buenos_Aires"}));
+    const fechaActual = argentinaTime.getDate().toString().padStart(2, '0') + '/' + 
+                      (argentinaTime.getMonth() + 1).toString().padStart(2, '0') + '/' + 
+                      argentinaTime.getFullYear();
+
     this.cajamoviForm = this.fb.group({
       codigo_mov: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       num_operacion: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
@@ -70,8 +80,20 @@ export class NewCajamoviComponent {
       punto_venta: new FormControl(null, Validators.pattern(/^[0-9]{1,4}$/)),
       tipo_comprobante: new FormControl('', Validators.maxLength(2)),
       numero_comprobante: new FormControl(null, Validators.pattern(/^[0-9]{1,8}$/)),
-      fecha_proceso: new FormControl(null)
+      fecha_proceso: new FormControl(fechaActual)
     });
+  }
+
+  // Método para configurar la fecha mínima (hoy en Argentina UTC-3)
+  setFechaMinima() {
+    // Crear fecha actual en zona horaria de Argentina (UTC-3)
+    const now = new Date();
+    const argentinaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Argentina/Buenos_Aires"}));
+    
+    const year = argentinaTime.getFullYear();
+    const month = (argentinaTime.getMonth() + 1).toString().padStart(2, '0');
+    const day = argentinaTime.getDate().toString().padStart(2, '0');
+    this.fechaMinima = `${year}-${month}-${day}`;
   }
   
   // Método para cambiar entre cliente y proveedor

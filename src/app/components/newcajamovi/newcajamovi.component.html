@@ -70,8 +70,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Fecha Mov.</label>
                                             <div class="col-md-9">
-                                                <input type="date" class="form-control" formControlName="fecha_mov" placeholder="">
-                                                <small class="form-control-feedback">Seleccione la fecha del movimiento</small>
+                                                <input type="date" class="form-control" formControlName="fecha_mov" [min]="fechaMinima" placeholder="">
+                                                <small class="form-control-feedback">Seleccione la fecha del movimiento (desde hoy en adelante)</small>
                                             </div>
                                         </div>
                                     </div>
@@ -185,8 +185,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Fecha Proceso</label>
                                             <div class="col-md-9">
-                                                <input type="date" class="form-control" formControlName="fecha_proceso" placeholder="">
-                                                <small class="form-control-feedback">Seleccione la fecha de proceso (opcional)</small>
+                                                <input type="text" class="form-control" formControlName="fecha_proceso" readonly>
+                                                <small class="form-control-feedback">Fecha de proceso (solo lectura)</small>
                                             </div>
                                         </div>
                                     </div>
