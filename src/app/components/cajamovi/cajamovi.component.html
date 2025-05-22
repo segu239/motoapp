@@ -84,12 +84,16 @@
                             <td>{{ cajamovi.fecha_proceso | date:'dd/MM/yyyy' }}</td>
                             <td>{{ cajamovi.id_movimiento }}</td> -->
                             <td>
-                                <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                                <p-button icon="pi pi-pencil" 
+                                    [styleClass]="canEditOrDelete(cajamovi) ? 'p-button-sm p-button-help' : 'p-button-sm p-button-help p-disabled'"
+                                    [disabled]="!canEditOrDelete(cajamovi)"
                                     (click)="editCajamovi(cajamovi)"></p-button>
                             </td>
                             <td>
-                                <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
-                                (click)="confirmDelete(cajamovi)"></p-button>
+                                <p-button icon="pi pi-trash" 
+                                    [styleClass]="canEditOrDelete(cajamovi) ? 'p-button-sm p-button-danger' : 'p-button-sm p-button-danger p-disabled'"
+                                    [disabled]="!canEditOrDelete(cajamovi)"
+                                    (click)="confirmDelete(cajamovi)"></p-button>
                             </td>
                         </tr>
                     </ng-template>

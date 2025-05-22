@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
+import { AuthService } from '../../services/auth.service';
+import { User } from '../../interfaces/user';
 import Swal from 'sweetalert2';
 
 // Exportar la interfaz para que pueda ser importada por otros componentes
@@ -44,13 +46,16 @@ export class CajamoviComponent {
 
   public cajamovis: Cajamovi[] = [];
   public loading: boolean = false;
+  public currentUser: User | null = null;
 
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
-    private cargardataService: CargardataService
+    private cargardataService: CargardataService,
+    private authService: AuthService
   ) {
     this.loadCajamovis();
+    this.loadCurrentUser();
   }
 
   loadCajamovis() {
@@ -73,7 +78,55 @@ export class CajamoviComponent {
     });
   }
 
+  loadCurrentUser() {
+    this.authService.user$.subscribe(user => {
+      this.currentUser = user;
+    });
+  }
+
+  canEditOrDelete(cajamovi: Cajamovi): boolean {
+    if (!this.currentUser) {
+      console.log('No hay usuario actual');
+      return false;
+    }
+    
+    console.log('Usuario actual:', this.currentUser.nivel);
+    
+    // Si el usuario es admin o super, puede editar/eliminar cualquier movimiento
+    if (this.currentUser.nivel === 'admin' || this.currentUser.nivel === 'super') {
+      console.log('Usuario es admin/super, puede editar');
+      return true;
+    }
+    
+    // Para otros usuarios, verificar si la fecha es anterior al día actual
+    let fechaMovimiento: Date;
+    
+    if (typeof cajamovi.fecha_mov === 'string') {
+      // Si es string en formato YYYY-MM-DD, parsear correctamente para evitar problemas de zona horaria
+      const partes = (cajamovi.fecha_mov as string).split('-');
+      fechaMovimiento = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+    } else {
+      fechaMovimiento = new Date(cajamovi.fecha_mov as Date);
+    }
+    
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaMovimiento.setHours(0, 0, 0, 0);
+    
+    console.log('Fecha movimiento corregida:', fechaMovimiento);
+    console.log('Fecha hoy:', hoy);
+    console.log('Puede editar:', fechaMovimiento >= hoy);
+    
+    // Solo puede editar/eliminar si la fecha es de hoy o posterior
+    return fechaMovimiento >= hoy;
+  }
+
   editCajamovi(cajamovi: Cajamovi) {
+    if (!this.canEditOrDelete(cajamovi)) {
+      this.showErrorMessage('No tiene permisos para editar movimientos de fechas anteriores al día actual');
+      return;
+    }
+    
     try {
       // Navigate to edit page with cajamovi data
       this.router.navigate(['components/editcajamovi'], {
@@ -88,6 +141,11 @@ export class CajamoviComponent {
   }
 
   confirmDelete(cajamovi: Cajamovi) {
+    if (!this.canEditOrDelete(cajamovi)) {
+      this.showErrorMessage('No tiene permisos para eliminar movimientos de fechas anteriores al día actual');
+      return;
+    }
+    
     // Verificar restricciones de eliminación según tipo_movi
     if (cajamovi.tipo_movi === 'A') {
       this.showErrorMessage('No se pueden eliminar movimientos de tipo "A"');

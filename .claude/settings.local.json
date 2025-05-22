@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(grep:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"fecha|cajamovi\" *.txt)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -i \"date|NOW\\(\\)|timestamp\" *.txt)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"cajamov\" *.txt)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 -B 10 \"cajamov\" Carga.php.txt)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -C 15 \"cajamovi\" Descarga.php.txt)"
     ],
     "deny": []
   }
