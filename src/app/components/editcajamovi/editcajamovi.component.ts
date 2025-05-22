@@ -345,6 +345,17 @@ export class EditCajamoviComponent implements OnInit {
            !this.proveedorExisteEnLista();
   }
 
+  // Método para obtener el texto de marca cerrado
+  public getMarcaCerradoTexto(): string {
+    const valor = this.cajamoviForm.get('marca_cerrado')?.value;
+    if (valor === 0 || valor === '0') {
+      return 'ABIERTA';
+    } else if (valor === 1 || valor === '1') {
+      return 'CERRADA';
+    }
+    return valor ? valor.toString() : '';
+  }
+
   loadCajamoviData(): void {
     this.route.queryParams.subscribe(params => {
       if (params['cajamovi']) {
