@@ -68,6 +68,7 @@ import { CajamoviComponent } from './components/cajamovi/cajamovi.component';
 import { NewCajamoviComponent } from './components/newcajamovi/newcajamovi.component';
 import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.component';
 import { SucursalesComponent } from './components/sucursales/sucursales.component';
+import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 
 
 //nuevouser role
@@ -138,15 +139,16 @@ children:[
     {path: 'cajamovi', component: CajamoviComponent, data: { titulo: "Cajamovi" } },
     { path: 'newcajamovi', component: NewCajamoviComponent, data: { titulo: "Nuevo Cajamovi" } },
     { path: 'editcajamovi', component: EditCajamoviComponent, data: { titulo: "Editar Cajamovi" } },
-    { path: 'sucursales', component: SucursalesComponent, data: { titulo: "Sucursales" } },
+    { path: 'sucursales', component: SucursalesComponent, canActivate: [AuthGuard], data: { titulo: "Sucursales", roles: [UserRole.SUPER, UserRole.ADMIN] } },
     // Nuevas rutas para la administración de usuarios
-    { path: 'user-management', component: UserManagementComponent, data: { titulo: "Administración de Usuarios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
+    { path: 'user-management', component: UserManagementComponent, canActivate: [AuthGuard], data: { titulo: "Administración de Usuarios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
 ]
 },
 
 // Rutas para autenticación
 { path: 'login', component: LoginComponent },
 { path: 'login2', component: Login2Component },
+{ path: 'nopermitido', component: NopermitidoComponent },
 { path: '**', pathMatch: 'full', redirectTo: 'login2' },
 {path: '', pathMatch: 'full', redirectTo: 'login2'}
 

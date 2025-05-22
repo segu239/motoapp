@@ -34,13 +34,21 @@ export class AuthGuard implements CanActivate {
         const isAuthenticated = !!user;
         const hasRole = this.authService.checkUserRole(user, allowedRoles);
         
-        return isAuthenticated && hasRole;
-      }),
-      tap(canAccess => {
-        if (!canAccess) {
-          console.warn('Acceso denegado. Redirigiendo a login');
-          this.router.navigate(['/login']);
+        // Si el usuario está autenticado pero no tiene el rol adecuado, redirigir a nopermitido
+        if (isAuthenticated && !hasRole) {
+          console.warn('Acceso denegado por falta de permisos. Redirigiendo a nopermitido');
+          this.router.navigate(['/nopermitido']);
+          return false;
         }
+        
+        // Si no está autenticado, redirigir a login
+        if (!isAuthenticated) {
+          console.warn('Usuario no autenticado. Redirigiendo a login');
+          this.router.navigate(['/login']);
+          return false;
+        }
+        
+        return isAuthenticated && hasRole;
       })
     );
   }

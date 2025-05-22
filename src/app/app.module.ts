@@ -112,6 +112,7 @@ import { SucursalesComponent } from './components/sucursales/sucursales.componen
 
 // Nuevo servicio de paginación
 import { ArticulosPaginadosService } from './services/articulos-paginados.service';
+import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 
 @NgModule({
   declarations: [
@@ -191,6 +192,7 @@ import { ArticulosPaginadosService } from './services/articulos-paginados.servic
     NewCajamoviComponent,
     EditCajamoviComponent,
     SucursalesComponent,
+    NopermitidoComponent,
   ],
   imports: [
     ButtonModule,
