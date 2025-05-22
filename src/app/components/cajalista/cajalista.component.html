@@ -26,8 +26,8 @@
                             <th pSortableColumn="especial">Especial<p-sortIcon field="especial"></p-sortIcon></th>
                             <th pSortableColumn="fija">Fija<p-sortIcon field="fija"></p-sortIcon></th>
                             <!-- <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th> -->
-                            <th>Editar</th>
-                            <th>Eliminar</th>
+                            <th *ngIf="isAdmin">Editar</th>
+                            <th *ngIf="isAdmin">Eliminar</th>
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-cajaLista>
@@ -37,11 +37,11 @@
                             <td>{{ cajaLista.especial }}</td>
                             <td>{{ cajaLista.fija }}</td>
                             <!-- <td>{{ cajaLista.id_caja }}</td> -->
-                            <td>
+                            <td *ngIf="isAdmin">
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
                                     (click)="editCajaLista(cajaLista)"></p-button>
                             </td>
-                            <td>
+                            <td *ngIf="isAdmin">
                                 <p-button icon="pi pi-trash" styleClass="p-button-sm p-button-danger"
                                 (click)="confirmDelete(cajaLista)"></p-button>
                             </td>

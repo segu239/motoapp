@@ -3,6 +3,8 @@ import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service'; // Asegúrate que la ruta sea correcta
 import { SubirdataService } from '../../services/subirdata.service'; // Asegúrate que la ruta sea correcta
+import { AuthService } from '../../services/auth.service';
+import { User, UserRole } from '../../interfaces/user';
 import Swal from 'sweetalert2';
 
 interface CajaLista {
@@ -21,13 +23,17 @@ interface CajaLista {
 export class CajaListaComponent {
 
   public cajasListas: CajaLista[] = [];
+  public currentUser: User | null = null;
+  public isAdmin: boolean = false;
 
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
-    private cargardataService: CargardataService
+    private cargardataService: CargardataService,
+    private authService: AuthService
   ) {
     this.loadCajasListas();
+    this.checkUserRole();
   }
 
   loadCajasListas() {
@@ -43,6 +49,19 @@ export class CajaListaComponent {
       error: (error) => {
         console.error('Error in API call:', error);
         this.showErrorMessage('Error en la conexión con el servidor');
+      }
+    });
+  }
+
+  checkUserRole() {
+    this.authService.user$.subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.isAdmin = user?.nivel === UserRole.ADMIN || user?.nivel === UserRole.SUPER;
+      },
+      error: (error) => {
+        console.error('Error checking user role:', error);
+        this.isAdmin = false;
       }
     });
   }
