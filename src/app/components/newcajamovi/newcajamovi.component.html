@@ -173,11 +173,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Marca Cerrado</label>
                                             <div class="col-md-9">
-                                                <select class="form-control" formControlName="marca_cerrado">
-                                                    <option value="0">ABIERTA</option>
-                                                    <option value="1">CERRADA</option>
-                                                </select>
-                                                <small class="form-control-feedback">Seleccione el estado de cierre</small>
+                                                <input type="text" class="form-control" formControlName="marca_cerrado" readonly>
+                                                <small class="form-control-feedback">Estado de cierre (solo lectura)</small>
                                             </div>
                                         </div>
                                     </div>
