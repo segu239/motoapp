@@ -1122,7 +1122,12 @@ public function CajaconceptoPorIdConcepto_post()
 
 public function Cajamovi_get()
 {
-  $query = $this->db->get('caja_movi'); // Nombre de la tabla en plural y minúscula
+  // Realizar JOIN con caja_conceptos y caja_lista para obtener las descripciones
+  $this->db->select('cm.*, TRIM(cc.descripcion) as descripcion_concepto, TRIM(cl.descripcion) as descripcion_caja');
+  $this->db->from('caja_movi cm');
+  $this->db->join('caja_conceptos cc', 'cm.codigo_mov = cc.id_concepto', 'left');
+  $this->db->join('caja_lista cl', 'cm.caja = cl.id_caja', 'left');
+  $query = $this->db->get();
   $resp=$query->result_array();
 
   if (isset($resp)){
@@ -1147,12 +1152,18 @@ public function CajamoviPorSucursal_post()
   $data = $this->post();
   $sucursal = isset($data['sucursal']) ? $data['sucursal'] : null;
   
+  // Realizar JOIN con caja_conceptos y caja_lista para obtener las descripciones
+  $this->db->select('cm.*, TRIM(cc.descripcion) as descripcion_concepto, TRIM(cl.descripcion) as descripcion_caja');
+  $this->db->from('caja_movi cm');
+  $this->db->join('caja_conceptos cc', 'cm.codigo_mov = cc.id_concepto', 'left');
+  $this->db->join('caja_lista cl', 'cm.caja = cl.id_caja', 'left');
+  
   if ($sucursal !== null) {
     // Filtrar por sucursal específica
-    $this->db->where('sucursal', $sucursal);
+    $this->db->where('cm.sucursal', $sucursal);
   }
   
-  $query = $this->db->get('caja_movi');
+  $query = $this->db->get();
   $resp = $query->result_array();
 
   if (isset($resp) && count($resp) > 0){

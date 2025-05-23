@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
@@ -6,6 +6,7 @@ import { SubirdataService } from '../../services/subirdata.service';
 import { AuthService } from '../../services/auth.service';
 import { User } from '../../interfaces/user';
 import Swal from 'sweetalert2';
+import { PrimeNGConfig } from 'primeng/api';
 
 // Exportar la interfaz para que pueda ser importada por otros componentes
 export interface Cajamovi {
@@ -35,6 +36,8 @@ export interface Cajamovi {
   numero_comprobante: number | null;
   fecha_proceso: Date | null;
   id_movimiento: number;
+  descripcion_concepto?: string; // Campo agregado para la descripción del concepto
+  descripcion_caja?: string; // Campo agregado para la descripción de la caja
 }
 
 @Component({
@@ -42,7 +45,7 @@ export interface Cajamovi {
   templateUrl: './cajamovi.component.html',
   styleUrls: ['./cajamovi.component.css']
 })
-export class CajamoviComponent {
+export class CajamoviComponent implements OnInit {
 
   public cajamovis: Cajamovi[] = [];
   public loading: boolean = false;
@@ -52,9 +55,60 @@ export class CajamoviComponent {
     private router: Router,
     private subirdataService: SubirdataService,
     private cargardataService: CargardataService,
-    private authService: AuthService
+    private authService: AuthService,
+    private primengConfig: PrimeNGConfig
   ) {
     this.loadCurrentUser();
+  }
+
+  ngOnInit() {
+    this.primengConfig.setTranslation({
+      startsWith: 'Comienza con',
+      contains: 'Contiene',
+      notContains: 'No contiene',
+      endsWith: 'Termina con',
+      equals: 'Igual a',
+      notEquals: 'No igual a',
+      noFilter: 'Sin filtro',
+      lt: 'Menor que',
+      lte: 'Menor o igual que',
+      gt: 'Mayor que',
+      gte: 'Mayor o igual que',
+      is: 'Es',
+      isNot: 'No es',
+      before: 'Antes',
+      after: 'Después',
+      dateIs: 'Fecha es',
+      dateIsNot: 'Fecha no es',
+      dateBefore: 'Fecha antes de',
+      dateAfter: 'Fecha después de',
+      clear: 'Limpiar',
+      apply: 'Aplicar',
+      matchAll: 'Coincidir con todos',
+      matchAny: 'Coincidir con cualquiera',
+      addRule: 'Agregar regla',
+      removeRule: 'Eliminar regla',
+      accept: 'Sí',
+      reject: 'No',
+      choose: 'Elegir',
+      upload: 'Subir',
+      cancel: 'Cancelar',
+      dayNames: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'],
+      dayNamesShort: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
+      dayNamesMin: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
+      monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+      monthNamesShort: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+      dateFormat: 'dd/mm/yy',
+      firstDayOfWeek: 1,
+      today: 'Hoy',
+      weekHeader: 'Sem',
+      weak: 'Débil',
+      medium: 'Medio',
+      strong: 'Fuerte',
+      passwordPrompt: 'Ingrese una contraseña',
+      emptyMessage: 'No se encontraron resultados',
+      emptyFilterMessage: 'No se encontraron resultados'
+    });
   }
 
   loadCajamovis() {

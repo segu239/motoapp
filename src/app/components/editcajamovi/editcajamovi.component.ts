@@ -33,6 +33,8 @@ interface Cajamovi {
   numero_comprobante: number | null;
   fecha_proceso: Date | null;
   id_movimiento: number;
+  descripcion_concepto?: string; // Campo agregado para la descripción del concepto
+  descripcion_caja?: string; // Campo agregado para la descripción de la caja
 }
 
 interface Cliente {
