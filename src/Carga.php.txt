@@ -1142,6 +1142,36 @@ public function Cajamovi_get()
   }
 }
 
+public function CajamoviPorSucursal_post()
+{
+  $data = $this->post();
+  $sucursal = isset($data['sucursal']) ? $data['sucursal'] : null;
+  
+  if ($sucursal !== null) {
+    // Filtrar por sucursal específica
+    $this->db->where('sucursal', $sucursal);
+  }
+  
+  $query = $this->db->get('caja_movi');
+  $resp = $query->result_array();
+
+  if (isset($resp) && count($resp) > 0){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp
+    );
+    $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "No se encontraron registros de movimientos de caja"
+    );
+    $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+  }
+}
+
 
 public function RubroPrincipalPorId_post() 
 {

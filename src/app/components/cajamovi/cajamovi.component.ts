@@ -54,13 +54,25 @@ export class CajamoviComponent {
     private cargardataService: CargardataService,
     private authService: AuthService
   ) {
-    this.loadCajamovis();
     this.loadCurrentUser();
   }
 
   loadCajamovis() {
     this.loading = true;
-    this.cargardataService.getCajamovi().subscribe({
+    
+    // Determinar si se debe filtrar por sucursal
+    let sucursalFiltro: number | null = null;
+    
+    if (this.currentUser && this.currentUser.nivel !== 'admin' && this.currentUser.nivel !== 'super') {
+      // Si no es admin ni super, filtrar por la sucursal actual
+      const sucursalStr = sessionStorage.getItem('sucursal');
+      if (sucursalStr) {
+        sucursalFiltro = parseInt(sucursalStr, 10);
+      }
+    }
+    
+    // Usar el método apropiado según el filtro
+    this.cargardataService.getCajamoviPorSucursal(sucursalFiltro).subscribe({
       next: (response: any) => {
         this.loading = false;
         if (!response.error) {
@@ -81,6 +93,8 @@ export class CajamoviComponent {
   loadCurrentUser() {
     this.authService.user$.subscribe(user => {
       this.currentUser = user;
+      // Cargar los movimientos después de obtener el usuario
+      this.loadCajamovis();
     });
   }
 

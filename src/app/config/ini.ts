@@ -175,6 +175,7 @@ export const UrlBuscarArticulos = 'https://motoapp.loclx.io/APIAND/index.php/Car
 export const UrlBuscarArticulosTexto = 'https://motoapp.loclx.io/APIAND/index.php/Carga/BuscarArticulosTexto';
 
 export const UrlCajamovi = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Cajamovi';
+export const UrlCajamoviPorSucursal = 'https://motoapp.loclx.io/APIAND/index.php/Carga/CajamoviPorSucursal';
 export const UrlBancos = 'https://motoapp.loclx.io/APIAND/index.php/Carga/Bancos';
 
 export const UrlSubirDatosRubroPrincipal = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/SubirDatosRubroPrincipal';
