@@ -1,13 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CargardataService } from '../../services/cargardata.service';
+import { StockPaginadosService } from '../../services/stock-paginados.service';
 import { Producto } from '../../interfaces/producto';
 import Swal from 'sweetalert2';
 import * as FileSaver from 'file-saver';
 import xlsx from 'xlsx/xlsx';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
-import { filter } from 'rxjs/operators';
+import { filter, takeUntil } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
+import { Subject, forkJoin } from 'rxjs';
 //importar componente calculoproducto
 //import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { StockproductopedidoComponent } from '../stockproductopedido/stockproductopedido.component'; 
@@ -20,7 +22,7 @@ import { ChangeDetectorRef } from '@angular/core';
   styleUrls: ['./pedir-stock.component.css'],
   providers: [DialogService]
 })
-export class PedirStockComponent {
+export class PedirStockComponent implements OnInit, OnDestroy {
   public tipoVal: string = 'Condicion de Venta';
   public codTarj: string = '';
   public listaPrecio: string = '';
@@ -36,44 +38,325 @@ export class PedirStockComponent {
 
   public productos: Producto[];
   public productoElejido: Producto;
+  public cargandoProductos: boolean = false;
+  
+  // Propiedades para paginación (igual que artículos)
+  public paginaActual = 1;
+  public totalPaginas = 0;
+  public totalItems = 0;
+  public terminoBusqueda = '';
+  
+  // Datos adicionales
+  public valoresCambio: any[] = [];
+  public tiposMoneda: any[] = [];
+  public confLista: any[] = [];
 
   public tarjetaFlag: boolean = false;
   public chequeFlag: boolean = false;
   public previousUrl: string = "";
   filteredTipo: any[] = [];
-  constructor(public dialogService: DialogService, private cdr: ChangeDetectorRef, private router: Router, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService) {
-
-    // Mostrar loading antes de cargar los productos
-    this.mostrarLoading();
-    
-    this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
-      console.log(resp.mensaje);
-      this.productos = [...resp.mensaje];
-      // Forzar la detección de cambios
-      this.cdr.detectChanges();
-      // Cerrar loading
-      Swal.close();
-    }, error => {
-      Swal.close();
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudieron cargar los productos'
-      });
-    });
+  
+  private destroy$ = new Subject<void>();
+  constructor(
+    public dialogService: DialogService, 
+    private cdr: ChangeDetectorRef, 
+    private router: Router, 
+    private activatedRoute: ActivatedRoute, 
+    private _cargardata: CargardataService,
+    private stockPaginadosService: StockPaginadosService
+  ) {
+    this.initializeComponent();
   }
  
 
   ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+    
     if (this.ref) {
       this.ref.close();
     }
   }
 
   ngOnInit() {
-
+    this.setupSubscriptions();
+    this.cargarDatosIniciales();
   }
 
+  // Inicializar componente
+  private initializeComponent(): void {
+    this.productos = [];
+    this.searchText = '';
+  }
+
+  // Configurar suscripciones (igual que artículos)
+  private setupSubscriptions(): void {
+    // Suscribirse a productos
+    this.stockPaginadosService.productos$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(productos => {
+        this.productos = productos;
+        this.cdr.detectChanges();
+      });
+
+    // Suscribirse a estado de carga
+    this.stockPaginadosService.cargando$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(cargando => {
+        this.cargandoProductos = cargando;
+      });
+
+    // Suscribirse a paginación
+    this.stockPaginadosService.paginaActual$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(pagina => {
+        this.paginaActual = pagina;
+      });
+
+    this.stockPaginadosService.totalPaginas$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(total => {
+        this.totalPaginas = total;
+      });
+
+    this.stockPaginadosService.totalItems$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(total => {
+        this.totalItems = total;
+      });
+
+    this.stockPaginadosService.terminoBusqueda$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(termino => {
+        this.terminoBusqueda = termino;
+      });
+  }
+
+  // Cargar datos iniciales (igual que artículos)
+  private cargarDatosIniciales(): void {
+    // Cargar datos adicionales
+    forkJoin({
+      valoresCambio: this.stockPaginadosService.getValoresCambio(),
+      tiposMoneda: this.stockPaginadosService.getTiposMoneda(),
+      confLista: this.stockPaginadosService.getConfLista()
+    }).pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (data) => {
+        if (data.valoresCambio && !data.valoresCambio['error']) {
+          this.valoresCambio = data.valoresCambio['mensaje'];
+        }
+        if (data.tiposMoneda && !data.tiposMoneda['error']) {
+          this.tiposMoneda = data.tiposMoneda['mensaje'];
+        }
+        if (data.confLista && !data.confLista['error']) {
+          this.confLista = data.confLista['mensaje'];
+        }
+        console.log('Pedir Stock: Datos adicionales cargados');
+      },
+      error: (error) => {
+        console.error('Pedir Stock: Error al cargar datos:', error);
+      }
+    });
+
+    // Cargar primera página de productos
+    this.stockPaginadosService.cargarPagina(1).subscribe(
+      () => {},
+      error => {
+        Swal.fire({
+          title: 'Error',
+          text: 'No se pudieron cargar los productos',
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
+      }
+    );
+  }
+
+  // Métodos de paginación sobrescritos para búsqueda local
+  irAPagina(pagina: number) {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (pagina >= 1 && pagina <= this.totalPaginas) {
+        this.paginaActual = pagina;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.stockPaginadosService.irAPagina(pagina);
+    }
+  }
+  
+  paginaSiguiente() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual < this.totalPaginas) {
+        this.paginaActual++;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.stockPaginadosService.paginaSiguiente();
+    }
+  }
+  
+  paginaAnterior() {
+    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
+      // Si estamos en modo búsqueda, paginar localmente
+      if (this.paginaActual > 1) {
+        this.paginaActual--;
+        this.paginarResultadosLocales();
+      }
+    } else {
+      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      this.stockPaginadosService.paginaAnterior();
+    }
+  }
+
+  // Variables para la búsqueda a nivel de cliente (igual que artículos)
+  productosCompletos: any[] = [];
+  productosFiltrados: any[] = [];
+
+  // Buscar productos
+  buscar() {
+    if (!this.terminoBusqueda.trim()) {
+      this.limpiarBusqueda();
+      return;
+    }
+    
+    // Si no tenemos todos los productos cargados, los cargamos primero
+    if (this.productosCompletos.length === 0) {
+      this.mostrarLoading();
+      
+      // Cargar todos los productos una sola vez
+      this._cargardata.artsucursal().subscribe({
+        next: (response: any) => {
+          console.log('Respuesta de artsucursal para pedir stock:', response);
+          
+          // Verificar si la respuesta tiene el formato esperado
+          let productos = [];
+          
+          if (response && Array.isArray(response)) {
+            // Es un array directo
+            productos = response;
+          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
+            // Tiene formato { mensaje: [...] }
+            productos = response.mensaje;
+          } else if (response && !response.error && response.mensaje) {
+            // Otro formato posible
+            productos = response.mensaje;
+          }
+          
+          console.log('Productos extraídos para búsqueda:', productos.length);
+          
+          if (productos && productos.length > 0) {
+            // Guardar la lista completa
+            this.productosCompletos = [...productos];
+            
+            // Realizar la búsqueda local
+            this.buscarLocal();
+            
+            Swal.close();
+          } else {
+            Swal.close();
+            console.warn('No se obtuvieron productos o respuesta vacía');
+            Swal.fire({
+              title: 'Advertencia',
+              text: 'No se pudieron cargar productos para buscar',
+              icon: 'warning',
+              confirmButtonText: 'Aceptar'
+            });
+          }
+        },
+        error: (error) => {
+          Swal.close();
+          console.error('Error al cargar productos:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Error al cargar productos para buscar',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      });
+    } else {
+      // Ya tenemos los productos, solo realizamos la búsqueda local
+      this.buscarLocal();
+    }
+  }
+  
+  // Buscar productos (para compatibilidad con el HTML existente)
+  public buscarProductos(termino: string): void {
+    this.terminoBusqueda = termino;
+    this.buscar();
+  }
+  
+  // Realizar búsqueda local
+  buscarLocal() {
+    const termino = this.terminoBusqueda.toLowerCase().trim();
+    console.log('Buscando el término en pedir stock:', termino);
+    console.log('En total productos para pedir stock:', this.productosCompletos.length);
+    
+    // Filtrar productos localmente
+    this.productosFiltrados = this.productosCompletos.filter(producto => {
+      // Primero verificamos si el producto tiene los campos necesarios
+      if (!producto) return false;
+      
+      // Asegurar que todos los campos se conviertan a string para búsqueda segura
+      const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
+      const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
+      const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
+      const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
+      const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
+      
+      // Devolver true si alguno de los campos contiene el término de búsqueda
+      return (
+        nombreArt.includes(termino) || 
+        marca.includes(termino) || 
+        codigo.includes(termino) || 
+        codigoBarra.includes(termino) || 
+        rubro.includes(termino)
+      );
+    });
+    
+    console.log('Productos filtrados encontrados en pedir stock:', this.productosFiltrados.length);
+    
+    // Actualizar contadores de paginación para la UI
+    this.totalItems = this.productosFiltrados.length;
+    this.totalPaginas = Math.ceil(this.totalItems / 50); // 50 ítems por página por defecto
+    this.paginaActual = 1;
+    
+    // Aplicar paginación a los resultados
+    this.paginarResultadosLocales();
+    
+    // Si no hay resultados, mostrar un mensaje amigable
+    if (this.productos.length === 0) {
+      Swal.fire({
+        title: 'Sin resultados',
+        text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
+        icon: 'info',
+        confirmButtonText: 'Aceptar'
+      });
+    }
+  }
+  
+  // Paginar resultados localmente
+  paginarResultadosLocales() {
+    const inicio = (this.paginaActual - 1) * 50; // 50 ítems por página por defecto
+    const fin = inicio + 50;
+    
+    // Obtener los productos para la página actual
+    this.productos = this.productosFiltrados.slice(inicio, fin);
+  }
+  
+  // Limpiar búsqueda
+  public limpiarBusqueda(): void {
+    this.terminoBusqueda = '';
+    this.productosFiltrados = [];
+    
+    // Volver a cargar la primera página desde el servicio
+    this.stockPaginadosService.cargarPagina(1).subscribe();
+  }
+  
   // Método para mostrar el indicador de carga
   mostrarLoading() {
     Swal.fire({
@@ -87,6 +370,27 @@ export class PedirStockComponent {
     });
   }
 
+  // Obtener números de página visibles en la paginación
+  getPaginasVisibles(): number[] {
+    const paginas: number[] = [];
+    const numerosPaginasVisibles = 10;
+    const paginasACadaLado = Math.floor(numerosPaginasVisibles / 2);
+    
+    let inicio = Math.max(1, this.paginaActual - paginasACadaLado);
+    let fin = Math.min(this.totalPaginas, inicio + numerosPaginasVisibles - 1);
+    
+    // Ajustar inicio si fin está al límite
+    if (fin === this.totalPaginas) {
+      inicio = Math.max(1, fin - numerosPaginasVisibles + 1);
+    }
+    
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    
+    return paginas;
+  }
+
   selectTipo(item: any) {
     console.log(item);
     //esto son datos de la tabla tarjcredito
@@ -96,24 +400,8 @@ export class PedirStockComponent {
     this.activaDatos = item.activadatos;
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
 
-    // Mostrar loading antes de cargar los productos
-    this.mostrarLoading();
-    
-    this._cargardata.artsucursal().pipe(take(1)).subscribe((resp: any) => {
-      console.log(resp.mensaje);
-      this.productos = [...resp.mensaje];
-      // Forzar la detección de cambios
-      this.cdr.detectChanges();
-      // Cerrar loading
-      Swal.close();
-    }, error => {
-      Swal.close();
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'No se pudieron cargar los productos'
-      });
-    });
+    // Los productos ya están paginados en memoria
+    console.log('Pedir Stock: Tipo seleccionado, productos disponibles');
   }
   abrirFormularioTarj() {
    /*  Swal.fire({
@@ -332,10 +620,12 @@ export class PedirStockComponent {
   }
   exportExcel() {
     import('xlsx').then((xlsx) => {
-      const worksheet = xlsx.utils.json_to_sheet(this.productos);
+      // Usar productos de la página actual
+      const productosParaExportar = this.productos;
+      const worksheet = xlsx.utils.json_to_sheet(productosParaExportar);
       const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
       const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
-      this.saveAsExcelFile(excelBuffer, 'products');
+      this.saveAsExcelFile(excelBuffer, 'pedir_stock_products');
     });
   }
   saveAsExcelFile(buffer: any, fileName: string): void {
