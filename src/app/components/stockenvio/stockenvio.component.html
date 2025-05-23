@@ -13,17 +13,31 @@
             </div>
         </div> -->
         <div>
-            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true" [rows]="10"
-                [globalFilterFields]="['nomart', 'marca']">
+            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="false" [rows]="50"
+                [globalFilterFields]="['nomart', 'marca']" [loading]="cargandoProductos">
                 <ng-template pTemplate="caption">
-                    <div class="p-d-flex">
-                        <span class="p-input-icon-left ml-auto">
-                            <input pInputText type="text"
-                                (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
-                                placeholder="Buscar.." />
-                        </span>
-                       <!--  <p-button icon="pi pi-file-excel" (click)="exportExcel()"
-                            styleClass="p-button-sm p-button-success ml-4"></p-button> -->
+                    <div class="d-flex flex-row align-items-center">
+                        <!-- Caja de búsqueda -->
+                        <div class="search-container">
+                            <div class="input-group">
+                                <input type="text" class="form-control" 
+                                    [(ngModel)]="terminoBusqueda"
+                                    placeholder="Buscar productos..." 
+                                    (keyup.enter)="buscarProductos(terminoBusqueda)" />
+                                <div class="input-group-append">
+                                    <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
+                                        (click)="buscarProductos(terminoBusqueda)" [disabled]="cargandoProductos"></p-button>
+                                    <p-button icon="pi pi-times" styleClass="p-button-sm p-button-secondary ml-1" 
+                                        (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="cargandoProductos"></p-button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Botón exportar Excel -->
+                        <div class="ml-2">
+                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                styleClass="p-button-success"></p-button>
+                        </div>
                     </div>
                 </ng-template>
                 <ng-template pTemplate="header">
@@ -45,6 +59,7 @@
                         <th pSortableColumn="exi2" style="width:10%">Stk CC<p-sortIcon field="exi2"></p-sortIcon></th>
                         <th pSortableColumn="exi3" style="width:10%">Stk VV<p-sortIcon field="exi3"></p-sortIcon></th>
                         <th pSortableColumn="exi4" style="width:10%">Stk GM<p-sortIcon field="exi4"></p-sortIcon></th>
+                        <th pSortableColumn="exi5" style="width:10%">Stk May<p-sortIcon field="exi5"></p-sortIcon></th>
                         <th style="width:20%">Select</th>
                         <th style="width: 5rem"></th>
                     </tr>
@@ -62,6 +77,7 @@
                         <td>{{ producto.exi2 }}</td>
                         <td>{{ producto.exi3 }}</td>
                         <td>{{ producto.exi4 }}</td>
+                        <td>{{ producto.exi5 }}</td>
                         <td>
                             <p-button icon="pi pi-cart-plus" (click)="selectProducto(producto)"
                                 styleClass="p-button-sm p-button-info"> </p-button>
@@ -69,6 +85,51 @@
                     </tr>
                 </ng-template>
             </p-table>
+
+            <!-- Paginación personalizada -->
+            <div class="pagination-container mt-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="pagination-info">
+                        Mostrando página {{ paginaActual }} de {{ totalPaginas }} | Total: {{ totalItems }} productos
+                    </span>
+                </div>
+                <nav aria-label="Page navigation" *ngIf="totalPaginas > 1">
+                    <ul class="pagination mb-0">
+                        <!-- Botón para primera página -->
+                        <li class="page-item" [class.disabled]="paginaActual === 1">
+                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(1)">
+                                <i class="fa fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        
+                        <!-- Botón página anterior -->
+                        <li class="page-item" [class.disabled]="paginaActual === 1">
+                            <a class="page-link" href="javascript:void(0)" (click)="paginaAnterior()">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        </li>
+                        
+                        <!-- Páginas numeradas -->
+                        <li class="page-item" [class.active]="paginaActual === p" *ngFor="let p of getPaginasVisibles()">
+                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(p)">{{ p }}</a>
+                        </li>
+                        
+                        <!-- Botón página siguiente -->
+                        <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                            <a class="page-link" href="javascript:void(0)" (click)="paginaSiguiente()">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        </li>
+                        
+                        <!-- Botón para última página -->
+                        <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(totalPaginas)">
+                                <i class="fa fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
     </div>
 </div>
