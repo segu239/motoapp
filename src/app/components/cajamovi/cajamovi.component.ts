@@ -38,6 +38,7 @@ export interface Cajamovi {
   id_movimiento: number;
   descripcion_concepto?: string; // Campo agregado para la descripción del concepto
   descripcion_caja?: string; // Campo agregado para la descripción de la caja
+  fecha_mov_string?: string; // Campo agregado para el filtro de fecha como string
 }
 
 @Component({
@@ -50,6 +51,7 @@ export class CajamoviComponent implements OnInit {
   public cajamovis: Cajamovi[] = [];
   public loading: boolean = false;
   public currentUser: User | null = null;
+  public selectedCajamovis: Cajamovi[] = [];
 
   constructor(
     private router: Router,
@@ -130,7 +132,52 @@ export class CajamoviComponent implements OnInit {
       next: (response: any) => {
         this.loading = false;
         if (!response.error) {
-          this.cajamovis = response.mensaje;
+          // Convertir las fechas string a objetos Date para que funcione el filtro
+          this.cajamovis = response.mensaje.map((cajamovi: any) => {
+            // Función auxiliar para extraer fecha en formato dd/mm/yyyy
+            const extractDateString = (dateStr: any): string => {
+              if (!dateStr) return '';
+              
+              // Si viene en formato ISO (2025-05-22T00:00:00.000Z)
+              if (dateStr.includes('T')) {
+                const datePart = dateStr.split('T')[0];
+                const [year, month, day] = datePart.split('-');
+                return `${day}/${month}/${year}`;
+              }
+              // Si viene en formato YYYY-MM-DD
+              else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [year, month, day] = dateStr.split('-');
+                return `${day}/${month}/${year}`;
+              }
+              // Si ya viene en formato DD/MM/YYYY
+              else if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                return dateStr;
+              }
+              
+              return '';
+            };
+            
+            // Función auxiliar para crear objetos Date evitando problemas de timezone
+            const createDate = (dateStr: any): Date | null => {
+              if (!dateStr) return null;
+              
+              if (dateStr.includes('T')) {
+                return new Date(dateStr.split('T')[0] + 'T12:00:00');
+              }
+              
+              return new Date(dateStr + 'T12:00:00');
+            };
+            
+            return {
+              ...cajamovi,
+              fecha_mov: createDate(cajamovi.fecha_mov),
+              fecha_emibco: createDate(cajamovi.fecha_emibco),
+              fecha_cobro_bco: createDate(cajamovi.fecha_cobro_bco),
+              fecha_vto_bco: createDate(cajamovi.fecha_vto_bco),
+              fecha_proceso: createDate(cajamovi.fecha_proceso),
+              fecha_mov_string: extractDateString(cajamovi.fecha_mov)
+            };
+          });
         } else {
           console.error('Error loading cajamovis:', response.mensaje);
           this.showErrorMessage('Error al cargar los movimientos de caja');
@@ -318,4 +365,18 @@ export class CajamoviComponent implements OnInit {
       confirmButtonText: 'Aceptar'
     });
   }
+
+  generarReporte() {
+    if (!this.selectedCajamovis || this.selectedCajamovis.length === 0) {
+      this.showErrorMessage('Por favor seleccione al menos un movimiento para generar el reporte');
+      return;
+    }
+
+    // Guardar los datos seleccionados en sessionStorage para pasarlos al componente de reporte
+    sessionStorage.setItem('reporteData', JSON.stringify(this.selectedCajamovis));
+    
+    // Navegar al componente de reporte
+    this.router.navigate(['components/reporte']);
+  }
+
 }

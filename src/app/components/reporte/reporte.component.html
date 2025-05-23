@@ -1,0 +1,147 @@
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="card-title">Reporte de Movimientos de Caja</h4>
+          <div>
+            <button class="btn btn-success btn-sm mr-2" (click)="exportExcel()">
+              <i class="pi pi-file-excel"></i> Excel
+            </button>
+            <button class="btn btn-danger btn-sm mr-2" (click)="exportPDF()">
+              <i class="pi pi-file-pdf"></i> PDF
+            </button>
+            <button class="btn btn-info btn-sm mr-2" (click)="print()">
+              <i class="pi pi-print"></i> Imprimir
+            </button>
+            <button class="btn btn-secondary btn-sm" (click)="volver()">
+              <i class="pi pi-arrow-left"></i> Volver
+            </button>
+          </div>
+        </div>
+
+        <div #reportContent>
+          <!-- Información del reporte -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <p class="text-muted mb-1">Fecha de generación: {{ fechaReporte | date:'dd/MM/yyyy HH:mm' }}</p>
+              <p class="text-muted">Total de movimientos analizados: {{ summary.cantidadMovimientos }}</p>
+            </div>
+          </div>
+
+          <!-- Resumen de totales -->
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <div class="card bg-success text-white">
+                <div class="card-body">
+                  <h5 class="card-title">Total Ingresos</h5>
+                  <h3>$ {{ summary.totalIngresos | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card bg-danger text-white">
+                <div class="card-body">
+                  <h5 class="card-title">Total Egresos</h5>
+                  <h3>$ {{ summary.totalEgresos | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card" [ngClass]="{'bg-info text-white': summary.balance >= 0, 'bg-warning': summary.balance < 0}">
+                <div class="card-body">
+                  <h5 class="card-title">Balance</h5>
+                  <h3>$ {{ summary.balance | number:'1.2-2' }}</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gráficos -->
+          <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <canvas id="chartTipo" style="max-height: 300px;"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <canvas id="chartCaja" style="max-height: 300px;"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mb-4">
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <canvas id="chartConcepto" style="max-height: 300px;"></canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-body">
+                  <canvas id="chartTendencia" style="max-height: 300px;"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla detallada -->
+          <div class="row">
+            <div class="col-12">
+              <h5 class="mb-3">Detalle de Movimientos</h5>
+              <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Concepto</th>
+                      <th>Caja</th>
+                      <th>Tipo</th>
+                      <th>Descripción</th>
+                      <th class="text-right">Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let mov of movimientos">
+                      <td>{{ mov.fecha_mov | date:'dd/MM/yyyy' }}</td>
+                      <td>{{ mov.descripcion_concepto || '-' }}</td>
+                      <td>{{ mov.descripcion_caja || '-' }}</td>
+                      <td>{{ mov.tipo_movi }}</td>
+                      <td>{{ mov.descripcion_mov }}</td>
+                      <td class="text-right">$ {{ mov.importe_mov | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="font-weight-bold">
+                      <td colspan="5">Total</td>
+                      <td class="text-right">$ {{ summary.balance | number:'1.2-2' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Estilos para impresión -->
+<style>
+  @media print {
+    .btn {
+      display: none !important;
+    }
+    .card {
+      border: 1px solid #dee2e6 !important;
+    }
+  }
+</style>

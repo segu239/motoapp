@@ -4,7 +4,7 @@
             <div class="card-body">
                 <h4 class="card-title">Movimientos de Caja</h4>
                 <p-table #dtable [value]="cajamovis" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
-                    [rows]="10" dataKey="id_movimiento"
+                    [rows]="10" dataKey="id_movimiento" [(selection)]="selectedCajamovis"
                     [globalFilterFields]="['sucursal', 'codigo_mov', 'num_operacion', 'fecha_mov', 'importe_mov', 'descripcion_mov', 'descripcion_concepto', 'descripcion_caja', 'fecha_emibco', 'banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'plaza_cheque', 'codigo_mbco', 'desc_bancaria', 'marca_cerrado', 'fecha_cobro_bco', 'fecha_vto_bco', 'tipo_movi', 'caja', 'letra', 'punto_venta', 'tipo_comprobante', 'numero_comprobante', 'fecha_proceso', 'id_movimiento']">
                     <ng-template pTemplate="caption">
                         <div class="p-d-flex">
@@ -17,10 +17,17 @@
                                 styleClass="p-button-sm p-button-success ml-4"></p-button>
                             <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajamovi']"
                                 styleClass="p-button-sm p-button-info ml-2"></p-button>
+                            <p-button icon="pi pi-chart-line" label="Generar Reporte" 
+                                (click)="generarReporte()"
+                                [disabled]="!selectedCajamovis || selectedCajamovis.length === 0"
+                                styleClass="p-button-sm p-button-warning ml-2"></p-button>
                         </div>
                     </ng-template>
                     <ng-template pTemplate="header">
                         <tr>
+                            <th style="width: 3rem">
+                                <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                            </th>
                             <th pSortableColumn="sucursal">
                                 <div class="flex align-items-center">
                                     Sucursal<p-sortIcon field="sucursal"></p-sortIcon>
@@ -49,7 +56,7 @@
                                 <div class="flex align-items-center">
                                     Fecha Mov.<p-sortIcon field="fecha_mov"></p-sortIcon>
                                 </div>
-                                <p-columnFilter type="date" field="fecha_mov" display="menu" class="ml-auto"></p-columnFilter>
+                                <p-columnFilter type="text" field="fecha_mov_string" display="menu" class="ml-auto"></p-columnFilter>
                             </th>
                             <th pSortableColumn="importe_mov">
                                 <div class="flex align-items-center">
@@ -81,6 +88,9 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-cajamovi>
                         <tr>
+                            <td>
+                                <p-tableCheckbox [value]="cajamovi"></p-tableCheckbox>
+                            </td>
                             <td>{{ cajamovi.sucursal }}</td>
                             <td>{{ cajamovi.codigo_mov }}</td>
                             <td>{{ cajamovi.descripcion_concepto || '-' }}</td>

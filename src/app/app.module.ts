@@ -1,8 +1,13 @@
-import { NgModule } from '@angular/core';
+import { NgModule, LOCALE_ID } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { DatePipe } from '@angular/common';
+import { registerLocaleData } from '@angular/common';
+import localeEs from '@angular/common/locales/es';
+
+// Registrar el locale español
+registerLocaleData(localeEs);
 
 import { DynamicDialogModule } from 'primeng/dynamicdialog';
 import { DropdownModule } from 'primeng/dropdown';
@@ -113,6 +118,7 @@ import { SucursalesComponent } from './components/sucursales/sucursales.componen
 // Nuevo servicio de paginación
 import { ArticulosPaginadosService } from './services/articulos-paginados.service';
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
+import { ReporteComponent } from './components/reporte/reporte.component';
 
 @NgModule({
   declarations: [
@@ -193,6 +199,7 @@ import { NopermitidoComponent } from './components/nopermitido/nopermitido.compo
     EditCajamoviComponent,
     SucursalesComponent,
     NopermitidoComponent,
+    ReporteComponent,
   ],
   imports: [
     ButtonModule,
@@ -218,7 +225,8 @@ import { NopermitidoComponent } from './components/nopermitido/nopermitido.compo
     DialogService, 
     DatePipe, 
     AngularFireAuthGuard, 
-    { provide: FIREBASE_OPTIONS, useValue: environment.firebase}
+    { provide: FIREBASE_OPTIONS, useValue: environment.firebase},
+    { provide: LOCALE_ID, useValue: 'es' }
   ],
   bootstrap: [AppComponent]
 })
