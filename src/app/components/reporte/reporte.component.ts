@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { Cajamovi } from '../cajamovi/cajamovi.component';
+import { Cajamovi } from '../../interfaces/cajamovi';
+import { ReporteDataService } from '../../services/reporte-data.service';
 import * as FileSaver from 'file-saver';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -44,25 +45,53 @@ export class ReporteComponent implements OnInit {
   
   public fechaReporte: Date = new Date();
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private reporteDataService: ReporteDataService
+  ) {
     // Chart.js auto registra todos los componentes necesarios
   }
 
   ngOnInit(): void {
+    console.log('ReporteComponent - ngOnInit');
     this.loadReportData();
   }
 
   loadReportData(): void {
-    const reportData = sessionStorage.getItem('reporteData');
-    if (!reportData) {
-      this.router.navigate(['components/cajamovi']);
-      return;
+    console.log('ReporteComponent - loadReportData');
+    
+    // Primero intentar obtener los datos del servicio
+    const dataFromService = this.reporteDataService.getReporteData();
+    console.log('Datos del servicio:', dataFromService);
+    
+    if (dataFromService && dataFromService.length > 0) {
+      this.movimientos = dataFromService;
+      console.log('Usando datos del servicio');
+    } else {
+      // Si no hay datos en el servicio, intentar con sessionStorage
+      const reportData = sessionStorage.getItem('reporteData');
+      console.log('Datos en sessionStorage:', reportData);
+      
+      if (!reportData) {
+        console.log('No hay datos disponibles, redirigiendo a cajamovi');
+        this.router.navigate(['components/cajamovi']);
+        return;
+      }
+      
+      try {
+        this.movimientos = JSON.parse(reportData);
+        console.log('Movimientos parseados desde sessionStorage:', this.movimientos);
+      } catch (error) {
+        console.error('Error al parsear los datos del reporte:', error);
+        this.router.navigate(['components/cajamovi']);
+        return;
+      }
     }
-
-    this.movimientos = JSON.parse(reportData);
+    
     this.calculateSummary();
     
-    // Limpiar los datos de sessionStorage
+    // Limpiar los datos
+    this.reporteDataService.clearReporteData();
     sessionStorage.removeItem('reporteData');
     
     // Crear gráficos después de un pequeño delay para asegurar que el DOM esté listo

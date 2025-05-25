@@ -1,8 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SubirdataService } from '../../services/subirdata.service';
 import { CargardataService } from '../../services/cargardata.service';
+import { CajamoviHelperService } from '../../services/cajamovi-helper.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { formatDateForServer, createDateFromString } from '../../utils/date-utils';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -10,7 +14,7 @@ import Swal from 'sweetalert2';
   templateUrl: './newcajamovi.component.html',
   styleUrls: ['./newcajamovi.component.css']
 })
-export class NewCajamoviComponent {
+export class NewCajamoviComponent implements OnDestroy {
   public cajamoviForm!: FormGroup;
   public loading: boolean = false;
   public sucursal: number = 0;
@@ -22,12 +26,14 @@ export class NewCajamoviComponent {
   public isClienteSelected: boolean = true; // Por defecto se selecciona cliente
   public conceptoSeleccionado: any = null; // Para almacenar el concepto seleccionado
   public fechaMinima: string = ''; // Fecha mínima permitida para el input de fecha
+  private destroy$ = new Subject<void>(); // Para limpiar recursos
 
   constructor(
     private subirdata: SubirdataService,
     private router: Router,
     private fb: FormBuilder,
-    private cargardata: CargardataService
+    private cargardata: CargardataService,
+    private cajamoviHelper: CajamoviHelperService
   ) {
     // Obtener la sucursal del sessionStorage
     const sucursalStr = sessionStorage.getItem('sucursal');
@@ -45,21 +51,21 @@ export class NewCajamoviComponent {
   }
 
   cargarForm() {
-    // Obtener la fecha actual en formato DD/MM/YYYY usando zona horaria de Argentina
+    // Obtener la fecha actual en formato YYYY-MM-DD usando zona horaria de Argentina
     const now = new Date();
     const argentinaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Argentina/Buenos_Aires"}));
-    const fechaActual = argentinaTime.getDate().toString().padStart(2, '0') + '/' + 
-                      (argentinaTime.getMonth() + 1).toString().padStart(2, '0') + '/' + 
-                      argentinaTime.getFullYear();
+    const year = argentinaTime.getFullYear();
+    const month = (argentinaTime.getMonth() + 1).toString().padStart(2, '0');
+    const day = argentinaTime.getDate().toString().padStart(2, '0');
+    const fechaActual = `${year}-${month}-${day}`;
 
     this.cajamoviForm = this.fb.group({
       codigo_mov: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       num_operacion: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       fecha_mov: new FormControl('', Validators.required),
       importe_mov: new FormControl(null, Validators.compose([
-        Validators.required, 
-        Validators.pattern(/^\d{1,13}(\.\d{1,2})?$/),
-        Validators.min(0)
+        Validators.required,
+        this.cajamoviHelper.importeValidator(0.01)
       ])),
       descripcion_mov: new FormControl('', Validators.compose([Validators.required, Validators.maxLength(80)])),
       fecha_emibco: new FormControl(null),
@@ -125,7 +131,9 @@ export class NewCajamoviComponent {
       // Si no se encuentra el concepto en la lista, cargarlo específicamente
       if (!this.conceptoSeleccionado && this.conceptos.length > 0) {
         console.log('Concepto no encontrado en la lista, consultando específicamente');
-        this.cargardata.getCajaconceptoPorId(codigoMov).subscribe({
+        this.cargardata.getCajaconceptoPorId(codigoMov).pipe(
+          takeUntil(this.destroy$)
+        ).subscribe({
           next: (response: any) => {
             if (!response.error && response.mensaje && response.mensaje.length > 0) {
               this.conceptoSeleccionado = response.mensaje[0];
@@ -156,44 +164,9 @@ export class NewCajamoviComponent {
         proveedor: !this.isClienteSelected ? this.cajamoviForm.get('proveedor')?.value : null
       };
       
-      // Siempre aseguramos trabajar con números para el importe
-      let importe = nuevoCajamovi.importe_mov !== null ? Math.abs(parseFloat(nuevoCajamovi.importe_mov)) : 0;
-      
-      console.log('Valor original del importe:', nuevoCajamovi.importe_mov);
-      console.log('Valor del importe después de Math.abs():', importe);
-      console.log('Tipo de concepto seleccionado:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'ninguno');
-      
-      // VERIFICACIÓN DETALLADA DEL CONCEPTO
-      console.log('VERIFICACIÓN DE CONCEPTO:');
-      console.log('Código mov seleccionado:', nuevoCajamovi.codigo_mov);
-      console.log('Concepto seleccionado completo:', this.conceptoSeleccionado);
-      console.log('Tipo de concepto.ingreso_egreso:', this.conceptoSeleccionado ? typeof this.conceptoSeleccionado.ingreso_egreso : 'N/A');
-      console.log('Valor de concepto.ingreso_egreso:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'N/A');
-      console.log('Comparación estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso === '1');
-      console.log('Comparación no estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso == '1');
-      
-      // Aplicar factor de -1 si es un egreso (ingreso_egreso = 1)
-      let esEgreso = false;
-      if (this.conceptoSeleccionado) {
-        // Comprobar si es egreso, tanto con comparación estricta como no estricta
-        esEgreso = this.conceptoSeleccionado.ingreso_egreso === '1' || 
-                  this.conceptoSeleccionado.ingreso_egreso === 1 ||
-                  this.conceptoSeleccionado.ingreso_egreso == '1';
-      }
-      
-      if (esEgreso) {
-        // Para egresos, siempre debe ser negativo
-        nuevoCajamovi.importe_mov = importe * -1;
-        console.log('Aplicando signo negativo para egreso:', nuevoCajamovi.importe_mov);
-      } else if (this.conceptoSeleccionado && (this.conceptoSeleccionado.ingreso_egreso === '0' || this.conceptoSeleccionado.ingreso_egreso == '0')) {
-        // Para ingresos, siempre debe ser positivo
-        nuevoCajamovi.importe_mov = importe;
-        console.log('Manteniendo signo positivo para ingreso:', nuevoCajamovi.importe_mov);
-      } else {
-        // Si no hay concepto seleccionado, mantener el valor absoluto
-        nuevoCajamovi.importe_mov = importe;
-        console.log('Sin concepto seleccionado o tipo desconocido, usando valor absoluto:', nuevoCajamovi.importe_mov);
-      }
+      // Usar el servicio helper para calcular el importe final
+      const importeOriginal = parseFloat(nuevoCajamovi.importe_mov) || 0;
+      nuevoCajamovi.importe_mov = this.cajamoviHelper.calcularImporteFinal(importeOriginal, this.conceptoSeleccionado);
       
       // Agregar la sucursal desde sessionStorage
       nuevoCajamovi.sucursal = this.sucursal;
@@ -209,14 +182,25 @@ export class NewCajamoviComponent {
         if (nuevoCajamovi[key] === '') {
           nuevoCajamovi[key] = null;
         }
-        // Asegurarse que las fechas vacías sean null
-        if (key.startsWith('fecha_') && !nuevoCajamovi[key]) {
+        // Formatear fechas para el servidor
+        if (key.startsWith('fecha_') && nuevoCajamovi[key]) {
+          // Usar createDateFromString para manejar correctamente las fechas
+          const fecha = createDateFromString(nuevoCajamovi[key]);
+          if (fecha) {
+            nuevoCajamovi[key] = formatDateForServer(fecha);
+          } else {
+            nuevoCajamovi[key] = null;
+          }
+        } else if (key.startsWith('fecha_') && !nuevoCajamovi[key]) {
+          // Asegurarse que las fechas vacías sean null
           nuevoCajamovi[key] = null;
         }
       }
 
       console.log('Objeto final enviado al backend:', JSON.stringify(nuevoCajamovi));
-      this.subirdata.subirDatosCajamovi(nuevoCajamovi).subscribe({
+      this.subirdata.subirDatosCajamovi(nuevoCajamovi).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (response: any) => {
           this.loading = false;
           if (!response.error) {
@@ -268,7 +252,9 @@ export class NewCajamoviComponent {
   }
 
   loadConceptos() {
-    this.cargardata.getCajaconcepto().subscribe({
+    this.cargardata.getCajaconcepto().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.conceptos = response.mensaje;
@@ -293,7 +279,9 @@ export class NewCajamoviComponent {
   }
 
   loadBancos() {
-    this.cargardata.getBancos().subscribe({
+    this.cargardata.getBancos().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.bancos = response.mensaje;
@@ -312,7 +300,9 @@ export class NewCajamoviComponent {
   loadClientes() {
     const sucursalStr = sessionStorage.getItem('sucursal');
     if (sucursalStr) {
-      this.cargardata.clisucx(sucursalStr).subscribe({
+      this.cargardata.clisucx(sucursalStr).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (response: any) => {
           if (!response.error) {
             this.clientes = response.mensaje;
@@ -330,7 +320,9 @@ export class NewCajamoviComponent {
   }
 
   loadProveedores() {
-    this.cargardata.getProveedor().subscribe({
+    this.cargardata.getProveedor().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.proveedores = response.mensaje;
@@ -348,7 +340,9 @@ export class NewCajamoviComponent {
 
   loadCajas() {
     // Utilizamos getCajaLista() para obtener datos de la tabla caja_lista
-    this.cargardata.getCajaLista().subscribe({
+    this.cargardata.getCajaLista().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.cajas = response.mensaje;
@@ -362,5 +356,28 @@ export class NewCajamoviComponent {
         this.showErrorMessage('Error en la conexión con el servidor');
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar suscripciones
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Limpiar referencias a objetos grandes
+    this.conceptos = [];
+    this.bancos = [];
+    this.clientes = [];
+    this.proveedores = [];
+    this.cajas = [];
+    
+    // Limpiar referencias a objetos
+    this.conceptoSeleccionado = null;
+    
+    // Limpiar el formulario
+    if (this.cajamoviForm) {
+      this.cajamoviForm.reset();
+    }
+    
+    // No es necesario limpiar sessionStorage aquí ya que no se usa para almacenar datos temporales en new
   }
 }

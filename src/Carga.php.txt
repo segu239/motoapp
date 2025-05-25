@@ -1183,6 +1183,156 @@ public function CajamoviPorSucursal_post()
   }
 }
 
+// Método agregado para cargar movimientos de caja específicos por sus IDs
+public function CajamoviPorIds_post()
+{
+  $data = $this->post();
+  $ids = isset($data['ids']) ? $data['ids'] : array();
+  $sucursal = isset($data['sucursal']) ? $data['sucursal'] : null;
+  
+  // Validar que se proporcionaron IDs
+  if (empty($ids) || !is_array($ids)) {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "No se proporcionaron IDs válidos"
+    );
+    $this->response($respuesta, 400);
+    return;
+  }
+  
+  // Sanitizar los IDs para evitar SQL injection
+  $ids_sanitizados = array_map('intval', $ids);
+  
+  // Construir la consulta
+  $this->db->select('cm.*, TRIM(cc.descripcion) as descripcion_concepto, TRIM(cl.descripcion) as descripcion_caja');
+  $this->db->from('caja_movi cm');
+  $this->db->join('caja_conceptos cc', 'cm.codigo_mov = cc.id_concepto', 'left');
+  $this->db->join('caja_lista cl', 'cm.caja = cl.id_caja', 'left');
+  $this->db->where_in('cm.id_movimiento', $ids_sanitizados);
+  
+  // Si se proporciona sucursal, validar que los movimientos pertenezcan a esa sucursal
+  if ($sucursal !== null) {
+    $this->db->where('cm.sucursal', $sucursal);
+  }
+  
+  // Ordenar por fecha descendente para consistencia
+  $this->db->order_by('cm.fecha_mov', 'DESC');
+  $this->db->order_by('cm.id_movimiento', 'DESC');
+  
+  $query = $this->db->get();
+  $resp = $query->result_array();
+  
+  if (isset($resp) && count($resp) > 0) {
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp,
+      "items_solicitados" => count($ids),
+      "items_encontrados" => count($resp)
+    );
+    $this->response($respuesta);
+  } else {
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => array(),
+      "items_solicitados" => count($ids),
+      "items_encontrados" => 0
+    );
+    $this->response($respuesta);
+  }
+}
+
+public function CajamoviPaginado_post()
+{
+  $data = $this->post();
+  $sucursal = isset($data['sucursal']) ? $data['sucursal'] : null;
+  $pagina = isset($data['pagina']) ? intval($data['pagina']) : 1;
+  $porPagina = isset($data['porPagina']) ? intval($data['porPagina']) : 100;
+  $fechaDesde = isset($data['fechaDesde']) ? $data['fechaDesde'] : null;
+  $fechaHasta = isset($data['fechaHasta']) ? $data['fechaHasta'] : null;
+  
+  // Validar parámetros
+  $pagina = max(1, $pagina);
+  $porPagina = max(10, min(1000, $porPagina)); // Máximo 1000 registros por página
+  
+  // Calcular el offset para la consulta
+  $offset = ($pagina - 1) * $porPagina;
+  
+  // Primero, contar el total de registros con los filtros aplicados
+  $this->db->from('caja_movi cm');
+  
+  if ($sucursal !== null) {
+    $this->db->where('cm.sucursal', $sucursal);
+  }
+  
+  if ($fechaDesde !== null && $fechaDesde !== '') {
+    $this->db->where('cm.fecha_mov >=', $fechaDesde);
+  }
+  
+  if ($fechaHasta !== null && $fechaHasta !== '') {
+    $this->db->where('cm.fecha_mov <=', $fechaHasta);
+  }
+  
+  $totalRegistros = $this->db->count_all_results();
+  
+  // Calcular el total de páginas
+  $totalPaginas = ceil($totalRegistros / $porPagina);
+  
+  // Ahora realizar la consulta con paginación y JOINs
+  $this->db->select('cm.*, TRIM(cc.descripcion) as descripcion_concepto, TRIM(cl.descripcion) as descripcion_caja');
+  $this->db->from('caja_movi cm');
+  $this->db->join('caja_conceptos cc', 'cm.codigo_mov = cc.id_concepto', 'left');
+  $this->db->join('caja_lista cl', 'cm.caja = cl.id_caja', 'left');
+  
+  if ($sucursal !== null) {
+    $this->db->where('cm.sucursal', $sucursal);
+  }
+  
+  if ($fechaDesde !== null && $fechaDesde !== '') {
+    $this->db->where('cm.fecha_mov >=', $fechaDesde);
+  }
+  
+  if ($fechaHasta !== null && $fechaHasta !== '') {
+    $this->db->where('cm.fecha_mov <=', $fechaHasta);
+  }
+  
+  // Ordenar por fecha descendente y id_movimiento para consistencia
+  $this->db->order_by('cm.fecha_mov', 'DESC');
+  $this->db->order_by('cm.id_movimiento', 'DESC');
+  
+  // Aplicar límites de paginación
+  $this->db->limit($porPagina, $offset);
+  
+  $query = $this->db->get();
+  $resp = $query->result_array();
+  
+  if (isset($resp) && count($resp) > 0){
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp,
+      "metadatos" => array(
+        "pagina_actual" => $pagina,
+        "por_pagina" => $porPagina,
+        "total_paginas" => $totalPaginas,
+        "total_registros" => $totalRegistros
+      )
+    );
+    $this->response($respuesta);
+  }
+  else
+  {
+    $respuesta = array(
+      "error" => false, // Cambio a false porque no es un error, simplemente no hay datos
+      "mensaje" => array(),
+      "metadatos" => array(
+        "pagina_actual" => $pagina,
+        "por_pagina" => $porPagina,
+        "total_paginas" => 0,
+        "total_registros" => 0
+      )
+    );
+    $this->response($respuesta);
+  }
+}
 
 public function RubroPrincipalPorId_post() 
 {
@@ -1431,6 +1581,91 @@ public function ArticuloById_post() {
       );
   }
 
+  $this->response($respuesta);
+}
+
+public function getAllCajamoviByIds_post()
+{
+  $data = $this->post();
+  $ids = isset($data['ids']) ? $data['ids'] : null;
+  
+  if (!$ids) {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "No se proporcionaron IDs"
+    );
+    $this->response($respuesta);
+    return;
+  }
+  
+  // Si los IDs vienen como JSON string, decodificarlos
+  if (is_string($ids)) {
+    // Verificar si es JSON
+    $decodedIds = json_decode($ids, true);
+    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedIds)) {
+      $ids = $decodedIds;
+    } else {
+      // Si no es JSON, intentar convertir string separado por comas
+      $ids = explode(',', $ids);
+    }
+  }
+  
+  // Asegurar que todos los IDs sean enteros
+  $ids = array_map('intval', $ids);
+  
+  // Filtrar IDs válidos (mayores a 0)
+  $ids = array_filter($ids, function($id) {
+    return $id > 0;
+  });
+  
+  if (empty($ids)) {
+    $respuesta = array(
+      "error" => true,
+      "mensaje" => "No se proporcionaron IDs válidos"
+    );
+    $this->response($respuesta);
+    return;
+  }
+  
+  // Limitar la cantidad de IDs para evitar consultas muy grandes
+  if (count($ids) > 500) {
+    $ids = array_slice($ids, 0, 500);
+  }
+  
+  // Construir la consulta con JOINs para obtener toda la información necesaria
+  $this->db->select('cm.*, TRIM(cc.descripcion) as descripcion_concepto, TRIM(cl.descripcion) as descripcion_caja');
+  $this->db->from('caja_movi cm');
+  $this->db->join('caja_conceptos cc', 'cm.codigo_mov = cc.id_concepto', 'left');
+  $this->db->join('caja_lista cl', 'cm.caja = cl.id_caja', 'left');
+  $this->db->where_in('cm.id_movimiento', $ids);
+  
+  // Mantener el orden de los IDs solicitados
+  $this->db->order_by('cm.fecha_mov', 'DESC');
+  $this->db->order_by('cm.id_movimiento', 'DESC');
+  
+  $query = $this->db->get();
+  $resp = $query->result_array();
+  
+  if (isset($resp) && count($resp) > 0) {
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => $resp,
+      "metadatos" => array(
+        "ids_solicitados" => count($ids),
+        "registros_encontrados" => count($resp)
+      )
+    );
+  } else {
+    $respuesta = array(
+      "error" => false,
+      "mensaje" => array(),
+      "metadatos" => array(
+        "ids_solicitados" => count($ids),
+        "registros_encontrados" => 0
+      )
+    );
+  }
+  
   $this->response($respuesta);
 }
 
