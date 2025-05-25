@@ -38,55 +38,40 @@ export class ArticulosPaginadosService {
   // Cargar una página específica
   cargarPagina(pagina: number): Observable<any> {
     this.cargandoSubject.next(true);
-    
-    return this.http.post<any>(UrlArticulosPaginados, { 
-      pagina: pagina, 
-      porPagina: this.tamañoPagina 
-    }).pipe(
-      tap(respuesta => {
-        if (!respuesta.error && respuesta.mensaje) {
-          // Adaptar formato para que coincida con lo que espera el componente
-          const items = respuesta.mensaje.map(item => {
-            return {
-              ...item,
-              // Asegurarse de que todos los campos necesarios existan
-              nomart: item.nomart || item.nombre || '',
-              cd_articulo: item.cd_articulo || item.codigo || '',
-              cd_barra: item.cd_barra || item.codigobarra || '',
-              marca: item.marca || '',
-              rubro: item.rubro || '',
-              precon: parseFloat(item.precon || '0'),
-              prefi1: parseFloat(item.prefi1 || '0'),
-              prefi2: parseFloat(item.prefi2 || '0'),
-              prefi3: parseFloat(item.prefi3 || '0'),
-              prefi4: parseFloat(item.prefi4 || '0'),
-              exi1: parseFloat(item.exi1 || '0'),
-              exi2: parseFloat(item.exi2 || '0'),
-              exi3: parseFloat(item.exi3 || '0'),
-              exi4: parseFloat(item.exi4 || '0'),
-              exi5: parseFloat(item.exi5 || '0'),
-              estado: item.estado || ''
-            };
-          });
-          
-          this.articulosSubject.next(items);
-          
-          if (respuesta.metadatos) {
-            this.totalPaginasSubject.next(respuesta.metadatos.total_paginas);
-            this.totalItemsSubject.next(respuesta.metadatos.total_articulos);
-            this.paginaActualSubject.next(respuesta.metadatos.pagina_actual);
+    this.paginaActualSubject.next(pagina);
+    // Limpiar término de búsqueda cuando se carga una página normal
+    this.terminoBusquedaSubject.next('');
+
+    // Construir URL con parámetros de paginación
+    const params = new URLSearchParams({
+      page: pagina.toString(),
+      limit: this.tamañoPagina.toString()
+    });
+
+    const urlConPaginacion = `${Urlartsucursal}?${params.toString()}`;
+
+    return this.http.get<any>(urlConPaginacion).pipe(
+      tap(response => {
+        if (response && !response.error && response.mensaje) {
+          // Si la respuesta tiene formato paginado
+          if (response.mensaje.data) {
+            this.articulosSubject.next(this.processProductosData(response.mensaje.data));
+            this.totalItemsSubject.next(response.mensaje.total);
+            this.totalPaginasSubject.next(response.mensaje.total_pages);
           } else {
-            // Fallback si no hay metadatos
-            this.paginaActualSubject.next(pagina);
+            // Formato sin paginación (compatibilidad)
+            const productos = this.processProductosData(response.mensaje);
+            this.articulosSubject.next(productos);
+            this.totalItemsSubject.next(productos.length);
+            this.totalPaginasSubject.next(1);
           }
         } else {
-          console.error('Error en respuesta de API:', respuesta);
           this.articulosSubject.next([]);
         }
         this.cargandoSubject.next(false);
       }),
       catchError(error => {
-        console.error('Error al cargar página de artículos:', error);
+        console.error('Error al cargar productos:', error);
         this.cargandoSubject.next(false);
         this.articulosSubject.next([]);
         return throwError(error);
@@ -96,67 +81,59 @@ export class ArticulosPaginadosService {
 
   // Buscar artículos
   buscar(termino: string, pagina: number = 1): Observable<any> {
+    this.cargandoSubject.next(true);
+    this.terminoBusquedaSubject.next(termino);
+
+    // Si no hay término, resetear y cargar página normal
     if (!termino || termino.trim() === '') {
       this.terminoBusquedaSubject.next('');
       return this.cargarPagina(pagina);
     }
 
-    this.terminoBusquedaSubject.next(termino);
-    this.cargandoSubject.next(true);
-    
-    // Utilizamos el endpoint específico para búsqueda de texto
-    // Este endpoint debe ser configurado en el servidor para buscar solo en campos de texto
-    return this.http.post<any>(UrlBuscarArticulosTexto, {
-      termino: termino,
-      pagina: pagina,
-      porPagina: this.tamañoPagina
-    }).pipe(
-      tap(respuesta => {
-        if (!respuesta.error && respuesta.mensaje) {
-          // Adaptar formato para que coincida con lo que espera el componente
-          const items = respuesta.mensaje.map(item => {
-            return {
-              ...item,
-              // Asegurarse de que todos los campos necesarios existan
-              nomart: item.nomart || item.nombre || '',
-              cd_articulo: item.cd_articulo || item.codigo || '',
-              cd_barra: item.cd_barra || item.codigobarra || '',
-              marca: item.marca || '',
-              rubro: item.rubro || '',
-              precon: parseFloat(item.precon || '0'),
-              prefi1: parseFloat(item.prefi1 || '0'),
-              prefi2: parseFloat(item.prefi2 || '0'),
-              prefi3: parseFloat(item.prefi3 || '0'),
-              prefi4: parseFloat(item.prefi4 || '0'),
-              exi1: parseFloat(item.exi1 || '0'),
-              exi2: parseFloat(item.exi2 || '0'),
-              exi3: parseFloat(item.exi3 || '0'),
-              exi4: parseFloat(item.exi4 || '0'),
-              exi5: parseFloat(item.exi5 || '0'),
-              estado: item.estado || ''
-            };
-          });
-          
-          this.articulosSubject.next(items);
-          
-          if (respuesta.metadatos) {
-            this.totalPaginasSubject.next(respuesta.metadatos.total_paginas);
-            this.totalItemsSubject.next(respuesta.metadatos.total_articulos);
-            this.paginaActualSubject.next(respuesta.metadatos.pagina_actual);
-          } else {
-            // Fallback si no hay metadatos
+    // Construir URL con parámetros de búsqueda
+    const params = new URLSearchParams({
+      search: termino,
+      page: pagina.toString(),
+      limit: this.tamañoPagina.toString()
+    });
+
+    const urlConBusqueda = `${Urlartsucursal}?${params.toString()}`;
+
+    return this.http.get<any>(urlConBusqueda).pipe(
+      tap(response => {
+        console.log('Respuesta de búsqueda:', response);
+
+        if (response && !response.error && response.mensaje) {
+          // Si la respuesta tiene formato paginado
+          if (response.mensaje.data !== undefined) {
+            const productos = Array.isArray(response.mensaje.data) ? response.mensaje.data : [];
+            this.articulosSubject.next(this.processProductosData(productos));
+            this.totalItemsSubject.next(response.mensaje.total || 0);
+            this.totalPaginasSubject.next(response.mensaje.total_pages || 0);
             this.paginaActualSubject.next(pagina);
+          } else {
+            // Formato sin paginación o sin resultados
+            const productos = Array.isArray(response.mensaje) ? response.mensaje : [];
+            this.articulosSubject.next(this.processProductosData(productos));
+            this.totalItemsSubject.next(productos.length);
+            this.totalPaginasSubject.next(productos.length > 0 ? 1 : 0);
+            this.paginaActualSubject.next(1);
           }
         } else {
-          console.error('Error en búsqueda de artículos:', respuesta);
+          // No hay resultados
           this.articulosSubject.next([]);
+          this.totalItemsSubject.next(0);
+          this.totalPaginasSubject.next(0);
+          this.paginaActualSubject.next(1);
         }
         this.cargandoSubject.next(false);
       }),
       catchError(error => {
-        console.error('Error en búsqueda de artículos:', error);
+        console.error('Error al buscar productos:', error);
         this.cargandoSubject.next(false);
         this.articulosSubject.next([]);
+        this.totalItemsSubject.next(0);
+        this.totalPaginasSubject.next(0);
         return throwError(error);
       })
     );
@@ -287,5 +264,39 @@ export class ArticulosPaginadosService {
         return throwError(error);
       })
     );
+  }
+
+  // Limpiar término de búsqueda
+  limpiarTerminoBusqueda(): void {
+    this.terminoBusquedaSubject.next('');
+  }
+
+  // Procesar datos de productos
+  private processProductosData(productos: any[]): any[] {
+    if (!productos || !Array.isArray(productos)) {
+      return [];
+    }
+
+    return productos.map(item => ({
+      ...item,
+      // Asegurarse de que todos los campos necesarios existan
+      nomart: item.nomart || item.nombre || '',
+      cd_articulo: item.cd_articulo || item.codigo || '',
+      cd_barra: item.cd_barra || item.codigobarra || '',
+      marca: item.marca || '',
+      rubro: item.rubro || '',
+      precon: parseFloat(item.precon || '0'),
+      prefi1: parseFloat(item.prefi1 || '0'),
+      prefi2: parseFloat(item.prefi2 || '0'),
+      prefi3: parseFloat(item.prefi3 || '0'),
+      prefi4: parseFloat(item.prefi4 || '0'),
+      exi1: parseFloat(item.exi1 || '0'),
+      exi2: parseFloat(item.exi2 || '0'),
+      exi3: parseFloat(item.exi3 || '0'),
+      exi4: parseFloat(item.exi4 || '0'),
+      exi5: parseFloat(item.exi5 || '0'),
+      estado: item.estado || '',
+      tipo_moneda: item.tipo_moneda || 1
+    }));
   }
 }

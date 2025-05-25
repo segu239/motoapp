@@ -1,41 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SubirdataService } from '../../services/subirdata.service';
 import { CargardataService } from '../../services/cargardata.service';
+import { CajamoviHelperService } from '../../services/cajamovi-helper.service';
+import { Cajamovi } from '../../interfaces/cajamovi';
+import { Subject, Subscription } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { formatDateForServer, createDateFromString } from '../../utils/date-utils';
 import Swal from 'sweetalert2';
-
-// Definir la interfaz Cajamovi aquí para evitar problemas de importación circular
-interface Cajamovi {
-  sucursal: number;
-  codigo_mov: number;
-  num_operacion: number;
-  fecha_mov: Date;
-  importe_mov: number;
-  descripcion_mov: string;
-  fecha_emibco: Date | null;
-  banco: number | null;
-  num_cheque: number | null;
-  cuenta_mov: number | null;
-  cliente: number | null;
-  proveedor: number | null;
-  plaza_cheque: string | null;
-  codigo_mbco: number | null;
-  desc_bancaria: string | null;
-  marca_cerrado: number;
-  fecha_cobro_bco: Date | null;
-  fecha_vto_bco: Date | null;
-  tipo_movi: string;
-  caja: number;
-  letra: string | null;
-  punto_venta: number | null;
-  tipo_comprobante: string | null;
-  numero_comprobante: number | null;
-  fecha_proceso: Date | null;
-  id_movimiento: number;
-  descripcion_concepto?: string; // Campo agregado para la descripción del concepto
-  descripcion_caja?: string; // Campo agregado para la descripción de la caja
-}
 
 interface Cliente {
   cliente: number;
@@ -52,7 +25,7 @@ interface Proveedor {
   templateUrl: './editcajamovi.component.html',
   styleUrls: ['./editcajamovi.component.css']
 })
-export class EditCajamoviComponent implements OnInit {
+export class EditCajamoviComponent implements OnInit, OnDestroy {
   public cajamoviForm!: FormGroup;
   public currentCajamovi: Cajamovi | null = null;
   private id_movimiento: number = 0;
@@ -68,6 +41,7 @@ export class EditCajamoviComponent implements OnInit {
   private clienteId: number | null = null;
   private proveedorId: number | null = null;
   public fechaMinima: string = ''; // Fecha mínima permitida para el input de fecha
+  private destroy$ = new Subject<void>(); // Para limpiar suscripciones
 
   constructor(
     private subirdata: SubirdataService,
@@ -75,6 +49,7 @@ export class EditCajamoviComponent implements OnInit {
     private route: ActivatedRoute,
     private fb: FormBuilder,
     private cargardata: CargardataService,
+    private cajamoviHelper: CajamoviHelperService
   ) {}
 
   ngOnInit(): void {
@@ -100,18 +75,22 @@ export class EditCajamoviComponent implements OnInit {
   
   setupFieldChangeListeners(): void {
     // Actualizar clienteId cuando cambie el campo cliente
-    this.cajamoviForm.get('cliente')?.valueChanges.subscribe(value => {
-      if (value) {
-        this.clienteId = value;
-      }
-    });
+    this.cajamoviForm.get('cliente')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(value => {
+        if (value) {
+          this.clienteId = value;
+        }
+      });
     
     // Actualizar proveedorId cuando cambie el campo proveedor
-    this.cajamoviForm.get('proveedor')?.valueChanges.subscribe(value => {
-      if (value) {
-        this.proveedorId = value;
-      }
-    });
+    this.cajamoviForm.get('proveedor')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(value => {
+        if (value) {
+          this.proveedorId = value;
+        }
+      });
   }
 
   initForm(): void {
@@ -120,9 +99,8 @@ export class EditCajamoviComponent implements OnInit {
       num_operacion: new FormControl(null, Validators.compose([Validators.required, Validators.pattern(/^[0-9]{1,10}$/)])),
       fecha_mov: new FormControl('', Validators.required),
       importe_mov: new FormControl(null, Validators.compose([
-        Validators.required, 
-        Validators.pattern(/^\d{1,13}(\.\d{1,2})?$/),
-        Validators.min(0)
+        Validators.required,
+        this.cajamoviHelper.importeValidator(0.01)
       ])),
       descripcion_mov: new FormControl('', Validators.compose([Validators.required, Validators.maxLength(80)])),
       fecha_emibco: new FormControl(null),
@@ -204,7 +182,9 @@ export class EditCajamoviComponent implements OnInit {
       // Si no se encuentra el concepto en la lista, cargarlo específicamente
       if (!this.conceptoSeleccionado && this.conceptos.length > 0) {
         console.log('Concepto no encontrado en la lista, consultando específicamente');
-        this.cargardata.getCajaconceptoPorId(codigoMov).subscribe({
+        this.cargardata.getCajaconceptoPorId(codigoMov).pipe(
+          takeUntil(this.destroy$)
+        ).subscribe({
           next: (response: any) => {
             if (!response.error && response.mensaje && response.mensaje.length > 0) {
               this.conceptoSeleccionado = response.mensaje[0];
@@ -359,11 +339,15 @@ export class EditCajamoviComponent implements OnInit {
   }
 
   loadCajamoviData(): void {
-    this.route.queryParams.subscribe(params => {
-      if (params['cajamovi']) {
-        try {
-          // Parsear los datos del cajamovi desde los parámetros
-          const cajamoviData = JSON.parse(params['cajamovi']);
+    // Intentar obtener los datos de sessionStorage
+    const cajamoviStr = sessionStorage.getItem('cajamoviEdit');
+    
+    if (cajamoviStr) {
+      try {
+        // Parsear los datos del cajamovi desde sessionStorage
+        const cajamoviData = JSON.parse(cajamoviStr);
+        // Limpiar sessionStorage después de leer
+        sessionStorage.removeItem('cajamoviEdit');
           this.currentCajamovi = cajamoviData;
           this.id_movimiento = cajamoviData.id_movimiento;
 
@@ -374,17 +358,12 @@ export class EditCajamoviComponent implements OnInit {
           const formattedData = { ...cajamoviData };
           
           // Formatear fechas para inputs de tipo date
-          const dateFields = ['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco'];
+          const dateFields = ['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'];
           dateFields.forEach(field => {
             if (formattedData[field]) {
               formattedData[field] = this.formatDate(formattedData[field]);
             }
           });
-          
-          // Formatear fecha_proceso para mostrar en formato DD/MM/YYYY
-          if (formattedData['fecha_proceso']) {
-            formattedData['fecha_proceso'] = this.formatDateForDisplay(formattedData['fecha_proceso']);
-          }
 
           // Mostrar valor absoluto del importe_mov (sin signo) para mejorar la UX
           if (formattedData['importe_mov'] !== null && formattedData['importe_mov'] !== undefined) {
@@ -423,18 +402,17 @@ export class EditCajamoviComponent implements OnInit {
           // Buscar el concepto seleccionado
           this.onConceptoChange();
 
-        } catch (error) {
-          console.error('Error parsing cajamovi data:', error);
-          this.showErrorMessage('No se pudo cargar la información del movimiento');
-          this.router.navigate(['components/cajamovi']);
-        }
-      } else {
-        // Si no vienen datos, redirigir o mostrar error
-        console.error('No cajamovi data found in query params');
-        this.showErrorMessage('No se encontró información del movimiento para editar.');
+      } catch (error) {
+        console.error('Error parsing cajamovi data:', error);
+        this.showErrorMessage('No se pudo cargar la información del movimiento');
         this.router.navigate(['components/cajamovi']);
       }
-    });
+    } else {
+      // Si no hay datos en sessionStorage, redirigir
+      console.error('No cajamovi data found in sessionStorage');
+      this.showErrorMessage('No se encontró información del movimiento para editar.');
+      this.router.navigate(['components/cajamovi']);
+    }
   }
 
   onSubmit(): void {
@@ -451,44 +429,9 @@ export class EditCajamoviComponent implements OnInit {
         sucursal: this.sucursal
       };
       
-      // Siempre aseguramos trabajar con números para el importe
-      let importe = cajamoviData.importe_mov !== null ? Math.abs(parseFloat(cajamoviData.importe_mov)) : 0;
-      
-      console.log('Valor original del importe:', cajamoviData.importe_mov);
-      console.log('Valor del importe después de Math.abs():', importe);
-      console.log('Tipo de concepto seleccionado:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'ninguno');
-      
-      // VERIFICACIÓN DETALLADA DEL CONCEPTO
-      console.log('VERIFICACIÓN DE CONCEPTO:');
-      console.log('Código mov seleccionado:', cajamoviData.codigo_mov);
-      console.log('Concepto seleccionado completo:', this.conceptoSeleccionado);
-      console.log('Tipo de concepto.ingreso_egreso:', this.conceptoSeleccionado ? typeof this.conceptoSeleccionado.ingreso_egreso : 'N/A');
-      console.log('Valor de concepto.ingreso_egreso:', this.conceptoSeleccionado ? this.conceptoSeleccionado.ingreso_egreso : 'N/A');
-      console.log('Comparación estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso === '1');
-      console.log('Comparación no estricta con "1":', this.conceptoSeleccionado && this.conceptoSeleccionado.ingreso_egreso == '1');
-      
-      // Aplicar factor de -1 si es un egreso (ingreso_egreso = 1)
-      let esEgreso = false;
-      if (this.conceptoSeleccionado) {
-        // Comprobar si es egreso, tanto con comparación estricta como no estricta
-        esEgreso = this.conceptoSeleccionado.ingreso_egreso === '1' || 
-                  this.conceptoSeleccionado.ingreso_egreso === 1 ||
-                  this.conceptoSeleccionado.ingreso_egreso == '1';
-      }
-      
-      if (esEgreso) {
-        // Para egresos, siempre debe ser negativo
-        cajamoviData.importe_mov = importe * -1;
-        console.log('Aplicando signo negativo para egreso:', cajamoviData.importe_mov);
-      } else if (this.conceptoSeleccionado && (this.conceptoSeleccionado.ingreso_egreso === '0' || this.conceptoSeleccionado.ingreso_egreso == '0')) {
-        // Para ingresos, siempre debe ser positivo
-        cajamoviData.importe_mov = importe;
-        console.log('Manteniendo signo positivo para ingreso:', cajamoviData.importe_mov);
-      } else {
-        // Si no hay concepto seleccionado, mantener el valor absoluto
-        cajamoviData.importe_mov = importe;
-        console.log('Sin concepto seleccionado o tipo desconocido, usando valor absoluto:', cajamoviData.importe_mov);
-      }
+      // Usar el servicio helper para calcular el importe final
+      const importeOriginal = parseFloat(cajamoviData.importe_mov) || 0;
+      cajamoviData.importe_mov = this.cajamoviHelper.calcularImporteFinal(importeOriginal, this.conceptoSeleccionado);
       
       // Agregar el usuario desde sessionStorage
       const emailOp = sessionStorage.getItem('emailOp');
@@ -501,14 +444,25 @@ export class EditCajamoviComponent implements OnInit {
         if (cajamoviData[key] === '') {
           cajamoviData[key] = null;
         }
-        // Asegurarse que las fechas vacías sean null
-        if (key.startsWith('fecha_') && !cajamoviData[key]) {
+        // Formatear fechas para el servidor
+        if (key.startsWith('fecha_') && cajamoviData[key]) {
+          // Usar createDateFromString para manejar correctamente las fechas
+          const fecha = createDateFromString(cajamoviData[key]);
+          if (fecha) {
+            cajamoviData[key] = formatDateForServer(fecha);
+          } else {
+            cajamoviData[key] = null;
+          }
+        } else if (key.startsWith('fecha_') && !cajamoviData[key]) {
+          // Asegurarse que las fechas vacías sean null
           cajamoviData[key] = null;
         }
       }
 
       console.log('Objeto final enviado al backend:', JSON.stringify(cajamoviData));
-      this.subirdata.updateCajamovi(cajamoviData).subscribe({
+      this.subirdata.updateCajamovi(cajamoviData).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (response: any) => {
           this.loading = false;
           if (!response.error) {
@@ -560,7 +514,9 @@ export class EditCajamoviComponent implements OnInit {
   }
 
   loadConceptos() {
-    this.cargardata.getCajaconcepto().subscribe({
+    this.cargardata.getCajaconcepto().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.conceptos = response.mensaje;
@@ -585,7 +541,9 @@ export class EditCajamoviComponent implements OnInit {
   }
 
   loadBancos() {
-    this.cargardata.getBancos().subscribe({
+    this.cargardata.getBancos().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.bancos = response.mensaje;
@@ -604,7 +562,9 @@ export class EditCajamoviComponent implements OnInit {
   loadClientes() {
     const sucursalStr = sessionStorage.getItem('sucursal');
     if (sucursalStr) {
-      this.cargardata.clisucx(sucursalStr).subscribe({
+      this.cargardata.clisucx(sucursalStr).pipe(
+        takeUntil(this.destroy$)
+      ).subscribe({
         next: (response: any) => {
           if (!response.error) {
             this.clientes = response.mensaje;
@@ -622,7 +582,9 @@ export class EditCajamoviComponent implements OnInit {
   }
 
   loadProveedores() {
-    this.cargardata.getProveedor().subscribe({
+    this.cargardata.getProveedor().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.proveedores = response.mensaje;
@@ -640,7 +602,9 @@ export class EditCajamoviComponent implements OnInit {
 
   loadCajas() {
     // Utilizamos getCajaLista() para obtener datos de la tabla caja_lista
-    this.cargardata.getCajaLista().subscribe({
+    this.cargardata.getCajaLista().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.cajas = response.mensaje;
@@ -654,5 +618,34 @@ export class EditCajamoviComponent implements OnInit {
         this.showErrorMessage('Error en la conexión con el servidor');
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    // Limpiar todas las suscripciones
+    this.destroy$.next();
+    this.destroy$.complete();
+    
+    // Limpiar referencias a objetos grandes
+    this.conceptos = [];
+    this.bancos = [];
+    this.clientes = [];
+    this.proveedores = [];
+    this.cajas = [];
+    
+    // Limpiar referencias a objetos
+    this.currentCajamovi = null;
+    this.conceptoSeleccionado = null;
+    
+    // Limpiar el formulario
+    if (this.cajamoviForm) {
+      this.cajamoviForm.reset();
+    }
+    
+    // Limpiar sessionStorage de datos temporales
+    sessionStorage.removeItem('cajamoviEdit');
+    
+    // Limpiar referencias a IDs
+    this.clienteId = null;
+    this.proveedorId = null;
   }
 }

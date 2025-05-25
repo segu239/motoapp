@@ -1,0 +1,151 @@
+/* Estilos optimizados para Virtual Scroller */
+:host ::ng-deep .p-datatable .p-datatable-scrollable-body {
+  /* Mejora el rendimiento del scroll */
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-virtual-scrollable-body {
+  /* Optimizaci�n para virtual scroll */
+  contain: strict;
+  overflow-y: auto !important;
+}
+
+/* Altura FIJA para las filas - CRÍTICO para virtual scroll */
+:host ::ng-deep .p-datatable tbody tr {
+  height: 60px !important; /* Altura fija para evitar rebotes */
+  max-height: 60px !important;
+  min-height: 60px !important;
+}
+
+:host ::ng-deep .p-datatable tbody td {
+  padding: 0.25rem 0.5rem; /* Reducir padding vertical */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  height: 60px !important;
+  max-height: 60px !important;
+}
+
+/* Estilos específicos para columnas de descripción */
+:host ::ng-deep .p-datatable .descripcion-column {
+  max-width: 200px;
+  min-width: 150px;
+  white-space: normal !important;
+  word-wrap: break-word;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+/* Estilo para descripción larga con truncamiento */
+:host ::ng-deep .descripcion-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Máximo 2 líneas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 2.4em; /* 2 líneas * 1.2 line-height */
+  line-height: 1.2;
+}
+
+/* Tooltip para mostrar texto completo al hover - DESACTIVADO */
+/*
+:host ::ng-deep .descripcion-column:hover .descripcion-text {
+  overflow: visible;
+  white-space: normal;
+  -webkit-line-clamp: unset;
+  max-height: none;
+  position: relative;
+  z-index: 10;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+*/
+
+/* Columnas numéricas y de fecha - ancho fijo */
+:host ::ng-deep .p-datatable tbody td:nth-child(2), /* Sucursal */
+:host ::ng-deep .p-datatable tbody td:nth-child(4), /* N° Operación */
+:host ::ng-deep .p-datatable tbody td:nth-child(5), /* Fecha */
+:host ::ng-deep .p-datatable tbody td:nth-child(6) { /* Importe */
+  width: 100px;
+  text-align: center;
+}
+
+/* Alineación a la derecha para importes */
+:host ::ng-deep .p-datatable tbody td:nth-child(6) { /* Importe */
+  text-align: right;
+}
+
+/* Indicador de carga durante scroll */
+:host ::ng-deep .p-datatable-loading-overlay {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Mejora visual durante el scroll */
+:host ::ng-deep .p-datatable-scrollable-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+:host ::ng-deep .p-datatable-scrollable-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+:host ::ng-deep .p-datatable-scrollable-body::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+:host ::ng-deep .p-datatable-scrollable-body::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Estilos para los filtros de fecha */
+.gap-2 {
+  gap: 0.5rem;
+}
+
+/* Indicador de rendimiento */
+.performance-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  z-index: 1000;
+  font-family: monospace;
+}
+
+.performance-indicator.warning {
+  background: rgba(255, 152, 0, 0.9);
+}
+
+.performance-indicator.danger {
+  background: rgba(244, 67, 54, 0.9);
+}
+
+/* Fixes para el rebote del virtual scroll */
+:host ::ng-deep .p-datatable .p-datatable-scrollable-body {
+  overflow-anchor: none !important; /* Previene el salto automático */
+}
+
+:host ::ng-deep .p-virtualscroller-content {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Asegurar que el spacer del virtual scroll sea estable */
+:host ::ng-deep .p-virtualscroller-spacer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 1px;
+  transform: translateZ(0);
+}

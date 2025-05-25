@@ -7,9 +7,9 @@ import * as FileSaver from 'file-saver';
 import xlsx from 'xlsx/xlsx';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
-import { filter } from 'rxjs/operators';
+import { filter, debounceTime, distinctUntilChanged, switchMap, tap, takeUntil } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, Subject, of } from 'rxjs';
 //importar componente calculoproducto
 import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -35,6 +35,8 @@ interface Column {
 export class CondicionventaComponent implements OnInit, OnDestroy {
   public tipoVal: string = 'Condicion de Venta';
   private subscriptions: Subscription[] = [];
+  private destroy$ = new Subject<void>();
+  private searchSubject$ = new Subject<string>();
   public codTarj: string = '';
   public listaPrecio: string = '';
   public activaDatos: number;
@@ -84,6 +86,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   public totalItems = 0;
   public terminoBusqueda = '';
   public loading = false;
+  public cargandoProductos = false;
 
   // Añadir nuevas propiedades para la selección de columnas
   cols: Column[];
@@ -99,7 +102,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   ) {
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
-    this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp: any) => {
+    this._cargardata.tarjcredito().pipe(takeUntil(this.destroy$)).subscribe((resp: any) => {
       this.tipo = resp.mensaje;//.tarjeta;
       console.log(this.tipo);
       this.filterByDay();
@@ -115,7 +118,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     });
     
     // Cargar los bancos
-    this._cargardata.getBancos().pipe(take(1)).subscribe((resp: any) => {
+    this._cargardata.getBancos().pipe(takeUntil(this.destroy$)).subscribe((resp: any) => {
       if (resp && !resp.error && resp.mensaje) {
         this.bancos = resp.mensaje;
         console.log('Bancos cargados:', this.bancos);
@@ -197,6 +200,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     
     // Cargar datos adicionales (valores de cambio, tipos de moneda)
     this.loadAdditionalData();
+    
+    // Configurar búsqueda con debounce
+    this.setupSearchDebounce();
   }
 
   // Cargar datos adicionales
@@ -282,6 +288,47 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     
     // Limpiar todas las suscripciones
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    
+    // Completar el subject de destrucción
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+  
+  // Configurar búsqueda con debounce
+  setupSearchDebounce() {
+    this.searchSubject$
+      .pipe(
+        debounceTime(300), // Esperar 300ms después de que el usuario deje de escribir
+        distinctUntilChanged(), // Ignorar si el valor no cambió
+        tap(termino => {
+          this.terminoBusqueda = termino;
+          this.cargandoProductos = true;
+        }),
+        switchMap(termino => {
+          // Si no hay término, cargar página normal
+          if (!termino || termino.trim() === '') {
+            return this.articulosPaginadosService.cargarPagina(1);
+          }
+          // Si hay término, buscar en backend
+          return this.articulosPaginadosService.buscar(termino, 1);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.cargandoProductos = false;
+        },
+        error: (error) => {
+          console.error('Error en búsqueda:', error);
+          this.cargandoProductos = false;
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los productos',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      });
   }
 
   // Método para mostrar el indicador de carga
@@ -297,228 +344,57 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     });
   }
   
-  // Variables para la búsqueda a nivel de cliente
-  productosCompletos: any[] = [];
-  productosFiltrados: any[] = [];
+  // Método para manejar búsqueda desde el input
+  public onSearchInput(value: string): void {
+    this.searchSubject$.next(value);
+  }
 
-  // Buscar artículos - implementado como en el componente articulos
-  buscar() {
-    if (!this.terminoBusqueda.trim()) {
-      this.limpiarBusqueda();
-      return;
-    }
-    
-    // Mostrar indicador de carga
-    this.loading = true;
-    
-    // Intentar primero buscar en el servidor si estuviera implementado
-    // Nota: Si el API soporta la búsqueda, se debería usar en el servicio como en articulos
-    
-    // Si no tenemos todos los productos cargados, los cargamos primero
-    if (this.productosCompletos.length === 0) {
-      this.mostrarLoading();
-      
-      // Cargar todos los productos una sola vez
-      this._cargardata.artsucursal().subscribe({
-        next: (response: any) => {
-          console.log('Respuesta de artsucursal para condicionventa:', response);
-          
-          // Verificar si la respuesta tiene el formato esperado (puede variar)
-          let articulos = [];
-          
-          if (response && Array.isArray(response)) {
-            // Es un array directo
-            articulos = response;
-          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
-            // Tiene formato { mensaje: [...] }
-            articulos = response.mensaje;
-          } else if (response && !response.error && response.mensaje) {
-            // Otro formato posible
-            articulos = response.mensaje;
-          }
-          
-          console.log('Artículos extraídos para condicionventa:', articulos.length);
-          
-          if (articulos && articulos.length > 0) {
-            // Guardar la lista completa
-            this.productosCompletos = [...articulos];
-            
-            // Realizar la búsqueda local
-            this.buscarLocal();
-            
-            Swal.close();
-          } else {
-            Swal.close();
-            this.loading = false;
-            console.warn('No se obtuvieron productos o respuesta vacía');
-            Swal.fire({
-              title: 'Advertencia',
-              text: 'No se pudieron cargar productos para buscar',
-              icon: 'warning',
-              confirmButtonText: 'Aceptar'
-            });
-          }
-        },
-        error: (error) => {
-          Swal.close();
-          this.loading = false;
-          console.error('Error al cargar productos:', error);
-          Swal.fire({
-            title: 'Error',
-            text: 'Error al cargar productos para buscar',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
-        }
-      });
-    } else {
-      // Ya tenemos los productos, solo realizamos la búsqueda local
-      this.buscarLocal();
-    }
+  // Buscar productos (mantener para compatibilidad con botón de búsqueda)
+  public buscarProductos(termino: string): void {
+    this.searchSubject$.next(termino);
   }
-  
-  // Realizar búsqueda local (implementado como en articulos)
-  buscarLocal() {
-    const termino = this.terminoBusqueda.toLowerCase().trim();
-    console.log('Buscando el término en condicionventa:', termino);
-    console.log('En total productos para condicionventa:', this.productosCompletos.length);
-    
-    // Usar setTimeout para permitir que se muestre el indicador de carga
-    setTimeout(() => {
-      try {
-        // Filtrar productos localmente
-        this.productosFiltrados = this.productosCompletos.filter(producto => {
-          // Primero verificamos si el producto tiene los campos necesarios
-          if (!producto) return false;
-          
-          // Asegurar que todos los campos se conviertan a string para búsqueda segura
-          // Buscar principalmente en nomart y marca
-          const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
-          const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
-          
-          // Adicionales por si acaso
-          const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
-          const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
-          const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
-          
-          // Devolver true si alguno de los campos contiene el término de búsqueda
-          return (
-            nombreArt.includes(termino) || 
-            marca.includes(termino) || 
-            codigo.includes(termino) || 
-            codigoBarra.includes(termino) || 
-            rubro.includes(termino)
-          );
-        });
-        
-        console.log('Productos filtrados encontrados en condicionventa:', this.productosFiltrados.length);
-        
-        // Actualizar contadores de paginación para la UI
-        this.totalItems = this.productosFiltrados.length;
-        this.totalPaginas = Math.ceil(this.totalItems / 10); // 10 ítems por página
-        this.paginaActual = 1;
-        
-        // Aplicar paginación a los resultados
-        this.paginarResultadosLocales();
-        
-        // Quitar indicador de carga
-        this.loading = false;
-        
-        // Si no hay resultados, mostrar un mensaje amigable
-        if (this.productos.length === 0) {
-          Swal.fire({
-            title: 'Sin resultados',
-            text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
-            icon: 'info',
-            confirmButtonText: 'Aceptar'
-          });
-        }
-      } catch (error) {
-        console.error('Error en la búsqueda local:', error);
-        this.loading = false;
-        Swal.fire({
-          title: 'Error',
-          text: 'Error al procesar la búsqueda',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
-      }
-    }, 100); // Pequeño retraso para permitir que se muestre el indicador de carga
-  }
-  
-  // Paginar resultados localmente
-  paginarResultadosLocales() {
-    const inicio = (this.paginaActual - 1) * 10;
-    const fin = inicio + 10;
-    
-    // Obtener los productos para la página actual
-    const productosPagina = this.productosFiltrados.slice(inicio, fin);
-    
-    // Aplicar multiplicador y actualizar la variable productos
-    this.productos = this.procesarProductosConMoneda(productosPagina);
-  }
-  
-  // Limpiar búsqueda (similar a articulos)
-  limpiarBusqueda() {
+
+  // Limpiar búsqueda
+  public limpiarBusqueda(): void {
     this.terminoBusqueda = '';
-    this.productosFiltrados = [];
-    
-    // Mostrar indicador de carga
-    this.loading = true;
-    
-    // Volver a cargar la primera página desde el servidor
-    this.articulosPaginadosService.cargarPagina(1).subscribe(
-      () => {
-        this.loading = false;
-      },
-      error => {
-        this.loading = false;
-        Swal.fire({
-          title: 'Error',
-          text: 'Error al cargar productos',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
-      }
-    );
+    // Limpiar el término de búsqueda en el servicio
+    this.articulosPaginadosService.limpiarTerminoBusqueda();
+    this.searchSubject$.next(''); // Esto activará la carga de la página normal
+    // Forzar recarga de la primera página
+    this.articulosPaginadosService.cargarPagina(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe();
   }
   
-  // Métodos de paginación sobrescritos para búsqueda local
+  // Métodos de paginación
   irAPagina(pagina: number) {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (pagina >= 1 && pagina <= this.totalPaginas) {
-        this.paginaActual = pagina;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      // Si hay término de búsqueda, usar búsqueda paginada
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, pagina)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      // Si no hay búsqueda, usar paginación normal
       this.articulosPaginadosService.irAPagina(pagina);
     }
   }
   
   paginaSiguiente() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual < this.totalPaginas) {
-        this.paginaActual++;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, this.paginaActual + 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
       this.articulosPaginadosService.paginaSiguiente();
     }
   }
   
   paginaAnterior() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual > 1) {
-        this.paginaActual--;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, this.paginaActual - 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
       this.articulosPaginadosService.paginaAnterior();
     }
   }
@@ -756,21 +632,23 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.mostrarLoading();
       
       // Cargar la primera página de productos paginados
-      this.articulosPaginadosService.cargarPagina(1).subscribe(
-        () => {
-          Swal.close();
-        },
-        error => {
-          console.error('Error al cargar productos:', error);
-          Swal.close();
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudieron cargar los productos',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
-        }
-      );
+      this.articulosPaginadosService.cargarPagina(1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(
+          () => {
+            Swal.close();
+          },
+          error => {
+            console.error('Error al cargar productos:', error);
+            Swal.close();
+            Swal.fire({
+              title: 'Error',
+              text: 'No se pudieron cargar los productos',
+              icon: 'error',
+              confirmButtonText: 'Aceptar'
+            });
+          }
+        );
     }
   }
   
@@ -986,20 +864,22 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           this.mostrarLoading();
           
           // Cargar la primera página
-          this.articulosPaginadosService.cargarPagina(1).subscribe(
-            () => {
-              Swal.close();
-            },
-            error => {
-              console.error('Error al cargar productos:', error);
-              Swal.close();
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los productos'
-              });
-            }
-          );
+          this.articulosPaginadosService.cargarPagina(1)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(
+              () => {
+                Swal.close();
+              },
+              error => {
+                console.error('Error al cargar productos:', error);
+                Swal.close();
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudieron cargar los productos'
+                });
+              }
+            );
         });
       }
     });
@@ -1284,20 +1164,22 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           this.mostrarLoading();
           
           // Cargar la primera página
-          this.articulosPaginadosService.cargarPagina(1).subscribe(
-            () => {
-              Swal.close();
-            },
-            error => {
-              console.error('Error al cargar productos:', error);
-              Swal.close();
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'No se pudieron cargar los productos'
-              });
-            }
-          );
+          this.articulosPaginadosService.cargarPagina(1)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(
+              () => {
+                Swal.close();
+              },
+              error => {
+                console.error('Error al cargar productos:', error);
+                Swal.close();
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudieron cargar los productos'
+                });
+              }
+            );
         });
       }
     });

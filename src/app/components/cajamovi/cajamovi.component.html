@@ -3,24 +3,74 @@
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title">Movimientos de Caja</h4>
-                <p-table #dtable [value]="cajamovis" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
-                    [rows]="10" dataKey="id_movimiento" [(selection)]="selectedCajamovis"
-                    [globalFilterFields]="['sucursal', 'codigo_mov', 'num_operacion', 'fecha_mov', 'importe_mov', 'descripcion_mov', 'descripcion_concepto', 'descripcion_caja', 'fecha_emibco', 'banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'plaza_cheque', 'codigo_mbco', 'desc_bancaria', 'marca_cerrado', 'fecha_cobro_bco', 'fecha_vto_bco', 'tipo_movi', 'caja', 'letra', 'punto_venta', 'tipo_comprobante', 'numero_comprobante', 'fecha_proceso', 'id_movimiento']">
+                
+                <p-table #dtable [value]="cajamovisFiltrados" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="false" (onFilter)="onTableFilter($event)"
+                    dataKey="id_movimiento" [(selection)]="selectedCajamovis" (selectionChange)="onSelectionChange($event)"
+                    [globalFilterFields]="['sucursal', 'num_operacion', 'fecha_mov', 'importe_mov', 'descripcion_mov', 'descripcion_concepto', 'descripcion_caja', 'fecha_emibco', 'banco', 'num_cheque', 'cuenta_mov', 'cliente', 'proveedor', 'plaza_cheque', 'codigo_mbco', 'desc_bancaria', 'marca_cerrado', 'fecha_cobro_bco', 'fecha_vto_bco', 'tipo_movi', 'caja', 'letra', 'punto_venta', 'tipo_comprobante', 'numero_comprobante', 'fecha_proceso', 'id_movimiento']"
+                    [virtualScroll]="true" 
+                    [virtualScrollItemSize]="60" 
+                    scrollHeight="600px"
+                    [lazy]="false"
+                    [virtualScrollOptions]="{numToleratedItems: 5, delay: 150}">
                     <ng-template pTemplate="caption">
-                        <div class="p-d-flex">
-                            <span class="p-input-icon-left ml-auto">
-                                <input pInputText type="text"
-                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
-                                    placeholder="Buscar.." />
-                            </span>
-                            <p-button icon="pi pi-file-excel" (click)="exportExcel()"
-                                styleClass="p-button-sm p-button-success ml-4"></p-button>
-                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajamovi']"
-                                styleClass="p-button-sm p-button-info ml-2"></p-button>
-                            <p-button icon="pi pi-chart-line" label="Generar Reporte" 
-                                (click)="generarReporte()"
-                                [disabled]="!selectedCajamovis || selectedCajamovis.length === 0"
-                                styleClass="p-button-sm p-button-warning ml-2"></p-button>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="p-input-icon-left">
+                                    <input pInputText type="text"
+                                        (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                        placeholder="Buscar.." style="width: 200px;" />
+                                </span>
+                                <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                    styleClass="p-button-sm p-button-success ml-2"
+                                    pTooltip="Exportar datos visibles a Excel"></p-button>
+                                <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajamovi']"
+                                    styleClass="p-button-sm p-button-info ml-2"></p-button>
+                                <p-button icon="pi pi-chart-line" label="Generar Reporte" 
+                                    (click)="generarReporte()"
+                                    [disabled]="seleccionCompleta.size === 0"
+                                    styleClass="p-button-sm p-button-warning ml-2"></p-button>
+                                <span *ngIf="seleccionCompleta.size > 0" class="ml-2 badge badge-info">
+                                    {{ seleccionCompleta.size }} seleccionado(s)
+                                    <span *ngIf="seleccionCompleta.size > selectedCajamovis.length">
+                                        ({{ selectedCajamovis.length }} en página actual)
+                                    </span>
+                                    <i class="pi pi-times ml-2" style="cursor: pointer;" 
+                                       (click)="limpiarSeleccion()"
+                                       pTooltip="Limpiar toda la selección"></i>
+                                </span>
+                            </div>
+                            
+                            <!-- Filtros de fecha del lado derecho -->
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted">Desde:</small>
+                                <p-calendar 
+                                    [(ngModel)]="fechaDesde" 
+                                    dateFormat="dd/mm/yy" 
+                                    placeholder="dd/mm/yyyy"
+                                    [showIcon]="true"
+                                    (onSelect)="aplicarFiltroFecha()"
+                                    (onClear)="aplicarFiltroFecha()"
+                                    inputStyleClass="p-inputtext-sm">
+                                </p-calendar>
+                                
+                                <small class="text-muted">Hasta:</small>
+                                <p-calendar 
+                                    [(ngModel)]="fechaHasta" 
+                                    dateFormat="dd/mm/yy" 
+                                    placeholder="dd/mm/yyyy"
+                                    [showIcon]="true"
+                                    (onSelect)="aplicarFiltroFecha()"
+                                    (onClear)="aplicarFiltroFecha()"
+                                    inputStyleClass="p-inputtext-sm">
+                                </p-calendar>
+                                
+                                <p-button 
+                                    icon="pi pi-times" 
+                                    (click)="limpiarFiltrosFecha()"
+                                    styleClass="p-button-sm p-button-outlined p-button-secondary"
+                                    pTooltip="Limpiar filtros de fecha">
+                                </p-button>
+                            </div>
                         </div>
                     </ng-template>
                     <ng-template pTemplate="header">
@@ -34,12 +84,14 @@
                                 </div>
                                 <p-columnFilter type="numeric" field="sucursal" display="menu" class="ml-auto"></p-columnFilter>
                             </th>
+                            <!-- Campo Código Mov. comentado/oculto
                             <th pSortableColumn="codigo_mov">
                                 <div class="flex align-items-center">
                                     Código Mov.<p-sortIcon field="codigo_mov"></p-sortIcon>
                                 </div>
                                 <p-columnFilter type="numeric" field="codigo_mov" display="menu" class="ml-auto"></p-columnFilter>
                             </th>
+                            -->
                             <th pSortableColumn="descripcion_concepto">
                                 <div class="flex align-items-center">
                                     Concepto<p-sortIcon field="descripcion_concepto"></p-sortIcon>
@@ -92,13 +144,25 @@
                                 <p-tableCheckbox [value]="cajamovi"></p-tableCheckbox>
                             </td>
                             <td>{{ cajamovi.sucursal }}</td>
-                            <td>{{ cajamovi.codigo_mov }}</td>
-                            <td>{{ cajamovi.descripcion_concepto || '-' }}</td>
+                            <!-- <td>{{ cajamovi.codigo_mov }}</td> -->
+                            <td class="descripcion-column">
+                                <div class="descripcion-text" [title]="cajamovi.descripcion_concepto || '-'">
+                                    {{ cajamovi.descripcion_concepto || '-' }}
+                                </div>
+                            </td>
                             <td>{{ cajamovi.num_operacion }}</td>
                             <td>{{ cajamovi.fecha_mov | date:'dd/MM/yyyy' }}</td>
                             <td>{{ cajamovi.importe_mov | number:'1.2-2' }}</td>
-                            <td>{{ cajamovi.descripcion_caja || '-' }}</td>
-                            <td>{{ cajamovi.descripcion_mov }}</td>
+                            <td class="descripcion-column">
+                                <div class="descripcion-text" [title]="cajamovi.descripcion_caja || '-'">
+                                    {{ cajamovi.descripcion_caja || '-' }}
+                                </div>
+                            </td>
+                            <td class="descripcion-column">
+                                <div class="descripcion-text" [title]="cajamovi.descripcion_mov">
+                                    {{ cajamovi.descripcion_mov }}
+                                </div>
+                            </td>
                             <td>{{ cajamovi.tipo_movi }}</td>
                             <td>
                                 <p-button icon="pi pi-pencil" 
@@ -115,7 +179,72 @@
                         </tr>
                     </ng-template>
                 </p-table>
+                
+                <!-- Paginación personalizada que usa los datos del servidor -->
+                <div class="pagination-container mt-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="pagination-info">
+                            Mostrando página {{ paginaActual }} de {{ totalPaginas }} | Total: {{ totalItems }} movimientos
+                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <small class="text-muted">Registros por página:</small>
+                            <p-dropdown 
+                                [options]="opcionesRegistrosPorPagina" 
+                                [(ngModel)]="registrosPorPagina"
+                                (onChange)="onRegistrosPorPaginaChange($event)"
+                                [style]="{'width':'140px'}"
+                                styleClass="p-dropdown-sm">
+                            </p-dropdown>
+                        </div>
+                    </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination mb-0">
+                            <!-- Botón para primera página -->
+                            <li class="page-item" [class.disabled]="paginaActual === 1">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(1)">
+                                    <i class="fa fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Botón página anterior -->
+                            <li class="page-item" [class.disabled]="paginaActual === 1">
+                                <a class="page-link" href="javascript:void(0)" (click)="paginaAnterior()">
+                                    <i class="fa fa-angle-left"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Páginas numeradas -->
+                            <li class="page-item" [class.active]="paginaActual === p" *ngFor="let p of getPaginasVisibles()">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(p)">{{ p }}</a>
+                            </li>
+                            
+                            <!-- Botón página siguiente -->
+                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                                <a class="page-link" href="javascript:void(0)" (click)="paginaSiguiente()">
+                                    <i class="fa fa-angle-right"></i>
+                                </a>
+                            </li>
+                            
+                            <!-- Botón para última página -->
+                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
+                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(totalPaginas)">
+                                    <i class="fa fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
+</div>
+
+<!-- Indicador de rendimiento (solo en desarrollo) -->
+<div *ngIf="showPerformanceIndicator" class="performance-indicator" 
+     [class.warning]="performanceData.registrosCargados > 5000"
+     [class.danger]="performanceData.registrosCargados > 10000">
+    <div>Registros: {{ performanceData.registrosCargados | number }}</div>
+    <div>Filtrados: {{ performanceData.registrosFiltrados | number }}</div>
+    <div>Memoria: {{ performanceData.memoriaUsada }}MB</div>
+    <div>Virtual Scroll: {{ performanceData.virtualScrollActivo ? 'Activo' : 'Inactivo' }}</div>
 </div>

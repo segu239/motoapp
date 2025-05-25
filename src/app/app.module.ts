@@ -39,6 +39,7 @@ import { ButtonModule } from 'primeng/button';
 import { TableModule } from 'primeng/table';
 import { CalendarModule } from 'primeng/calendar';
 import { MultiSelectModule } from 'primeng/multiselect';
+import { VirtualScrollerModule } from 'primeng/virtualscroller';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -206,6 +207,7 @@ import { ReporteComponent } from './components/reporte/reporte.component';
     TableModule,
     CalendarModule,
     MultiSelectModule,
+    VirtualScrollerModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,
