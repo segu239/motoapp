@@ -508,21 +508,29 @@ export class StockenvioComponent implements OnInit, OnDestroy{
       listaPrecio: this.listaPrecio,
     };
     this.ref = this.dialogService.open(StockproductoenvioComponent, {
-      header: 'Producto',
-      width: '70%',
-      data:
-      {
+      header: 'Envío de Stock - ' + producto.nomart,
+      width: '80%',
+      style: { 
+        'max-width': '900px' 
+      },
+      data: {
         producto: producto,
         //cliente: this.clienteFrompuntoVenta,
-       // tarjeta: this.tarjeta,
+        // tarjeta: this.tarjeta,
         //cheque: this.cheque,
         //tipoVal: this.tipoVal,
         //codTarj: this.codTarj,
         //listaPrecio: this.listaPrecio,
       },
-      contentStyle: { overflow: 'auto' },
+      contentStyle: { 
+        overflow: 'auto',
+        padding: '0',
+        borderRadius: '8px'
+      },
       baseZIndex: 10000,
-      maximizable: true
+      maximizable: true,
+      closeOnEscape: true,
+      dismissableMask: true
     });
   }
   exportExcel() {

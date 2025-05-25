@@ -1,0 +1,232 @@
+/* Stock Pedido Modal Styling */
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: none;
+    background-color: #fcfcfc;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+.form-horizontal .form-body {
+    padding: 0.5rem 0;
+}
+
+/* Header Styling */
+.box-title {
+    margin-top: 1.5rem;
+    color: #333;
+    font-weight: 600;
+    font-size: 1.2rem;
+    position: relative;
+    padding-left: 0.75rem;
+    border-left: 4px solid #007bff;
+}
+
+.product-title {
+    font-size: 1.3rem;
+    color: #343a40;
+    margin-top: 0;
+}
+
+.pedido-title {
+    color: #ff6f00;
+    border-left-color: #ff6f00;
+}
+
+/* Divider Styling */
+hr.m-t-0.m-b-40 {
+    margin: 1rem 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Form Fields Styling */
+.form-group {
+    margin-bottom: 0.8rem;
+}
+
+.control-label {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9rem;
+}
+
+.form-control-static {
+    font-size: 1rem;
+    padding: 0.4rem 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    margin-bottom: 0;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    border-left: 3px solid #007bff;
+}
+
+/* Inner Cards Styling */
+.stock-panel, .price-panel {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-top: 1.5rem;
+}
+
+.card-header {
+    background-color: #f1f8ff;
+    border-bottom: 1px solid rgba(0, 123, 255, 0.2);
+    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+}
+
+.inventory-header {
+    color: #004085;
+    background-color: #cce5ff;
+    border-color: #b8daff;
+}
+
+.price-header {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+/* Stock value styling */
+.stock-value {
+    font-weight: 600;
+    color: #495057;
+    border-left-color: #6c757d;
+}
+
+/* Price value styling */
+.price-value {
+    font-weight: 600;
+    color: #007bff;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Input and Select Styling */
+input[type="number"].form-control,
+input[type="text"].form-control,
+select.form-control {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 1rem;
+}
+
+input[type="number"].form-control:focus,
+input[type="text"].form-control:focus,
+select.form-control:focus {
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+select.custom-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='4' height='5' viewBox='0 0 4 5'%3e%3cpath fill='%23343a40' d='M2 0L0 2h4zm0 5L0 3h4z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right .75rem center;
+    background-size: 8px 10px;
+}
+
+/* Form Group Label Icons */
+.form-group label i {
+    color: #ff6f00;
+}
+
+/* Action Buttons */
+.form-actions {
+    padding: 1rem 0 0;
+    margin-top: 1.5rem;
+    border-top: 1px solid #eee;
+}
+
+.btn-solicitar {
+    padding: 0.6rem 1.8rem;
+    border-radius: 50px;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-solicitar:hover:not(:disabled) {
+    background-color: #e0a800;
+    border-color: #d39e00;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-solicitar:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-solicitar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-solicitar i {
+    margin-right: 0.5rem;
+}
+
+/* Margins and spacing */
+.mb-3 {
+    margin-bottom: 1rem !important;
+}
+
+.mb-4 {
+    margin-bottom: 1.5rem !important;
+}
+
+.mt-3 {
+    margin-top: 1rem !important;
+}
+
+.mt-4 {
+    margin-top: 1.5rem !important;
+}
+
+.mr-1 {
+    margin-right: 0.25rem !important;
+}
+
+.mr-2 {
+    margin-right: 0.5rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .control-label {
+        text-align: left !important;
+    }
+    
+    .form-control-static {
+        min-height: 30px;
+        font-size: 0.9rem;
+    }
+    
+    .box-title {
+        font-size: 1.1rem;
+    }
+    
+    .card-header {
+        padding: 0.5rem 1rem;
+    }
+
+    .inventory-header, .price-header {
+        font-size: 0.9rem;
+    }
+    
+    .btn-solicitar {
+        width: 100%;
+        margin-top: 1rem;
+    }
+}
