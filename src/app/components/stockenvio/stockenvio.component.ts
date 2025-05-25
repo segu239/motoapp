@@ -7,9 +7,9 @@ import * as FileSaver from 'file-saver';
 import xlsx from 'xlsx/xlsx';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
-import { filter, takeUntil } from 'rxjs/operators';
+import { filter, takeUntil, debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
-import { Subject, forkJoin } from 'rxjs';
+import { Subject, forkJoin, of } from 'rxjs';
 //importar componente calculoproducto
 //import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { StockproductoenvioComponent } from '../stockproductoenvio/stockproductoenvio.component';
@@ -57,6 +57,8 @@ export class StockenvioComponent implements OnInit, OnDestroy{
   filteredTipo: any[] = [];
   
   private destroy$ = new Subject<void>();
+  private searchSubject$ = new Subject<string>();
+  
   constructor(
     public dialogService: DialogService, 
     private cdr: ChangeDetectorRef, 
@@ -130,6 +132,41 @@ export class StockenvioComponent implements OnInit, OnDestroy{
       .subscribe(termino => {
         this.terminoBusqueda = termino;
       });
+
+    // Configurar búsqueda con debounce
+    this.searchSubject$
+      .pipe(
+        debounceTime(300), // Esperar 300ms después de que el usuario deje de escribir
+        distinctUntilChanged(), // Ignorar si el valor no cambió
+        tap(termino => {
+          this.terminoBusqueda = termino;
+          this.cargandoProductos = true;
+        }),
+        switchMap(termino => {
+          // Si no hay término, cargar página normal
+          if (!termino || termino.trim() === '') {
+            return this.stockPaginadosService.cargarPagina(1);
+          }
+          // Si hay término, buscar en backend
+          return this.stockPaginadosService.buscarProductos(termino, 1);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.cargandoProductos = false;
+        },
+        error: (error) => {
+          console.error('Error en búsqueda:', error);
+          this.cargandoProductos = false;
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los productos',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      });
   }
 
   // Cargar datos iniciales (igual que artículos)
@@ -172,189 +209,59 @@ export class StockenvioComponent implements OnInit, OnDestroy{
     );
   }
 
-  // Métodos de paginación sobrescritos para búsqueda local
+  // Métodos de paginación
   irAPagina(pagina: number) {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (pagina >= 1 && pagina <= this.totalPaginas) {
-        this.paginaActual = pagina;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      // Si hay término de búsqueda, usar búsqueda paginada
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, pagina)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
+      // Si no hay búsqueda, usar paginación normal
       this.stockPaginadosService.irAPagina(pagina);
     }
   }
   
   paginaSiguiente() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual < this.totalPaginas) {
-        this.paginaActual++;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, this.paginaActual + 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
       this.stockPaginadosService.paginaSiguiente();
     }
   }
   
   paginaAnterior() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual > 1) {
-        this.paginaActual--;
-        this.paginarResultadosLocales();
-      }
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, this.paginaActual - 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
     } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
       this.stockPaginadosService.paginaAnterior();
     }
   }
 
-  // Variables para la búsqueda a nivel de cliente (igual que artículos)
-  productosCompletos: any[] = [];
-  productosFiltrados: any[] = [];
+  // Método para manejar búsqueda desde el input
+  public onSearchInput(value: string): void {
+    this.searchSubject$.next(value);
+  }
 
-  // Buscar productos
-  buscar() {
-    if (!this.terminoBusqueda.trim()) {
-      this.limpiarBusqueda();
-      return;
-    }
-    
-    // Si no tenemos todos los productos cargados, los cargamos primero
-    if (this.productosCompletos.length === 0) {
-      this.mostrarLoading();
-      
-      // Cargar todos los productos una sola vez
-      this._cargardata.artsucursal().subscribe({
-        next: (response: any) => {
-          console.log('Respuesta de artsucursal para stock envío:', response);
-          
-          // Verificar si la respuesta tiene el formato esperado
-          let productos = [];
-          
-          if (response && Array.isArray(response)) {
-            // Es un array directo
-            productos = response;
-          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
-            // Tiene formato { mensaje: [...] }
-            productos = response.mensaje;
-          } else if (response && !response.error && response.mensaje) {
-            // Otro formato posible
-            productos = response.mensaje;
-          }
-          
-          console.log('Productos extraídos para búsqueda:', productos.length);
-          
-          if (productos && productos.length > 0) {
-            // Guardar la lista completa
-            this.productosCompletos = [...productos];
-            
-            // Realizar la búsqueda local
-            this.buscarLocal();
-            
-            Swal.close();
-          } else {
-            Swal.close();
-            console.warn('No se obtuvieron productos o respuesta vacía');
-            Swal.fire({
-              title: 'Advertencia',
-              text: 'No se pudieron cargar productos para buscar',
-              icon: 'warning',
-              confirmButtonText: 'Aceptar'
-            });
-          }
-        },
-        error: (error) => {
-          Swal.close();
-          console.error('Error al cargar productos:', error);
-          Swal.fire({
-            title: 'Error',
-            text: 'Error al cargar productos para buscar',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
-        }
-      });
-    } else {
-      // Ya tenemos los productos, solo realizamos la búsqueda local
-      this.buscarLocal();
-    }
-  }
-  
-  // Buscar productos (para compatibilidad con el HTML existente)
+  // Buscar productos (mantener para compatibilidad con botón de búsqueda)
   public buscarProductos(termino: string): void {
-    this.terminoBusqueda = termino;
-    this.buscar();
-  }
-  
-  // Realizar búsqueda local
-  buscarLocal() {
-    const termino = this.terminoBusqueda.toLowerCase().trim();
-    console.log('Buscando el término en stock envío:', termino);
-    console.log('En total productos para stock envío:', this.productosCompletos.length);
-    
-    // Filtrar productos localmente
-    this.productosFiltrados = this.productosCompletos.filter(producto => {
-      // Primero verificamos si el producto tiene los campos necesarios
-      if (!producto) return false;
-      
-      // Asegurar que todos los campos se conviertan a string para búsqueda segura
-      const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
-      const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
-      const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
-      const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
-      const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
-      
-      // Devolver true si alguno de los campos contiene el término de búsqueda
-      return (
-        nombreArt.includes(termino) || 
-        marca.includes(termino) || 
-        codigo.includes(termino) || 
-        codigoBarra.includes(termino) || 
-        rubro.includes(termino)
-      );
-    });
-    
-    console.log('Productos filtrados encontrados en stock envío:', this.productosFiltrados.length);
-    
-    // Actualizar contadores de paginación para la UI
-    this.totalItems = this.productosFiltrados.length;
-    this.totalPaginas = Math.ceil(this.totalItems / 50); // 50 ítems por página por defecto
-    this.paginaActual = 1;
-    
-    // Aplicar paginación a los resultados
-    this.paginarResultadosLocales();
-    
-    // Si no hay resultados, mostrar un mensaje amigable
-    if (this.productos.length === 0) {
-      Swal.fire({
-        title: 'Sin resultados',
-        text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
-        icon: 'info',
-        confirmButtonText: 'Aceptar'
-      });
-    }
-  }
-  
-  // Paginar resultados localmente
-  paginarResultadosLocales() {
-    const inicio = (this.paginaActual - 1) * 50; // 50 ítems por página por defecto
-    const fin = inicio + 50;
-    
-    // Obtener los productos para la página actual
-    this.productos = this.productosFiltrados.slice(inicio, fin);
+    this.searchSubject$.next(termino);
   }
   
   // Limpiar búsqueda
   public limpiarBusqueda(): void {
     this.terminoBusqueda = '';
-    this.productosFiltrados = [];
-    
-    // Volver a cargar la primera página desde el servicio
-    this.stockPaginadosService.cargarPagina(1).subscribe();
+    // Limpiar el término de búsqueda en el servicio
+    this.stockPaginadosService.limpiarTerminoBusqueda();
+    this.searchSubject$.next(''); // Esto activará la carga de la página normal
+    // Forzar recarga de la primera página
+    this.stockPaginadosService.cargarPagina(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe();
   }
   
   // Método para mostrar el indicador de carga

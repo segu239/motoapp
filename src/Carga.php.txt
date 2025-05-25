@@ -40,15 +40,64 @@ public function Arconmov_get() //TOMA DE artprev los datos y los sube a la app
 
 public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la app
 {
-  $query = $this->db->get('artsucursal');  // Produces: SELECT * FROM mytable
-  $resp=$query->result_array();
+  // Obtener parámetros de búsqueda y paginación
+  $search = $this->get('search');
+  $page = $this->get('page') ? intval($this->get('page')) : 1;
+  $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+  $offset = ($page - 1) * $limit;
+
+  // Construir la consulta base
+  $this->db->from('artsucursal');
+  
+  // Si hay término de búsqueda, aplicar filtros
+  if (!empty($search)) {
+    // Escapar el término de búsqueda para seguridad
+    $search_escaped = $this->db->escape_like_str($search);
+    
+    // Construir WHERE con ILIKE para búsqueda insensible a mayúsculas/minúsculas (PostgreSQL)
+    $where = "(
+      nomart ILIKE '%{$search_escaped}%' OR
+      CAST(cd_articulo AS TEXT) ILIKE '%{$search_escaped}%' OR
+      cd_barra ILIKE '%{$search_escaped}%' OR
+      marca ILIKE '%{$search_escaped}%' OR
+      rubro ILIKE '%{$search_escaped}%'
+    )";
+    
+    $this->db->where($where);
+  }
+  
+  // Contar total de registros (para paginación)
+  $total_query = clone $this->db;
+  $total = $total_query->count_all_results();
+  
+  // Aplicar límite y offset para paginación
+  $this->db->limit($limit, $offset);
+  
+  // Ejecutar consulta
+  $query = $this->db->get();
+  $resp = $query->result_array();
 
   if (isset($resp)){
-    $respuesta=array
-    ("error"=>false,
-      "mensaje"=>$resp
-    );
-  $this->response($respuesta);
+    // Si hay parámetros de paginación, devolver formato paginado
+    if ($this->get('page') || $this->get('search')) {
+      $respuesta = array(
+        "error" => false,
+        "mensaje" => array(
+          "data" => $resp,
+          "total" => $total,
+          "page" => $page,
+          "limit" => $limit,
+          "total_pages" => ceil($total / $limit)
+        )
+      );
+    } else {
+      // Mantener compatibilidad con formato anterior
+      $respuesta = array(
+        "error" => false,
+        "mensaje" => $resp
+      );
+    }
+    $this->response($respuesta);
   }
   else
   {

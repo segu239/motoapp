@@ -27,13 +27,14 @@
                             <div class="input-group">
                                 <input type="text" class="form-control" 
                                     [(ngModel)]="terminoBusqueda"
-                                    placeholder="Buscar en servidor..." 
-                                    (keyup.enter)="buscar()" />
+                                    placeholder="Buscar productos..." 
+                                    (input)="onSearchInput($any($event.target).value)"
+                                    (keyup.enter)="buscarProductos(terminoBusqueda)" />
                                 <div class="input-group-append">
                                     <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
-                                        (click)="buscar()" [disabled]="loading"></p-button>
+                                        (click)="buscarProductos(terminoBusqueda)" [disabled]="loading || cargandoProductos"></p-button>
                                     <p-button icon="pi pi-times" styleClass="p-button-sm p-button-secondary ml-1" 
-                                        (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="loading"></p-button>
+                                        (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="loading || cargandoProductos"></p-button>
                                 </div>
                             </div>
                         </div>

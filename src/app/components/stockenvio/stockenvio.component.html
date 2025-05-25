@@ -23,6 +23,7 @@
                                 <input type="text" class="form-control" 
                                     [(ngModel)]="terminoBusqueda"
                                     placeholder="Buscar productos..." 
+                                    (input)="onSearchInput($any($event.target).value)"
                                     (keyup.enter)="buscarProductos(terminoBusqueda)" />
                                 <div class="input-group-append">
                                     <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
@@ -79,8 +80,8 @@
                         <td>{{ producto.exi4 }}</td>
                         <td>{{ producto.exi5 }}</td>
                         <td>
-                            <p-button icon="pi pi-cart-plus" (click)="selectProducto(producto)"
-                                styleClass="p-button-sm p-button-info"> </p-button>
+                            <p-button icon="pi pi-arrow-right-arrow-left" (click)="selectProducto(producto)"
+                                styleClass="p-button-sm p-button-info" pTooltip="Enviar Stock"> </p-button>
                         </td>
                     </tr>
                 </ng-template>
