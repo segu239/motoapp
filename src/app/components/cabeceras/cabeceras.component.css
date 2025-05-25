@@ -1,7 +1,277 @@
-.altura-boton {
-    height: 50px; /* Ajusta este valor según sea necesario */
+/* Contenedor principal */
+.cabeceras-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
 }
+
+/* Sección de documentos */
+.documentos-section {
+    padding: 20px;
+}
+
+/* Sección de detalles */
+.detalle-section {
+    background-color: #f9fbfd;
+    border-radius: 0 0 8px 8px;
+    padding: 20px;
+}
+
+/* Header */
+.cabeceras-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.cabeceras-title {
+    color: #3a3f51;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.cabeceras-subtitle {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* Búsqueda */
+.search-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.search-input {
+    position: relative;
+}
+
+.search-input i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+.search-input input {
+    padding-left: 35px;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px 8px 35px;
+    width: 250px;
+    transition: all 0.2s;
+}
+
+.search-input input:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+    outline: none;
+}
+
+/* Tabla personalizada */
+::ng-deep .p-datatable .p-datatable-header {
+    background: white;
+    border: none;
+    padding: 0;
+}
+
+::ng-deep .p-datatable .p-datatable-thead > tr > th {
+    background-color: white;
+    border: none;
+    border-bottom: 2px solid #f0f0f0;
+    color: #495057;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    padding: 12px 15px;
+}
+
+::ng-deep .p-datatable .p-datatable-tbody > tr {
+    transition: background-color 0.2s;
+}
+
+::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background-color: #f8faff;
+}
+
+::ng-deep .p-datatable .p-datatable-tbody > tr > td {
+    padding: 15px;
+    border: none;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* Total summary */
+.total-summary {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.total-price {
+    font-size: 1.5rem;
+    color: #3a3f51;
+    font-weight: 700;
+}
+
+/* Grid form para detalles */
+.grid-form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.form-row label {
+    width: 35%;
+    font-weight: 500;
+    color: #5e6e82;
+    margin-bottom: 0;
+}
+
+.form-row .input-container {
+    width: 65%;
+}
+
+/* Inputs y selects */
+.form-control, .custom-select {
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 8px 12px;
+    height: auto;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: all 0.2s;
+}
+
+.form-control:focus, .custom-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.15rem rgba(0, 123, 255, 0.15);
+    outline: none;
+}
+
+/* Sección de pagos */
+.payment-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #f0f4f9;
+    border-radius: 6px;
+}
+
+.payment-input {
+    width: 200px;
+}
+
+/* Botones */
+.btn {
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+}
+
+.btn i {
+    margin-right: 6px;
+    font-size: 0.9rem;
+}
+
+.btn-success {
+    background-color: #27AE60;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #219A52;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(39, 174, 96, 0.2);
+}
+
+.btn-info {
+    background-color: #3C91E6;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #2680D9;
+}
+
+/* Dropdown personalizado */
+.altura-boton {
+    height: 38px;
+}
+
+.dropdown-toggle-split {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
 .scroll_list {
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
+    padding: 5px;
+}
+
+.scroll_list input {
+    margin: 5px;
+    width: calc(100% - 10px);
+}
+
+.scroll_list li {
+    list-style: none;
+}
+
+.scroll_list .dropdown-item {
+    padding: 8px 15px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.scroll_list .dropdown-item:hover {
+    background-color: #f0f4f9;
+    color: #3C91E6;
+    padding-left: 20px;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+    .grid-form {
+        grid-template-columns: 1fr;
+    }
+    
+    .cabeceras-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .search-input input {
+        width: 100%;
+    }
+    
+    .payment-section {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .payment-input {
+        width: 100%;
+    }
 }
