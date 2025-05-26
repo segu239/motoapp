@@ -75,3 +75,49 @@ canvas {
 .align-items-center {
   align-items: center;
 }
+
+.text-center {
+  text-align: center;
+}
+
+/* Estilos para tablas de totalizadores */
+.table tfoot {
+  background-color: #f8f9fa;
+  border-top: 2px solid #dee2e6;
+}
+
+.table tfoot tr td {
+  font-weight: bold;
+}
+
+/* Estilos para títulos principales */
+h2.text-primary {
+  color: #007bff !important;
+  font-size: 1.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 3px solid #007bff;
+  padding-bottom: 10px;
+  margin-bottom: 25px !important;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Estilos para impresión */
+@media print {
+  .table {
+    font-size: 12px;
+  }
+  
+  h5 {
+    font-size: 16px;
+    margin-top: 20px;
+  }
+  
+  h2.text-primary {
+    font-size: 20px;
+    color: #000 !important;
+    border-bottom-color: #000;
+  }
+}

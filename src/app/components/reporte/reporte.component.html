@@ -5,15 +5,12 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h4 class="card-title">Reporte de Movimientos de Caja</h4>
           <div>
-            <!-- <button class="btn btn-success btn-sm mr-2" (click)="exportExcel()">
-              <i class="pi pi-file-excel"></i> Excel
+            <button class="btn btn-success btn-sm mr-2" (click)="exportExcel()">
+              <i class="pi pi-file-excel"></i> Exportar a Excel
             </button>
             <button class="btn btn-danger btn-sm mr-2" (click)="exportPDF()">
               <i class="pi pi-file-pdf"></i> PDF
             </button>
-            <button class="btn btn-info btn-sm mr-2" (click)="print()">
-              <i class="pi pi-print"></i> Imprimir
-            </button> -->
             <button class="btn btn-secondary btn-sm" (click)="volver()">
               <i class="pi pi-arrow-left"></i> Volver
             </button>
@@ -57,45 +54,213 @@
             </div>
           </div>
 
-          <!-- Gráficos -->
-          <div class="row mb-4">
-            <div class="col-md-6 mb-4">
-              <div class="card">
-                <div class="card-body">
-                  <canvas id="chartTipo" style="max-height: 300px;"></canvas>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-6 mb-4">
-              <div class="card">
-                <div class="card-body">
-                  <canvas id="chartCaja" style="max-height: 300px;"></canvas>
-                </div>
+          <!-- Botón para mostrar/ocultar gráficos -->
+          <div class="row mb-3">
+            <div class="col-12 text-center">
+              <button class="btn btn-primary me-2" (click)="toggleGraficos()" [disabled]="cargandoGraficos">
+                <i class="pi" [ngClass]="mostrarGraficos ? 'pi-eye-slash' : 'pi-chart-bar'"></i>
+                {{ mostrarGraficos ? 'Ocultar Estadísticas Visuales' : 'Mostrar Estadísticas Visuales' }}
+              </button>
+              <button class="btn btn-secondary me-2" (click)="cambiarModoVisualizacion()" *ngIf="mostrarGraficos">
+                <i class="pi" [ngClass]="usarGraficosSimples ? 'pi-chart-line' : 'pi-table'"></i>
+                {{ usarGraficosSimples ? 'Ver Gráficos' : 'Ver Tablas' }}
+              </button>
+              <!-- Botón deshabilitado temporalmente -->
+              <!-- <button class="btn btn-warning" (click)="probarGraficoSimple()" *ngIf="mostrarGraficos">
+                <i class="pi pi-chart-line"></i> Probar Gráfico Simple
+              </button> -->
+              <div *ngIf="cargandoGraficos" class="mt-2">
+                <i class="pi pi-spin pi-spinner"></i> Cargando visualización...
               </div>
             </div>
           </div>
 
-          <div class="row mb-4">
+          <!-- Visualización Simple de Estadísticas -->
+          <div class="row mb-4" *ngIf="mostrarGraficos && usarGraficosSimples">
+            <!-- Distribución por Tipo -->
             <div class="col-md-6 mb-4">
               <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Distribución por Tipo de Movimiento</h6>
+                </div>
                 <div class="card-body">
-                  <canvas id="chartConcepto" style="max-height: 300px;"></canvas>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Tipo</th>
+                          <th class="text-center">Cantidad</th>
+                          <th class="text-right">%</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getDistribucionTipo()">
+                          <td>{{ item.tipo }}</td>
+                          <td class="text-center">{{ item.cantidad }}</td>
+                          <td class="text-right">{{ item.porcentaje }}%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
+            
+            <!-- Top 5 Cajas -->
             <div class="col-md-6 mb-4">
               <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Top 5 Cajas por Importe</h6>
+                </div>
                 <div class="card-body">
-                  <canvas id="chartTendencia" style="max-height: 300px;"></canvas>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Caja</th>
+                          <th class="text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getTop5Cajas()">
+                          <td>{{ item.caja }}</td>
+                          <td class="text-right">$ {{ item.importe | number:'1.2-2' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Top 5 Conceptos -->
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Top 5 Conceptos por Importe</h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Concepto</th>
+                          <th class="text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getTop5Conceptos()">
+                          <td>{{ item.concepto }}</td>
+                          <td class="text-right">$ {{ item.importe | number:'1.2-2' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Resumen por Fecha -->
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Resumen Últimos 7 Días</h6>
+                </div>
+                <div class="card-body">
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Fecha</th>
+                          <th class="text-right">Importe</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let item of getUltimos7Dias()">
+                          <td>{{ item.fecha }}</td>
+                          <td class="text-right">$ {{ item.importe | number:'1.2-2' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          
+          <!-- Gráficos con ng2-charts -->
+          <div class="row mb-4" *ngIf="mostrarGraficos && !usarGraficosSimples">
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Distribución por Tipo de Movimiento</h6>
+                </div>
+                <div class="card-body" style="position: relative; height:300px">
+                  <canvas baseChart *ngIf="pieChartData"
+                    [datasets]="pieChartData"
+                    [labels]="pieChartLabels"
+                    [options]="pieChartOptions"
+                    [type]="'pie'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Top 10 Cajas por Importe</h6>
+                </div>
+                <div class="card-body" style="position: relative; height:300px">
+                  <canvas baseChart *ngIf="barChartData"
+                    [datasets]="barChartData"
+                    [labels]="barChartLabels"
+                    [options]="barChartOptions"
+                    [type]="'bar'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-4" *ngIf="mostrarGraficos && !usarGraficosSimples">
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Top 10 Conceptos por Importe</h6>
+                </div>
+                <div class="card-body" style="position: relative; height:300px">
+                  <canvas baseChart *ngIf="doughnutChartData"
+                    [datasets]="doughnutChartData"
+                    [labels]="doughnutChartLabels"
+                    [options]="doughnutChartOptions"
+                    [type]="'doughnut'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-4">
+              <div class="card">
+                <div class="card-header">
+                  <h6 class="mb-0">Tendencia de Movimientos por Fecha</h6>
+                </div>
+                <div class="card-body" style="position: relative; height:300px">
+                  <canvas baseChart *ngIf="lineChartData"
+                    [datasets]="lineChartData"
+                    [labels]="lineChartLabels"
+                    [options]="lineChartOptions"
+                    [type]="'line'">
+                  </canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Sección de gráficos PrimeNG eliminada - Usando ng2-charts -->
 
           <!-- Tabla detallada -->
-          <div class="row">
+          <div class="row mb-4">
             <div class="col-12">
-              <h5 class="mb-3">Detalle de Movimientos</h5>
+              <h2 class="mb-4 text-primary font-weight-bold">Detalle de Movimientos</h2>
               <div class="table-responsive">
                 <table class="table table-striped table-sm">
                   <thead>
@@ -121,6 +286,70 @@
                   <tfoot>
                     <tr class="font-weight-bold">
                       <td colspan="5">Total</td>
+                      <td class="text-right">$ {{ summary.balance | number:'1.2-2' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totalizador por Caja -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <h2 class="mb-4 text-primary font-weight-bold">Totales por Caja</h2>
+              <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                  <thead>
+                    <tr>
+                      <th>Caja</th>
+                      <th class="text-center">Cantidad Movimientos</th>
+                      <th class="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of getTotalesPorCaja()">
+                      <td>{{ item.caja }}</td>
+                      <td class="text-center">{{ item.cantidad }}</td>
+                      <td class="text-right">$ {{ item.importe | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="font-weight-bold">
+                      <td>Total General</td>
+                      <td class="text-center">{{ summary.cantidadMovimientos }}</td>
+                      <td class="text-right">$ {{ summary.balance | number:'1.2-2' }}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totalizador por Concepto -->
+          <div class="row mb-4">
+            <div class="col-12">
+              <h2 class="mb-4 text-primary font-weight-bold">Totales por Concepto</h2>
+              <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                  <thead>
+                    <tr>
+                      <th>Concepto</th>
+                      <th class="text-center">Cantidad Movimientos</th>
+                      <th class="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let item of getTotalesPorConcepto()">
+                      <td>{{ item.concepto }}</td>
+                      <td class="text-center">{{ item.cantidad }}</td>
+                      <td class="text-right">$ {{ item.importe | number:'1.2-2' }}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="font-weight-bold">
+                      <td>Total General</td>
+                      <td class="text-center">{{ summary.cantidadMovimientos }}</td>
                       <td class="text-right">$ {{ summary.balance | number:'1.2-2' }}</td>
                     </tr>
                   </tfoot>

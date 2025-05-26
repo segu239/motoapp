@@ -40,6 +40,8 @@ import { TableModule } from 'primeng/table';
 import { CalendarModule } from 'primeng/calendar';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { VirtualScrollerModule } from 'primeng/virtualscroller';
+import { ChartModule } from 'primeng/chart';
+import { NgChartsModule } from 'ng2-charts';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -208,6 +210,8 @@ import { ReporteComponent } from './components/reporte/reporte.component';
     CalendarModule,
     MultiSelectModule,
     VirtualScrollerModule,
+    ChartModule,
+    NgChartsModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,
