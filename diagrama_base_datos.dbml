@@ -1,0 +1,681 @@
+// Diagrama de Base de Datos - MotoApp
+// Generado automáticamente analizando la estructura PostgreSQL
+
+Table artiva {
+  id_ariva integer [pk, increment]
+  cod_iva numeric
+  descripcion varchar(30)
+  desde date
+  hasta date
+  tipo_ali_1 varchar(10)
+  alicuota1 numeric
+  tipo_ali_2 varchar(10)
+  alicuota2 numeric
+  tipo_ali_3 varchar(10)
+  alicuota3 numeric
+  cuit boolean
+}
+
+Table artsucursal {
+  id_articulo integer [pk, increment]
+  nomart varchar
+  marca varchar
+  precon numeric
+  prefi1 numeric
+  prefi2 numeric
+  prefi3 numeric
+  prefi4 numeric
+  exi1 numeric
+  exi2 numeric
+  exi3 numeric
+  exi4 numeric
+  exi5 numeric
+  stkmin1 numeric
+  stkmax1 numeric
+  stkprep1 numeric
+  stkmin2 numeric
+  stkmax2 numeric
+  stkprep2 numeric
+  stkmin3 numeric
+  stkmax3 numeric
+  stkprep3 numeric
+  stkmin4 numeric
+  stkmax4 numeric
+  stkprep4 numeric
+  stkmin5 numeric
+  stkmax5 numeric
+  stkprep5 numeric
+  cd_articulo numeric
+  cd_proveedor numeric
+  cd_barra varchar
+  idart numeric
+  estado varchar
+  rubro varchar
+  articulo numeric
+  cod_iva numeric
+  prebsiva numeric
+  precostosi numeric
+  margen numeric
+  descuento numeric
+  cod_deposito numeric
+  tipo_moneda numeric
+}
+
+Table bancos {
+  id_banco integer [pk, increment]
+  codigo_banco numeric
+  descripcion varchar
+  domicilio varchar
+  telefono varchar
+  responsable varchar
+  codigo_postal varchar
+  plaza varchar
+  cuenta_aso varchar
+}
+
+Table cactualiza {
+  id_act integer [pk, increment]
+  listap numeric(4)
+  tipo varchar(100)
+  porcentaje_21 numeric(10,2)
+  porcentaje_105 numeric(10,2)
+  precio_costo numeric(1)
+  precio_venta numeric(1)
+  fecha timestamp [default: `('now'::text)::timestamp(6) with time zone`]
+  usuario varchar(25)
+  id_moneda integer
+  id_proveedor integer
+  id_marca integer
+}
+
+Table caja_conceptos {
+  id_concepto integer [pk, increment]
+  descripcion varchar(80)
+  tipo_concepto varchar(2)
+  fija numeric(1)
+  ingreso_egreso numeric(1)
+  id_caja numeric
+  activo_inactivo numeric(1)
+}
+
+Table caja_lista {
+  id_caja integer [pk, increment]
+  descripcion varchar(80)
+  fecha_cierre date
+  especial numeric(1)
+  fija numeric(1)
+}
+
+Table caja_movi {
+  id_movimiento integer [pk, increment]
+  sucursal numeric
+  codigo_mov numeric
+  num_operacion numeric
+  fecha_mov date
+  importe_mov numeric(15,2)
+  descripcion_mov varchar(80)
+  fecha_emibco date
+  banco numeric
+  num_cheque numeric
+  cuenta_mov numeric(6)
+  cliente numeric
+  proveedor numeric
+  plaza_cheque varchar(30)
+  codigo_mbco numeric
+  desc_bancaria varchar(80)
+  filler varchar(30)
+  fecha_cobro_bco date
+  fecha_vto_bco date
+  tipo_movi varchar(1)
+  caja numeric
+  letra varchar(1)
+  punto_venta numeric(4)
+  tipo_comprobante varchar(2)
+  numero_comprobante numeric(8)
+  marca_cerrado numeric(1)
+  usuario varchar(25)
+  fecha_proceso date
+}
+
+Table clisuc {
+  id_cli integer
+  cliente numeric
+  nombre varchar
+  direccion varchar
+  dni numeric
+  cuit numeric
+  cod_iva numeric
+  cod_ven numeric
+  cod_zona numeric
+  tipoiva varchar
+  vendedor varchar
+  zona varchar
+  telefono varchar
+  estado varchar
+  idcli numeric
+  fecha date
+  hora varchar
+  ingresos_br varchar
+  n_sucursal numeric
+  id_suc numeric
+  estado_act varchar
+}
+
+Table conf_lista {
+  id_conflista integer [pk, increment]
+  listap numeric
+  activa boolean
+  precosto21 numeric
+  precosto105 numeric
+  pordcto numeric
+  margen numeric
+  preciof21 numeric
+  preciof105 numeric
+  rmargen boolean
+  tipomone numeric
+  actprov boolean
+  cod_marca varchar
+  fecha date
+}
+
+Table dactualiza {
+  id_actprecios integer [pk, increment]
+  rubro varchar(4)
+  articulo numeric(4)
+  nombre varchar(100)
+  pcosto numeric(12,4)
+  descto numeric(12,4)
+  margen numeric(12,4)
+  precio numeric(12,4)
+  pfinal numeric(12,4)
+  pcoston numeric(12,4)
+  descton numeric(12,4)
+  margenn numeric(12,4)
+  precion numeric(12,4)
+  pfinaln numeric(12,4)
+  codprov numeric(6)
+  listap numeric(4)
+  fecha date
+  id_act numeric
+}
+
+Table factcab1 {
+  id_num integer [increment]
+  tipo varchar(2)
+  numero_int numeric
+  puntoventa numeric(4)
+  letra varchar(1)
+  numero_fac numeric(8)
+  atipo varchar(2)
+  anumero_com numeric(8)
+  cliente numeric(6)
+  cod_sucursal numeric(6)
+  emitido date
+  vencimiento date
+  exento numeric(12,4)
+  basico numeric(12,4)
+  iva1 numeric(12,4)
+  iva2 numeric(12,4)
+  iva3 numeric(12,4)
+  bonifica numeric(12,4)
+  interes numeric(12,4)
+  saldo numeric(12,4)
+  dorigen boolean
+  cod_condvta numeric(4)
+  cod_iva numeric(2)
+  cod_vendedor numeric(6)
+  anulado boolean
+  cuit numeric(15)
+  usuario varchar(12)
+  turno numeric(2)
+  pfiscal numeric(6)
+  mperc numeric(12,4)
+  imp_int numeric(12,4)
+  fec_proceso date
+  fec_ultpago date
+  estado varchar(12)
+  id_aso numeric
+}
+
+Table factcab2 {
+  // Similar estructura a factcab1 para sucursal 2
+}
+
+Table factcab3 {
+  // Similar estructura a factcab1 para sucursal 3
+}
+
+Table factcab4 {
+  // Similar estructura a factcab1 para sucursal 4
+}
+
+Table factcab5 {
+  // Similar estructura a factcab1 para sucursal 5
+}
+
+Table facttmp1 {
+  id_num integer [increment]
+  tipo varchar(2)
+  numero_int numeric
+  puntoventa numeric(4)
+  letra varchar(1)
+  numero_fac numeric(8)
+  atipo varchar(2)
+  anumero_com numeric(8)
+  cliente numeric(6)
+  cod_sucursal numeric(6)
+  emitido date
+  vencimiento date
+  exento numeric(12,4)
+  basico numeric(12,4)
+  iva1 numeric(12,4)
+  iva2 numeric(12,4)
+  iva3 numeric(12,4)
+  bonificacion numeric(12,4)
+  saldo numeric(12,4)
+  dorigen boolean
+  cod_condvta numeric(3)
+  cod_iva numeric(2)
+  cod_vendedor numeric(6)
+  anulado boolean
+  cuit numeric(15)
+  usuario varchar(12)
+  turno numeric(2)
+  pfiscal numeric(6)
+  mperc numeric(12,4)
+  imp_int numeric(12,4)
+  fec_proceso date
+  estado varchar(12)
+}
+
+Table facttmp2 {
+  // Similar estructura a facttmp1 para sucursal 2
+}
+
+Table facttmp3 {
+  // Similar estructura a facttmp1 para sucursal 3
+}
+
+Table facttmp4 {
+  // Similar estructura a facttmp1 para sucursal 4
+}
+
+Table facttmp5 {
+  // Similar estructura a facttmp1 para sucursal 5
+}
+
+Table marcas {
+  id_marca integer [pk, increment]
+  cod_marca varchar(6)
+  marca varchar(30)
+}
+
+Table parametros {
+  codigo numeric
+  usuario text
+  ventas numeric
+  clientes numeric
+  caja numeric
+  proveedores numeric
+}
+
+Table pedidoitem {
+  id_items integer [pk, increment]
+  tipo varchar(2)
+  cantidad numeric(8,2)
+  id_art numeric
+  descripcion varchar
+  precio numeric(12,2)
+  fecha_resuelto date
+  usuario_res varchar
+  observacion text
+  estado varchar
+  id_num numeric
+}
+
+Table pedidoscb {
+  id_num integer [pk, increment]
+  numero integer [increment]
+  tipo varchar(2)
+  sucursald numeric(4)
+  sucursalh numeric(4)
+  fecha date
+  usuario varchar(30)
+  observacion text
+  estado varchar(15)
+  id_aso numeric
+}
+
+Table proveedores {
+  id_prov integer [pk, increment]
+  cod_prov numeric
+  nombre varchar
+  direccion varchar
+  codpos varchar
+  localidad varchar
+  telefono varchar
+  cuit numeric
+  contacto varchar
+  rubro varchar
+  cod_iva numeric
+  ganancias numeric
+  ingbrutos varchar
+  email varchar
+  www varchar
+  cta_proveedores varchar
+  fec_proceso date
+}
+
+Table psucursal1 {
+  id_num numeric
+  idart numeric
+  cantidad numeric
+  precio numeric
+  idcli numeric
+  idven numeric
+  fecha date
+  hora text
+  tipoprecio text
+  cod_tar numeric
+  titulartar text
+  numerotar numeric
+  cod_mov numeric
+  suc_destino numeric
+  nomart text
+  nautotar numeric
+  dni_tar numeric
+  banco text
+  ncuenta numeric
+  ncheque numeric
+  nombre text
+  plaza text
+  importeimputar numeric(12,2)
+  importecheque numeric(12,2)
+  fechacheque date
+  emailop text
+  tipodoc text
+  puntoventa numeric(4)
+  numerocomprobante numeric(8)
+  estado text
+}
+
+Table psucursal2 {
+  // Similar estructura a psucursal1 para sucursal 2
+}
+
+Table psucursal3 {
+  // Similar estructura a psucursal1 para sucursal 3
+}
+
+Table psucursal4 {
+  // Similar estructura a psucursal1 para sucursal 4
+}
+
+Table psucursal5 {
+  // Similar estructura a psucursal1 para sucursal 5
+}
+
+Table psucutmp1 {
+  id_num numeric
+  idart numeric
+  cantidad numeric(8,2)
+  precio numeric(12,2)
+  idcli numeric
+  idven numeric
+  fecha date
+  hora text
+  tipoprecio text
+  cod_tar numeric(3)
+  titulartar text
+  numerotar numeric(20)
+  cod_mov numeric(3)
+  suc_destino numeric(4)
+  nomart text
+  nautotar numeric(4)
+  dni_tar numeric
+  banco text
+  ncuenta numeric(30)
+  ncheque numeric(20)
+  nombre text
+  plaza text
+  importeimputar numeric(12,2)
+  importecheque numeric(12,2)
+  fechacheque date
+  emailop text
+  tipodoc text
+  puntoventa numeric(4)
+  numerocomprobante numeric(8)
+  estado text
+}
+
+Table psucutmp2 {
+  // Similar estructura a psucutmp1 para sucursal 2
+}
+
+Table psucutmp3 {
+  // Similar estructura a psucutmp1 para sucursal 3
+}
+
+Table psucutmp4 {
+  // Similar estructura a psucutmp1 para sucursal 4
+}
+
+Table psucutmp5 {
+  // Similar estructura a psucutmp1 para sucursal 5
+}
+
+Table recibos1 {
+  recibo numeric
+  c_tipo varchar
+  c_numero numeric
+  c_cuota numeric
+  fecha date
+  importe numeric
+}
+
+Table recibos2 {
+  // Similar estructura a recibos1 para sucursal 2
+}
+
+Table recibos3 {
+  // Similar estructura a recibos1 para sucursal 3
+}
+
+Table recibos4 {
+  // Similar estructura a recibos1 para sucursal 4
+}
+
+Table recibos5 {
+  // Similar estructura a recibos1 para sucursal 5
+}
+
+Table res_caja_movi {
+  id_movimiento integer [pk, increment]
+  sucursal numeric
+  codigo_mov numeric
+  num_operacion numeric
+  fecha_mov date
+  importe_mov numeric(15,2)
+  descripcion_mov varchar(80)
+  fecha_emibco date
+  banco numeric
+  num_cheque numeric
+  cuenta_mov numeric(6)
+  cliente numeric
+  proveedor numeric
+  plaza_cheque varchar(30)
+  codigo_mbco numeric
+  desc_bancaria varchar(80)
+  filler varchar(30)
+  fecha_cobro_bco date
+  fecha_vto_bco date
+  tipo_movi varchar(1)
+  caja numeric
+  letra varchar(1)
+  punto_venta numeric(4)
+  tipo_comprobante varchar(2)
+  numero_comprobante numeric(8)
+  marca_cerrado numeric(1)
+  usuario varchar(25)
+  fecha_proceso date
+}
+
+Table rubro_principal {
+  id_rubro_p integer [pk, increment]
+  cod_rubro varchar(2)
+  rubro varchar(30)
+}
+
+Table rubros {
+  id_rubro integer [pk, increment]
+  cod_rubro varchar(4)
+  rubro varchar(30)
+  numerador numeric(4)
+  modiprecio numeric(1)
+  modidescri numeric(1)
+  cod_depo numeric(6)
+  mustuni numeric(1)
+  id_rubro_p numeric
+}
+
+Table situacion {
+  id_situa integer [pk, increment]
+  tipo varchar(2)
+  sucursald numeric(4)
+  sucursalh numeric(4)
+  fechag date
+  fechar date
+  usuario_res varchar(10)
+  oservacion text
+  estado varchar(10)
+  id_aso numeric
+}
+
+Table sucursales {
+  cod_sucursal numeric
+  sucursal text
+  mail text
+  contrasena text
+}
+
+Table tarjcredito {
+  id_forma_pago integer [pk, increment]
+  cod_tarj numeric
+  tarjeta text
+  listaprecio numeric
+  activadatos numeric
+  d1 numeric
+  d2 numeric
+  d3 numeric
+  d4 numeric
+  d5 numeric
+  d6 numeric
+  d7 numeric
+  idcp_ingreso numeric
+  idcp_egreso numeric
+}
+
+Table tipomone {
+  id_moneda integer [pk, increment]
+  cod_mone numeric
+  moneda varchar
+  simbolo varchar
+}
+
+Table turnos {
+  id_turno integer [pk, increment]
+  desctur varchar(100)
+  id_vendedor integer
+  hab_cierre numeric(1)
+  fec_apertura date
+  hora_apertura text
+  hora_cierre text
+  fec_proceso date
+}
+
+Table valorcambio {
+  id_valor integer [pk, increment]
+  codmone numeric(2)
+  desvalor varchar(30)
+  fecdesde date
+  fechasta date
+  vcambio numeric(10,2)
+}
+
+Table vendedores {
+  cod_ven integer
+  vendedor text
+  p_venta real
+  p_cobro real
+  p_venta_total real
+  email text
+  password text
+}
+
+// Relaciones lógicas inferidas (no hay FK definidas explícitamente)
+// Estas relaciones son inferidas basándose en los nombres de campos y la lógica del negocio
+
+// Relaciones con artículos
+Ref: artsucursal.cd_proveedor > proveedores.cod_prov
+Ref: artsucursal.cod_iva > artiva.cod_iva
+Ref: artsucursal.tipo_moneda > tipomone.cod_mone
+
+// Relaciones con facturas
+Ref: factcab1.cliente > clisuc.cliente
+Ref: factcab1.cod_vendedor > vendedores.cod_ven
+Ref: factcab1.cod_sucursal > sucursales.cod_sucursal
+Ref: factcab1.cod_iva > artiva.cod_iva
+
+// Relaciones con caja
+Ref: caja_movi.cliente > clisuc.cliente
+Ref: caja_movi.proveedor > proveedores.cod_prov
+Ref: caja_movi.banco > bancos.codigo_banco
+Ref: caja_movi.sucursal > sucursales.cod_sucursal
+
+// Relaciones con pedidos
+Ref: pedidoscb.sucursald > sucursales.cod_sucursal
+Ref: pedidoscb.sucursalh > sucursales.cod_sucursal
+Ref: pedidoitem.id_num > pedidoscb.id_num
+
+// Relaciones con ventas por sucursal
+Ref: psucursal1.idcli > clisuc.idcli
+Ref: psucursal1.idven > vendedores.cod_ven
+Ref: psucursal1.idart > artsucursal.idart
+Ref: psucursal1.cod_tar > tarjcredito.cod_tarj
+
+// Relaciones con configuración
+Ref: conf_lista.tipomone > tipomone.cod_mone
+
+// Relaciones con clientes
+Ref: clisuc.cod_ven > vendedores.cod_ven
+Ref: clisuc.cod_iva > artiva.cod_iva
+
+// Relaciones con proveedores
+Ref: proveedores.cod_iva > artiva.cod_iva
+
+// Relaciones con actualizaciones
+Ref: cactualiza.id_moneda > tipomone.id_moneda
+Ref: cactualiza.id_proveedor > proveedores.id_prov
+Ref: cactualiza.id_marca > marcas.id_marca
+
+// Relaciones con situaciones
+Ref: situacion.sucursald > sucursales.cod_sucursal
+Ref: situacion.sucursalh > sucursales.cod_sucursal
+
+// Relaciones con turnos
+Ref: turnos.id_vendedor > vendedores.cod_ven
+
+// Relaciones con valores de cambio
+Ref: valorcambio.codmone > tipomone.cod_mone
+
+// Relaciones con rubros
+Ref: rubros.id_rubro_p > rubro_principal.id_rubro_p
+
+// Relaciones con conceptos de caja
+Ref: caja_conceptos.id_caja > caja_lista.id_caja
+
+// Relaciones de resumen de caja con originales
+Ref: res_caja_movi.sucursal > sucursales.cod_sucursal
+Ref: res_caja_movi.cliente > clisuc.cliente
+Ref: res_caja_movi.proveedor > proveedores.cod_prov
+Ref: res_caja_movi.banco > bancos.codigo_banco
