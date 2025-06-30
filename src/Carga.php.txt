@@ -45,11 +45,27 @@ public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la ap
   $page = $this->get('page') ? intval($this->get('page')) : 1;
   $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
   $offset = ($page - 1) * $limit;
+  
+  // NUEVO: Parámetros de ordenamiento para lazy loading
+  $sortField = $this->get('sortField');
+  $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+  
+  // NUEVO: Filtros dinámicos por columna (JSON desde frontend)
+  $columnFilters = $this->get('filters');
+  $filters = array();
+  if (!empty($columnFilters)) {
+    $filters = json_decode($columnFilters, true);
+  }
 
   // Construir la consulta base
   $this->db->from('artsucursal');
   
-  // Si hay término de búsqueda, aplicar filtros
+  // NUEVO: Aplicar filtros dinámicos por columna
+  if (!empty($filters)) {
+    $this->applyColumnFilters($filters);
+  }
+  
+  // Si hay término de búsqueda, aplicar filtros de texto
   if (!empty($search)) {
     // Escapar el término de búsqueda para seguridad
     $search_escaped = $this->db->escape_like_str($search);
@@ -64,6 +80,15 @@ public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la ap
     )";
     
     $this->db->where($where);
+  }
+  
+  // NUEVO: Aplicar ordenamiento dinámico
+  if (!empty($sortField)) {
+    $direction = ($sortOrder === 1) ? 'ASC' : 'DESC';
+    $this->db->order_by($sortField, $direction);
+  } else {
+    // Ordenamiento por defecto
+    $this->db->order_by('nomart', 'ASC');
   }
   
   // Contar total de registros (para paginación)
@@ -107,6 +132,95 @@ public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la ap
     );
   $this->response($respuesta);
   }
+}
+
+// NUEVO: Método para aplicar filtros dinámicos por columna
+private function applyColumnFilters($filters) {
+  foreach ($filters as $field => $filterMeta) {
+    // PrimeNG envía arrays de filtros, tomar el primer elemento válido
+    if (is_array($filterMeta) && !empty($filterMeta)) {
+      // Si es array, tomar el primer filtro
+      $firstFilter = $filterMeta[0];
+      if (!isset($firstFilter['value']) || $firstFilter['value'] === null || $firstFilter['value'] === '') {
+        continue;
+      }
+      $value = $firstFilter['value'];
+      $matchMode = isset($firstFilter['matchMode']) ? $firstFilter['matchMode'] : 'contains';
+    } else {
+      // Si no es array (fallback), usar como objeto directo
+      if (!isset($filterMeta['value']) || $filterMeta['value'] === null || $filterMeta['value'] === '') {
+        continue;
+      }
+      $value = $filterMeta['value'];
+      $matchMode = isset($filterMeta['matchMode']) ? $filterMeta['matchMode'] : 'contains';
+    }
+    
+    // Validar que el campo es permitido (seguridad)
+    if (!$this->isValidField($field)) {
+      continue;
+    }
+    
+    // Aplicar filtro según el modo
+    switch ($matchMode) {
+      case 'equals':
+        if ($field === 'cod_deposito' || $field === 'tipo_moneda' || $field === 'cd_articulo') {
+          $this->db->where($field, intval($value));
+        } else {
+          $this->db->where($field, $value);
+        }
+        break;
+        
+      case 'notEquals':
+        if ($field === 'cod_deposito' || $field === 'tipo_moneda' || $field === 'cd_articulo') {
+          $this->db->where($field . ' !=', intval($value));
+        } else {
+          $this->db->where($field . ' !=', $value);
+        }
+        break;
+        
+      case 'contains':
+        $value_escaped = $this->db->escape_like_str($value);
+        $this->db->where("$field ILIKE '%{$value_escaped}%'");
+        break;
+        
+      case 'startsWith':
+        $value_escaped = $this->db->escape_like_str($value);
+        $this->db->where("$field ILIKE '{$value_escaped}%'");
+        break;
+        
+      case 'endsWith':
+        $value_escaped = $this->db->escape_like_str($value);
+        $this->db->where("$field ILIKE '%{$value_escaped}'");
+        break;
+        
+      case 'lt':
+        $this->db->where($field . ' <', $value);
+        break;
+        
+      case 'lte':
+        $this->db->where($field . ' <=', $value);
+        break;
+        
+      case 'gt':
+        $this->db->where($field . ' >', $value);
+        break;
+        
+      case 'gte':
+        $this->db->where($field . ' >=', $value);
+        break;
+    }
+  }
+}
+
+// NUEVO: Validar campos permitidos para filtros (seguridad)
+private function isValidField($field) {
+  $allowedFields = array(
+    'nomart', 'cd_articulo', 'cd_barra', 'marca', 'rubro', 'estado',
+    'cod_deposito', 'tipo_moneda', 'precon', 'prefi1', 'prefi2', 'prefi3', 'prefi4',
+    'exi1', 'exi2', 'exi3', 'exi4', 'exi5', 'cd_proveedor', 'cod_iva'
+  );
+  
+  return in_array($field, $allowedFields);
 }
 
 public function Bancos_get() 
@@ -803,7 +917,7 @@ public function PedidoItemsPorSucursal_post() {
 
     try {
         // ÚNICA CONSULTA:  Realizamos un JOIN para obtener datos de ambas tablas
-        $this->db->select('pi.*, pc.sucursalh, , pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
+        $this->db->select('pi.*, pc.sucursalh, pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
         $this->db->from('pedidoitem AS pi');
         $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner'); // INNER JOIN para asegurar que solo se devuelven filas con coincidencias en ambas tablas
         $this->db->where('pc.sucursald', $sucursal); // Filtro por sucursal en pedidoscb
