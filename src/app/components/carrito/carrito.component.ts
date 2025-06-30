@@ -318,11 +318,18 @@ export class CarritoComponent {
           // Mapeado de sucursal a exi - Lo mantenemos hasta que se pueda cambiar en la base de datos
           let exi = 0;
           // Usando un objeto de mapeo en lugar de condicionales
-          const mappedValues = {
+        /*   const mappedValues = {
             "2": 3,  // Suc. Valle Viejo
             "3": 4,  // Suc. Guemes
             "4": 1   // Deposito
-          };
+          }; */
+           const mappedValues = {
+    "1": 2,  // Casa Central → exi2
+    "2": 3,  // Suc. Valle Viejo → exi3
+    "3": 4,  // Suc. Guemes → exi4
+    "4": 1,   // Deposito → exi1
+    "5": 5,   // Mayorista → exi5
+  };
           
           // Usamos el objeto de mapeo, con fallback a 0 si no existe
           exi = mappedValues[sucursal] || 0;

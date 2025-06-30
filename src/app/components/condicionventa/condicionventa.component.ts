@@ -142,7 +142,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       { field: 'exi2', header: 'Stock CC' },
       { field: 'exi3', header: 'Stock VV' },
       { field: 'exi4', header: 'Stock GM' },
-      { field: 'exi5', header: 'Stock 5' },
+      { field: 'exi5', header: 'Stock MAY' },
       { field: 'cd_articulo', header: 'Código' },
       { field: 'cd_barra', header: 'Código Barra' },
       { field: 'rubro', header: 'Rubro' },
@@ -158,6 +158,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.cols[8], // exi2
       this.cols[9], // exi3
       this.cols[10], // exi4
+      this.cols[11], // exi5
     ];
     
     // Suscribirse a los observables del servicio de paginación
@@ -1200,7 +1201,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi1' || 
         col.field === 'exi2' || 
         col.field === 'exi3' || 
-        col.field === 'exi4'
+        col.field === 'exi4' || 
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '1') {
@@ -1212,7 +1214,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi1' || 
         col.field === 'exi2' || 
         col.field === 'exi3' || 
-        col.field === 'exi4'
+        col.field === 'exi4' || 
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '2') {
@@ -1224,7 +1227,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi1' || 
         col.field === 'exi2' || 
         col.field === 'exi3' || 
-        col.field === 'exi4'
+        col.field === 'exi4' || 
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '3') {
@@ -1236,7 +1240,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi1' || 
         col.field === 'exi2' || 
         col.field === 'exi3' || 
-        col.field === 'exi4'
+        col.field === 'exi4' || 
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '4') {
@@ -1248,7 +1253,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi1' || 
         col.field === 'exi2' || 
         col.field === 'exi3' || 
-        col.field === 'exi4'
+        col.field === 'exi4' || 
+        col.field === 'exi5'
       );
     }
     
