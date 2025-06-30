@@ -42,7 +42,7 @@
                 <!-- Table with data -->
                 <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" 
                     [paginator]="false" [loading]="loading"
-                    [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo']">
+                    [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo', 'cod_deposito']">
                     <ng-template pTemplate="caption">
                         <div class="d-flex flex-row align-items-center">
                             <!-- Caja de búsqueda -->
