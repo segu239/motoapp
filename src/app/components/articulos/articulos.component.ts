@@ -136,11 +136,11 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       { field: 'precostosi', header: 'Costo s/IVA' },
       { field: 'margen', header: 'Margen' },
       { field: 'descuento', header: 'Descuento' },
+      { field: 'cod_deposito', header: 'Cód. Depósito' },
       { field: 'tipo_moneda', header: 'Tipo Moneda' }
     ];
     
     this._selectedColumns = [
-      this.cols[0], // cd_articulo
       this.cols[1], // nomart
       this.cols[2], // marca
       this.cols[3], // precon
@@ -149,7 +149,7 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       this.cols[6], // prefi3 (precio3)
       this.cols[7], // prefi4 (precio4)
       this.cols[14], // rubro
-      this.cols[15]  // estado
+      this.cols[22] // cod_deposito
     ];
   }
 
