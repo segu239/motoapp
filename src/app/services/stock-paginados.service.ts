@@ -31,6 +31,21 @@ export class StockPaginadosService {
 
   constructor(private http: HttpClient) {}
 
+  // Método auxiliar para obtener filtros por defecto según sucursal
+  private getDefaultFilters(): any {
+    const sucursal = sessionStorage.getItem('sucursal');
+    const esMayorista = sucursal === '5';
+    
+    if (esMayorista) {
+      // Formato que espera el backend según el código PHP
+      return {
+        cod_deposito: [{ value: 2, matchMode: 'equals' }]
+      };
+    }
+    
+    return {};
+  }
+
   // Cargar una página específica de productos
   cargarPagina(pagina: number): Observable<any> {
     this.cargandoSubject.next(true);
@@ -43,6 +58,13 @@ export class StockPaginadosService {
       page: pagina.toString(),
       limit: this.tamañoPagina.toString()
     });
+    
+    // Aplicar filtros por defecto según sucursal
+    const defaultFilters = this.getDefaultFilters();
+    if (Object.keys(defaultFilters).length > 0) {
+      params.append('filters', JSON.stringify(defaultFilters));
+      console.log('StockPaginados: Aplicando filtros por defecto:', defaultFilters);
+    }
     
     const urlConPaginacion = `${Urlartsucursal}?${params.toString()}`;
     
@@ -273,6 +295,10 @@ export class StockPaginadosService {
   ): Observable<any> {
     this.cargandoSubject.next(true);
     
+    // Combinar filtros del usuario con filtros por defecto
+    const defaultFilters = this.getDefaultFilters();
+    const combinedFilters = { ...defaultFilters, ...filters };
+    
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString()
@@ -284,13 +310,14 @@ export class StockPaginadosService {
       params.append('sortOrder', sortOrder.toString());
     }
     
-    // Enviar filtros tal como vienen de PrimeNG (el backend los procesará)
-    if (filters && Object.keys(filters).length > 0) {
-      params.append('filters', JSON.stringify(filters));
+    // Enviar filtros combinados tal como vienen de PrimeNG (el backend los procesará)
+    if (combinedFilters && Object.keys(combinedFilters).length > 0) {
+      params.append('filters', JSON.stringify(combinedFilters));
     }
     
     const urlCompleta = `${Urlartsucursal}?${params.toString()}`;
-    console.log('Stock: URL con filtros completos:', urlCompleta);
+    console.log('StockPaginados: URL con filtros completos:', urlCompleta);
+    console.log('StockPaginados: Filtros aplicados:', combinedFilters);
     
     return this.http.get<any>(urlCompleta).pipe(
       tap(response => {
