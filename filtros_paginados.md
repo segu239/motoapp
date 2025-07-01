@@ -5,12 +5,16 @@ Esta guía establece el patrón estándar para implementar tablas con lazy loadi
 ## 📋 Índice
 
 1. [Arquitectura General](#arquitectura-general)
-2. [Backend (PHP/CodeIgniter)](#backend-phpcodeigniter)
-3. [Service Angular](#service-angular)
-4. [Componente Angular](#componente-angular)
-5. [Template HTML](#template-html)
-6. [Checklist de Implementación](#checklist-de-implementación)
-7. [Troubleshooting](#troubleshooting)
+2. [Pre-requisitos y Preparación](#pre-requisitos-y-preparación)
+3. [Migración desde Componente Existente](#migración-desde-componente-existente)
+4. [Backend (PHP/CodeIgniter)](#backend-phpcodeigniter)
+5. [Service Angular](#service-angular)
+6. [Componente Angular](#componente-angular)
+7. [Template HTML](#template-html)
+8. [Gestión de Estado vs Nuevas Columnas](#gestión-de-estado-vs-nuevas-columnas)
+9. [Checklist de Implementación](#checklist-de-implementación)
+10. [Troubleshooting](#troubleshooting)
+11. [Casos de Estudio](#casos-de-estudio)
 
 ---
 
@@ -26,6 +30,113 @@ Usuario aplica filtro → PrimeNG LazyLoadEvent → Service Angular → Backend 
 - **Server-side Filtering**: Todos los filtros se procesan en el backend
 - **State Persistence**: Los filtros y estado de tabla se mantienen entre navegaciones
 - **Columnas Estáticas**: Para mantener el estado de filtros en PrimeNG
+
+---
+
+## 📦 Pre-requisitos y Preparación
+
+### Imports Necesarios
+
+```typescript
+import { LazyLoadEvent } from 'primeng/api';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+```
+
+### Service Requirements
+
+- ✅ El service DEBE tener implementado `cargarPaginaConFiltros()`
+- ✅ Verificar en: `ArticulosPaginadosService.ts:274-339`
+- ✅ Backend endpoint debe soportar parámetros: `page`, `limit`, `sortField`, `sortOrder`, `filters`
+
+### Crear Backup
+
+```bash
+# OBLIGATORIO antes de migrar
+cp componente.component.ts componente.component.ts.backup
+cp componente.component.html componente.component.html.backup
+```
+
+---
+
+## 🔄 Migración desde Componente Existente
+
+### ⚠️ IMPORTANTE: Esta sección es para componentes que YA tienen tabla y paginación manual
+
+### 1. Identificar Puntos de Carga de Datos
+
+Buscar todos los lugares donde se cargan datos:
+```typescript
+// Puntos típicos a actualizar:
+- Constructor
+- ngOnInit()  
+- Formularios específicos (tarjeta, cheque, etc.)
+- Métodos de refresh/reload
+- Métodos de búsqueda
+```
+
+### 2. Marcar Métodos Obsoletos
+
+```typescript
+// ❌ MARCAR COMO OBSOLETO - No eliminar inmediatamente
+public buscarProductos(termino: string): void {
+  console.log('buscarProductos: Método obsoleto, usar filtros PrimeNG');
+}
+
+public paginaSiguiente(): void {
+  console.log('paginaSiguiente: Método obsoleto, PrimeNG maneja paginación automáticamente');
+}
+
+public irAPagina(pagina: number): void {
+  console.log('irAPagina: Método obsoleto, PrimeNG maneja paginación automáticamente');
+}
+
+private setupSearchDebounce(): void {
+  console.log('setupSearchDebounce: Método obsoleto, lazy loading activo');
+}
+```
+
+### 3. Patrón de Actualización de Cargas
+
+```typescript
+// ❌ ANTES - Paginación manual
+this.articulosPaginadosService.cargarPagina(1).subscribe()
+
+// ✅ DESPUÉS - Lazy loading
+this.loadDataLazy({
+  first: 0,
+  rows: this.rows,
+  sortField: this.sortField,
+  sortOrder: this.sortOrder,
+  filters: this.filters
+}).then(() => {
+  Swal.close();
+}).catch(error => {
+  console.error('Error:', error);
+  Swal.close();
+});
+```
+
+### 4. Actualizar Template HTML
+
+```html
+<!-- ❌ ELIMINAR: Paginación manual -->
+<div class="pagination-container">
+  <button (click)="paginaAnterior()">Anterior</button>
+  <!-- ... más botones ... -->
+</div>
+
+<!-- ❌ ELIMINAR: Binding dinámico de columnas -->
+[columns]="selectedColumns"
+
+<!-- ❌ ELIMINAR: Búsqueda manual -->
+<input [(ngModel)]="terminoBusqueda" (keyup.enter)="buscarProductos()">
+
+<!-- ✅ AGREGAR: Lazy loading -->
+[lazy]="true"
+[paginator]="true" 
+[totalRecords]="totalRegistros"
+(onLazyLoad)="loadDataLazy($event)"
+```
 
 ---
 
@@ -601,6 +712,103 @@ ngOnDestroy() {
 
 ---
 
+## 💾 Gestión de Estado vs Nuevas Columnas
+
+### ⚠️ Problema Frecuente: localStorage Override
+
+Al agregar nuevas columnas a un componente existente, el estado guardado en `localStorage` puede no incluir las nuevas columnas, causando que no aparezcan por defecto.
+
+### Síntomas:
+- La nueva columna aparece en el selector pero no está seleccionada por defecto
+- Los filtros funcionan pero la columna no es visible
+
+### Solución Temporal (Durante Desarrollo):
+
+```typescript
+private restoreTableState(): void {
+  try {
+    const savedState = localStorage.getItem('tu_componente_table_state');
+    
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      const isValidState = state.timestamp && (Date.now() - state.timestamp) < (2 * 60 * 60 * 1000);
+      
+      if (isValidState) {
+        this.first = state.first || 0;
+        this.rows = state.rows || 50;
+        this.sortField = state.sortField;
+        this.sortOrder = state.sortOrder || 1;
+        this.filters = state.filters || {};
+        
+        // 🔧 TEMPORAL: No restaurar selectedColumns para nuevas columnas
+        // if (state.selectedColumns && Array.isArray(state.selectedColumns)) {
+        //   this._selectedColumns = state.selectedColumns;
+        // }
+        console.log('🔄 Usando columnas por defecto (incluye nuevas columnas)');
+      }
+    }
+  } catch (error) {
+    console.warn('Error restaurando estado de la tabla:', error);
+  }
+}
+```
+
+### Método de Reset Completo:
+
+```typescript
+// AGREGAR método para limpiar estado cuando sea necesario
+public limpiarEstadoTabla(): void {
+  localStorage.removeItem('tu_componente_table_state');
+  // Resetear a valores por defecto que incluyen nuevas columnas
+  this._selectedColumns = [
+    this.cols[0], // columna1
+    this.cols[1], // columna2
+    // ... 
+    this.cols[16], // nueva_columna
+  ];
+  console.log('✅ Estado de tabla limpiado, usando columnas por defecto actualizadas');
+}
+```
+
+### Solución Productiva (Versionado de Estado):
+
+```typescript
+interface TableState {
+  version: number; // ← AGREGAR versionado
+  first: number;
+  rows: number;
+  selectedColumns: Column[];
+  // ...
+}
+
+private restoreTableState(): void {
+  const CURRENT_STATE_VERSION = 2; // ← Incrementar al agregar columnas
+  
+  if (savedState) {
+    const state = JSON.parse(savedState);
+    
+    // Si la versión es antigua, usar defaults
+    if (!state.version || state.version < CURRENT_STATE_VERSION) {
+      console.log('🔄 Estado antiguo detectado, usando columnas por defecto actualizadas');
+      return; // Usar defaults del constructor
+    }
+    
+    // Restaurar solo si la versión es compatible
+    this._selectedColumns = state.selectedColumns;
+  }
+}
+```
+
+### Comando Manual para Usuarios:
+
+```javascript
+// En consola del navegador para limpiar estado manualmente:
+localStorage.removeItem('condicionventa_table_state');
+location.reload();
+```
+
+---
+
 ## ✅ Checklist de Implementación
 
 ### Backend
@@ -704,5 +912,70 @@ Siguiendo esta guía obtendrás:
 - ✅ **Estado de tabla** guardado automáticamente
 - ✅ **Rendimiento optimizado** para grandes volúmenes de datos
 - ✅ **Código mantenible** siguiendo patrones establecidos
+
+**¡Tu tabla funcionará exactamente como la tabla de artículos!** 🚀
+
+---
+
+## 📚 Casos de Estudio
+
+### Caso 1: Migración de CondicionVenta (Completado)
+
+**Contexto:** Componente con tabla existente, paginación manual, formularios específicos y conversión de monedas.
+
+**Desafíos Encontrados:**
+- ❌ Métodos obsoletos de búsqueda y paginación
+- ❌ Múltiples puntos de carga de datos (formularios tarjeta/cheque)
+- ❌ Estado persistente que no incluía nueva columna depósito
+- ❌ Binding dinámico de columnas que rompía filtros
+
+**Soluciones Aplicadas:**
+- ✅ Marcado de métodos como obsoletos (no eliminación inmediata)
+- ✅ Actualización de 3 puntos de carga: constructor, tarjeta, cheque
+- ✅ Temporal disable de `selectedColumns` restoration
+- ✅ Cambio a columnas estáticas con `*ngIf="isColumnVisible()"`
+
+**Tiempo de Migración:** 4 horas
+**Resultado:** ✅ Éxito total, todas las funcionalidades preservadas
+
+### Caso 2: Migración de Artículos (Referencia)
+
+**Contexto:** Componente base con implementación completa y exitosa.
+
+**Funcionalidades Clave:**
+- ✅ Lazy loading con persistencia de estado
+- ✅ Filtros por columna con múltiples tipos (text, numeric, date)
+- ✅ Conversión de monedas compleja
+- ✅ Selector de columnas dinámico
+- ✅ Exportación a Excel
+
+**Patrón de Referencia:** `/src/app/components/articulos/`
+
+### Lecciones Aprendidas
+
+1. **Siempre usar componente de referencia:** La implementación en `articulos` fue fundamental para entender el patrón correcto.
+
+2. **Backup obligatorio:** Los archivos `.backup` salvaron tiempo al poder comparar cambios.
+
+3. **Estado vs nuevas columnas:** El problema de localStorage es común al agregar columnas.
+
+4. **Migración gradual:** Marcar como obsoleto primero, eliminar después.
+
+5. **Testing inmediato:** Verificar compilación después de cada cambio mayor.
+
+### Recomendaciones Futuras
+
+- 🔄 **Usar versionado de estado** para evitar problemas con localStorage
+- 📋 **Documentar puntos de carga** específicos del componente antes de migrar
+- 🧪 **Implementar tests automáticos** para verificar filtros
+- 📊 **Monitorear performance** en tablas con muchos registros
+
+---
+
+## 🏆 Componentes Implementados
+
+- ✅ **Artículos** - Referencia base (completado)
+- ✅ **CondicionVenta** - Migración exitosa (completado)
+- 🔄 **Próximos:** Cajamovi, Stock, Clientes, etc.
 
 **¡Tu tabla funcionará exactamente como la tabla de artículos!** 🚀
