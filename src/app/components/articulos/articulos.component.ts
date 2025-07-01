@@ -6,6 +6,7 @@ import { SubirdataService } from '../../services/subirdata.service';
 import { FormGroup, FormControl } from '@angular/forms';
 import { ArticulosPaginadosService } from '../../services/articulos-paginados.service';
 import { Subscription, forkJoin } from 'rxjs';
+import { LazyLoadEvent } from 'primeng/api';
 
 import Swal from 'sweetalert2';
 
@@ -92,11 +93,20 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   cols: Column[];
   _selectedColumns: Column[];
   
-  // Propiedades para paginación
+  // Propiedades para paginación tradicional
   public paginaActual = 1;
   public totalPaginas = 0;
   public totalItems = 0;
-  public terminoBusqueda = '';
+  
+  // NUEVO: Propiedades para lazy loading
+  public lazyLoading: boolean = true;
+  public first: number = 0;
+  public rows: number = 50;
+  public sortField: string | undefined;
+  public sortOrder: number = 1;
+  public filters: any = {};
+  public totalRegistros: number = 0;
+  
   
   // Propiedades para carga
   public loading = false;
@@ -156,6 +166,9 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('ArticulosComponent initialized');
     
+    // NUEVO: Restaurar estado de tabla al inicializar
+    this.restoreTableState();
+    
     // Reiniciar el contador de reintentos
     this.resetRetryCount();
     
@@ -177,7 +190,7 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       })
     );
     
-    // Subscribe to pagination data
+    // Subscribe to pagination data (compatible con lazy loading)
     this.subscriptions.push(
       this.articulosPaginadosService.paginaActual$.subscribe(pagina => {
         this.paginaActual = pagina;
@@ -193,30 +206,27 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.articulosPaginadosService.totalItems$.subscribe(total => {
         this.totalItems = total;
+        this.totalRegistros = total; // Para lazy loading
       })
     );
     
-    this.subscriptions.push(
-      this.articulosPaginadosService.terminoBusqueda$.subscribe(termino => {
-        this.terminoBusqueda = termino;
-      })
-    );
     
     // Load additional data needed (valores cambio, tipos moneda, conf lista)
     this.loadAdditionalData();
     
-    // Load initial page of data
-    this.articulosPaginadosService.cargarPagina(1).subscribe(
-      () => {},
-      error => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los artículos',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
+    // NUEVO: Cargar primera página como respaldo si lazy loading no se activa
+    setTimeout(() => {
+      if (this.articulos.length === 0 && !this.loading) {
+        console.log('Cargando primera página manualmente como respaldo');
+        this.loadDataLazy({
+          first: this.first,
+          rows: this.rows,
+          sortField: this.sortField,
+          sortOrder: this.sortOrder,
+          filters: this.filters
         });
       }
-    );
+    }, 1000);
   }
   
   // Load additional data needed for price conversion
@@ -284,205 +294,23 @@ export class ArticulosComponent implements OnInit, OnDestroy {
     this._selectedColumns = this.cols.filter((col) => val.includes(col));
   }
 
-  // Variables para la búsqueda a nivel de cliente
-  productosCompletos: any[] = [];
-  productosFiltrados: any[] = [];
 
-  // Buscar artículos
-  buscar() {
-    if (!this.terminoBusqueda.trim()) {
-      this.limpiarBusqueda();
-      return;
-    }
-    
-    // Si no tenemos todos los productos cargados, los cargamos primero
-    if (this.productosCompletos.length === 0) {
-      this.mostrarLoading();
-      
-      // Cargar todos los productos una sola vez
-      this.cargardataService.artsucursal().subscribe({
-        next: (response: any) => {
-          console.log('Respuesta de artsucursal para articulos:', response);
-          
-          // Verificar si la respuesta tiene el formato esperado (puede variar)
-          let articulos = [];
-          
-          if (response && Array.isArray(response)) {
-            // Es un array directo
-            articulos = response;
-          } else if (response && response.mensaje && Array.isArray(response.mensaje)) {
-            // Tiene formato { mensaje: [...] }
-            articulos = response.mensaje;
-          } else if (response && !response.error && response.mensaje) {
-            // Otro formato posible
-            articulos = response.mensaje;
-          }
-          
-          console.log('Artículos extraídos para búsqueda:', articulos.length);
-          
-          if (articulos && articulos.length > 0) {
-            // Guardar la lista completa
-            this.productosCompletos = [...articulos];
-            
-            // Realizar la búsqueda local
-            this.buscarLocal();
-            
-            Swal.close();
-          } else {
-            Swal.close();
-            console.warn('No se obtuvieron productos o respuesta vacía');
-            Swal.fire({
-              title: 'Advertencia',
-              text: 'No se pudieron cargar productos para buscar',
-              icon: 'warning',
-              confirmButtonText: 'Aceptar'
-            });
-          }
-        },
-        error: (error) => {
-          Swal.close();
-          console.error('Error al cargar productos:', error);
-          Swal.fire({
-            title: 'Error',
-            text: 'Error al cargar productos para buscar',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
-        }
-      });
-    } else {
-      // Ya tenemos los productos, solo realizamos la búsqueda local
-      this.buscarLocal();
-    }
-  }
   
-  // Realizar búsqueda local
-  buscarLocal() {
-    const termino = this.terminoBusqueda.toLowerCase().trim();
-    console.log('Buscando el término en articulos:', termino);
-    console.log('En total productos para articulos:', this.productosCompletos.length);
-    
-    // Inspeccionar los primeros 5 productos para entender la estructura
-    console.log('Muestra de productos:', this.productosCompletos.slice(0, 5));
-    
-    // Filtrar productos localmente
-    this.productosFiltrados = this.productosCompletos.filter(producto => {
-      // Primero verificamos si el producto tiene los campos necesarios
-      if (!producto) return false;
-      
-      // Asegurar que todos los campos se conviertan a string para búsqueda segura
-      // Buscar principalmente en nomart y marca
-      const nombreArt = producto.nomart ? producto.nomart.toString().toLowerCase() : '';
-      const marca = producto.marca ? producto.marca.toString().toLowerCase() : '';
-      
-      // Adicionales por si acaso
-      const codigo = producto.cd_articulo ? producto.cd_articulo.toString().toLowerCase() : '';
-      const codigoBarra = producto.cd_barra ? producto.cd_barra.toString().toLowerCase() : '';
-      const rubro = producto.rubro ? producto.rubro.toString().toLowerCase() : '';
-      
-      // Devolver true si alguno de los campos contiene el término de búsqueda
-      return (
-        nombreArt.includes(termino) || 
-        marca.includes(termino) || 
-        codigo.includes(termino) || 
-        codigoBarra.includes(termino) || 
-        rubro.includes(termino)
-      );
-    });
-    
-    console.log('Productos filtrados encontrados en articulos:', this.productosFiltrados.length);
-    
-    // Actualizar contadores de paginación para la UI
-    this.totalItems = this.productosFiltrados.length;
-    this.totalPaginas = Math.ceil(this.totalItems / 50); // 50 ítems por página por defecto
-    this.paginaActual = 1;
-    
-    // Aplicar paginación a los resultados
-    this.paginarResultadosLocales();
-    
-    // Si no hay resultados, mostrar un mensaje amigable
-    if (this.articulos.length === 0) {
-      Swal.fire({
-        title: 'Sin resultados',
-        text: `No se encontraron productos que coincidan con "${this.terminoBusqueda}"`,
-        icon: 'info',
-        confirmButtonText: 'Aceptar'
-      });
-    }
-  }
   
-  // Paginar resultados localmente
-  paginarResultadosLocales() {
-    const inicio = (this.paginaActual - 1) * 50; // 50 ítems por página por defecto
-    const fin = inicio + 50;
-    
-    // Obtener los productos para la página actual
-    const productosPagina = this.productosFiltrados.slice(inicio, fin);
-    
-    // Aplicar multiplicador y actualizar la variable articulos
-    this.articulos = this.aplicarMultiplicadorPrecio(productosPagina);
-  }
   
-  // Limpiar búsqueda
-  limpiarBusqueda() {
-    this.terminoBusqueda = '';
-    this.productosFiltrados = [];
-    
-    // Volver a cargar la primera página desde el servidor
-    this.articulosPaginadosService.cargarPagina(1).subscribe();
-  }
   
-  // Método para mostrar el indicador de carga
-  mostrarLoading() {
-    Swal.fire({
-      title: 'Cargando datos',
-      text: 'Por favor espere...',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-  }
   
-  // Métodos de paginación sobrescritos para búsqueda local
+  // Métodos de paginación
   irAPagina(pagina: number) {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (pagina >= 1 && pagina <= this.totalPaginas) {
-        this.paginaActual = pagina;
-        this.paginarResultadosLocales();
-      }
-    } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
-      this.articulosPaginadosService.irAPagina(pagina);
-    }
+    this.articulosPaginadosService.irAPagina(pagina);
   }
   
   paginaSiguiente() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual < this.totalPaginas) {
-        this.paginaActual++;
-        this.paginarResultadosLocales();
-      }
-    } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
-      this.articulosPaginadosService.paginaSiguiente();
-    }
+    this.articulosPaginadosService.paginaSiguiente();
   }
   
   paginaAnterior() {
-    if (this.terminoBusqueda && this.productosFiltrados.length > 0) {
-      // Si estamos en modo búsqueda, paginar localmente
-      if (this.paginaActual > 1) {
-        this.paginaActual--;
-        this.paginarResultadosLocales();
-      }
-    } else {
-      // Si no estamos en modo búsqueda, usar el servicio de paginación
-      this.articulosPaginadosService.paginaAnterior();
-    }
+    this.articulosPaginadosService.paginaAnterior();
   }
   
   // Obtener números de página visibles en la paginación
@@ -525,12 +353,11 @@ export class ArticulosComponent implements OnInit, OnDestroy {
       }
     });
     
-    // Reload additional data and current page
+    // NUEVO: Reload additional data and current page manteniendo filtros
     forkJoin({
       valoresCambio: this.articulosPaginadosService.getValoresCambio(),
       tiposMoneda: this.articulosPaginadosService.getTiposMoneda(),
-      confLista: this.articulosPaginadosService.getConfLista(),
-      articulos: this.articulosPaginadosService.cargarPagina(1)
+      confLista: this.articulosPaginadosService.getConfLista()
     }).subscribe(
       results => {
         if (results.valoresCambio && !results.valoresCambio['error']) {
@@ -545,6 +372,15 @@ export class ArticulosComponent implements OnInit, OnDestroy {
           this.confLista = results.confLista['mensaje'];
         }
         
+        // NUEVO: Recargar datos manteniendo filtros actuales
+        this.loadDataLazy({
+          first: this.first,
+          rows: this.rows,
+          sortField: this.sortField,
+          sortOrder: this.sortOrder,
+          filters: this.filters
+        });
+        
         Swal.close();
       },
       error => {
@@ -557,6 +393,139 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         });
       }
     );
+  }
+
+  // NUEVO: Método para lazy loading con persistencia de estado
+  async loadDataLazy(event: LazyLoadEvent): Promise<void> {
+    console.log('🔄 loadDataLazy - Evento recibido:', event);
+    
+    // Actualizar parámetros de paginación y filtros
+    this.first = event.first || 0;
+    this.rows = event.rows || 50;
+    this.sortField = event.sortField;
+    this.sortOrder = event.sortOrder || 1;
+    this.filters = event.filters || {};
+    
+    // NUEVO: Guardar estado después de cada cambio (como en colegios)
+    this.saveTableState();
+    
+    // Calcular página basada en first
+    const page = Math.floor(this.first / this.rows) + 1;
+    
+    console.log(`📄 Cargando página ${page}, first: ${this.first}, rows: ${this.rows}`);
+    console.log('🔍 Filtros recibidos:', this.filters);
+    console.log('📊 Ordenamiento:', this.sortField, this.sortOrder);
+    
+    try {
+      // Cargar datos del servidor con los parámetros del lazy loading
+      await this.loadServerData(page);
+    } catch (error) {
+      console.error('❌ Error en loadDataLazy:', error);
+      Swal.fire({
+        title: 'Error',
+        text: 'Error al cargar datos: ' + (error.message || error),
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+      });
+    }
+  }
+
+  // NUEVO: Cargar datos del servidor con filtros y paginación
+  private async loadServerData(page: number): Promise<void> {
+    try {
+      console.log(`🌐 Cargando página ${page} del servidor...`);
+      console.log('📋 Parámetros:', {
+        page,
+        rows: this.rows,
+        sortField: this.sortField,
+        sortOrder: this.sortOrder,
+        filters: this.filters
+      });
+      
+      const response = await this.articulosPaginadosService.cargarPaginaConFiltros(
+        page,
+        this.rows,
+        this.sortField,
+        this.sortOrder,
+        this.filters
+      ).toPromise();
+      
+      console.log('✅ Respuesta recibida:', response);
+      
+      if (response && !response.error) {
+        console.log(`✅ Datos cargados exitosamente`);
+      } else {
+        console.warn('⚠️ Respuesta con error o vacía:', response);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error cargando datos del servidor:', error);
+      throw error;
+    }
+  }
+
+  // NUEVO: Método para verificar si una columna es visible
+  isColumnVisible(field: string): boolean {
+    return this._selectedColumns.some(col => col.field === field);
+  }
+
+  // Método para manejar cambios en selección de columnas
+  onColumnSelectionChange(): void {
+    // Guardar el estado cuando cambien las columnas seleccionadas
+    this.saveTableState();
+    console.log('Columnas seleccionadas actualizadas:', this._selectedColumns);
+  }
+
+  // NUEVO: Guardar estado de la tabla (como en colegios)
+  private saveTableState(): void {
+    try {
+      const state = {
+        first: this.first,
+        rows: this.rows,
+        sortField: this.sortField,
+        sortOrder: this.sortOrder,
+        filters: this.filters,
+        selectedColumns: this._selectedColumns,
+        timestamp: Date.now()
+      };
+
+      localStorage.setItem('articulos_table_state', JSON.stringify(state));
+      console.log('💾 Estado de tabla guardado:', state);
+    } catch (error) {
+      console.warn('Error guardando estado de la tabla:', error);
+    }
+  }
+
+  // NUEVO: Restaurar estado de la tabla (como en colegios)
+  private restoreTableState(): void {
+    try {
+      const savedState = localStorage.getItem('articulos_table_state');
+      
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        
+        // Verificar que el estado no sea muy viejo (2 horas máximo)
+        const isValidState = state.timestamp && (Date.now() - state.timestamp) < (2 * 60 * 60 * 1000);
+        
+        if (isValidState) {
+          console.log('🔄 Restaurando estado de filtros y paginación:', state);
+          
+          this.first = state.first || 0;
+          this.rows = state.rows || 50;
+          this.sortField = state.sortField;
+          this.sortOrder = state.sortOrder || 1;
+          this.filters = state.filters || {};
+          
+          if (state.selectedColumns && Array.isArray(state.selectedColumns)) {
+            this._selectedColumns = state.selectedColumns;
+          }
+        } else {
+          console.log('⏰ Estado de tabla expirado, usando valores por defecto');
+        }
+      }
+    } catch (error) {
+      console.warn('Error restaurando estado de la tabla:', error);
+    }
   }
 
   // Process articles with prices

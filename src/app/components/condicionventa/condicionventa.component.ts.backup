@@ -14,7 +14,6 @@ import { Subscription, forkJoin, Subject, of } from 'rxjs';
 import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
-import { LazyLoadEvent } from 'primeng/api';
 
 // Método auxiliar para PrimeNG
 function $any(val: any): any {
@@ -81,21 +80,13 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   // Propiedad para bancos
   public bancos: any[] = [];
   
-  // Propiedades para paginación tradicional (compatibilidad)
+  // Propiedades para paginación
   public paginaActual = 1;
   public totalPaginas = 0;
   public totalItems = 0;
   public terminoBusqueda = '';
   public loading = false;
   public cargandoProductos = false;
-  
-  // NUEVO: Propiedades para lazy loading
-  public first: number = 0;
-  public rows: number = 50;
-  public sortField: string | undefined;
-  public sortOrder: number = 1;
-  public filters: any = {};
-  public totalRegistros: number = 0;
 
   // Añadir nuevas propiedades para la selección de columnas
   cols: Column[];
@@ -156,7 +147,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       { field: 'cd_barra', header: 'Código Barra' },
       { field: 'rubro', header: 'Rubro' },
       { field: 'estado', header: 'Estado' },
-      { field: 'cod_deposito', header: 'Cód. Depósito' },
     ];
     
     // Definir las columnas seleccionadas por defecto
@@ -169,7 +159,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.cols[9], // exi3
       this.cols[10], // exi4
       this.cols[11], // exi5
-      this.cols[16], // cod_deposito
     ];
     
     // Suscribirse a los observables del servicio de paginación
@@ -201,7 +190,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.articulosPaginadosService.totalItems$.subscribe(total => {
         this.totalItems = total;
-        this.totalRegistros = total; // Para lazy loading
       })
     );
     
@@ -283,9 +271,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('CondicionVentaComponent inicializado');
     
-    // NUEVO: Restaurar estado de tabla al inicializar
-    this.restoreTableState();
-    
     // Recuperar la condición de venta seleccionada de sessionStorage
     const condicionGuardada = sessionStorage.getItem('condicionVentaSeleccionada');
     if (condicionGuardada) {
@@ -294,20 +279,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.codTarj = condicion.cod_tarj;
       this.listaPrecio = condicion.listaprecio;
     }
-    
-    // NUEVO: Cargar primera página como respaldo si lazy loading no se activa
-    setTimeout(() => {
-      if (this.productos.length === 0 && !this.loading) {
-        console.log('Cargando primera página manualmente como respaldo');
-        this.loadDataLazy({
-          first: this.first,
-          rows: this.rows,
-          sortField: this.sortField,
-          sortOrder: this.sortOrder,
-          filters: this.filters
-        });
-      }
-    }, 1000);
   }
   
   ngOnDestroy() {
@@ -324,12 +295,41 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
   
-  // OBSOLETO: Configurar búsqueda con debounce (reemplazado por lazy loading)
-  // Los filtros ahora se manejan automáticamente por PrimeNG
+  // Configurar búsqueda con debounce
   setupSearchDebounce() {
-    // Este método ya no es necesario con lazy loading
-    // Los filtros se manejan automáticamente en loadDataLazy()
-    console.log('setupSearchDebounce: Método obsoleto, lazy loading activo');
+    this.searchSubject$
+      .pipe(
+        debounceTime(300), // Esperar 300ms después de que el usuario deje de escribir
+        distinctUntilChanged(), // Ignorar si el valor no cambió
+        tap(termino => {
+          this.terminoBusqueda = termino;
+          this.cargandoProductos = true;
+        }),
+        switchMap(termino => {
+          // Si no hay término, cargar página normal
+          if (!termino || termino.trim() === '') {
+            return this.articulosPaginadosService.cargarPagina(1);
+          }
+          // Si hay término, buscar en backend
+          return this.articulosPaginadosService.buscar(termino, 1);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.cargandoProductos = false;
+        },
+        error: (error) => {
+          console.error('Error en búsqueda:', error);
+          this.cargandoProductos = false;
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudieron cargar los productos',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
+        }
+      });
   }
 
   // Método para mostrar el indicador de carga
@@ -345,32 +345,59 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     });
   }
   
-  // OBSOLETO: Método para manejar búsqueda desde el input (reemplazado por filtros PrimeNG)
+  // Método para manejar búsqueda desde el input
   public onSearchInput(value: string): void {
-    console.log('onSearchInput: Método obsoleto, usar filtros PrimeNG');
+    this.searchSubject$.next(value);
   }
 
-  // OBSOLETO: Buscar productos (reemplazado por filtros PrimeNG)
+  // Buscar productos (mantener para compatibilidad con botón de búsqueda)
   public buscarProductos(termino: string): void {
-    console.log('buscarProductos: Método obsoleto, usar filtros PrimeNG');
+    this.searchSubject$.next(termino);
   }
 
-  // OBSOLETO: Limpiar búsqueda (reemplazado por filtros PrimeNG)
+  // Limpiar búsqueda
   public limpiarBusqueda(): void {
-    console.log('limpiarBusqueda: Método obsoleto, usar clear en filtros PrimeNG');
+    this.terminoBusqueda = '';
+    // Limpiar el término de búsqueda en el servicio
+    this.articulosPaginadosService.limpiarTerminoBusqueda();
+    this.searchSubject$.next(''); // Esto activará la carga de la página normal
+    // Forzar recarga de la primera página
+    this.articulosPaginadosService.cargarPagina(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe();
   }
   
-  // OBSOLETO: Métodos de paginación manual (reemplazados por lazy loading PrimeNG)
+  // Métodos de paginación
   irAPagina(pagina: number) {
-    console.log('irAPagina: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      // Si hay término de búsqueda, usar búsqueda paginada
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, pagina)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      // Si no hay búsqueda, usar paginación normal
+      this.articulosPaginadosService.irAPagina(pagina);
+    }
   }
   
   paginaSiguiente() {
-    console.log('paginaSiguiente: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, this.paginaActual + 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      this.articulosPaginadosService.paginaSiguiente();
+    }
   }
   
   paginaAnterior() {
-    console.log('paginaAnterior: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.articulosPaginadosService.buscar(this.terminoBusqueda, this.paginaActual - 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      this.articulosPaginadosService.paginaAnterior();
+    }
   }
   
   // Obtener números de página visibles en la paginación (igual que en articulos)
@@ -393,165 +420,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     }
     
     return paginas;
-  }
-
-  // NUEVO: Método para lazy loading con persistencia de estado (copiado de articulos)
-  async loadDataLazy(event: LazyLoadEvent): Promise<void> {
-    console.log('🔄 loadDataLazy - Evento recibido:', event);
-    
-    // Actualizar parámetros de paginación y filtros
-    this.first = event.first || 0;
-    this.rows = event.rows || 50;
-    this.sortField = event.sortField;
-    this.sortOrder = event.sortOrder || 1;
-    this.filters = event.filters || {};
-    
-    // NUEVO: Guardar estado después de cada cambio
-    this.saveTableState();
-    
-    // Calcular página basada en first
-    const page = Math.floor(this.first / this.rows) + 1;
-    
-    console.log(`📄 Cargando página ${page}, first: ${this.first}, rows: ${this.rows}`);
-    console.log('🔍 Filtros recibidos:', this.filters);
-    console.log('📊 Ordenamiento:', this.sortField, this.sortOrder);
-    
-    try {
-      // Cargar datos del servidor con los parámetros del lazy loading
-      await this.loadServerData(page);
-    } catch (error) {
-      console.error('❌ Error en loadDataLazy:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error al cargar datos: ' + (error.message || error),
-        icon: 'error',
-        confirmButtonText: 'Aceptar'
-      });
-    }
-  }
-
-  // NUEVO: Cargar datos del servidor con filtros y paginación (copiado de articulos)
-  private async loadServerData(page: number): Promise<void> {
-    try {
-      console.log(`🌐 Cargando página ${page} del servidor...`);
-      console.log('📋 Parámetros:', {
-        page,
-        rows: this.rows,
-        sortField: this.sortField,
-        sortOrder: this.sortOrder,
-        filters: this.filters
-      });
-      
-      const response = await this.articulosPaginadosService.cargarPaginaConFiltros(
-        page,
-        this.rows,
-        this.sortField,
-        this.sortOrder,
-        this.filters
-      ).toPromise();
-      
-      console.log('✅ Respuesta recibida:', response);
-      
-      if (response && !response.error) {
-        console.log(`✅ Datos cargados exitosamente`);
-        // Los datos se actualizan automáticamente a través de las subscripciones
-      } else {
-        console.warn('⚠️ Respuesta con error o vacía:', response);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error cargando datos del servidor:', error);
-      throw error;
-    }
-  }
-
-  // NUEVO: Método para verificar si una columna es visible (copiado de articulos)
-  isColumnVisible(field: string): boolean {
-    return this._selectedColumns.some(col => col.field === field);
-  }
-
-  // NUEVO: Método para manejar cambios en selección de columnas (copiado de articulos)
-  onColumnSelectionChange(): void {
-    // Guardar el estado cuando cambien las columnas seleccionadas
-    this.saveTableState();
-    console.log('Columnas seleccionadas actualizadas:', this._selectedColumns);
-  }
-
-  // NUEVO: Guardar estado de la tabla (copiado de articulos)
-  private saveTableState(): void {
-    try {
-      const state = {
-        first: this.first,
-        rows: this.rows,
-        sortField: this.sortField,
-        sortOrder: this.sortOrder,
-        filters: this.filters,
-        selectedColumns: this._selectedColumns,
-        timestamp: Date.now()
-      };
-
-      localStorage.setItem('condicionventa_table_state', JSON.stringify(state));
-      console.log('💾 Estado de tabla guardado:', state);
-    } catch (error) {
-      console.warn('Error guardando estado de la tabla:', error);
-    }
-  }
-
-  // NUEVO: Restaurar estado de la tabla (copiado de articulos)
-  private restoreTableState(): void {
-    try {
-      const savedState = localStorage.getItem('condicionventa_table_state');
-      
-      if (savedState) {
-        const state = JSON.parse(savedState);
-        
-        // Verificar que el estado no sea muy viejo (2 horas máximo)
-        const isValidState = state.timestamp && (Date.now() - state.timestamp) < (2 * 60 * 60 * 1000);
-        
-        if (isValidState) {
-          console.log('🔄 Restaurando estado de filtros y paginación:', state);
-          
-          this.first = state.first || 0;
-          this.rows = state.rows || 50;
-          this.sortField = state.sortField;
-          this.sortOrder = state.sortOrder || 1;
-          this.filters = state.filters || {};
-          
-          // TEMPORAL: No restaurar selectedColumns para forzar uso de defaults con nuevo campo deposito
-          // if (state.selectedColumns && Array.isArray(state.selectedColumns)) {
-          //   this._selectedColumns = state.selectedColumns;
-          // }
-          console.log('🔄 Usando columnas por defecto (incluye nuevo campo depósito)');
-        } else {
-          console.log('⏰ Estado de tabla expirado, usando valores por defecto');
-        }
-      }
-    } catch (error) {
-      console.warn('Error restaurando estado de la tabla:', error);
-    }
-  }
-
-  // NUEVO: Método para contar columnas visibles (para emptymessage)
-  getColumnCount(): number {
-    return this._selectedColumns.length + 1; // +1 para la columna de acciones
-  }
-
-  // NUEVO: Método para limpiar estado guardado y usar defaults
-  public limpiarEstadoTabla(): void {
-    localStorage.removeItem('condicionventa_table_state');
-    // Resetear a valores por defecto
-    this._selectedColumns = [
-      this.cols[0], // nomart
-      this.cols[1], // marca
-      this.cols[2], // precon
-      this.cols[7], // exi1
-      this.cols[8], // exi2
-      this.cols[9], // exi3
-      this.cols[10], // exi4
-      this.cols[11], // exi5
-      this.cols[16], // cod_deposito
-    ];
-    console.log('✅ Estado de tabla limpiado, usando columnas por defecto con depósito');
   }
   
   /**
@@ -764,25 +632,24 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       // Mostrar loading antes de cargar los productos
       this.mostrarLoading();
       
-      // NUEVO: Cargar con lazy loading en lugar de paginación manual
-      this.loadDataLazy({
-        first: 0,
-        rows: this.rows,
-        sortField: this.sortField,
-        sortOrder: this.sortOrder,
-        filters: this.filters
-      }).then(() => {
-        Swal.close();
-      }).catch(error => {
-        console.error('Error al cargar productos:', error);
-        Swal.close();
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron cargar los productos',
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
-      });
+      // Cargar la primera página de productos paginados
+      this.articulosPaginadosService.cargarPagina(1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(
+          () => {
+            Swal.close();
+          },
+          error => {
+            console.error('Error al cargar productos:', error);
+            Swal.close();
+            Swal.fire({
+              title: 'Error',
+              text: 'No se pudieron cargar los productos',
+              icon: 'error',
+              confirmButtonText: 'Aceptar'
+            });
+          }
+        );
     }
   }
   
@@ -997,24 +864,23 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           // Mostrar loading antes de cargar los productos
           this.mostrarLoading();
           
-          // NUEVO: Cargar con lazy loading
-          this.loadDataLazy({
-            first: 0,
-            rows: this.rows,
-            sortField: this.sortField,
-            sortOrder: this.sortOrder,
-            filters: this.filters
-          }).then(() => {
-            Swal.close();
-          }).catch(error => {
-            console.error('Error al cargar productos:', error);
-            Swal.close();
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudieron cargar los productos'
-            });
-          });
+          // Cargar la primera página
+          this.articulosPaginadosService.cargarPagina(1)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(
+              () => {
+                Swal.close();
+              },
+              error => {
+                console.error('Error al cargar productos:', error);
+                Swal.close();
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudieron cargar los productos'
+                });
+              }
+            );
         });
       }
     });
@@ -1298,24 +1164,23 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           // Mostrar loading antes de cargar los productos
           this.mostrarLoading();
           
-          // NUEVO: Cargar con lazy loading
-          this.loadDataLazy({
-            first: 0,
-            rows: this.rows,
-            sortField: this.sortField,
-            sortOrder: this.sortOrder,
-            filters: this.filters
-          }).then(() => {
-            Swal.close();
-          }).catch(error => {
-            console.error('Error al cargar productos:', error);
-            Swal.close();
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudieron cargar los productos'
-            });
-          });
+          // Cargar la primera página
+          this.articulosPaginadosService.cargarPagina(1)
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(
+              () => {
+                Swal.close();
+              },
+              error => {
+                console.error('Error al cargar productos:', error);
+                Swal.close();
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudieron cargar los productos'
+                });
+              }
+            );
         });
       }
     });
@@ -1337,8 +1202,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi2' || 
         col.field === 'exi3' || 
         col.field === 'exi4' || 
-        col.field === 'exi5' ||
-        col.field === 'cod_deposito'
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '1') {
@@ -1351,8 +1215,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi2' || 
         col.field === 'exi3' || 
         col.field === 'exi4' || 
-        col.field === 'exi5' ||
-        col.field === 'cod_deposito'
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '2') {
@@ -1365,8 +1228,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi2' || 
         col.field === 'exi3' || 
         col.field === 'exi4' || 
-        col.field === 'exi5' ||
-        col.field === 'cod_deposito'
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '3') {
@@ -1379,8 +1241,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi2' || 
         col.field === 'exi3' || 
         col.field === 'exi4' || 
-        col.field === 'exi5' ||
-        col.field === 'cod_deposito'
+        col.field === 'exi5'
       );
     }
     else if (this.listaPrecio === '4') {
@@ -1393,8 +1254,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         col.field === 'exi2' || 
         col.field === 'exi3' || 
         col.field === 'exi4' || 
-        col.field === 'exi5' ||
-        col.field === 'cod_deposito'
+        col.field === 'exi5'
       );
     }
     

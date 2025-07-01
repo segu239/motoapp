@@ -39,33 +39,27 @@
                     </small>
                 </div>
                 
-                <!-- Table with data -->
-                <p-table #dtable [value]="articulos" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }" 
-                    [paginator]="false" [loading]="loading"
-                    [globalFilterFields]="['nomart', 'marca', 'precon', 'cd_articulo', 'cd_barra', 'rubro', 'id_articulo', 'cod_deposito']">
+                <!-- Table with data - NUEVO: Lazy Loading -->
+                <p-table #dtable [value]="articulos" [tableStyle]="{ 'min-width': '50rem' }" 
+                    [paginator]="true" 
+                    [rows]="rows"
+                    [first]="first"
+                    [rowsPerPageOptions]="[25,50,100]"
+                    [totalRecords]="totalRegistros"
+                    [showCurrentPageReport]="true"
+                    [loading]="loading"
+                    [lazy]="true"
+                    (onLazyLoad)="loadDataLazy($event)"
+                    [lazyLoadOnInit]="true"
+                    [filterDelay]="300">
                     <ng-template pTemplate="caption">
                         <div class="d-flex flex-row align-items-center">
-                            <!-- Caja de búsqueda -->
-                            <div class="search-container">
-                                <div class="input-group">
-                                    <input type="text" class="form-control" 
-                                        [(ngModel)]="terminoBusqueda"
-                                        placeholder="Buscar en servidor..." 
-                                        (keyup.enter)="buscar()" />
-                                    <div class="input-group-append">
-                                        <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
-                                            (click)="buscar()" [disabled]="loading"></p-button>
-                                        <p-button icon="pi pi-times" styleClass="p-button-sm p-button-secondary ml-1" 
-                                            (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="loading"></p-button>
-                                    </div>
-                                </div>
-                            </div>
-                            
                             <!-- Columnas selector -->
                             <div class="ml-2 columnas-container">
                                 <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
                                     selectedItemsLabel="{0} Columnas Seleccionadas" 
-                                    placeholder="Elija Columnas">
+                                    placeholder="Elija Columnas"
+                                    (onChange)="onColumnSelectionChange()">
                                 </p-multiSelect>
                             </div>
                             
@@ -89,47 +83,127 @@
                             </div>
                         </div>
                     </ng-template>
-                    <ng-template pTemplate="header" let-columns>
+                    <ng-template pTemplate="header">
                         <tr>
-                            <th *ngFor="let col of columns" [pSortableColumn]="col.field">
-                                {{col.header}}
-                                <p-sortIcon [field]="col.field"></p-sortIcon>
-                                <p-columnFilter type="text" [field]="col.field" display="menu"></p-columnFilter>
+                            <!-- Columnas estáticas para mantener estado de filtros -->
+                            <th *ngIf="isColumnVisible('nomart')" pSortableColumn="nomart">
+                                Nombre
+                                <p-sortIcon field="nomart"></p-sortIcon>
+                                <p-columnFilter type="text" field="nomart" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('marca')" pSortableColumn="marca">
+                                Marca
+                                <p-sortIcon field="marca"></p-sortIcon>
+                                <p-columnFilter type="text" field="marca" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('precon')" pSortableColumn="precon">
+                                Precio Contado
+                                <p-sortIcon field="precon"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="precon" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('prefi1')" pSortableColumn="prefi1">
+                                Precio 1
+                                <p-sortIcon field="prefi1"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="prefi1" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('prefi2')" pSortableColumn="prefi2">
+                                Precio 2
+                                <p-sortIcon field="prefi2"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="prefi2" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('prefi3')" pSortableColumn="prefi3">
+                                Precio 3
+                                <p-sortIcon field="prefi3"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="prefi3" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('prefi4')" pSortableColumn="prefi4">
+                                Precio 4
+                                <p-sortIcon field="prefi4"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="prefi4" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('rubro')" pSortableColumn="rubro">
+                                Rubro
+                                <p-sortIcon field="rubro"></p-sortIcon>
+                                <p-columnFilter type="text" field="rubro" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cod_deposito')" pSortableColumn="cod_deposito">
+                                Depósito
+                                <p-sortIcon field="cod_deposito"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cod_deposito" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cd_articulo')" pSortableColumn="cd_articulo">
+                                Código
+                                <p-sortIcon field="cd_articulo"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cd_articulo" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('estado')" pSortableColumn="estado">
+                                Estado
+                                <p-sortIcon field="estado"></p-sortIcon>
+                                <p-columnFilter type="text" field="estado" display="menu" matchMode="equals"></p-columnFilter>
                             </th>
                             <th>Editar</th>
                             <th>Eliminar</th>
                         </tr>
                     </ng-template>
-                    <ng-template pTemplate="body" let-articulo let-columns="columns">
+                    <ng-template pTemplate="body" let-articulo>
                         <tr [class.table-warning]="articulo?._precioError">
-                            <td *ngFor="let col of columns">
-                                <!-- Mostrar precios con formato numérico si el campo es un precio -->
-                                <ng-container *ngIf="col.field === 'precon' || col.field === 'prefi1' || col.field === 'prefi2' || col.field === 'prefi3' || col.field === 'prefi4' || col.field === 'precostosi'">
-                                    <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                        {{ articulo[col.field] | number:'1.2-2' }}
-                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
-                                           class="fa fa-exclamation-triangle text-danger" 
-                                           title="Posible error en precio por falla en la conversión de moneda"></i>
-                                    </span>
-                                </ng-container>
-                                
-                                <!-- Si es tipo_moneda, mostrar el nombre de la moneda en lugar del código -->
-                                <ng-container *ngIf="col.field === 'tipo_moneda'">
-                                    <span [class.badge]="true" 
-                                          [class.badge-secondary]="articulo?.tipo_moneda !== 1" 
-                                          [class.text-muted]="articulo?.tipo_moneda === 1" 
-                                          [class.badge-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                        {{ obtenerNombreMoneda(articulo.tipo_moneda) }}
-                                        <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
-                                           class="fa fa-exclamation-triangle" 
-                                           title="Error en conversión de moneda"></i>
-                                    </span>
-                                </ng-container>
-                                
-                                <!-- Para otros campos, mostrar valor normal -->
-                                <ng-container *ngIf="col.field !== 'precon' && col.field !== 'prefi1' && col.field !== 'prefi2' && col.field !== 'prefi3' && col.field !== 'prefi4' && col.field !== 'tipo_moneda' && col.field !== 'precostosi'">
-                                    {{ articulo[col.field] }}
-                                </ng-container>
+                            <td *ngIf="isColumnVisible('nomart')">
+                                {{ articulo.nomart }}
+                            </td>
+                            <td *ngIf="isColumnVisible('marca')">
+                                {{ articulo.marca }}
+                            </td>
+                            <td *ngIf="isColumnVisible('precon')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.precon | number:'1.2-2' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('prefi1')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.prefi1 | number:'1.2-2' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('prefi2')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.prefi2 | number:'1.2-2' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('prefi3')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.prefi3 | number:'1.2-2' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('prefi4')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.prefi4 | number:'1.2-2' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('rubro')">
+                                {{ articulo.rubro }}
+                            </td>
+                            <td *ngIf="isColumnVisible('cod_deposito')">
+                                {{ articulo.cod_deposito }}
+                            </td>
+                            <td *ngIf="isColumnVisible('cd_articulo')">
+                                {{ articulo.cd_articulo }}
+                            </td>
+                            <td *ngIf="isColumnVisible('estado')">
+                                {{ articulo.estado }}
                             </td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
@@ -157,50 +231,6 @@
                     </ng-template>
                 </p-table>
 
-                <!-- Paginación personalizada que usa los datos del servidor -->
-                <div class="pagination-container mt-3 d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="pagination-info">
-                            Mostrando página {{ paginaActual }} de {{ totalPaginas }} | Total: {{ totalItems }} artículos
-                        </span>
-                    </div>
-                    <nav aria-label="Page navigation">
-                        <ul class="pagination mb-0">
-                            <!-- Botón para primera página -->
-                            <li class="page-item" [class.disabled]="paginaActual === 1">
-                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(1)">
-                                    <i class="fa fa-angle-double-left"></i>
-                                </a>
-                            </li>
-                            
-                            <!-- Botón página anterior -->
-                            <li class="page-item" [class.disabled]="paginaActual === 1">
-                                <a class="page-link" href="javascript:void(0)" (click)="paginaAnterior()">
-                                    <i class="fa fa-angle-left"></i>
-                                </a>
-                            </li>
-                            
-                            <!-- Páginas numeradas -->
-                            <li class="page-item" [class.active]="paginaActual === p" *ngFor="let p of getPaginasVisibles()">
-                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(p)">{{ p }}</a>
-                            </li>
-                            
-                            <!-- Botón página siguiente -->
-                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-                                <a class="page-link" href="javascript:void(0)" (click)="paginaSiguiente()">
-                                    <i class="fa fa-angle-right"></i>
-                                </a>
-                            </li>
-                            
-                            <!-- Botón para última página -->
-                            <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-                                <a class="page-link" href="javascript:void(0)" (click)="irAPagina(totalPaginas)">
-                                    <i class="fa fa-angle-double-right"></i>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
             </div>
         </div>
     </div>

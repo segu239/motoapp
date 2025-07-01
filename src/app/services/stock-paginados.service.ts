@@ -263,6 +263,73 @@ export class StockPaginadosService {
     this.cargarPagina(1).subscribe();
   }
 
+  // NUEVO: Cargar página con filtros completos para lazy loading
+  cargarPaginaConFiltros(
+    page: number,
+    limit: number,
+    sortField?: string,
+    sortOrder: number = 1,
+    filters: any = {}
+  ): Observable<any> {
+    this.cargandoSubject.next(true);
+    
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+    
+    // Agregar ordenamiento
+    if (sortField) {
+      params.append('sortField', sortField);
+      params.append('sortOrder', sortOrder.toString());
+    }
+    
+    // Enviar filtros tal como vienen de PrimeNG (el backend los procesará)
+    if (filters && Object.keys(filters).length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+    
+    const urlCompleta = `${Urlartsucursal}?${params.toString()}`;
+    console.log('Stock: URL con filtros completos:', urlCompleta);
+    
+    return this.http.get<any>(urlCompleta).pipe(
+      tap(response => {
+        console.log('Stock: Respuesta lazy loading:', response);
+        
+        if (response && !response.error && response.mensaje) {
+          // Formato paginado del backend
+          if (response.mensaje.data !== undefined) {
+            const productos = Array.isArray(response.mensaje.data) ? response.mensaje.data : [];
+            this.productosSubject.next(this.processProductosData(productos));
+            this.totalItemsSubject.next(response.mensaje.total || 0);
+            this.totalPaginasSubject.next(response.mensaje.total_pages || 0);
+            this.paginaActualSubject.next(page);
+          } else {
+            // Formato sin paginación
+            const productos = Array.isArray(response.mensaje) ? response.mensaje : [];
+            this.productosSubject.next(this.processProductosData(productos));
+            this.totalItemsSubject.next(productos.length);
+            this.totalPaginasSubject.next(productos.length > 0 ? 1 : 0);
+            this.paginaActualSubject.next(1);
+          }
+        } else {
+          this.productosSubject.next([]);
+          this.totalItemsSubject.next(0);
+          this.totalPaginasSubject.next(0);
+        }
+        this.cargandoSubject.next(false);
+      }),
+      catchError(error => {
+        console.error('Stock: Error en lazy loading:', error);
+        this.cargandoSubject.next(false);
+        this.productosSubject.next([]);
+        this.totalItemsSubject.next(0);
+        this.totalPaginasSubject.next(0);
+        return throwError(error);
+      })
+    );
+  }
+
   // Limpiar término de búsqueda
   limpiarTerminoBusqueda(): void {
     this.terminoBusquedaSubject.next('');
