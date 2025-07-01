@@ -1,37 +1,36 @@
 <div class="card">
     <div class="card-body">
-     <!--    <div class="btn-group ml-2">
-            <button type="button" class="btn btn-info">{{tipoVal}}</button>
-            <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"
-                aria-haspopup="true" aria-expanded="false">
-            </button>
-            <div class="dropdown-menu scroll_list">
-                <input type="text" class="form-control" placeholder="Buscar..." [(ngModel)]="searchText">
-                <li *ngFor="let item of filteredTipo | filter: searchText">
-                    <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
-                </li>
-            </div>
-        </div> -->
+        <h4 class="card-title">Solicitar Stock de Productos</h4>
+        
         <div>
-            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="false" [rows]="50"
-                [globalFilterFields]="['nomart', 'marca']" [loading]="cargandoProductos">
+            <!-- Loading indicator -->
+            <div class="alert alert-warning mb-3" *ngIf="loading">
+                <i class="fa fa-spinner fa-spin mr-2"></i> 
+                Cargando datos, por favor espere...
+            </div>
+            
+            <!-- Tabla con lazy loading siguiendo patrón de articulos -->
+            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" 
+                [paginator]="true" 
+                [rows]="rows"
+                [first]="first"
+                [rowsPerPageOptions]="[25,50,100]"
+                [totalRecords]="totalRegistros"
+                [showCurrentPageReport]="true"
+                [loading]="loading"
+                [lazy]="true"
+                (onLazyLoad)="loadDataLazy($event)"
+                [lazyLoadOnInit]="true"
+                [filterDelay]="300">
                 <ng-template pTemplate="caption">
                     <div class="d-flex flex-row align-items-center">
-                        <!-- Caja de búsqueda -->
-                        <div class="search-container">
-                            <div class="input-group">
-                                <input type="text" class="form-control" 
-                                    [(ngModel)]="terminoBusqueda"
-                                    placeholder="Buscar productos..." 
-                                    (input)="onSearchInput($any($event.target).value)"
-                                    (keyup.enter)="buscarProductos(terminoBusqueda)" />
-                                <div class="input-group-append">
-                                    <p-button icon="pi pi-search" styleClass="p-button-sm p-button-info ml-1" 
-                                        (click)="buscarProductos(terminoBusqueda)" [disabled]="cargandoProductos"></p-button>
-                                    <p-button icon="pi pi-times" styleClass="p-button-sm p-button-secondary ml-1" 
-                                        (click)="limpiarBusqueda()" *ngIf="terminoBusqueda" [disabled]="cargandoProductos"></p-button>
-                                </div>
-                            </div>
+                        <!-- Columnas selector -->
+                        <div class="columnas-container">
+                            <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
+                                selectedItemsLabel="{0} Columnas Seleccionadas" 
+                                placeholder="Elija Columnas"
+                                (onChange)="onColumnSelectionChange()">
+                            </p-multiSelect>
                         </div>
                         
                         <!-- Botón exportar Excel -->
@@ -43,94 +42,135 @@
                 </ng-template>
                 <ng-template pTemplate="header">
                     <tr>
-                        <th pSortableColumn="nomart" style="width:30%">Nomart<p-sortIcon field="nomart"></p-sortIcon>
+                        <!-- Columnas estáticas para mantener estado de filtros -->
+                        <th *ngIf="isColumnVisible('nomart')" pSortableColumn="nomart">
+                            Nombre
+                            <p-sortIcon field="nomart"></p-sortIcon>
+                            <p-columnFilter type="text" field="nomart" display="menu" matchMode="contains"></p-columnFilter>
                         </th>
-                        <th pSortableColumn="marca" style="width:15%">Marca<p-sortIcon field="marca"></p-sortIcon></th>
-                      <!--   <th *ngIf="prefi0" pSortableColumn="precon" style="width:10%">Precio<p-sortIcon
-                                field="precon"></p-sortIcon></th>
-                        <th *ngIf="prefi1" pSortableColumn="prefi1" style="width:10%">Precio<p-sortIcon
-                                field="prefi1"></p-sortIcon></th>
-                        <th *ngIf="prefi2" pSortableColumn="prefi2" style="width:10%">Precio<p-sortIcon
-                                field="prefi2"></p-sortIcon></th>
-                        <th *ngIf="prefi3" pSortableColumn="prefi3" style="width:10%">Precio<p-sortIcon
-                                field="prefi3"></p-sortIcon></th>
-                        <th *ngIf="prefi4" pSortableColumn="prefi4" style="width:10%">Precio<p-sortIcon
-                                field="prefi4"></p-sortIcon></th> -->
-                        <th pSortableColumn="exi1" style="width:10%">Stk Dep<p-sortIcon field="exi1"></p-sortIcon></th>
-                        <th pSortableColumn="exi2" style="width:10%">Stk CC<p-sortIcon field="exi2"></p-sortIcon></th>
-                        <th pSortableColumn="exi3" style="width:10%">Stk VV<p-sortIcon field="exi3"></p-sortIcon></th>
-                        <th pSortableColumn="exi4" style="width:10%">Stk GM<p-sortIcon field="exi4"></p-sortIcon></th>
-                        <th pSortableColumn="exi5" style="width:10%">Stk May<p-sortIcon field="exi5"></p-sortIcon></th>
-                        <th style="width:20%">Select</th>
-                        <th style="width: 5rem"></th>
+                        <th *ngIf="isColumnVisible('marca')" pSortableColumn="marca">
+                            Marca
+                            <p-sortIcon field="marca"></p-sortIcon>
+                            <p-columnFilter type="text" field="marca" display="menu" matchMode="contains"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('precon')" pSortableColumn="precon">
+                            Precio 0
+                            <p-sortIcon field="precon"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="precon" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('prefi1')" pSortableColumn="prefi1">
+                            Precio 1
+                            <p-sortIcon field="prefi1"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="prefi1" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('prefi2')" pSortableColumn="prefi2">
+                            Precio 2
+                            <p-sortIcon field="prefi2"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="prefi2" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('prefi3')" pSortableColumn="prefi3">
+                            Precio 3
+                            <p-sortIcon field="prefi3"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="prefi3" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('prefi4')" pSortableColumn="prefi4">
+                            Precio 4
+                            <p-sortIcon field="prefi4"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="prefi4" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('exi1')" pSortableColumn="exi1">
+                            Stock Dep
+                            <p-sortIcon field="exi1"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="exi1" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('exi2')" pSortableColumn="exi2">
+                            Stock CC
+                            <p-sortIcon field="exi2"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="exi2" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('exi3')" pSortableColumn="exi3">
+                            Stock VV
+                            <p-sortIcon field="exi3"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="exi3" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('exi4')" pSortableColumn="exi4">
+                            Stock GM
+                            <p-sortIcon field="exi4"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="exi4" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('exi5')" pSortableColumn="exi5">
+                            Stock MAY
+                            <p-sortIcon field="exi5"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="exi5" display="menu"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('cd_articulo')" pSortableColumn="cd_articulo">
+                            Código
+                            <p-sortIcon field="cd_articulo"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="cd_articulo" display="menu" matchMode="equals"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('cd_barra')" pSortableColumn="cd_barra">
+                            Código Barra
+                            <p-sortIcon field="cd_barra"></p-sortIcon>
+                            <p-columnFilter type="text" field="cd_barra" display="menu" matchMode="contains"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('rubro')" pSortableColumn="rubro">
+                            Rubro
+                            <p-sortIcon field="rubro"></p-sortIcon>
+                            <p-columnFilter type="text" field="rubro" display="menu" matchMode="contains"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('estado')" pSortableColumn="estado">
+                            Estado
+                            <p-sortIcon field="estado"></p-sortIcon>
+                            <p-columnFilter type="text" field="estado" display="menu" matchMode="equals"></p-columnFilter>
+                        </th>
+                        <th *ngIf="isColumnVisible('cod_deposito')" pSortableColumn="cod_deposito">
+                            Cód. Depósito
+                            <p-sortIcon field="cod_deposito"></p-sortIcon>
+                            <p-columnFilter type="numeric" field="cod_deposito" display="menu" matchMode="equals"></p-columnFilter>
+                        </th>
+                        <th>Solicitar Stock</th>
                     </tr>
                 </ng-template>
                 <ng-template pTemplate="body" let-producto>
                     <tr>
-                        <td>{{ producto.nomart }}</td>
-                        <td>{{ producto.marca }}</td>
-                      <!--   <td *ngIf="prefi0">{{ producto.precon }}</td>
-                        <td *ngIf="prefi1">{{ producto.prefi1 }}</td>
-                        <td *ngIf="prefi2">{{ producto.prefi2 }}</td>
-                        <td *ngIf="prefi3">{{ producto.prefi3 }}</td>
-                        <td *ngIf="prefi4">{{ producto.prefi4 }}</td> -->
-                        <td>{{ producto.exi1 }}</td>
-                        <td>{{ producto.exi2 }}</td>
-                        <td>{{ producto.exi3 }}</td>
-                        <td>{{ producto.exi4 }}</td>
-                        <td>{{ producto.exi5 }}</td>
+                        <td *ngIf="isColumnVisible('nomart')">{{ producto.nomart }}</td>
+                        <td *ngIf="isColumnVisible('marca')">{{ producto.marca }}</td>
+                        <td *ngIf="isColumnVisible('precon')">{{ producto.precon | number:'1.2-2' }}</td>
+                        <td *ngIf="isColumnVisible('prefi1')">{{ producto.prefi1 | number:'1.2-2' }}</td>
+                        <td *ngIf="isColumnVisible('prefi2')">{{ producto.prefi2 | number:'1.2-2' }}</td>
+                        <td *ngIf="isColumnVisible('prefi3')">{{ producto.prefi3 | number:'1.2-2' }}</td>
+                        <td *ngIf="isColumnVisible('prefi4')">{{ producto.prefi4 | number:'1.2-2' }}</td>
+                        <td *ngIf="isColumnVisible('exi1')">{{ producto.exi1 | number:'1.0-0' }}</td>
+                        <td *ngIf="isColumnVisible('exi2')">{{ producto.exi2 | number:'1.0-0' }}</td>
+                        <td *ngIf="isColumnVisible('exi3')">{{ producto.exi3 | number:'1.0-0' }}</td>
+                        <td *ngIf="isColumnVisible('exi4')">{{ producto.exi4 | number:'1.0-0' }}</td>
+                        <td *ngIf="isColumnVisible('exi5')">{{ producto.exi5 | number:'1.0-0' }}</td>
+                        <td *ngIf="isColumnVisible('cd_articulo')">{{ producto.cd_articulo }}</td>
+                        <td *ngIf="isColumnVisible('cd_barra')">{{ producto.cd_barra }}</td>
+                        <td *ngIf="isColumnVisible('rubro')">{{ producto.rubro }}</td>
+                        <td *ngIf="isColumnVisible('estado')">{{ producto.estado }}</td>
+                        <td *ngIf="isColumnVisible('cod_deposito')">{{ producto.cod_deposito }}</td>
                         <td>
                             <p-button icon="pi pi-arrow-right-arrow-left" (click)="selectProducto(producto)"
-                                styleClass="p-button-sm p-button-info" pTooltip="Solicitar Stock"> </p-button>
+                                styleClass="p-button-sm p-button-info" pTooltip="Solicitar Stock"></p-button>
+                        </td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td [attr.colspan]="getColumnCount()" class="text-center p-4">
+                            <div *ngIf="loading">
+                                <i class="fa fa-spinner fa-spin fa-2x mb-2"></i>
+                                <p>Cargando productos...</p>
+                            </div>
+                            <div *ngIf="!loading">
+                                <i class="fa fa-database fa-2x mb-2"></i>
+                                <p>No se encontraron productos</p>
+                            </div>
                         </td>
                     </tr>
                 </ng-template>
             </p-table>
-
-            <!-- Paginación personalizada -->
-            <div class="pagination-container mt-3 d-flex justify-content-between align-items-center">
-                <div>
-                    <span class="pagination-info">
-                        Mostrando página {{ paginaActual }} de {{ totalPaginas }} | Total: {{ totalItems }} productos
-                    </span>
-                </div>
-                <nav aria-label="Page navigation" *ngIf="totalPaginas > 1">
-                    <ul class="pagination mb-0">
-                        <!-- Botón para primera página -->
-                        <li class="page-item" [class.disabled]="paginaActual === 1">
-                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(1)">
-                                <i class="fa fa-angle-double-left"></i>
-                            </a>
-                        </li>
-                        
-                        <!-- Botón página anterior -->
-                        <li class="page-item" [class.disabled]="paginaActual === 1">
-                            <a class="page-link" href="javascript:void(0)" (click)="paginaAnterior()">
-                                <i class="fa fa-angle-left"></i>
-                            </a>
-                        </li>
-                        
-                        <!-- Páginas numeradas -->
-                        <li class="page-item" [class.active]="paginaActual === p" *ngFor="let p of getPaginasVisibles()">
-                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(p)">{{ p }}</a>
-                        </li>
-                        
-                        <!-- Botón página siguiente -->
-                        <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-                            <a class="page-link" href="javascript:void(0)" (click)="paginaSiguiente()">
-                                <i class="fa fa-angle-right"></i>
-                            </a>
-                        </li>
-                        
-                        <!-- Botón para última página -->
-                        <li class="page-item" [class.disabled]="paginaActual === totalPaginas">
-                            <a class="page-link" href="javascript:void(0)" (click)="irAPagina(totalPaginas)">
-                                <i class="fa fa-angle-double-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
         </div>
     </div>
 </div>

@@ -9,17 +9,12 @@ import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
 import { filter, takeUntil, debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
-import { Subject, forkJoin, of, Subscription } from 'rxjs';
+import { Subject, forkJoin, of } from 'rxjs';
+//importar componente calculoproducto
+//import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { StockproductopedidoComponent } from '../stockproductopedido/stockproductopedido.component'; 
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ChangeDetectorRef } from '@angular/core';
-import { LazyLoadEvent } from 'primeng/api';
-
-// Definir la interfaz Column para la selección de columnas
-interface Column {
-  field: string;
-  header: string;
-}
 
 @Component({
   selector: 'app-pedir-stock',
@@ -45,24 +40,11 @@ export class PedirStockComponent implements OnInit, OnDestroy {
   public productoElejido: Producto;
   public cargandoProductos: boolean = false;
   
-  // Propiedades para paginación tradicional (compatibilidad)
+  // Propiedades para paginación (igual que artículos)
   public paginaActual = 1;
   public totalPaginas = 0;
   public totalItems = 0;
   public terminoBusqueda = '';
-  public loading = false;
-  
-  // NUEVO: Propiedades para lazy loading
-  public first: number = 0;
-  public rows: number = 50;
-  public sortField: string | undefined;
-  public sortOrder: number = 1;
-  public filters: any = {};
-  public totalRegistros: number = 0;
-  
-  // Configuración de columnas
-  cols: Column[];
-  _selectedColumns: Column[];
   
   // Datos adicionales
   public valoresCambio: any[] = [];
@@ -76,7 +58,6 @@ export class PedirStockComponent implements OnInit, OnDestroy {
   
   private destroy$ = new Subject<void>();
   private searchSubject$ = new Subject<string>();
-  private subscriptions: Subscription[] = [];
   
   constructor(
     public dialogService: DialogService, 
@@ -87,56 +68,10 @@ export class PedirStockComponent implements OnInit, OnDestroy {
     private stockPaginadosService: StockPaginadosService
   ) {
     this.initializeComponent();
-    
-    // Definir todas las columnas disponibles
-    this.cols = [
-      { field: 'nomart', header: 'Nombre' },
-      { field: 'marca', header: 'Marca' },
-      { field: 'precon', header: 'Precio 0' },
-      { field: 'prefi1', header: 'Precio 1' },
-      { field: 'prefi2', header: 'Precio 2' },
-      { field: 'prefi3', header: 'Precio 3' },
-      { field: 'prefi4', header: 'Precio 4' },
-      { field: 'exi1', header: 'Stock Dep' },
-      { field: 'exi2', header: 'Stock CC' },
-      { field: 'exi3', header: 'Stock VV' },
-      { field: 'exi4', header: 'Stock GM' },
-      { field: 'exi5', header: 'Stock MAY' },
-      { field: 'cd_articulo', header: 'Código' },
-      { field: 'cd_barra', header: 'Código Barra' },
-      { field: 'rubro', header: 'Rubro' },
-      { field: 'estado', header: 'Estado' },
-      { field: 'cod_deposito', header: 'Cód. Depósito' },
-    ];
-    
-    // Definir las columnas seleccionadas por defecto (enfoque en stock)
-    this._selectedColumns = [
-      this.cols[0], // nomart
-      this.cols[1], // marca
-      this.cols[7], // exi1 (Stock Dep)
-      this.cols[8], // exi2 (Stock CC)
-      this.cols[9], // exi3 (Stock VV)
-      this.cols[10], // exi4 (Stock GM)
-      this.cols[11], // exi5 (Stock MAY)
-      this.cols[16], // cod_deposito
-    ];
   }
  
 
-  // Getters y setters para las columnas seleccionadas
-  get selectedColumns(): Column[] {
-    return this._selectedColumns;
-  }
-  
-  set selectedColumns(val: Column[]) {
-    // Restaurar orden original
-    this._selectedColumns = this.cols.filter((col) => val.includes(col));
-  }
-
   ngOnDestroy() {
-    // Limpiar todas las suscripciones
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-    
     this.destroy$.next();
     this.destroy$.complete();
     
@@ -146,27 +81,8 @@ export class PedirStockComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    console.log('PedirStockComponent inicializado');
-    
-    // NUEVO: Restaurar estado de tabla al inicializar
-    this.restoreTableState();
-    
     this.setupSubscriptions();
     this.cargarDatosIniciales();
-    
-    // NUEVO: Cargar primera página como respaldo si lazy loading no se activa
-    setTimeout(() => {
-      if (this.productos.length === 0 && !this.loading) {
-        console.log('Cargando primera página manualmente como respaldo');
-        this.loadDataLazy({
-          first: this.first,
-          rows: this.rows,
-          sortField: this.sortField,
-          sortOrder: this.sortOrder,
-          filters: this.filters
-        });
-      }
-    }, 1000);
   }
 
   // Inicializar componente
@@ -175,49 +91,47 @@ export class PedirStockComponent implements OnInit, OnDestroy {
     this.searchText = '';
   }
 
-  // Configurar suscripciones (siguiendo patrón de artículos)
+  // Configurar suscripciones (igual que artículos)
   private setupSubscriptions(): void {
     // Suscribirse a productos
-    this.subscriptions.push(
-      this.stockPaginadosService.productos$.subscribe(productos => {
+    this.stockPaginadosService.productos$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(productos => {
         this.productos = productos;
         this.cdr.detectChanges();
-      })
-    );
+      });
 
     // Suscribirse a estado de carga
-    this.subscriptions.push(
-      this.stockPaginadosService.cargando$.subscribe(cargando => {
+    this.stockPaginadosService.cargando$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(cargando => {
         this.cargandoProductos = cargando;
-        this.loading = cargando;
-      })
-    );
+      });
 
     // Suscribirse a paginación
-    this.subscriptions.push(
-      this.stockPaginadosService.paginaActual$.subscribe(pagina => {
+    this.stockPaginadosService.paginaActual$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(pagina => {
         this.paginaActual = pagina;
-      })
-    );
+      });
 
-    this.subscriptions.push(
-      this.stockPaginadosService.totalPaginas$.subscribe(total => {
+    this.stockPaginadosService.totalPaginas$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(total => {
         this.totalPaginas = total;
-      })
-    );
+      });
 
-    this.subscriptions.push(
-      this.stockPaginadosService.totalItems$.subscribe(total => {
+    this.stockPaginadosService.totalItems$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(total => {
         this.totalItems = total;
-        this.totalRegistros = total; // Para lazy loading
-      })
-    );
+      });
 
-    this.subscriptions.push(
-      this.stockPaginadosService.terminoBusqueda$.subscribe(termino => {
+    this.stockPaginadosService.terminoBusqueda$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(termino => {
         this.terminoBusqueda = termino;
-      })
-    );
+      });
 
     // Configurar búsqueda con debounce
     this.searchSubject$
@@ -295,32 +209,59 @@ export class PedirStockComponent implements OnInit, OnDestroy {
     );
   }
 
-  // OBSOLETO: Métodos de paginación manual (reemplazados por lazy loading PrimeNG)
+  // Métodos de paginación
   irAPagina(pagina: number) {
-    console.log('irAPagina: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      // Si hay término de búsqueda, usar búsqueda paginada
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, pagina)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      // Si no hay búsqueda, usar paginación normal
+      this.stockPaginadosService.irAPagina(pagina);
+    }
   }
   
   paginaSiguiente() {
-    console.log('paginaSiguiente: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, this.paginaActual + 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      this.stockPaginadosService.paginaSiguiente();
+    }
   }
   
   paginaAnterior() {
-    console.log('paginaAnterior: Método obsoleto, PrimeNG maneja paginación automáticamente');
+    if (this.terminoBusqueda && this.terminoBusqueda.trim() !== '') {
+      this.stockPaginadosService.buscarProductos(this.terminoBusqueda, this.paginaActual - 1)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe();
+    } else {
+      this.stockPaginadosService.paginaAnterior();
+    }
   }
 
-  // OBSOLETO: Método para manejar búsqueda desde el input (reemplazado por filtros PrimeNG)
+  // Método para manejar búsqueda desde el input
   public onSearchInput(value: string): void {
-    console.log('onSearchInput: Método obsoleto, usar filtros PrimeNG');
+    this.searchSubject$.next(value);
   }
 
-  // OBSOLETO: Buscar productos (reemplazado por filtros PrimeNG)
+  // Buscar productos (mantener para compatibilidad con botón de búsqueda)
   public buscarProductos(termino: string): void {
-    console.log('buscarProductos: Método obsoleto, usar filtros PrimeNG');
+    this.searchSubject$.next(termino);
   }
   
-  // OBSOLETO: Limpiar búsqueda (reemplazado por filtros PrimeNG)
+  // Limpiar búsqueda
   public limpiarBusqueda(): void {
-    console.log('limpiarBusqueda: Método obsoleto, usar clear en filtros PrimeNG');
+    this.terminoBusqueda = '';
+    // Limpiar el término de búsqueda en el servicio
+    this.stockPaginadosService.limpiarTerminoBusqueda();
+    this.searchSubject$.next(''); // Esto activará la carga de la página normal
+    // Forzar recarga de la primera página
+    this.stockPaginadosService.cargarPagina(1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe();
   }
   
   // Método para mostrar el indicador de carga
@@ -609,161 +550,5 @@ export class PedirStockComponent implements OnInit, OnDestroy {
       type: EXCEL_TYPE
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
-  }
-
-  // NUEVO: Método para lazy loading con persistencia de estado (copiado de articulos)
-  async loadDataLazy(event: LazyLoadEvent): Promise<void> {
-    console.log('🔄 loadDataLazy - Evento recibido:', event);
-    
-    // Actualizar parámetros de paginación y filtros
-    this.first = event.first || 0;
-    this.rows = event.rows || 50;
-    this.sortField = event.sortField;
-    this.sortOrder = event.sortOrder || 1;
-    this.filters = event.filters || {};
-    
-    // NUEVO: Guardar estado después de cada cambio
-    this.saveTableState();
-    
-    // Calcular página basada en first
-    const page = Math.floor(this.first / this.rows) + 1;
-    
-    console.log(`📄 Cargando página ${page}, first: ${this.first}, rows: ${this.rows}`);
-    console.log('🔍 Filtros recibidos:', this.filters);
-    console.log('📊 Ordenamiento:', this.sortField, this.sortOrder);
-    
-    try {
-      // Cargar datos del servidor con los parámetros del lazy loading
-      await this.loadServerData(page);
-    } catch (error) {
-      console.error('❌ Error en loadDataLazy:', error);
-      Swal.fire({
-        title: 'Error',
-        text: 'Error al cargar datos: ' + (error.message || error),
-        icon: 'error',
-        confirmButtonText: 'Aceptar'
-      });
-    }
-  }
-
-  // NUEVO: Cargar datos del servidor con filtros y paginación (copiado de articulos)
-  private async loadServerData(page: number): Promise<void> {
-    try {
-      console.log(`🌐 Cargando página ${page} del servidor...`);
-      console.log('📋 Parámetros:', {
-        page,
-        rows: this.rows,
-        sortField: this.sortField,
-        sortOrder: this.sortOrder,
-        filters: this.filters
-      });
-      
-      const response = await this.stockPaginadosService.cargarPaginaConFiltros(
-        page,
-        this.rows,
-        this.sortField,
-        this.sortOrder,
-        this.filters
-      ).toPromise();
-      
-      console.log('✅ Respuesta recibida:', response);
-      
-      if (response && !response.error) {
-        console.log(`✅ Datos cargados exitosamente`);
-        // Los datos se actualizan automáticamente a través de las subscripciones
-      } else {
-        console.warn('⚠️ Respuesta con error o vacía:', response);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error cargando datos del servidor:', error);
-      throw error;
-    }
-  }
-
-  // NUEVO: Método para verificar si una columna es visible (copiado de articulos)
-  isColumnVisible(field: string): boolean {
-    return this._selectedColumns.some(col => col.field === field);
-  }
-
-  // NUEVO: Método para manejar cambios en selección de columnas (copiado de articulos)
-  onColumnSelectionChange(): void {
-    // Guardar el estado cuando cambien las columnas seleccionadas
-    this.saveTableState();
-    console.log('Columnas seleccionadas actualizadas:', this._selectedColumns);
-  }
-
-  // NUEVO: Método para contar columnas visibles (para emptymessage)
-  getColumnCount(): number {
-    return this._selectedColumns.length + 1; // +1 para la columna de acciones
-  }
-
-  // NUEVO: Guardar estado de la tabla (copiado de articulos)
-  private saveTableState(): void {
-    try {
-      const state = {
-        first: this.first,
-        rows: this.rows,
-        sortField: this.sortField,
-        sortOrder: this.sortOrder,
-        filters: this.filters,
-        selectedColumns: this._selectedColumns,
-        timestamp: Date.now()
-      };
-
-      localStorage.setItem('pedir_stock_table_state', JSON.stringify(state));
-      console.log('💾 Estado de tabla guardado:', state);
-    } catch (error) {
-      console.warn('Error guardando estado de la tabla:', error);
-    }
-  }
-
-  // NUEVO: Restaurar estado de la tabla (copiado de articulos)
-  private restoreTableState(): void {
-    try {
-      const savedState = localStorage.getItem('pedir_stock_table_state');
-      
-      if (savedState) {
-        const state = JSON.parse(savedState);
-        
-        // Verificar que el estado no sea muy viejo (2 horas máximo)
-        const isValidState = state.timestamp && (Date.now() - state.timestamp) < (2 * 60 * 60 * 1000);
-        
-        if (isValidState) {
-          console.log('🔄 Restaurando estado de filtros y paginación:', state);
-          
-          this.first = state.first || 0;
-          this.rows = state.rows || 50;
-          this.sortField = state.sortField;
-          this.sortOrder = state.sortOrder || 1;
-          this.filters = state.filters || {};
-          
-          if (state.selectedColumns && Array.isArray(state.selectedColumns)) {
-            this._selectedColumns = state.selectedColumns;
-          }
-        } else {
-          console.log('⏰ Estado de tabla expirado, usando valores por defecto');
-        }
-      }
-    } catch (error) {
-      console.warn('Error restaurando estado de la tabla:', error);
-    }
-  }
-
-  // NUEVO: Método para limpiar estado guardado y usar defaults
-  public limpiarEstadoTabla(): void {
-    localStorage.removeItem('pedir_stock_table_state');
-    // Resetear a valores por defecto
-    this._selectedColumns = [
-      this.cols[0], // nomart
-      this.cols[1], // marca
-      this.cols[7], // exi1 (Stock Dep)
-      this.cols[8], // exi2 (Stock CC)
-      this.cols[9], // exi3 (Stock VV)
-      this.cols[10], // exi4 (Stock GM)
-      this.cols[11], // exi5 (Stock MAY)
-      this.cols[16], // cod_deposito
-    ];
-    console.log('✅ Estado de tabla limpiado, usando columnas por defecto con depósito');
   }
 }
