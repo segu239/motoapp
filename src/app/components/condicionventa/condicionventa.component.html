@@ -19,13 +19,20 @@
         </div>
         <div>
             <!-- Loading indicator -->
-            <div class="alert alert-warning mb-3" *ngIf="loading">
+            <div class="alert alert-warning mb-3" *ngIf="loadingLocal">
                 <i class="fa fa-spinner fa-spin mr-2"></i> 
                 Cargando datos, por favor espere...
             </div>
             
+            <!-- Mensaje informativo cuando no hay condición de venta seleccionada -->
+            <div class="alert alert-info text-center" *ngIf="!mostrarProductos">
+                <i class="fa fa-info-circle fa-2x mb-2"></i>
+                <h5>Seleccione una condición de venta</h5>
+                <p>Debe elegir un método de pago del menú desplegable para ver los productos con los precios correspondientes.</p>
+            </div>
+            
             <!-- Tabla con lazy loading siguiendo patrón de articulos -->
-            <p-table #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" 
+            <p-table *ngIf="mostrarProductos" #dtable [value]="productos" [tableStyle]="{ 'min-width': '50rem' }" 
                 [paginator]="true" 
                 [rows]="rows"
                 [first]="first"

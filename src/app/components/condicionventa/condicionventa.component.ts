@@ -9,7 +9,7 @@ import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { FilterPipe } from 'src/app/pipes/filter.pipe';
 import { filter, debounceTime, distinctUntilChanged, switchMap, tap, takeUntil } from 'rxjs/operators';
 import { first, take } from 'rxjs/operators';
-import { Subscription, forkJoin, Subject, of } from 'rxjs';
+import { Subscription, forkJoin, Subject, of, combineLatest, BehaviorSubject } from 'rxjs';
 //importar componente calculoproducto
 import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.component';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
@@ -38,6 +38,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   private subscriptions: Subscription[] = [];
   private destroy$ = new Subject<void>();
   private searchSubject$ = new Subject<string>();
+  private datosCambioListos$ = new BehaviorSubject<boolean>(false);
   public codTarj: string = '';
   public listaPrecio: string = '';
   public activaDatos: number;
@@ -88,6 +89,12 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   public terminoBusqueda = '';
   public loading = false;
   public cargandoProductos = false;
+  
+  // Variable para controlar si se muestran los productos
+  public mostrarProductos: boolean = false;
+  
+  // Variable local para loading para evitar NG0100
+  public loadingLocal: boolean = false;
   
   // NUEVO: Propiedades para lazy loading
   public first: number = 0;
@@ -175,14 +182,28 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Suscribirse a los observables del servicio de paginación
     this.subscriptions.push(
       this.articulosPaginadosService.cargando$.subscribe(loading => {
-        this.loading = loading;
+        setTimeout(() => {
+          this.loadingLocal = loading;
+        }, 0);
       })
     );
     
+    // NUEVO: Combinar artículos con datos de cambio listos
     this.subscriptions.push(
-      this.articulosPaginadosService.articulos$.subscribe(articulos => {
-        // Aplicar el procesamiento necesario
-        this.productos = this.procesarProductosConMoneda(articulos);
+      combineLatest([
+        this.articulosPaginadosService.articulos$,
+        this.datosCambioListos$
+      ]).subscribe(([articulos, datosCambioListos]) => {
+        // Usar setTimeout para mover al siguiente ciclo de eventos
+        setTimeout(() => {
+          if (datosCambioListos && articulos) {
+            // Solo procesar cuando los datos de cambio estén listos
+            this.productos = this.procesarProductosConMoneda(articulos);
+          } else if (!datosCambioListos && articulos) {
+            // Si no hay datos de cambio, mostrar productos sin procesamiento de moneda
+            this.productos = articulos;
+          }
+        }, 0);
       })
     );
     
@@ -233,24 +254,20 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           this.tiposMoneda = results.tiposMoneda['mensaje'];
         }
         
-        // Verificar integridad de datos de cambio
+        // NUEVO: Marcar datos de cambio como listos
+        this.datosCambioListos$.next(true);
+        
+        // Verificar integridad de datos de cambio (solo para logging, sin notificaciones)
         const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
         if (!datosCambioValidos) {
           console.warn('Los datos de cambio no son completamente válidos');
-          // Notificación no bloqueante para el usuario
-          Swal.fire({
-            title: 'Advertencia',
-            text: 'Los datos de tipos de cambio pueden estar incompletos. Los precios de productos en moneda extranjera podrían no ser precisos.',
-            icon: 'warning',
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 5000
-          });
+          // Notificación eliminada para evitar spam
         }
       },
       error => {
         console.error('Error al cargar datos adicionales:', error);
+        // Marcar como listo aunque haya error para evitar bloqueo
+        this.datosCambioListos$.next(true);
       }
     );
   }
@@ -293,12 +310,13 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.tipoVal = condicion.tarjeta;
       this.codTarj = condicion.cod_tarj;
       this.listaPrecio = condicion.listaprecio;
-    }
-    
-    // NUEVO: Cargar primera página como respaldo si lazy loading no se activa
-    setTimeout(() => {
-      if (this.productos.length === 0 && !this.loading) {
-        console.log('Cargando primera página manualmente como respaldo');
+      
+      // Si hay una condición guardada, mostrar productos y aplicar configuración
+      this.mostrarProductos = true;
+      this.listaPrecioF();
+      
+      // Cargar productos con la condición restaurada
+      setTimeout(() => {
         this.loadDataLazy({
           first: this.first,
           rows: this.rows,
@@ -306,8 +324,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           sortOrder: this.sortOrder,
           filters: this.filters
         });
-      }
-    }, 1000);
+      }, 500);
+    }
   }
   
   ngOnDestroy() {
@@ -322,6 +340,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Completar el subject de destrucción
     this.destroy$.next();
     this.destroy$.complete();
+    
+    // Completar el subject de datos de cambio
+    this.datosCambioListos$.complete();
   }
   
   // OBSOLETO: Configurar búsqueda con debounce (reemplazado por lazy loading)
@@ -632,6 +653,11 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       return [];
     }
     
+    // Si no hay datos de cambio disponibles, devolver productos sin procesar
+    if (!this.valoresCambio || !this.tiposMoneda) {
+      return productos;
+    }
+    
     // Verificar si tenemos datos válidos para conversión
     const datosCambioValidos = this.verificarIntegridadDatosCambio(this.valoresCambio, this.tiposMoneda);
     
@@ -704,9 +730,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
               productosConProblemas++;
             }
           } else {
-            console.warn(`No hay valores de cambio para moneda ${tipoMoneda}`);
-            producto._precioConversionSospechosa = true;
-            productosConProblemas++;
+            // REDUCIDO: Solo log en desarrollo, sin marcar como sospechoso
+            console.log(`Sin valores de cambio para moneda ${tipoMoneda}`);
+            // No marcar como sospechoso para evitar warnings visuales
           }
         }
       } catch (error) {
@@ -719,18 +745,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     // Registrar estadísticas de conversión
     if (productosConProblemas > 0) {
       console.warn(`Se encontraron ${productosConProblemas} productos con problemas de conversión de moneda`);
-      // Agregar notificación no bloqueante si hay problemas
-      setTimeout(() => {
-        Swal.fire({
-          title: 'Información',
-          text: `Algunos productos (${productosConProblemas}) podrían mostrar precios incorrectos debido a problemas con los tipos de cambio.`,
-          icon: 'info',
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 5000
-        });
-      }, 1000);
+      // Notificación eliminada por solicitud del usuario
     }
     
     return productosConversiones;
@@ -752,6 +767,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     }));
     
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
+    
     if (this.activaDatos == 1) {
       this.abrirFormularioTarj();
       // aca se llama a la funcion que muestra los prefijos
@@ -761,6 +777,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       // aca se llama a la funcion que muestra los prefijos
     }
     else {
+      // Activar la visualización de productos
+      this.mostrarProductos = true;
+      
       // Mostrar loading antes de cargar los productos
       this.mostrarLoading();
       
@@ -994,6 +1013,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           timer: 1500,
           showConfirmButton: false
         }).then(() => {
+          // Activar la visualización de productos
+          this.mostrarProductos = true;
+          
           // Mostrar loading antes de cargar los productos
           this.mostrarLoading();
           
@@ -1295,6 +1317,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           timer: 1500,
           showConfirmButton: false
         }).then(() => {
+          // Activar la visualización de productos
+          this.mostrarProductos = true;
+          
           // Mostrar loading antes de cargar los productos
           this.mostrarLoading();
           
