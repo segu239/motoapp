@@ -1,4 +1,4 @@
-import { Component, OnInit,ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { Cabecera } from '../../interfaces/cabecera';
 import { Table } from 'primeng/table';
 import { CargardataService } from '../../services/cargardata.service';
@@ -6,8 +6,8 @@ import { Cliente } from '../../interfaces/cliente';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import xlsx from 'xlsx/xlsx';
-import { first, take,catchError} from 'rxjs/operators';
-import { of } from 'rxjs'; // Importar catchError
+import { first, take, catchError, takeUntil } from 'rxjs/operators';
+import { of, Subject } from 'rxjs'; // Importar catchError
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import { CrudService } from 'src/app/services/crud.service';
 import { formatDate } from '@angular/common';
@@ -27,7 +27,7 @@ interface Column {
   styleUrls: ['./analisiscaja.component.css'],
   providers: [FilterService, DialogService, CalendarModule]
 })
-export class AnalisiscajaComponent implements OnInit {
+export class AnalisiscajaComponent implements OnInit, OnDestroy {
   @ViewChild('dtable') dtable: Table;
   cols: Column[];
   _selectedColumns: Column[];
@@ -45,6 +45,7 @@ export class AnalisiscajaComponent implements OnInit {
   dateRange: Date[];
  /*  dateRange: Date[];
   filters: any = {}; // Variable para controlar los filtros */
+  private destroy$ = new Subject<void>();
 
   constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
     this.cols = [
@@ -92,7 +93,9 @@ export class AnalisiscajaComponent implements OnInit {
   }
   
   loadSucursales(): void {
-    this._crud.getListSnap('sucursales').subscribe(
+    this._crud.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       data => {
         this.sucursal = data.map(item => {
           const payload = item.payload.val() as any;
@@ -236,5 +239,10 @@ export class AnalisiscajaComponent implements OnInit {
       text: message,
       confirmButtonText: 'Aceptar'
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

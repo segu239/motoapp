@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { Cabecera } from '../../interfaces/cabecera';
 import { Recibo } from 'src/app/interfaces/recibo';
 import { Table } from 'primeng/table';
@@ -7,8 +7,9 @@ import { Cliente } from '../../interfaces/cliente';
 import { ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import xlsx from 'xlsx/xlsx';
-import { first, take } from 'rxjs/operators';
+import { first, take, takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2'; // Import SweetAlert2
+import { Subject } from 'rxjs';
 import { CrudService } from 'src/app/services/crud.service';
 import { formatDate } from '@angular/common';
 import { MotomatchBotService } from 'src/app/services/motomatch-bot.service';
@@ -22,7 +23,7 @@ pdfMake.vfs = pdfFonts.pdfMake.vfs;
   templateUrl: './cabeceras.component.html',
   styleUrls: ['./cabeceras.component.css']
 })
-export class CabecerasComponent {
+export class CabecerasComponent implements OnDestroy {
   public cabeceras: Cabecera[];
   public cabeceraElejida: Cabecera;
   public clienteFromCuentaCorriente: any;
@@ -81,6 +82,7 @@ export class CabecerasComponent {
   public cabecerasFiltered: any[] = [];
   public sucursalNombre: string = '';
   public numero_fac: number;
+  private destroy$ = new Subject<void>();
 
   constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
     this.getNombreSucursal();
@@ -117,7 +119,9 @@ export class CabecerasComponent {
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
     
-    this._crud.getListSnap('sucursales').subscribe(
+    this._crud.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       data => {
         const sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -1033,5 +1037,10 @@ export class CabecerasComponent {
       text: message,
       confirmButtonText: 'Aceptar'
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

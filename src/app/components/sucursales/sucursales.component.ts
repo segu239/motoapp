@@ -1,20 +1,23 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CrudService } from '../../services/crud.service';
 import { Sucursal } from '../../interfaces/sucursal';
 import Swal from 'sweetalert2';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-sucursales',
   templateUrl: './sucursales.component.html',
   styleUrls: ['./sucursales.component.css']
 })
-export class SucursalesComponent implements OnInit {
+export class SucursalesComponent implements OnInit, OnDestroy {
   sucursales: any[] = [];
   sucursalForm: FormGroup;
   editMode = false;
   currentSucursalId: string | null = null;
   loading = false;
+  private destroy$ = new Subject<void>();
   
   constructor(
     private crudService: CrudService,
@@ -32,7 +35,9 @@ export class SucursalesComponent implements OnInit {
   
   loadSucursales(): void {
     this.loading = true;
-    this.crudService.getListSnap('sucursales').subscribe(
+    this.crudService.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       (data) => {
         this.sucursales = data.map((item: any) => {
           return {
@@ -162,5 +167,10 @@ export class SucursalesComponent implements OnInit {
       icon: 'error',
       confirmButtonText: 'Aceptar'
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }

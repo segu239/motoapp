@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service'; // Asegúrate que la ruta sea correcta
@@ -6,6 +6,8 @@ import { SubirdataService } from '../../services/subirdata.service'; // Asegúra
 import { AuthService } from '../../services/auth.service';
 import { User, UserRole } from '../../interfaces/user';
 import Swal from 'sweetalert2';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 interface CajaLista {
   descripcion: string;
@@ -20,11 +22,12 @@ interface CajaLista {
   templateUrl: './cajalista.component.html',
   styleUrls: ['./cajalista.component.css'] // Asegúrate que la ruta sea correcta
 })
-export class CajaListaComponent {
+export class CajaListaComponent implements OnDestroy {
 
   public cajasListas: CajaLista[] = [];
   public currentUser: User | null = null;
   public isAdmin: boolean = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
@@ -54,7 +57,9 @@ export class CajaListaComponent {
   }
 
   checkUserRole() {
-    this.authService.user$.subscribe({
+    this.authService.user$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
       next: (user) => {
         this.currentUser = user;
         this.isAdmin = user?.nivel === UserRole.ADMIN || user?.nivel === UserRole.SUPER;
@@ -159,5 +164,10 @@ export class CajaListaComponent {
       icon: 'error',
       confirmButtonText: 'Aceptar'
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
