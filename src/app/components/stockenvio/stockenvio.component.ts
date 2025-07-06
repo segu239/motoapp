@@ -639,7 +639,7 @@ export class StockenvioComponent implements OnInit, OnDestroy{
     });
   }
   
-  // NUEVO: Guardar estado de la tabla en localStorage
+  // NUEVO: Guardar estado de la tabla en sessionStorage
   saveTableState(): void {
     const state = {
       first: this.first,
@@ -649,12 +649,12 @@ export class StockenvioComponent implements OnInit, OnDestroy{
       filters: this.filters,
       selectedColumns: this._selectedColumns.map(col => col.field)
     };
-    localStorage.setItem('stockenvio_table_state', JSON.stringify(state));
+    sessionStorage.setItem('stockenvio_table_state', JSON.stringify(state));
   }
   
-  // NUEVO: Restaurar estado de la tabla desde localStorage
+  // NUEVO: Restaurar estado de la tabla desde sessionStorage
   restoreTableState(): void {
-    const state = localStorage.getItem('stockenvio_table_state');
+    const state = sessionStorage.getItem('stockenvio_table_state');
     if (state) {
       try {
         const parsedState = JSON.parse(state);

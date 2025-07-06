@@ -256,7 +256,7 @@ export class StockCacheService {
 
   // Métodos de gestión de cache
   private isCacheValid(): boolean {
-    const timestamp = localStorage.getItem(this.cacheKeys.timestamp);
+    const timestamp = sessionStorage.getItem(this.cacheKeys.timestamp);
     if (!timestamp) return false;
 
     const cacheTime = new Date(timestamp);
@@ -286,7 +286,7 @@ export class StockCacheService {
   }
 
   private updateCacheTimestamp(): void {
-    localStorage.setItem(this.cacheKeys.timestamp, new Date().toISOString());
+    sessionStorage.setItem(this.cacheKeys.timestamp, new Date().toISOString());
   }
 
   private parseFloat(value: any): number {
@@ -299,7 +299,6 @@ export class StockCacheService {
   public clearCache(): void {
     Object.values(this.cacheKeys).forEach(key => {
       sessionStorage.removeItem(key);
-      localStorage.removeItem(key);
     });
     console.log('Stock: Cache limpiado');
   }
@@ -310,7 +309,7 @@ export class StockCacheService {
   }
 
   public getCacheInfo(): any {
-    const timestamp = localStorage.getItem(this.cacheKeys.timestamp);
+    const timestamp = sessionStorage.getItem(this.cacheKeys.timestamp);
     const productos = this.getCachedData(this.cacheKeys.productos);
     
     return {

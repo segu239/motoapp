@@ -511,7 +511,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         timestamp: Date.now()
       };
 
-      localStorage.setItem('condicionventa_table_state', JSON.stringify(state));
+      sessionStorage.setItem('condicionventa_table_state', JSON.stringify(state));
       console.log('💾 Estado de tabla guardado:', state);
     } catch (error) {
       console.warn('Error guardando estado de la tabla:', error);
@@ -521,7 +521,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   // NUEVO: Restaurar estado de la tabla (copiado de articulos)
   private restoreTableState(): void {
     try {
-      const savedState = localStorage.getItem('condicionventa_table_state');
+      const savedState = sessionStorage.getItem('condicionventa_table_state');
       
       if (savedState) {
         const state = JSON.parse(savedState);
@@ -559,7 +559,7 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
 
   // NUEVO: Método para limpiar estado guardado y usar defaults
   public limpiarEstadoTabla(): void {
-    localStorage.removeItem('condicionventa_table_state');
+    sessionStorage.removeItem('condicionventa_table_state');
     // Resetear a valores por defecto
     this._selectedColumns = [
       this.cols[0], // nomart
