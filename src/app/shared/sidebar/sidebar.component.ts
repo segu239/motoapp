@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { LoginService } from '../../services/login.service';
 import { AuthService } from '../../services/auth.service';
+import { CarritoService } from '../../services/carrito.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -12,7 +13,8 @@ export class SidebarComponent implements OnInit {
   
   constructor(
     private _login: LoginService,
-    private authService: AuthService
+    private authService: AuthService,
+    private _carrito: CarritoService
   ) {
     this.nombreCliente = sessionStorage.getItem('usernameOp') || '';
   }
@@ -21,6 +23,9 @@ export class SidebarComponent implements OnInit {
   }
   
   salir() {
+    // Limpiar el estado del carrito primero
+    this._carrito.limpiarCarrito();
+    
     // Limpiar los datos de sesión
     sessionStorage.clear();
     

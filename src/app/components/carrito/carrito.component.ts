@@ -1,6 +1,7 @@
-import { Component,OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 //agregar importacion de router para navegacion
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CarritoService } from 'src/app/services/carrito.service';
 import { SubirdataService } from 'src/app/services/subirdata.service';
 import { CargardataService } from 'src/app/services/cargardata.service';
@@ -28,7 +29,7 @@ interface Cliente {
   templateUrl: './carrito.component.html',
   styleUrls: ['./carrito.component.css']
 })
-export class CarritoComponent {
+export class CarritoComponent implements OnDestroy {
   ref: DynamicDialogRef | undefined;
   public FechaCalend: any;
   public itemsEnCarrito: any[] = [];
@@ -52,27 +53,52 @@ export class CarritoComponent {
   public cliente: any;
   public usuario: any;
   itemsConTipoPago: any[] = [];
+  
+  private subscriptions: Subscription[] = [];
   constructor(private _cargardata: CargardataService, private bot: MotomatchBotService, private _crud: CrudService, private _subirdata: SubirdataService, private _carrito: CarritoService, private router: Router) {
+    // Verificar autenticación antes de inicializar
+    if (!sessionStorage.getItem('usernameOp')) {
+      this.router.navigate(['/login2']);
+      return;
+    }
+
     this.FechaCalend = new Date();
     this.getItemsCarrito();
     this.calculoTotal();
     this.getNombreSucursal();
     this.getVendedores();
-    this.usuario = sessionStorage.getItem('usernameOp')
-    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
-    this.initLetraValue();
+    this.usuario = sessionStorage.getItem('usernameOp');
+    
+    // Validación defensiva para datos del cliente
+    const clienteData = sessionStorage.getItem('datoscliente');
+    if (clienteData) {
+      try {
+        this.cliente = JSON.parse(clienteData);
+        this.initLetraValue();
+      } catch (error) {
+        console.error('Error al parsear datos del cliente:', error);
+        // Establecer cliente por defecto en lugar de redirigir
+        this.cliente = { cod_iva: 2 }; // Consumidor final por defecto
+        this.initLetraValue();
+      }
+    } else {
+      // Si no hay datos del cliente, establecer valores por defecto
+      this.cliente = { cod_iva: 2 }; // Consumidor final por defecto
+      this.initLetraValue();
+    }
   }
   ngOnInit() {
     this.cargarTarjetas();
   }
   cargarTarjetas() {
-    this._cargardata.tarjcredito().subscribe((data: any) => {
+    const tarjetasSubscription = this._cargardata.tarjcredito().subscribe((data: any) => {
       this.tarjetas = data.mensaje;
       console.log('Tarjetas obtenidas:', this.tarjetas);
      // this.agregarTipoPago();
      this.actualizarItemsConTipoPago();
       console.log('Items en carrito después de agregar tipoPago:', this.itemsEnCarrito);
     });
+    this.subscriptions.push(tarjetasSubscription);
   }
  /*  agregarTipoPago() {
     const tarjetaMap = new Map();
@@ -107,22 +133,35 @@ export class CarritoComponent {
       });
     }
   getItemsCarrito() {
-    let items = sessionStorage.getItem('carrito');
+    const items = sessionStorage.getItem('carrito');
     if (items) {
-      this.itemsEnCarrito = JSON.parse(items);
+      try {
+        this.itemsEnCarrito = JSON.parse(items);
+        // Validar que sea un array válido
+        if (!Array.isArray(this.itemsEnCarrito)) {
+          this.itemsEnCarrito = [];
+        }
+      } catch (error) {
+        console.error('Error al parsear items del carrito:', error);
+        this.itemsEnCarrito = [];
+        sessionStorage.removeItem('carrito');
+      }
+    } else {
+      this.itemsEnCarrito = [];
     }
   }
   getVendedores() {
-    this._cargardata.vendedores().subscribe((res: any) => {
+    const vendedoresSubscription = this._cargardata.vendedores().subscribe((res: any) => {
       this.vendedores = res.mensaje;
       console.log(this.vendedores);
-    })
+    });
+    this.subscriptions.push(vendedoresSubscription);
   }
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
     console.log(this.sucursal);
 
-    this._crud.getListSnap('sucursales').subscribe(
+    const sucursalesSubscription = this._crud.getListSnap('sucursales').subscribe(
       data => {
         const sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -150,9 +189,15 @@ export class CarritoComponent {
         this.sucursalNombre = 'Sucursal ' + this.sucursal;
       }
     );
+    this.subscriptions.push(sucursalesSubscription);
   }
 
   initLetraValue() {
+    if (!this.cliente) {
+      this.letraValue = "B"; // Valor por defecto
+      return;
+    }
+    
     if (this.cliente.cod_iva == 2)//consumidor final
     { this.letraValue = "B"; }
     else if (this.cliente.cod_iva == 1)//excento
@@ -863,5 +908,10 @@ try {
       
       return cajaMovi;
     });
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    this.subscriptions = [];
   }
 }

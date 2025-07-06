@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CarritoService } from 'src/app/services/carrito.service';
 import { DialogService } from 'primeng/dynamicdialog';
 import { GrillaComponent } from 'src/app/components/grilla/grilla.component'; // Asegúrate de que la ruta sea correcta
 import { CrudService } from 'src/app/services/crud.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -10,10 +11,12 @@ import { CrudService } from 'src/app/services/crud.service';
   styleUrls: ['./header.component.css'],
   providers: [DialogService]
 })
-export class HeaderComponent implements OnInit {
+export class HeaderComponent implements OnInit, OnDestroy {
 public sucursal: string = '';
 public cantidad: number = 0;
 public sucursalNombre: string = '';
+private carritoSubscription: Subscription;
+private sucursalSubscription: Subscription;
 
 
 constructor(
@@ -26,14 +29,14 @@ constructor(
 }
 
 ngOnInit(): void {
-  this.carritoService.carritoObservable.subscribe((items: any[]) => {
+  this.carritoSubscription = this.carritoService.carritoObservable.subscribe((items: any[]) => {
     this.cantidad = items.length;
     console.log(items);
   });
 }
 
 cargarNombreSucursal() {
-  this._crud.getListSnap('sucursales').subscribe(
+  this.sucursalSubscription = this._crud.getListSnap('sucursales').subscribe(
     data => {
       const sucursales = data.map(item => {
         const payload = item.payload.val() as any;
@@ -73,12 +76,21 @@ cargarNombreSucursal() {
   );
 }
 
+ngOnDestroy(): void {
+  if (this.carritoSubscription) {
+    this.carritoSubscription.unsubscribe();
+  }
+  if (this.sucursalSubscription) {
+    this.sucursalSubscription.unsubscribe();
+  }
+}
+
 openGrilla() {
   this.dialogService.open(GrillaComponent, {
     header: 'Grilla',
     width: '70%'
   });
 }
-  }
+}
 
 

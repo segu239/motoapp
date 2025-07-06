@@ -43,5 +43,11 @@ export class CarritoService {
     // Guardar el array actualizado en sessionStorage como una cadena JSON
     sessionStorage.setItem(clave, JSON.stringify(array));
     this.actualizarCarrito();
+  }
+
+  limpiarCarrito(): void {
+    this.itemsEnCarrito = [];
+    this.carritoSubject.next([]);
+    sessionStorage.removeItem('carrito');
   } 
 }
