@@ -285,8 +285,9 @@ export class CarritoComponent implements OnDestroy {
   calculoTotal() {
     this.suma = 0;
     for (let item of this.itemsEnCarrito) {
-      this.suma += item.precio * item.cantidad;
+      this.suma += parseFloat((item.precio * item.cantidad).toFixed(4));
     }
+    this.suma = parseFloat(this.suma.toFixed(4));
   }
   async finalizar() {
     if (this.itemsEnCarrito.length > 0) {//hacer si 
@@ -439,8 +440,8 @@ export class CarritoComponent implements OnDestroy {
       emitido: fecha,
       vencimiento: fecha,
       exento: 0,
-      basico: parseFloat((this.suma / 1.21).toFixed(2)),//this.suma/1.21,
-      iva1: parseFloat((this.suma - this.suma / 1.21).toFixed(2)),
+      basico: parseFloat((this.suma / 1.21).toFixed(4)),//this.suma/1.21,
+      iva1: parseFloat((this.suma - this.suma / 1.21).toFixed(4)),
       iva2: 0,
       iva3: 0,
       bonifica: 0,
@@ -472,10 +473,10 @@ export class CarritoComponent implements OnDestroy {
     for (let item of this.itemsEnCarrito) {
       console.log(item);
       if (item.cod_tar === 111) {
-        acumulado += item.precio * item.cantidad; // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
+        acumulado += parseFloat((item.precio * item.cantidad).toFixed(4)); // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
       }
     }
-    return acumulado;
+    return parseFloat(acumulado.toFixed(4));
   }
 
   getCodVta() {
@@ -649,7 +650,7 @@ try {
     let fechaActual = new Date();
     let fechaFormateada = fechaActual.toISOString().split('T')[0];
     console.log(fechaFormateada);
-    const tableBody = items.map(item => [item.cantidad, item.nomart, item.precio, item.cantidad * item.precio]);
+    const tableBody = items.map(item => [item.cantidad, item.nomart, item.precio, parseFloat((item.cantidad * item.precio).toFixed(4))]);
     // Definir el contenido del documento
     const documentDefinition = {
       background: {

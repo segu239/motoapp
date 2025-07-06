@@ -111,11 +111,11 @@ export class StockCacheService {
       rubro: item.rubro || '',
       
       // Normalizar precios como números
-      precon: this.parseFloat(item.precon),
-      prefi1: this.parseFloat(item.prefi1),
-      prefi2: this.parseFloat(item.prefi2),
-      prefi3: this.parseFloat(item.prefi3),
-      prefi4: this.parseFloat(item.prefi4),
+      precon: parseFloat(this.parseFloat(item.precon).toFixed(4)),
+      prefi1: parseFloat(this.parseFloat(item.prefi1).toFixed(4)),
+      prefi2: parseFloat(this.parseFloat(item.prefi2).toFixed(4)),
+      prefi3: parseFloat(this.parseFloat(item.prefi3).toFixed(4)),
+      prefi4: parseFloat(this.parseFloat(item.prefi4).toFixed(4)),
       
       // Normalizar existencias como números
       exi1: this.parseFloat(item.exi1),

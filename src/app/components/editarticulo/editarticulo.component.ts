@@ -967,7 +967,7 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista1.preciof105);
       const valorPrefi1 = precon + (precon * porcentaje / 100);
       this.articuloForm.get('prefi1')?.setValue(Math.round(valorPrefi1 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(2)}`);
+      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 1 con la moneda seleccionada');
       this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
@@ -980,7 +980,7 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista2.preciof105);
       const valorPrefi2 = precon + (precon * porcentaje / 100);
       this.articuloForm.get('prefi2')?.setValue(Math.round(valorPrefi2 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(2)}`);
+      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 2 con la moneda seleccionada');
       this.articuloForm.get('prefi2')?.setValue(0, {emitEvent: false});
@@ -993,7 +993,7 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista3.preciof105);
       const valorPrefi3 = precon + (precon * porcentaje / 100);
       this.articuloForm.get('prefi3')?.setValue(Math.round(valorPrefi3 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(2)}`);
+      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 3 con la moneda seleccionada');
       this.articuloForm.get('prefi3')?.setValue(0, {emitEvent: false});
@@ -1006,7 +1006,7 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista4.preciof105);
       const valorPrefi4 = precon + (precon * porcentaje / 100);
       this.articuloForm.get('prefi4')?.setValue(Math.round(valorPrefi4 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(2)}`);
+      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 4 con la moneda seleccionada');
       this.articuloForm.get('prefi4')?.setValue(0, {emitEvent: false});

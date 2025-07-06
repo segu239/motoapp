@@ -387,11 +387,11 @@ export class ArticulosPaginadosService {
       cd_barra: item.cd_barra || item.codigobarra || '',
       marca: item.marca || '',
       rubro: item.rubro || '',
-      precon: parseFloat(item.precon || '0'),
-      prefi1: parseFloat(item.prefi1 || '0'),
-      prefi2: parseFloat(item.prefi2 || '0'),
-      prefi3: parseFloat(item.prefi3 || '0'),
-      prefi4: parseFloat(item.prefi4 || '0'),
+      precon: parseFloat(parseFloat(item.precon || '0').toFixed(4)),
+      prefi1: parseFloat(parseFloat(item.prefi1 || '0').toFixed(4)),
+      prefi2: parseFloat(parseFloat(item.prefi2 || '0').toFixed(4)),
+      prefi3: parseFloat(parseFloat(item.prefi3 || '0').toFixed(4)),
+      prefi4: parseFloat(parseFloat(item.prefi4 || '0').toFixed(4)),
       exi1: parseFloat(item.exi1 || '0'),
       exi2: parseFloat(item.exi2 || '0'),
       exi3: parseFloat(item.exi3 || '0'),
@@ -399,7 +399,11 @@ export class ArticulosPaginadosService {
       exi5: parseFloat(item.exi5 || '0'),
       estado: item.estado || '',
       cod_deposito: parseInt(item.cod_deposito) || 0,
-      tipo_moneda: item.tipo_moneda || 1
+      tipo_moneda: item.tipo_moneda || 1,
+      prebsiva: parseFloat(parseFloat(item.prebsiva || '0').toFixed(4)),
+      precostosi: parseFloat(parseFloat(item.precostosi || '0').toFixed(4)),
+      descuento: parseFloat(parseFloat(item.descuento || '0').toFixed(4)),
+      margen: parseFloat(parseFloat(item.margen || '0').toFixed(4))
     }));
   }
 }
