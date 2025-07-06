@@ -1,4 +1,4 @@
-/* import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import { ArticulosPaginadosService } from 'src/app/services/articulos-paginados.service';
@@ -91,15 +91,27 @@ export class GrillaComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     console.log('GrillaComponent initialized');
+    
+    // DEBUG: Verificar sucursal
+    const sucursal = sessionStorage.getItem('sucursal');
+    console.log('Sucursal en sessionStorage:', sucursal);
+    
+    if (!sucursal) {
+      console.error('No hay sucursal configurada en sessionStorage');
+      Swal.fire({
+        title: 'Error de Configuración',
+        text: 'No se ha establecido una sucursal. Por favor, inicie sesión nuevamente.',
+        icon: 'error',
+        confirmButtonText: 'Aceptar'
+      });
+      return;
+    }
+    
     this.mostrarCargando();
     // Intentar cargar datos desde caché primero
     this.cargarDatosDesdeCache();
   }
   
-  ngOnDestroy(): void {
-    // Limpiar todas las suscripciones
-    this.subscriptions.forEach(sub => sub.unsubscribe());
-  }
   
   cargarDatosDesdeCache(): void {
     console.log('Cargando datos paginados para Grilla');
@@ -140,7 +152,7 @@ export class GrillaComponent implements OnInit, OnDestroy {
   cargarValoresCambio(): void {
     console.log('Cargando valores de cambio desde API para Grilla');
     
-    const subscription = this.cargarDataService.getValorCambio().subscribe({
+    this.cargarDataService.getValorCambio().subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.valoresCambio = response.mensaje;
@@ -164,14 +176,12 @@ export class GrillaComponent implements OnInit, OnDestroy {
         this.showNotification('Error al cargar valores de cambio');
       }
     });
-    
-    this.subscriptions.push(subscription);
   }
 
   cargarTiposMoneda(): void {
     console.log('Cargando tipos de moneda desde API para Grilla');
     
-    const subscription = this.cargarDataService.getTipoMoneda().subscribe({
+    this.cargarDataService.getTipoMoneda().subscribe({
       next: (response: any) => {
         if (!response.error) {
           this.tiposMoneda = response.mensaje;
@@ -193,8 +203,6 @@ export class GrillaComponent implements OnInit, OnDestroy {
         this.showNotification('Error al cargar tipos de moneda');
       }
     });
-    
-    this.subscriptions.push(subscription);
   }
   
   // Los métodos de paginación están más abajo, implementados con lógica de filtrado local
@@ -502,220 +510,14 @@ export class GrillaComponent implements OnInit, OnDestroy {
       confirmButtonText: 'Aceptar'
     });
   }
-} */
 
-  import { Component, OnInit } from '@angular/core';
-  import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
-  import { CargardataService } from 'src/app/services/cargardata.service';
-  import Swal from 'sweetalert2';
-  
-  interface ValorCambio {
-    codmone: number;
-    desvalor: string;
-    fecdesde: Date;
-    fechasta: Date;
-    vcambio: number;
-    id_valor: number;
+  ngOnDestroy(): void {
+    // Cerrar todas las suscripciones para evitar memory leaks
+    this.subscriptions.forEach(sub => {
+      if (sub && !sub.closed) {
+        sub.unsubscribe();
+      }
+    });
+    this.subscriptions = [];
   }
-  
-  interface TipoMoneda {
-    cod_mone: number;
-    moneda: string;
-    simbolo: string;
-    id_moneda: number;
-  }
-  
-  @Component({
-    selector: 'app-grilla',
-    templateUrl: './grilla.component.html',
-    styleUrls: ['./grilla.component.css']
-  })
-  export class GrillaComponent implements OnInit {
-    productos: any[] = [];
-    valoresCambio: ValorCambio[] = [];
-    tiposMoneda: TipoMoneda[] = [];
-    cargando: boolean = true;
-  
-    constructor(
-      private cargarDataService: CargardataService,
-      public ref: DynamicDialogRef,
-      public config: DynamicDialogConfig
-    ) {}
-  
-    ngOnInit(): void {
-      this.mostrarCargando();
-      // Primero cargar los valores de cambio y monedas antes de cargar productos
-      this.cargarValoresCambio();
-    }
-  
-    mostrarCargando() {
-      Swal.fire({
-        title: 'Cargando productos',
-        text: 'Por favor espere mientras se cargan los datos...',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
-      });
-    }
-  
-    cargarValoresCambio() {
-      this.cargarDataService.getValorCambio().subscribe({
-        next: (response: any) => {
-          if (!response.error) {
-            this.valoresCambio = response.mensaje;
-            console.log('Valores de cambio cargados:', this.valoresCambio);
-            // Una vez cargados los valores de cambio, cargar tipos de moneda
-            this.cargarTiposMoneda();
-          } else {
-            Swal.close();
-            this.cargando = false;
-            console.error('Error loading valores de cambio:', response.mensaje);
-            this.showNotification('Error al cargar valores de cambio');
-          }
-        },
-        error: (error) => {
-          Swal.close();
-          this.cargando = false;
-          console.error('Error in API call:', error);
-          this.showNotification('Error al cargar valores de cambio');
-        }
-      });
-    }
-  
-    cargarTiposMoneda() {
-      this.cargarDataService.getTipoMoneda().subscribe({
-        next: (response: any) => {
-          if (!response.error) {
-            this.tiposMoneda = response.mensaje;
-            console.log('Tipos de moneda cargados:', this.tiposMoneda);
-            // Una vez cargados los tipos de moneda, cargamos los productos
-            this.cargarProductos();
-          } else {
-            Swal.close();
-            this.cargando = false;
-            console.error('Error loading tipos de moneda:', response.mensaje);
-            this.showNotification('Error al cargar tipos de moneda');
-          }
-        },
-        error: (error) => {
-          Swal.close();
-          this.cargando = false;
-          console.error('Error in API call:', error);
-          this.showNotification('Error al cargar tipos de moneda');
-        }
-      });
-    }
-  
-    cargarProductos() {
-      this.cargarDataService.artsucursal().subscribe({
-        next: (data: any) => {
-          console.log(data);
-          if (data && data.mensaje) {
-            // Hacer una copia de los productos originales
-            let productosConPrecios = [...data.mensaje];
-            
-            // Aplicar multiplicador de tipo de moneda a cada producto
-            productosConPrecios = this.aplicarMultiplicadorPrecio(productosConPrecios);
-            
-            // Asignar los productos con precios actualizados
-            this.productos = productosConPrecios;
-          }
-          Swal.close();
-          this.cargando = false;
-        },
-        error: (error) => {
-          Swal.close();
-          this.cargando = false;
-          console.error('Error in API call:', error);
-          this.showNotification('Error al cargar los productos');
-        }
-      });
-    }
-  
-    aplicarMultiplicadorPrecio(productos: any[]): any[] {
-      if (!this.valoresCambio || this.valoresCambio.length === 0) {
-        console.warn('No hay valores de cambio disponibles para aplicar a los precios');
-        return productos;
-      }
-  
-      return productos.map(producto => {
-        // Crear una copia del producto para no modificar el original
-        const productoCopy = { ...producto };
-        
-        // Verificar si el producto tiene tipo_moneda y es diferente de 1 (asumiendo que 1 es la moneda local)
-        if (productoCopy.tipo_moneda && productoCopy.tipo_moneda !== 1) {
-          // Buscar el valor de cambio correspondiente
-          const valorCambio = this.obtenerValorCambio(productoCopy.tipo_moneda);
-          
-          // Si se encontró un valor de cambio válido y tiene un multiplicador
-          if (valorCambio && valorCambio > 0) {
-            // Aplicar el multiplicador a los precios
-            productoCopy.precon = productoCopy.precon * valorCambio;
-            productoCopy.prefi1 = productoCopy.prefi1 * valorCambio;
-            productoCopy.prefi2 = productoCopy.prefi2 * valorCambio;
-            if (productoCopy.prefi3) productoCopy.prefi3 = productoCopy.prefi3 * valorCambio;
-            if (productoCopy.prefi4) productoCopy.prefi4 = productoCopy.prefi4 * valorCambio;
-          }
-        }
-        
-        return productoCopy;
-      });
-    }
-  
-    obtenerValorCambio(codMoneda: number): number {
-      // Si no hay valores de cambio, devolver 1 (sin cambio)
-      if (!this.valoresCambio || this.valoresCambio.length === 0) {
-        return 1;
-      }
-      
-      // Filtrar todos los valores de cambio para esta moneda
-      const valoresCambioMoneda = this.valoresCambio.filter(vc => vc.codmone === codMoneda);
-      
-      // Si no hay valores para esta moneda, devolver 1
-      if (!valoresCambioMoneda || valoresCambioMoneda.length === 0) {
-        return 1;
-      }
-      
-      // Si hay múltiples valores para esta moneda, tomar el más reciente por fecha
-      if (valoresCambioMoneda.length > 1) {
-        // Ordenar por fecha descendente (más reciente primero)
-        valoresCambioMoneda.sort((a, b) => {
-          const fechaA = new Date(a.fecdesde);
-          const fechaB = new Date(b.fecdesde);
-          return fechaB.getTime() - fechaA.getTime();
-        });
-      }
-      
-      // Tomar el primer valor (el más reciente después de ordenar)
-      const valorCambioSeleccionado = valoresCambioMoneda[0];
-      
-      // Devolver el valor de cambio o 1 si no está definido
-      return valorCambioSeleccionado && valorCambioSeleccionado.vcambio ? 
-        parseFloat(valorCambioSeleccionado.vcambio.toString()) : 1;
-    }
-  
-    obtenerNombreMoneda(codMoneda: number): string {
-      if (!codMoneda) return 'Peso';
-      
-      const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
-      return moneda ? moneda.moneda : `Moneda ${codMoneda}`;
-    }
-  
-    obtenerSimboloMoneda(codMoneda: number): string {
-      if (!codMoneda || codMoneda === 1) return '$';
-      
-      const moneda = this.tiposMoneda.find(m => m.cod_mone === codMoneda);
-      return moneda && moneda.simbolo ? moneda.simbolo : '$';
-    }
-  
-    showNotification(message: string) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: message,
-        confirmButtonText: 'Aceptar'
-      });
-    }
-  }
+}

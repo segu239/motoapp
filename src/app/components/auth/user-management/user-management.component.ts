@@ -1,8 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { User, UserRole } from '../../../interfaces/user';
 import { CrudService } from '../../../services/crud.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -10,7 +12,7 @@ import Swal from 'sweetalert2';
   templateUrl: './user-management.component.html',
   styleUrls: ['./user-management.component.css']
 })
-export class UserManagementComponent implements OnInit {
+export class UserManagementComponent implements OnInit, OnDestroy {
   users: User[] = [];
   userForm: FormGroup;
   editMode = false;
@@ -19,6 +21,7 @@ export class UserManagementComponent implements OnInit {
   userRoles = Object.values(UserRole);
   sucursales: any[] = [];
   sucursalesSeleccionadas: number[] = [];
+  private destroy$ = new Subject<void>();
   
   constructor(
     private authService: AuthService,
@@ -36,7 +39,9 @@ export class UserManagementComponent implements OnInit {
     });
     
     // Configuramos el comportamiento de password de manera segura
-    this.userForm.get('password')?.valueChanges.subscribe(val => {
+    this.userForm.get('password')?.valueChanges.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(val => {
       // No usar updateValueAndValidity para evitar recursión
       if (this.editMode) {
         this.userForm.get('password')?.clearValidators();
@@ -58,7 +63,9 @@ export class UserManagementComponent implements OnInit {
   }
   
   loadSucursales(): void {
-    this.crudService.getListSnap('sucursales').subscribe(
+    this.crudService.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       data => {
         this.sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -80,7 +87,9 @@ export class UserManagementComponent implements OnInit {
   
   loadUsers(): void {
     this.loading = true;
-    this.authService.getAllUsers().subscribe(
+    this.authService.getAllUsers().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       (users) => {
         this.users = users;
         this.loading = false;
@@ -354,5 +363,10 @@ export class UserManagementComponent implements OnInit {
     });
     
     return nombres.join(', ');
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

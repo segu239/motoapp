@@ -63,8 +63,11 @@ export class ArticulosPaginadosService {
 
     const urlConPaginacion = `${Urlartsucursal}?${params.toString()}`;
 
+    console.log('DEBUG: URL completa:', urlConPaginacion);
+    
     return this.http.get<any>(urlConPaginacion).pipe(
       tap(response => {
+        console.log('DEBUG: Respuesta del servidor:', response);
         if (response && !response.error && response.mensaje) {
           // Si la respuesta tiene formato paginado
           if (response.mensaje.data) {
