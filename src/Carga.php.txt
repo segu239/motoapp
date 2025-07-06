@@ -50,6 +50,9 @@ public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la ap
   $sortField = $this->get('sortField');
   $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
   
+  // NUEVO: Parámetro de sucursal para filtrado automático
+  $sucursal = $this->get('sucursal');
+  
   // NUEVO: Filtros dinámicos por columna (JSON desde frontend)
   $columnFilters = $this->get('filters');
   $filters = array();
@@ -59,6 +62,11 @@ public function Artsucursal_get() //TOMA DE artprev los datos y los sube a la ap
 
   // Construir la consulta base
   $this->db->from('artsucursal');
+  
+  // NUEVO: Aplicar filtro automático por sucursal mayorista
+  if ($sucursal === '5') {
+    $this->db->where('cod_deposito', 2);
+  }
   
   // NUEVO: Aplicar filtros dinámicos por columna
   if (!empty($filters)) {

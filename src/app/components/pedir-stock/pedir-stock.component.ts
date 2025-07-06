@@ -177,6 +177,9 @@ export class PedirStockComponent implements OnInit, OnDestroy {
 
   // Configurar suscripciones (siguiendo patrón de artículos)
   private setupSubscriptions(): void {
+    // ELIMINADO: Ya no necesario - el filtrado se maneja automáticamente en backend
+    // El backend aplica automáticamente el filtro cod_deposito=2 para sucursal=5
+
     // Suscribirse a productos
     this.subscriptions.push(
       this.stockPaginadosService.productos$.subscribe(productos => {
@@ -766,4 +769,6 @@ export class PedirStockComponent implements OnInit, OnDestroy {
     ];
     console.log('✅ Estado de tabla limpiado, usando columnas por defecto con depósito');
   }
+
+  // ELIMINADO: Método ya no necesario - los filtros se aplican automáticamente en backend
 }

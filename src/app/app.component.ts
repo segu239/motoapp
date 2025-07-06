@@ -17,5 +17,8 @@ export class AppComponent implements OnInit {
   ngOnInit() {
     console.log("APP COMPONENTS");
     init_plugins();
+    
+    // ELIMINADO: Ya no necesario - el filtrado se maneja automáticamente en backend
+    // El backend aplica automáticamente el filtro cod_deposito=2 para sucursal=5
   }
 }
