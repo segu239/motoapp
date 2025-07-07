@@ -86,6 +86,11 @@
                     <ng-template pTemplate="header">
                         <tr>
                             <!-- Columnas estáticas para mantener estado de filtros -->
+                            <th *ngIf="isColumnVisible('cd_articulo')" pSortableColumn="cd_articulo">
+                                Código
+                                <p-sortIcon field="cd_articulo"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cd_articulo" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
                             <th *ngIf="isColumnVisible('nomart')" pSortableColumn="nomart">
                                 Nombre
                                 <p-sortIcon field="nomart"></p-sortIcon>
@@ -121,25 +126,85 @@
                                 <p-sortIcon field="prefi4"></p-sortIcon>
                                 <p-columnFilter type="numeric" field="prefi4" display="menu"></p-columnFilter>
                             </th>
+                            <th *ngIf="isColumnVisible('exi1')" pSortableColumn="exi1">
+                                Existencia 1
+                                <p-sortIcon field="exi1"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="exi1" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('exi2')" pSortableColumn="exi2">
+                                Existencia 2
+                                <p-sortIcon field="exi2"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="exi2" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('exi3')" pSortableColumn="exi3">
+                                Existencia 3
+                                <p-sortIcon field="exi3"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="exi3" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('exi4')" pSortableColumn="exi4">
+                                Existencia 4
+                                <p-sortIcon field="exi4"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="exi4" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('exi5')" pSortableColumn="exi5">
+                                Existencia 5
+                                <p-sortIcon field="exi5"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="exi5" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cd_barra')" pSortableColumn="cd_barra">
+                                Código Barra
+                                <p-sortIcon field="cd_barra"></p-sortIcon>
+                                <p-columnFilter type="text" field="cd_barra" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
                             <th *ngIf="isColumnVisible('rubro')" pSortableColumn="rubro">
                                 Rubro
                                 <p-sortIcon field="rubro"></p-sortIcon>
                                 <p-columnFilter type="text" field="rubro" display="menu" matchMode="contains"></p-columnFilter>
                             </th>
-                            <th *ngIf="isColumnVisible('cod_deposito')" pSortableColumn="cod_deposito">
-                                Depósito
-                                <p-sortIcon field="cod_deposito"></p-sortIcon>
-                                <p-columnFilter type="numeric" field="cod_deposito" display="menu" matchMode="equals"></p-columnFilter>
-                            </th>
-                            <th *ngIf="isColumnVisible('cd_articulo')" pSortableColumn="cd_articulo">
-                                Código
-                                <p-sortIcon field="cd_articulo"></p-sortIcon>
-                                <p-columnFilter type="numeric" field="cd_articulo" display="menu" matchMode="equals"></p-columnFilter>
-                            </th>
                             <th *ngIf="isColumnVisible('estado')" pSortableColumn="estado">
                                 Estado
                                 <p-sortIcon field="estado"></p-sortIcon>
                                 <p-columnFilter type="text" field="estado" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cd_proveedor')" pSortableColumn="cd_proveedor">
+                                Proveedor
+                                <p-sortIcon field="cd_proveedor"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cd_proveedor" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('idart')" pSortableColumn="idart">
+                                ID Art
+                                <p-sortIcon field="idart"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="idart" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cod_iva')" pSortableColumn="cod_iva">
+                                IVA
+                                <p-sortIcon field="cod_iva"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cod_iva" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('precostosi')" pSortableColumn="precostosi">
+                                Costo s/IVA
+                                <p-sortIcon field="precostosi"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="precostosi" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('margen')" pSortableColumn="margen">
+                                Margen
+                                <p-sortIcon field="margen"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="margen" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('descuento')" pSortableColumn="descuento">
+                                Descuento
+                                <p-sortIcon field="descuento"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="descuento" display="menu"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cod_deposito')" pSortableColumn="cod_deposito">
+                                Cód. Depósito
+                                <p-sortIcon field="cod_deposito"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cod_deposito" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('tipo_moneda')" pSortableColumn="tipo_moneda">
+                                Tipo Moneda
+                                <p-sortIcon field="tipo_moneda"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="tipo_moneda" display="menu" matchMode="equals"></p-columnFilter>
                             </th>
                             <th>Editar</th>
                             <th>Eliminar</th>
@@ -147,6 +212,9 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-articulo>
                         <tr [class.table-warning]="articulo?._precioError">
+                            <td *ngIf="isColumnVisible('cd_articulo')">
+                                {{ articulo.cd_articulo }}
+                            </td>
                             <td *ngIf="isColumnVisible('nomart')">
                                 {{ articulo.nomart }}
                             </td>
@@ -155,7 +223,7 @@
                             </td>
                             <td *ngIf="isColumnVisible('precon')">
                                 <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                    {{ articulo.precon | number:'1.2-2' }}
+                                    {{ articulo.precon | number:'1.4-4' }}
                                     <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
                                        class="fa fa-exclamation-triangle text-danger" 
                                        title="Posible error en precio por falla en la conversión de moneda"></i>
@@ -163,7 +231,7 @@
                             </td>
                             <td *ngIf="isColumnVisible('prefi1')">
                                 <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                    {{ articulo.prefi1 | number:'1.2-2' }}
+                                    {{ articulo.prefi1 | number:'1.4-4' }}
                                     <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
                                        class="fa fa-exclamation-triangle text-danger" 
                                        title="Posible error en precio por falla en la conversión de moneda"></i>
@@ -171,7 +239,7 @@
                             </td>
                             <td *ngIf="isColumnVisible('prefi2')">
                                 <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                    {{ articulo.prefi2 | number:'1.2-2' }}
+                                    {{ articulo.prefi2 | number:'1.4-4' }}
                                     <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
                                        class="fa fa-exclamation-triangle text-danger" 
                                        title="Posible error en precio por falla en la conversión de moneda"></i>
@@ -179,7 +247,7 @@
                             </td>
                             <td *ngIf="isColumnVisible('prefi3')">
                                 <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                    {{ articulo.prefi3 | number:'1.2-2' }}
+                                    {{ articulo.prefi3 | number:'1.4-4' }}
                                     <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
                                        class="fa fa-exclamation-triangle text-danger" 
                                        title="Posible error en precio por falla en la conversión de moneda"></i>
@@ -187,23 +255,64 @@
                             </td>
                             <td *ngIf="isColumnVisible('prefi4')">
                                 <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
-                                    {{ articulo.prefi4 | number:'1.2-2' }}
+                                    {{ articulo.prefi4 | number:'1.4-4' }}
                                     <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
                                        class="fa fa-exclamation-triangle text-danger" 
                                        title="Posible error en precio por falla en la conversión de moneda"></i>
                                 </span>
                             </td>
+                            <td *ngIf="isColumnVisible('exi1')">
+                                {{ articulo.exi1 | number:'1.0-0' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('exi2')">
+                                {{ articulo.exi2 | number:'1.0-0' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('exi3')">
+                                {{ articulo.exi3 | number:'1.0-0' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('exi4')">
+                                {{ articulo.exi4 | number:'1.0-0' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('exi5')">
+                                {{ articulo.exi5 | number:'1.0-0' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('cd_barra')">
+                                {{ articulo.cd_barra }}
+                            </td>
                             <td *ngIf="isColumnVisible('rubro')">
                                 {{ articulo.rubro }}
+                            </td>
+                            <td *ngIf="isColumnVisible('estado')">
+                                {{ articulo.estado }}
+                            </td>
+                            <td *ngIf="isColumnVisible('cd_proveedor')">
+                                {{ articulo.cd_proveedor }}
+                            </td>
+                            <td *ngIf="isColumnVisible('idart')">
+                                {{ articulo.idart }}
+                            </td>
+                            <td *ngIf="isColumnVisible('cod_iva')">
+                                {{ articulo.cod_iva }}
+                            </td>
+                            <td *ngIf="isColumnVisible('precostosi')">
+                                <span [class.text-danger]="articulo?._precioError && articulo?.tipo_moneda !== 1">
+                                    {{ articulo.precostosi | number:'1.4-4' }}
+                                    <i *ngIf="articulo?._precioError && articulo?.tipo_moneda !== 1" 
+                                       class="fa fa-exclamation-triangle text-danger" 
+                                       title="Posible error en precio por falla en la conversión de moneda"></i>
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('margen')">
+                                {{ articulo.margen | number:'1.2-2' }}
+                            </td>
+                            <td *ngIf="isColumnVisible('descuento')">
+                                {{ articulo.descuento | number:'1.2-2' }}
                             </td>
                             <td *ngIf="isColumnVisible('cod_deposito')">
                                 {{ articulo.cod_deposito }}
                             </td>
-                            <td *ngIf="isColumnVisible('cd_articulo')">
-                                {{ articulo.cd_articulo }}
-                            </td>
-                            <td *ngIf="isColumnVisible('estado')">
-                                {{ articulo.estado }}
+                            <td *ngIf="isColumnVisible('tipo_moneda')">
+                                {{ obtenerNombreMoneda(articulo.tipo_moneda) }}
                             </td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
@@ -217,7 +326,7 @@
                     </ng-template>
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="12" class="text-center p-4">
+                            <td colspan="25" class="text-center p-4">
                                 <div *ngIf="loading">
                                     <i class="fa fa-spinner fa-spin fa-2x mb-2"></i>
                                     <p>Cargando artículos...</p>
