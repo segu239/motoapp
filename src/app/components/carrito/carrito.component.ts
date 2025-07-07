@@ -38,7 +38,7 @@ export class CarritoComponent implements OnDestroy {
   public tipoDoc: string = "FC";
   public numerocomprobante: string;
   public numerocomprobanteImpresion: string;
-  public puntoventa: number = 3;
+  public puntoventa: number = 0; // Se asignará dinámicamente según la sucursal
   private myRegex = new RegExp('^[0-9]+$');
   public sucursal: string = '';
   public sucursalNombre: string = '';
@@ -68,6 +68,7 @@ export class CarritoComponent implements OnDestroy {
     this.getNombreSucursal();
     this.getVendedores();
     this.usuario = sessionStorage.getItem('usernameOp');
+    this.initializePuntoVenta(); // Inicializar punto de venta según sucursal
     
     // Validación defensiva para datos del cliente
     const clienteData = sessionStorage.getItem('datoscliente');
@@ -213,6 +214,21 @@ export class CarritoComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Inicializa el punto de venta con el número de sucursal actual
+   * Se ejecuta al cargar el componente para asegurar consistencia
+   */
+  private initializePuntoVenta(): void {
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (sucursal) {
+      this.puntoventa = parseInt(sucursal);
+      console.log('Punto de venta inicializado correctamente:', this.puntoventa, 'para sucursal:', sucursal);
+    } else {
+      console.warn('No se encontró sucursal en sessionStorage - usando puntoventa = 0');
+      this.puntoventa = 0;
+    }
+  }
+
   tipoDocChange(event) {
     console.log(event.target.value);
     this.tipoDoc = event.target.value;
@@ -221,38 +237,44 @@ export class CarritoComponent implements OnDestroy {
       // se cambio esto para sacar el punto de venta y ponerle el valor de la sucursal----
       this.puntoVenta_flag = false;//this.puntoVenta_flag = true;
       //se agregó esto para que el punto de venta sea igual a la sucursal-------------------
-      this.puntoventa = parseInt(this.sucursal);
-      //console.log('PUNTO DE VENTA:' + this.puntoventa);
+      // Asegurar que siempre use la sucursal actual de forma segura
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
+      console.log('PUNTO DE VENTA FC:', this.puntoventa);
       this.letras_flag = true;
     }
     else if (this.tipoDoc == "NC") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de crédito, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "NV") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de venta, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "ND") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de débito, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "PR") {
       this.inputOPFlag = false;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para presupuestos, también usar el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "CS") {
       this.inputOPFlag = false;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para consultas, también usar el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
   }
@@ -301,6 +323,13 @@ export class CarritoComponent implements OnDestroy {
         this.indiceTipoDoc = "";
         console.log('TIPO DOC:' + this.tipoDoc);
         console.log('PUNTO VENTA:' + this.puntoventa);
+        
+        // Validación adicional: asegurar que puntoventa siempre coincida con sucursal
+        const sucursalActual = parseInt(sessionStorage.getItem('sucursal') || '0');
+        if (this.puntoventa !== sucursalActual) {
+          console.warn('Corrigiendo puntoventa:', this.puntoventa, '-> ', sucursalActual);
+          this.puntoventa = sucursalActual;
+        }
         if (this.tipoDoc == undefined || this.tipoDoc == "" || this.puntoventa == undefined)//if (this.tipoDoc == undefined || this.tipoDoc == "" || this.numerocomprobante == undefined || this.numerocomprobante == "" || this.puntoventa == undefined || this.puntoventa == "") 
         {
           Swal.fire({
