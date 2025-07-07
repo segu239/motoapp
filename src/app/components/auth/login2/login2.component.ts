@@ -1,23 +1,26 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { CryptoService } from '../../../services/crypto.service';
 import { CrudService } from '../../../services/crud.service';
 import Swal from 'sweetalert2';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-login2',
   templateUrl: './login2.component.html',
   styleUrls: ['./login2.component.css']
 })
-export class Login2Component implements OnInit {
+export class Login2Component implements OnInit, OnDestroy {
   loginForm: FormGroup;
   loading = false;
   rememberMe = false;
   sucursal: string | null = null;
   errorMessage: string | null = null;
   sucursales: any[] = [];
+  private destroy$ = new Subject<void>();
   
   constructor(
     private fb: FormBuilder,
@@ -40,7 +43,9 @@ export class Login2Component implements OnInit {
   }
   
   loadSucursales(): void {
-    this.crudService.getListSnap('sucursales').subscribe(
+    this.crudService.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       data => {
         this.sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -218,5 +223,10 @@ export class Login2Component implements OnInit {
   
   onSucursalChange(event: any): void {
     this.sucursal = event.target.value;
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 } 

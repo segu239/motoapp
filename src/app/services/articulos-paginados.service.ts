@@ -33,22 +33,11 @@ export class ArticulosPaginadosService {
   public totalItems$ = this.totalItemsSubject.asObservable();
   public terminoBusqueda$ = this.terminoBusquedaSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient
+  ) {}
 
-  // Método auxiliar para obtener filtros por defecto según sucursal
-  private getDefaultFilters(): any {
-    const sucursal = sessionStorage.getItem('sucursal');
-    const esMayorista = sucursal === '5';
-    
-    if (esMayorista) {
-      // Formato que espera el backend según el código PHP
-      return {
-        cod_deposito: [{ value: 2, matchMode: 'equals' }]
-      };
-    }
-    
-    return {};
-  }
+  // ELIMINADO: Método completo ya no necesario
 
   // Cargar una página específica
   cargarPagina(pagina: number): Observable<any> {
@@ -63,17 +52,22 @@ export class ArticulosPaginadosService {
       limit: this.tamañoPagina.toString()
     });
 
-    // Aplicar filtros por defecto según sucursal
-    const defaultFilters = this.getDefaultFilters();
-    if (Object.keys(defaultFilters).length > 0) {
-      params.append('filters', JSON.stringify(defaultFilters));
-      console.log('ArticulosPaginados: Aplicando filtros por defecto:', defaultFilters);
+    // NUEVO: Incluir parámetro de sucursal para filtrado automático en backend
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (sucursal) {
+      params.append('sucursal', sucursal);
+      console.log('ArticulosPaginados: Enviando sucursal al backend:', sucursal);
     }
+
+    // ELIMINADO: Filtros por defecto ya no necesarios - se aplican automáticamente en backend
 
     const urlConPaginacion = `${Urlartsucursal}?${params.toString()}`;
 
+    console.log('DEBUG: URL completa:', urlConPaginacion);
+    
     return this.http.get<any>(urlConPaginacion).pipe(
       tap(response => {
+        console.log('DEBUG: Respuesta del servidor:', response);
         if (response && !response.error && response.mensaje) {
           // Si la respuesta tiene formato paginado
           if (response.mensaje.data) {
@@ -118,6 +112,13 @@ export class ArticulosPaginadosService {
       page: pagina.toString(),
       limit: this.tamañoPagina.toString()
     });
+
+    // NUEVO: Incluir parámetro de sucursal para filtrado automático en backend
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (sucursal) {
+      params.append('sucursal', sucursal);
+      console.log('ArticulosPaginados (búsqueda): Enviando sucursal al backend:', sucursal);
+    }
 
     const urlConBusqueda = `${Urlartsucursal}?${params.toString()}`;
 
@@ -303,14 +304,20 @@ export class ArticulosPaginadosService {
   ): Observable<any> {
     this.cargandoSubject.next(true);
     
-    // Combinar filtros del usuario con filtros por defecto
-    const defaultFilters = this.getDefaultFilters();
-    const combinedFilters = { ...defaultFilters, ...filters };
+    // Solo usar filtros del usuario (los filtros automáticos se aplican en backend)
+    const combinedFilters = filters;
     
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString()
     });
+    
+    // NUEVO: Incluir parámetro de sucursal para filtrado automático en backend
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (sucursal) {
+      params.append('sucursal', sucursal);
+      console.log('ArticulosPaginados (lazy loading): Enviando sucursal al backend:', sucursal);
+    }
     
     // Agregar ordenamiento
     if (sortField) {
@@ -380,11 +387,11 @@ export class ArticulosPaginadosService {
       cd_barra: item.cd_barra || item.codigobarra || '',
       marca: item.marca || '',
       rubro: item.rubro || '',
-      precon: parseFloat(item.precon || '0'),
-      prefi1: parseFloat(item.prefi1 || '0'),
-      prefi2: parseFloat(item.prefi2 || '0'),
-      prefi3: parseFloat(item.prefi3 || '0'),
-      prefi4: parseFloat(item.prefi4 || '0'),
+      precon: parseFloat(parseFloat(item.precon || '0').toFixed(4)),
+      prefi1: parseFloat(parseFloat(item.prefi1 || '0').toFixed(4)),
+      prefi2: parseFloat(parseFloat(item.prefi2 || '0').toFixed(4)),
+      prefi3: parseFloat(parseFloat(item.prefi3 || '0').toFixed(4)),
+      prefi4: parseFloat(parseFloat(item.prefi4 || '0').toFixed(4)),
       exi1: parseFloat(item.exi1 || '0'),
       exi2: parseFloat(item.exi2 || '0'),
       exi3: parseFloat(item.exi3 || '0'),
@@ -392,7 +399,11 @@ export class ArticulosPaginadosService {
       exi5: parseFloat(item.exi5 || '0'),
       estado: item.estado || '',
       cod_deposito: parseInt(item.cod_deposito) || 0,
-      tipo_moneda: item.tipo_moneda || 1
+      tipo_moneda: item.tipo_moneda || 1,
+      prebsiva: parseFloat(parseFloat(item.prebsiva || '0').toFixed(4)),
+      precostosi: parseFloat(parseFloat(item.precostosi || '0').toFixed(4)),
+      descuento: parseFloat(parseFloat(item.descuento || '0').toFixed(4)),
+      margen: parseFloat(parseFloat(item.margen || '0').toFixed(4))
     }));
   }
 }

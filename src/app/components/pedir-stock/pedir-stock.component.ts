@@ -177,6 +177,9 @@ export class PedirStockComponent implements OnInit, OnDestroy {
 
   // Configurar suscripciones (siguiendo patrón de artículos)
   private setupSubscriptions(): void {
+    // ELIMINADO: Ya no necesario - el filtrado se maneja automáticamente en backend
+    // El backend aplica automáticamente el filtro cod_deposito=2 para sucursal=5
+
     // Suscribirse a productos
     this.subscriptions.push(
       this.stockPaginadosService.productos$.subscribe(productos => {
@@ -711,7 +714,7 @@ export class PedirStockComponent implements OnInit, OnDestroy {
         timestamp: Date.now()
       };
 
-      localStorage.setItem('pedir_stock_table_state', JSON.stringify(state));
+      sessionStorage.setItem('pedir_stock_table_state', JSON.stringify(state));
       console.log('💾 Estado de tabla guardado:', state);
     } catch (error) {
       console.warn('Error guardando estado de la tabla:', error);
@@ -721,7 +724,7 @@ export class PedirStockComponent implements OnInit, OnDestroy {
   // NUEVO: Restaurar estado de la tabla (copiado de articulos)
   private restoreTableState(): void {
     try {
-      const savedState = localStorage.getItem('pedir_stock_table_state');
+      const savedState = sessionStorage.getItem('pedir_stock_table_state');
       
       if (savedState) {
         const state = JSON.parse(savedState);
@@ -752,7 +755,7 @@ export class PedirStockComponent implements OnInit, OnDestroy {
 
   // NUEVO: Método para limpiar estado guardado y usar defaults
   public limpiarEstadoTabla(): void {
-    localStorage.removeItem('pedir_stock_table_state');
+    sessionStorage.removeItem('pedir_stock_table_state');
     // Resetear a valores por defecto
     this._selectedColumns = [
       this.cols[0], // nomart
@@ -766,4 +769,6 @@ export class PedirStockComponent implements OnInit, OnDestroy {
     ];
     console.log('✅ Estado de tabla limpiado, usando columnas por defecto con depósito');
   }
+
+  // ELIMINADO: Método ya no necesario - los filtros se aplican automáticamente en backend
 }

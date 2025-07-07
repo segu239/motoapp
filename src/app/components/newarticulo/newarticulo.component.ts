@@ -469,7 +469,7 @@ export class NewarticuloComponent implements AfterViewInit {
       }
       
       console.log('Precio base sin IVA calculado:', precioBase);
-      this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(2));
+      this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(4));
       
       // Si tenemos descuento y margen, calculamos el precio sin IVA (costo)
       if (margenPorcentaje > 0 || descuentoPorcentaje > 0) {
@@ -485,10 +485,10 @@ export class NewarticuloComponent implements AfterViewInit {
         }
         
         console.log('Precio sin IVA (costo) calculado:', precioSinIva);
-        this.nuevoarticuloForm.get('precostosi')?.setValue(precioSinIva.toFixed(2));
+        this.nuevoarticuloForm.get('precostosi')?.setValue(precioSinIva.toFixed(4));
       } else {
         // Si no hay margen ni descuento, el precio sin IVA es igual al precio base
-        this.nuevoarticuloForm.get('precostosi')?.setValue(precioBase.toFixed(2));
+        this.nuevoarticuloForm.get('precostosi')?.setValue(precioBase.toFixed(4));
       }
       
       // Calcular precios de lista
@@ -534,14 +534,14 @@ export class NewarticuloComponent implements AfterViewInit {
       console.log('Precio base calculado:', precioBase);
       
       // Actualizar precio base sin IVA
-      this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(2));
+      this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(4));
       
       // Calcular precio final con IVA
       const precioFinal = precioBase * (1 + (porcentajeIva / 100));
       console.log('Precio final con IVA:', precioFinal);
       
       // Actualizar precio final
-      this.nuevoarticuloForm.get('precon')?.setValue(precioFinal.toFixed(2));
+      this.nuevoarticuloForm.get('precon')?.setValue(precioFinal.toFixed(4));
       
       // Calcular precios de lista
       this.calcularPreciosLista();
@@ -575,7 +575,7 @@ export class NewarticuloComponent implements AfterViewInit {
     console.log('Precio base final:', precioBase);
     
     // Solo actualizamos el precio base, NO el precio sin IVA
-    this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(2));
+    this.nuevoarticuloForm.get('prebsiva')?.setValue(precioBase.toFixed(4));
     
     // Calculamos el precio final
     this.calcularPrecioFinalInterno();
@@ -592,7 +592,7 @@ export class NewarticuloComponent implements AfterViewInit {
     const precioFinal = precioBase * (1 + (porcentajeIva / 100));
     
     // Actualizar precon
-    this.nuevoarticuloForm.get('precon')?.setValue(precioFinal.toFixed(2));
+    this.nuevoarticuloForm.get('precon')?.setValue(precioFinal.toFixed(4));
     
     // Calcular precios de lista
     this.calcularPreciosLista();
@@ -633,7 +633,7 @@ export class NewarticuloComponent implements AfterViewInit {
       // Calcular el margen basado en la diferencia entre el precio base y el precio neto
       const margenPorcentaje = ((precioBase - precioNeto) / precioNeto) * 100;
       
-      this.nuevoarticuloForm.get('margen')?.setValue(margenPorcentaje.toFixed(2));
+      this.nuevoarticuloForm.get('margen')?.setValue(margenPorcentaje.toFixed(4));
       
       this.calcularPrecioFinalInterno();
     } finally {
@@ -684,10 +684,10 @@ export class NewarticuloComponent implements AfterViewInit {
       
       // Calcular el nuevo precio final con el nuevo IVA
       const nuevoFinal = precioBase * (1 + (porcentajeIva / 100));
-      console.log('Nuevo precio final calculado:', nuevoFinal.toFixed(2));
+      console.log('Nuevo precio final calculado:', nuevoFinal.toFixed(4));
       
       // Actualizar el precio final
-      this.nuevoarticuloForm.get('precon')?.setValue(nuevoFinal.toFixed(2));
+      this.nuevoarticuloForm.get('precon')?.setValue(nuevoFinal.toFixed(4));
       
       // Actualizar precios de lista con el nuevo precio final
       this.calcularPreciosLista();
@@ -802,8 +802,8 @@ export class NewarticuloComponent implements AfterViewInit {
                           parseFloat(lista1.preciof21) : 
                           parseFloat(lista1.preciof105);
       const valorPrefi1 = precon + (precon * porcentaje / 100);
-      this.nuevoarticuloForm.get('prefi1')?.setValue(valorPrefi1.toFixed(2));
-      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(2)}`);
+      this.nuevoarticuloForm.get('prefi1')?.setValue(valorPrefi1.toFixed(4));
+      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 1 con la moneda seleccionada');
       this.nuevoarticuloForm.get('prefi1')?.setValue('0.00');
@@ -815,8 +815,8 @@ export class NewarticuloComponent implements AfterViewInit {
                           parseFloat(lista2.preciof21) : 
                           parseFloat(lista2.preciof105);
       const valorPrefi2 = precon + (precon * porcentaje / 100);
-      this.nuevoarticuloForm.get('prefi2')?.setValue(valorPrefi2.toFixed(2));
-      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(2)}`);
+      this.nuevoarticuloForm.get('prefi2')?.setValue(valorPrefi2.toFixed(4));
+      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 2 con la moneda seleccionada');
       this.nuevoarticuloForm.get('prefi2')?.setValue('0.00');
@@ -828,8 +828,8 @@ export class NewarticuloComponent implements AfterViewInit {
                           parseFloat(lista3.preciof21) : 
                           parseFloat(lista3.preciof105);
       const valorPrefi3 = precon + (precon * porcentaje / 100);
-      this.nuevoarticuloForm.get('prefi3')?.setValue(valorPrefi3.toFixed(2));
-      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(2)}`);
+      this.nuevoarticuloForm.get('prefi3')?.setValue(valorPrefi3.toFixed(4));
+      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 3 con la moneda seleccionada');
       this.nuevoarticuloForm.get('prefi3')?.setValue('0.00');
@@ -841,8 +841,8 @@ export class NewarticuloComponent implements AfterViewInit {
                           parseFloat(lista4.preciof21) : 
                           parseFloat(lista4.preciof105);
       const valorPrefi4 = precon + (precon * porcentaje / 100);
-      this.nuevoarticuloForm.get('prefi4')?.setValue(valorPrefi4.toFixed(2));
-      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(2)}`);
+      this.nuevoarticuloForm.get('prefi4')?.setValue(valorPrefi4.toFixed(4));
+      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 4 con la moneda seleccionada');
       this.nuevoarticuloForm.get('prefi4')?.setValue('0.00');
@@ -893,7 +893,7 @@ export class NewarticuloComponent implements AfterViewInit {
       const monedaInfo = this.tiposMoneda?.find((m: any) => parseInt(m.cod_mone) === codMone);
       const nombreMoneda = monedaInfo ? monedaInfo.moneda : `Moneda ${codMone}`;
       
-      this.infoTasaCambio = `Referencia: 1 ${nombreMoneda} = ${tasaCambioInfo.toFixed(2)} pesos`;
+      this.infoTasaCambio = `Referencia: 1 ${nombreMoneda} = ${tasaCambioInfo.toFixed(4)} pesos`;
       console.log(`Moneda seleccionada: ${codMone}, tasa de cambio referencial: ${tasaCambioInfo}`);
     } else {
       console.log(`No se encontró valor de cambio vigente para la moneda ${codMone}`);

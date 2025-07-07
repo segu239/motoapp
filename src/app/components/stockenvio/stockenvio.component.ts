@@ -177,6 +177,9 @@ export class StockenvioComponent implements OnInit, OnDestroy{
 
   // Configurar suscripciones (siguiendo patrón de artículos)
   private setupSubscriptions(): void {
+    // ELIMINADO: Ya no necesario - el filtrado se maneja automáticamente en backend
+    // El backend aplica automáticamente el filtro cod_deposito=2 para sucursal=5
+
     // Suscribirse a productos
     this.subscriptions.push(
       this.stockPaginadosService.productos$.subscribe(productos => {
@@ -639,7 +642,7 @@ export class StockenvioComponent implements OnInit, OnDestroy{
     });
   }
   
-  // NUEVO: Guardar estado de la tabla en localStorage
+  // NUEVO: Guardar estado de la tabla en sessionStorage
   saveTableState(): void {
     const state = {
       first: this.first,
@@ -649,12 +652,12 @@ export class StockenvioComponent implements OnInit, OnDestroy{
       filters: this.filters,
       selectedColumns: this._selectedColumns.map(col => col.field)
     };
-    localStorage.setItem('stockenvio_table_state', JSON.stringify(state));
+    sessionStorage.setItem('stockenvio_table_state', JSON.stringify(state));
   }
   
-  // NUEVO: Restaurar estado de la tabla desde localStorage
+  // NUEVO: Restaurar estado de la tabla desde sessionStorage
   restoreTableState(): void {
-    const state = localStorage.getItem('stockenvio_table_state');
+    const state = sessionStorage.getItem('stockenvio_table_state');
     if (state) {
       try {
         const parsedState = JSON.parse(state);
@@ -711,4 +714,6 @@ export class StockenvioComponent implements OnInit, OnDestroy{
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+
+  // ELIMINADO: Método ya no necesario - los filtros se aplican automáticamente en backend
 }

@@ -1,6 +1,7 @@
-import { Component,OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 //agregar importacion de router para navegacion
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { CarritoService } from 'src/app/services/carrito.service';
 import { SubirdataService } from 'src/app/services/subirdata.service';
 import { CargardataService } from 'src/app/services/cargardata.service';
@@ -28,7 +29,7 @@ interface Cliente {
   templateUrl: './carrito.component.html',
   styleUrls: ['./carrito.component.css']
 })
-export class CarritoComponent {
+export class CarritoComponent implements OnDestroy {
   ref: DynamicDialogRef | undefined;
   public FechaCalend: any;
   public itemsEnCarrito: any[] = [];
@@ -37,7 +38,7 @@ export class CarritoComponent {
   public tipoDoc: string = "FC";
   public numerocomprobante: string;
   public numerocomprobanteImpresion: string;
-  public puntoventa: number = 3;
+  public puntoventa: number = 0; // Se asignará dinámicamente según la sucursal
   private myRegex = new RegExp('^[0-9]+$');
   public sucursal: string = '';
   public sucursalNombre: string = '';
@@ -52,27 +53,53 @@ export class CarritoComponent {
   public cliente: any;
   public usuario: any;
   itemsConTipoPago: any[] = [];
+  
+  private subscriptions: Subscription[] = [];
   constructor(private _cargardata: CargardataService, private bot: MotomatchBotService, private _crud: CrudService, private _subirdata: SubirdataService, private _carrito: CarritoService, private router: Router) {
+    // Verificar autenticación antes de inicializar
+    if (!sessionStorage.getItem('usernameOp')) {
+      this.router.navigate(['/login2']);
+      return;
+    }
+
     this.FechaCalend = new Date();
     this.getItemsCarrito();
     this.calculoTotal();
     this.getNombreSucursal();
     this.getVendedores();
-    this.usuario = sessionStorage.getItem('usernameOp')
-    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
-    this.initLetraValue();
+    this.usuario = sessionStorage.getItem('usernameOp');
+    this.initializePuntoVenta(); // Inicializar punto de venta según sucursal
+    
+    // Validación defensiva para datos del cliente
+    const clienteData = sessionStorage.getItem('datoscliente');
+    if (clienteData) {
+      try {
+        this.cliente = JSON.parse(clienteData);
+        this.initLetraValue();
+      } catch (error) {
+        console.error('Error al parsear datos del cliente:', error);
+        // Establecer cliente por defecto en lugar de redirigir
+        this.cliente = { cod_iva: 2 }; // Consumidor final por defecto
+        this.initLetraValue();
+      }
+    } else {
+      // Si no hay datos del cliente, establecer valores por defecto
+      this.cliente = { cod_iva: 2 }; // Consumidor final por defecto
+      this.initLetraValue();
+    }
   }
   ngOnInit() {
     this.cargarTarjetas();
   }
   cargarTarjetas() {
-    this._cargardata.tarjcredito().subscribe((data: any) => {
+    const tarjetasSubscription = this._cargardata.tarjcredito().subscribe((data: any) => {
       this.tarjetas = data.mensaje;
       console.log('Tarjetas obtenidas:', this.tarjetas);
      // this.agregarTipoPago();
      this.actualizarItemsConTipoPago();
       console.log('Items en carrito después de agregar tipoPago:', this.itemsEnCarrito);
     });
+    this.subscriptions.push(tarjetasSubscription);
   }
  /*  agregarTipoPago() {
     const tarjetaMap = new Map();
@@ -107,22 +134,35 @@ export class CarritoComponent {
       });
     }
   getItemsCarrito() {
-    let items = sessionStorage.getItem('carrito');
+    const items = sessionStorage.getItem('carrito');
     if (items) {
-      this.itemsEnCarrito = JSON.parse(items);
+      try {
+        this.itemsEnCarrito = JSON.parse(items);
+        // Validar que sea un array válido
+        if (!Array.isArray(this.itemsEnCarrito)) {
+          this.itemsEnCarrito = [];
+        }
+      } catch (error) {
+        console.error('Error al parsear items del carrito:', error);
+        this.itemsEnCarrito = [];
+        sessionStorage.removeItem('carrito');
+      }
+    } else {
+      this.itemsEnCarrito = [];
     }
   }
   getVendedores() {
-    this._cargardata.vendedores().subscribe((res: any) => {
+    const vendedoresSubscription = this._cargardata.vendedores().subscribe((res: any) => {
       this.vendedores = res.mensaje;
       console.log(this.vendedores);
-    })
+    });
+    this.subscriptions.push(vendedoresSubscription);
   }
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
     console.log(this.sucursal);
 
-    this._crud.getListSnap('sucursales').subscribe(
+    const sucursalesSubscription = this._crud.getListSnap('sucursales').subscribe(
       data => {
         const sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -150,9 +190,15 @@ export class CarritoComponent {
         this.sucursalNombre = 'Sucursal ' + this.sucursal;
       }
     );
+    this.subscriptions.push(sucursalesSubscription);
   }
 
   initLetraValue() {
+    if (!this.cliente) {
+      this.letraValue = "B"; // Valor por defecto
+      return;
+    }
+    
     if (this.cliente.cod_iva == 2)//consumidor final
     { this.letraValue = "B"; }
     else if (this.cliente.cod_iva == 1)//excento
@@ -168,6 +214,21 @@ export class CarritoComponent {
     }
   }
 
+  /**
+   * Inicializa el punto de venta con el número de sucursal actual
+   * Se ejecuta al cargar el componente para asegurar consistencia
+   */
+  private initializePuntoVenta(): void {
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (sucursal) {
+      this.puntoventa = parseInt(sucursal);
+      console.log('Punto de venta inicializado correctamente:', this.puntoventa, 'para sucursal:', sucursal);
+    } else {
+      console.warn('No se encontró sucursal en sessionStorage - usando puntoventa = 0');
+      this.puntoventa = 0;
+    }
+  }
+
   tipoDocChange(event) {
     console.log(event.target.value);
     this.tipoDoc = event.target.value;
@@ -176,38 +237,44 @@ export class CarritoComponent {
       // se cambio esto para sacar el punto de venta y ponerle el valor de la sucursal----
       this.puntoVenta_flag = false;//this.puntoVenta_flag = true;
       //se agregó esto para que el punto de venta sea igual a la sucursal-------------------
-      this.puntoventa = parseInt(this.sucursal);
-      //console.log('PUNTO DE VENTA:' + this.puntoventa);
+      // Asegurar que siempre use la sucursal actual de forma segura
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
+      console.log('PUNTO DE VENTA FC:', this.puntoventa);
       this.letras_flag = true;
     }
     else if (this.tipoDoc == "NC") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de crédito, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "NV") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de venta, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "ND") {
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para notas de débito, mantener el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "PR") {
       this.inputOPFlag = false;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para presupuestos, también usar el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "CS") {
       this.inputOPFlag = false;
       this.puntoVenta_flag = false;
-      this.puntoventa = 0;
+      // Para consultas, también usar el punto de venta de la sucursal
+      this.puntoventa = parseInt(this.sucursal) || parseInt(sessionStorage.getItem('sucursal') || '0');
       this.letras_flag = false;
     }
   }
@@ -233,6 +300,7 @@ export class CarritoComponent {
         sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
         this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
         this.calculoTotal();
+        this.actualizarItemsConTipoPago();
       }
     })
   }
@@ -240,8 +308,9 @@ export class CarritoComponent {
   calculoTotal() {
     this.suma = 0;
     for (let item of this.itemsEnCarrito) {
-      this.suma += item.precio * item.cantidad;
+      this.suma += parseFloat((item.precio * item.cantidad).toFixed(4));
     }
+    this.suma = parseFloat(this.suma.toFixed(4));
   }
   async finalizar() {
     if (this.itemsEnCarrito.length > 0) {//hacer si 
@@ -254,6 +323,13 @@ export class CarritoComponent {
         this.indiceTipoDoc = "";
         console.log('TIPO DOC:' + this.tipoDoc);
         console.log('PUNTO VENTA:' + this.puntoventa);
+        
+        // Validación adicional: asegurar que puntoventa siempre coincida con sucursal
+        const sucursalActual = parseInt(sessionStorage.getItem('sucursal') || '0');
+        if (this.puntoventa !== sucursalActual) {
+          console.warn('Corrigiendo puntoventa:', this.puntoventa, '-> ', sucursalActual);
+          this.puntoventa = sucursalActual;
+        }
         if (this.tipoDoc == undefined || this.tipoDoc == "" || this.puntoventa == undefined)//if (this.tipoDoc == undefined || this.tipoDoc == "" || this.numerocomprobante == undefined || this.numerocomprobante == "" || this.puntoventa == undefined || this.puntoventa == "") 
         {
           Swal.fire({
@@ -295,10 +371,18 @@ export class CarritoComponent {
             this.numerocomprobante = numero.toString();
           }
           let emailOp = sessionStorage.getItem('emailOp');
+          // Crear datos para descuento de stock (con id_articulo)
+          let stockData = this.itemsEnCarrito.map(obj => {
+            return {
+              id_articulo: obj.id_articulo,
+              cantidad: obj.cantidad,
+              tipodoc: this.tipoDoc
+            };
+          });
+
+          // Crear datos para guardar en psucursal (sin id_articulo)
           let result = this.itemsEnCarrito.map(obj => {
-            // Crear una copia del objeto original sin el campo id_articulo
             const { id_articulo, ...objSinIdArticulo } = obj;
-            
             return {
               ...objSinIdArticulo,
               emailop: emailOp,
@@ -307,8 +391,7 @@ export class CarritoComponent {
               numerocomprobante: this.numerocomprobante,
               estado: "NP",
               idven: this.vendedoresV,
-              // Asignar al campo idart de psucursal3 el campo id_articulo de artsucursal
-              idart: id_articulo || obj.idart
+              idart: obj.id_articulo || 0 // Usar id_articulo en el campo idart para psucursal
             };
           });
           this.numerocomprobanteImpresion = this.numerocomprobante;
@@ -333,10 +416,29 @@ export class CarritoComponent {
           
           // Usamos el objeto de mapeo, con fallback a 0 si no existe
           exi = mappedValues[sucursal] || 0;
-          this._subirdata.editarStockArtSucxManagedPHP(result, exi).pipe(take(1)).subscribe((data: any) => {
-            console.log(data);
+          this._subirdata.editarStockArtSucxManagedPHP(stockData, exi).pipe(take(1)).subscribe({
+            next: (data: any) => {
+              console.log('Stock actualizado:', data);
+              if (!data.error) {
+                // Solo si el descuento fue exitoso, proceder con el pedido
+                this.agregarPedido(result, sucursal);
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudo actualizar el stock: ' + data.mensaje
+                });
+              }
+            },
+            error: (error) => {
+              console.error('Error al actualizar stock:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error de conexión al actualizar stock'
+              });
+            }
           });
-          this.agregarPedido(result, sucursal);
         }
       }
     }
@@ -394,8 +496,8 @@ export class CarritoComponent {
       emitido: fecha,
       vencimiento: fecha,
       exento: 0,
-      basico: parseFloat((this.suma / 1.21).toFixed(2)),//this.suma/1.21,
-      iva1: parseFloat((this.suma - this.suma / 1.21).toFixed(2)),
+      basico: parseFloat((this.suma / 1.21).toFixed(4)),//this.suma/1.21,
+      iva1: parseFloat((this.suma - this.suma / 1.21).toFixed(4)),
       iva2: 0,
       iva3: 0,
       bonifica: 0,
@@ -427,10 +529,10 @@ export class CarritoComponent {
     for (let item of this.itemsEnCarrito) {
       console.log(item);
       if (item.cod_tar === 111) {
-        acumulado += item.precio * item.cantidad; // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
+        acumulado += parseFloat((item.precio * item.cantidad).toFixed(4)); // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
       }
     }
-    return acumulado;
+    return parseFloat(acumulado.toFixed(4));
   }
 
   getCodVta() {
@@ -604,7 +706,7 @@ try {
     let fechaActual = new Date();
     let fechaFormateada = fechaActual.toISOString().split('T')[0];
     console.log(fechaFormateada);
-    const tableBody = items.map(item => [item.cantidad, item.nomart, item.precio, item.cantidad * item.precio]);
+    const tableBody = items.map(item => [item.cantidad, item.nomart, item.precio, parseFloat((item.cantidad * item.precio).toFixed(4))]);
     // Definir el contenido del documento
     const documentDefinition = {
       background: {
@@ -863,5 +965,10 @@ try {
       
       return cajaMovi;
     });
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
+    this.subscriptions = [];
   }
 }

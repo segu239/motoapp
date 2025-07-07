@@ -6,13 +6,15 @@ import { PedidoItem } from 'src/app/interfaces/pedidoItem';
 import { Pedidoscb } from 'src/app/interfaces/pedidoscb';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import { CrudService } from 'src/app/services/crud.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-stockproductopedido',
   templateUrl: './stockproductopedido.component.html',
   styleUrls: ['./stockproductopedido.component.css']
 })
-export class StockproductopedidoComponent implements OnInit {
+export class StockproductopedidoComponent implements OnInit, OnDestroy {
   sucursales = [];
 tipos = ["PE","M-","M+"];
 selectedSucursal: number;
@@ -21,6 +23,7 @@ selectedSucursal: number;
   public comentario: string;
   public usuario: string;
   public sucursal: string;
+  private destroy$ = new Subject<void>();
   constructor(
     private cargardata: CargardataService, 
     private _carrito: CarritoService, 
@@ -40,7 +43,9 @@ selectedSucursal: number;
   }
 
   cargarSucursales() {
-    this._crud.getListSnap('sucursales').subscribe(
+    this._crud.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
       data => {
         this.sucursales = data.map(item => {
           const payload = item.payload.val() as any;
@@ -62,6 +67,9 @@ selectedSucursal: number;
     );
   }
     ngOnDestroy() {
+      this.destroy$.next();
+      this.destroy$.complete();
+      
       if (this.ref) {
         this.ref.close();
       }

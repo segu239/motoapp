@@ -497,11 +497,11 @@ export class EditarticuloComponent implements OnInit {
     this.calculando = true;
     
     try {
-      // Limitar a dos decimales todos los valores de entrada
-      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 100) / 100;
+      // Limitar a cuatro decimales todos los valores de entrada
+      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 10000) / 10000;
       const codIva = this.articuloForm.get('cod_iva')?.value;
-      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 100) / 100;
-      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 100) / 100;
+      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 10000) / 10000;
+      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 10000) / 10000;
       
       console.log('CALCULAR DESDE PRECIO FINAL: ', precon, '| Código IVA:', codIva);
       console.log('Descuento:', descuentoPorcentaje, '% | Margen:', margenPorcentaje, '%');
@@ -522,7 +522,7 @@ export class EditarticuloComponent implements OnInit {
       let precioBase = precon;
       if (porcentajeIva > 0) {
         precioBase = precon / (1 + (porcentajeIva / 100));
-        precioBase = Math.round(precioBase * 100) / 100; // Redondear a 2 decimales
+        precioBase = Math.round(precioBase * 10000) / 10000; // Redondear a 4 decimales
         console.log('Cálculo del precio base: ', precon, ' / (1 + (', porcentajeIva, '/ 100)) = ', precioBase);
       }
       
@@ -540,17 +540,17 @@ export class EditarticuloComponent implements OnInit {
           // Revertir el descuento: precio original = precio con descuento / (1 - descuento/100)
           const precioSinIva = precioSinMargen / (1 - (descuentoPorcentaje / 100));
           console.log('Precio costo calculado (con descuento revertido):', precioSinIva);
-          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinIva * 100) / 100, {emitEvent: false});
+          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinIva * 10000) / 10000, {emitEvent: false});
         } else {
           console.log('Precio costo calculado (sin descuento):', precioSinMargen);
-          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinMargen * 100) / 100, {emitEvent: false});
+          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinMargen * 10000) / 10000, {emitEvent: false});
         }
       } else {
         // Si no hay margen, solo revertimos el descuento si existe
         if (descuentoPorcentaje > 0 && descuentoPorcentaje < 100) {
           const precioSinIva = precioBase / (1 - (descuentoPorcentaje / 100));
           console.log('Precio costo calculado (solo descuento revertido):', precioSinIva);
-          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinIva * 100) / 100, {emitEvent: false});
+          this.articuloForm.get('precostosi')?.setValue(Math.round(precioSinIva * 10000) / 10000, {emitEvent: false});
         } else {
           // Si no hay margen ni descuento, el precio base es igual al precio costo
           console.log('Precio costo = precio base (sin margen ni descuento):', precioBase);
@@ -570,11 +570,11 @@ export class EditarticuloComponent implements OnInit {
     this.calculando = true;
     
     try {
-      // Limitar a dos decimales todos los valores de entrada
-      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 100) / 100;
+      // Limitar a cuatro decimales todos los valores de entrada
+      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 10000) / 10000;
       const codIva = this.articuloForm.get('cod_iva')?.value;
-      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 100) / 100;
-      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 100) / 100;
+      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 10000) / 10000;
+      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 10000) / 10000;
       
       console.log('CALCULAR DESDE PRECIO COSTO: ', precioSinIva, '| Código IVA:', codIva);
       console.log('Descuento:', descuentoPorcentaje, '% | Margen:', margenPorcentaje, '%');
@@ -595,7 +595,7 @@ export class EditarticuloComponent implements OnInit {
       let precioConDescuento = precioSinIva;
       if (descuentoPorcentaje > 0) {
         precioConDescuento = precioSinIva * (1 - (descuentoPorcentaje / 100));
-        precioConDescuento = Math.round(precioConDescuento * 100) / 100;
+        precioConDescuento = Math.round(precioConDescuento * 10000) / 10000;
         console.log('Precio con descuento aplicado:', precioConDescuento);
       }
       
@@ -603,7 +603,7 @@ export class EditarticuloComponent implements OnInit {
       let precioBase = precioConDescuento;
       if (margenPorcentaje > 0) {
         precioBase = precioConDescuento * (1 + (margenPorcentaje / 100));
-        precioBase = Math.round(precioBase * 100) / 100;
+        precioBase = Math.round(precioBase * 10000) / 10000;
         console.log('Precio base con margen aplicado:', precioBase);
       }
       
@@ -614,7 +614,7 @@ export class EditarticuloComponent implements OnInit {
       let precioFinal = precioBase;
       if (porcentajeIva > 0) {
         precioFinal = precioBase * (1 + (porcentajeIva / 100));
-        precioFinal = Math.round(precioFinal * 100) / 100;
+        precioFinal = Math.round(precioFinal * 10000) / 10000;
         console.log('Cálculo del precio final: ', precioBase, ' * (1 + (', porcentajeIva, '/ 100)) = ', precioFinal);
       } else {
         console.log('No se aplicó IVA porque el porcentaje es 0 o negativo');
@@ -635,9 +635,9 @@ export class EditarticuloComponent implements OnInit {
     this.calculando = true;
     
     try {
-      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 100) / 100;
-      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 100) / 100;
-      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 100) / 100;
+      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 10000) / 10000;
+      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 10000) / 10000;
+      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 10000) / 10000;
       
       console.log('CALCULAR MARGEN | Precio Base:', precioBase, '| Precio Costo:', precioSinIva);
       
@@ -657,7 +657,7 @@ export class EditarticuloComponent implements OnInit {
       const margenCalculado = ((precioBase - precioNeto) / precioNeto) * 100;
       
       console.log('Margen calculado:', margenCalculado);
-      this.articuloForm.get('margen')?.setValue(Math.round(margenCalculado * 100) / 100, {emitEvent: false});
+      this.articuloForm.get('margen')?.setValue(Math.round(margenCalculado * 10000) / 10000, {emitEvent: false});
       
       // Recalcular precio final
       this.calcularPrecioFinal();
@@ -672,9 +672,9 @@ export class EditarticuloComponent implements OnInit {
     // Esto asegura que siempre se ejecute aunque estemos en medio de otro cálculo
     
     try {
-      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 100) / 100;
-      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 100) / 100;
-      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 100) / 100;
+      const precioSinIva = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 10000) / 10000;
+      const margenPorcentaje = Math.round(parseFloat(this.articuloForm.get('margen')?.value || 0) * 10000) / 10000;
+      const descuentoPorcentaje = Math.round(parseFloat(this.articuloForm.get('descuento')?.value || 0) * 10000) / 10000;
       
       console.log('CALCULAR PRECIO BASE | Precio Costo:', precioSinIva);
       console.log('Margen:', margenPorcentaje, '% | Descuento:', descuentoPorcentaje, '%');
@@ -692,7 +692,7 @@ export class EditarticuloComponent implements OnInit {
       let precioConDescuento = precioSinIva;
       if (descuentoPorcentaje > 0) {
         precioConDescuento = precioSinIva * (1 - (descuentoPorcentaje / 100));
-        precioConDescuento = Math.round(precioConDescuento * 100) / 100;
+        precioConDescuento = Math.round(precioConDescuento * 10000) / 10000;
         console.log('Precio con descuento aplicado:', precioConDescuento);
       }
       
@@ -700,7 +700,7 @@ export class EditarticuloComponent implements OnInit {
       let precioBase = precioConDescuento;
       if (margenPorcentaje > 0) {
         precioBase = precioConDescuento * (1 + (margenPorcentaje / 100));
-        precioBase = Math.round(precioBase * 100) / 100;
+        precioBase = Math.round(precioBase * 10000) / 10000;
         console.log('Precio base con margen aplicado:', precioBase);
       }
       
@@ -718,7 +718,7 @@ export class EditarticuloComponent implements OnInit {
       let precioFinal = precioBase;
       if (porcentajeIva > 0) {
         precioFinal = precioBase * (1 + (porcentajeIva / 100));
-        precioFinal = Math.round(precioFinal * 100) / 100;
+        precioFinal = Math.round(precioFinal * 10000) / 10000;
         console.log('Cálculo del precio final: ', precioBase, ' * (1 + (', porcentajeIva, '/ 100)) = ', precioFinal);
       }
       
@@ -739,7 +739,7 @@ export class EditarticuloComponent implements OnInit {
     this.calculando = true;
     
     try {
-      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 100) / 100;
+      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 10000) / 10000;
       const codIva = this.articuloForm.get('cod_iva')?.value;
       
       console.log('CALCULAR PRECIO FINAL | Precio Base:', precioBase, '| Código IVA:', codIva);
@@ -765,7 +765,7 @@ export class EditarticuloComponent implements OnInit {
       }
       
       console.log('Precio final calculado:', precioFinal);
-      this.articuloForm.get('precon')?.setValue(Math.round(precioFinal * 100) / 100, {emitEvent: false});
+      this.articuloForm.get('precon')?.setValue(Math.round(precioFinal * 10000) / 10000, {emitEvent: false});
       
       // Calcular precios de lista
       this.calcularPreciosLista();
@@ -795,7 +795,7 @@ export class EditarticuloComponent implements OnInit {
       this.ivaAnterior = codIva;
       
       // Obtener el precio base actual
-      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 100) / 100;
+      const precioBase = Math.round(parseFloat(this.articuloForm.get('prebsiva')?.value || 0) * 10000) / 10000;
       console.log('Precio base actual para recálculo:', precioBase);
       
       if (precioBase <= 0) {
@@ -808,7 +808,7 @@ export class EditarticuloComponent implements OnInit {
       console.log('Nuevo porcentaje de IVA a aplicar:', porcentajeIva + '%');
       
       // Calcular el nuevo precio final con el nuevo IVA
-      const precioFinal = Math.round(precioBase * (1 + (porcentajeIva / 100)) * 100) / 100;
+      const precioFinal = Math.round(precioBase * (1 + (porcentajeIva / 100)) * 10000) / 10000;
       console.log('Recalculando precio final:', precioBase, '* (1 + ', porcentajeIva, '/100) =', precioFinal);
       
       // Actualizar el precio final en el formulario
@@ -867,13 +867,13 @@ export class EditarticuloComponent implements OnInit {
     }
     
     // Si hay un precio costo, calcular todo desde allí
-    const precostosi = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 100) / 100;
+    const precostosi = Math.round(parseFloat(this.articuloForm.get('precostosi')?.value || 0) * 10000) / 10000;
     if (precostosi > 0) {
       console.log('Forzando cálculos completos desde precio costo');
       this.calcularDesdePrecoSinIva();
     } else {
       // Si no hay precio costo pero hay precio final, calcular desde el precio final
-      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 100) / 100;
+      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 10000) / 10000;
       if (precon > 0) {
         console.log('Forzando cálculos completos desde precio final');
         this.calcularPreciosSinIva();
@@ -892,7 +892,7 @@ export class EditarticuloComponent implements OnInit {
     if (!this.confLista || this.confLista.length === 0) {
       console.log('confLista no disponible, usando cálculo fijo alternativo');
       // Usar cálculo fijo como fallback
-      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 100) / 100;
+      const precon = Math.round(parseFloat(this.articuloForm.get('precon')?.value || 0) * 10000) / 10000;
       
       if (precon <= 0) {
         this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
@@ -966,8 +966,8 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista1.preciof21) : 
                           parseFloat(lista1.preciof105);
       const valorPrefi1 = precon + (precon * porcentaje / 100);
-      this.articuloForm.get('prefi1')?.setValue(Math.round(valorPrefi1 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(2)}`);
+      this.articuloForm.get('prefi1')?.setValue(Math.round(valorPrefi1 * 10000) / 10000, {emitEvent: false});
+      console.log(`Lista 1: Porcentaje=${porcentaje}%, Precio=${valorPrefi1.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 1 con la moneda seleccionada');
       this.articuloForm.get('prefi1')?.setValue(0, {emitEvent: false});
@@ -979,8 +979,8 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista2.preciof21) : 
                           parseFloat(lista2.preciof105);
       const valorPrefi2 = precon + (precon * porcentaje / 100);
-      this.articuloForm.get('prefi2')?.setValue(Math.round(valorPrefi2 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(2)}`);
+      this.articuloForm.get('prefi2')?.setValue(Math.round(valorPrefi2 * 10000) / 10000, {emitEvent: false});
+      console.log(`Lista 2: Porcentaje=${porcentaje}%, Precio=${valorPrefi2.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 2 con la moneda seleccionada');
       this.articuloForm.get('prefi2')?.setValue(0, {emitEvent: false});
@@ -992,8 +992,8 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista3.preciof21) : 
                           parseFloat(lista3.preciof105);
       const valorPrefi3 = precon + (precon * porcentaje / 100);
-      this.articuloForm.get('prefi3')?.setValue(Math.round(valorPrefi3 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(2)}`);
+      this.articuloForm.get('prefi3')?.setValue(Math.round(valorPrefi3 * 10000) / 10000, {emitEvent: false});
+      console.log(`Lista 3: Porcentaje=${porcentaje}%, Precio=${valorPrefi3.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 3 con la moneda seleccionada');
       this.articuloForm.get('prefi3')?.setValue(0, {emitEvent: false});
@@ -1005,8 +1005,8 @@ export class EditarticuloComponent implements OnInit {
                           parseFloat(lista4.preciof21) : 
                           parseFloat(lista4.preciof105);
       const valorPrefi4 = precon + (precon * porcentaje / 100);
-      this.articuloForm.get('prefi4')?.setValue(Math.round(valorPrefi4 * 100) / 100, {emitEvent: false});
-      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(2)}`);
+      this.articuloForm.get('prefi4')?.setValue(Math.round(valorPrefi4 * 10000) / 10000, {emitEvent: false});
+      console.log(`Lista 4: Porcentaje=${porcentaje}%, Precio=${valorPrefi4.toFixed(4)}`);
     } else {
       console.log('No se encontró configuración para Lista 4 con la moneda seleccionada');
       this.articuloForm.get('prefi4')?.setValue(0, {emitEvent: false});

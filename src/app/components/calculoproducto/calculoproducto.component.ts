@@ -101,8 +101,8 @@ export class CalculoproductoComponent {
         break;
     }
     
-    // Calcular el precio total inicial
-    this.precioTotal = this.precio * this.cantidad;
+    // Calcular el precio total inicial con precisión de 4 decimales
+    this.precioTotal = parseFloat((this.precio * this.cantidad).toFixed(4));
   }
 
   ngOnDestroy() {
@@ -119,8 +119,8 @@ export class CalculoproductoComponent {
       this.cantidad = 1;
     }
     
-    // Calcular el precio total
-    this.precioTotal = this.precio * newValue;
+    // Calcular el precio total con precisión de 4 decimales
+    this.precioTotal = parseFloat((this.precio * newValue).toFixed(4));
     console.log('Precio unitario:', this.precio, 'Cantidad:', newValue, 'Precio total:', this.precioTotal);
   }
 
@@ -156,7 +156,7 @@ export class CalculoproductoComponent {
       this.pedido.nomart = this.producto.nomart;
     }
     this.pedido.cantidad = this.cantidad;
-    this.pedido.precio = this.precio;// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado 
+    this.pedido.precio = parseFloat(this.precio.toFixed(4));// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado 
     if (this.cliente.idcli != undefined) {
       this.pedido.idcli = parseInt(this.cliente.idcli);
     }

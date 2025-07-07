@@ -239,7 +239,17 @@ export class CajamoviHelperService {
   }
 
   /**
-   * Redondea un valor monetario a 2 decimales usando técnica bancaria
+   * Redondea un valor monetario a 4 decimales para cálculos internos
+   * @param valor Número a redondear
+   * @returns Número redondeado a 4 decimales
+   */
+  redondearMonedaCalculo(valor: number): number {
+    // Usar técnica de redondeo bancario para evitar errores de punto flotante
+    return Math.round((valor + Number.EPSILON) * 10000) / 10000;
+  }
+
+  /**
+   * Redondea un valor monetario a 2 decimales para visualización
    * @param valor Número a redondear
    * @returns Número redondeado a 2 decimales
    */
@@ -249,21 +259,21 @@ export class CajamoviHelperService {
   }
 
   /**
-   * Suma una lista de valores monetarios con precisión
+   * Suma una lista de valores monetarios con precisión de 4 decimales
    * @param valores Array de números a sumar
-   * @returns Suma total redondeada a 2 decimales
+   * @returns Suma total redondeada a 4 decimales
    */
   sumarMontos(valores: number[]): number {
-    // Sumar en centavos para evitar errores de punto flotante
-    const sumaCentavos = valores.reduce((acc, valor) => {
+    // Sumar con precisión de 4 decimales para evitar errores de punto flotante
+    const sumaDiezMilesimas = valores.reduce((acc, valor) => {
       if (this.esNumeroValidoParaMoneda(valor)) {
-        return acc + Math.round(valor * 100);
+        return acc + Math.round(valor * 10000);
       }
       return acc;
     }, 0);
     
-    // Convertir de vuelta a unidades monetarias
-    return this.redondearMoneda(sumaCentavos / 100);
+    // Convertir de vuelta a unidades monetarias con 4 decimales
+    return this.redondearMonedaCalculo(sumaDiezMilesimas / 10000);
   }
 
   /**
@@ -273,7 +283,7 @@ export class CajamoviHelperService {
    */
   parseMoneda(valor: string | number): number | null {
     if (typeof valor === 'number') {
-      return this.esNumeroValidoParaMoneda(valor) ? this.redondearMoneda(valor) : null;
+      return this.esNumeroValidoParaMoneda(valor) ? this.redondearMonedaCalculo(valor) : null;
     }
     
     // Limpiar string: remover espacios y cambiar comas por puntos
@@ -287,6 +297,6 @@ export class CajamoviHelperService {
       return null;
     }
     
-    return this.redondearMoneda(numero);
+    return this.redondearMonedaCalculo(numero);
   }
 }

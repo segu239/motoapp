@@ -70,6 +70,7 @@ import { EditCajamoviComponent } from './components/editcajamovi/editcajamovi.co
 import { SucursalesComponent } from './components/sucursales/sucursales.component';
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 import { ReporteComponent } from './components/reporte/reporte.component';
+import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 
 
 //nuevouser role
@@ -86,6 +87,7 @@ const APP_ROUTES: Routes = [
   canActivate:[AuthGuard], data: { roles: [UserRole.SUPER, UserRole.ADMIN, UserRole.USER] },
 children:[
    { path: 'puntoventa', component: PuntoventaComponent, data :{titulo:'Punto de Venta'} },
+    { path: 'historialventas', component: HistorialventasComponent, data :{titulo:'Historial de Ventas'} },
     { path: 'editcliente', component: EditclienteComponent, data :{titulo:'Editar Cliente'} },
     { path: 'newcliente', component: NewclienteComponent, data :{titulo:'Nuevo Cliente'} },
     { path: 'condicionventa', component: CondicionventaComponent, data :{titulo:'Condicion de Venta'} },

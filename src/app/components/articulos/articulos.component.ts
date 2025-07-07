@@ -489,7 +489,7 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         timestamp: Date.now()
       };
 
-      localStorage.setItem('articulos_table_state', JSON.stringify(state));
+      sessionStorage.setItem('articulos_table_state', JSON.stringify(state));
       console.log('💾 Estado de tabla guardado:', state);
     } catch (error) {
       console.warn('Error guardando estado de la tabla:', error);
@@ -499,7 +499,7 @@ export class ArticulosComponent implements OnInit, OnDestroy {
   // NUEVO: Restaurar estado de la tabla (como en colegios)
   private restoreTableState(): void {
     try {
-      const savedState = localStorage.getItem('articulos_table_state');
+      const savedState = sessionStorage.getItem('articulos_table_state');
       
       if (savedState) {
         const state = JSON.parse(savedState);

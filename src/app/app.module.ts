@@ -122,6 +122,7 @@ import { SucursalesComponent } from './components/sucursales/sucursales.componen
 import { ArticulosPaginadosService } from './services/articulos-paginados.service';
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 import { ReporteComponent } from './components/reporte/reporte.component';
+import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 
 @NgModule({
   declarations: [
@@ -203,6 +204,7 @@ import { ReporteComponent } from './components/reporte/reporte.component';
     SucursalesComponent,
     NopermitidoComponent,
     ReporteComponent,
+    HistorialventasComponent,
   ],
   imports: [
     ButtonModule,
