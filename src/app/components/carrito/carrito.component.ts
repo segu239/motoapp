@@ -278,6 +278,7 @@ export class CarritoComponent implements OnDestroy {
         sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
         this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
         this.calculoTotal();
+        this.actualizarItemsConTipoPago();
       }
     })
   }
