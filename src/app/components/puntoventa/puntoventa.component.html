@@ -37,6 +37,7 @@
                                     field="telefono"></p-sortIcon></th>
                             <th>Select</th>
                             <th>Edit</th>
+                            <th>Historial</th>
                             <th style="width: 5rem"></th>
                         </tr>
                     </ng-template>
@@ -56,6 +57,11 @@
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
                                     (click)="editCliente(cliente)"> </p-button>
+                            </td>
+                            <td>
+                                <p-button icon="pi pi-history" styleClass="p-button-sm p-button-warning"
+                                    (click)="verHistorialVentas(cliente)" 
+                                    pTooltip="Ver historial de ventas"> </p-button>
                             </td>
                         </tr>
                     </ng-template>

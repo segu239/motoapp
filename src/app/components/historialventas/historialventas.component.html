@@ -1,0 +1,161 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Historial de Ventas</h4>
+                
+                <!-- Loading indicator -->
+                <div class="alert alert-warning mb-3" *ngIf="loading">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> 
+                    Cargando historial de ventas, por favor espere...
+                </div>
+                
+                <!-- Cliente info -->
+                <div class="alert alert-info mb-3" *ngIf="clienteInfo">
+                    <small>
+                        <i class="fa fa-user"></i> <strong>Cliente:</strong> {{ clienteInfo.nombre }} 
+                        (ID: {{ clienteInfo.idcli }})
+                    </small>
+                </div>
+                
+                <!-- Table with data - Lazy Loading -->
+                <p-table #dtable [value]="historialVentas" [tableStyle]="{ 'min-width': '50rem' }" 
+                    [paginator]="true" 
+                    [rows]="rows"
+                    [first]="first"
+                    [rowsPerPageOptions]="[25,50,100]"
+                    [totalRecords]="totalRegistros"
+                    [showCurrentPageReport]="true"
+                    [loading]="loading"
+                    [lazy]="true"
+                    (onLazyLoad)="loadDataLazy($event)"
+                    [lazyLoadOnInit]="true"
+                    [filterDelay]="300">
+                    
+                    <ng-template pTemplate="caption">
+                        <div class="d-flex flex-row align-items-center">
+                            <!-- Columnas selector -->
+                            <div class="ml-2 columnas-container">
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
+                                    selectedItemsLabel="{0} Columnas Seleccionadas" 
+                                    placeholder="Elija Columnas"
+                                    (onChange)="onColumnSelectionChange()">
+                                </p-multiSelect>
+                            </div>
+                            
+                            <!-- Botón actualizar -->
+                            <div class="ml-2">
+                                <button class="btn btn-primary btn-actualizar" (click)="forceRefresh()" [disabled]="loading">
+                                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i> Actualizar
+                                </button>
+                            </div>
+                            
+                            <!-- Botón exportar Excel -->
+                            <div class="ml-2">
+                                <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                    styleClass="p-button-success"></p-button>
+                            </div>
+                        </div>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th *ngIf="isColumnVisible('tipodoc')" pSortableColumn="tipodoc">
+                                Tipo Doc.
+                                <p-sortIcon field="tipodoc"></p-sortIcon>
+                                <p-columnFilter type="text" field="tipodoc" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('puntoventa')" pSortableColumn="puntoventa">
+                                Punto Venta
+                                <p-sortIcon field="puntoventa"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="puntoventa" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('idart')" pSortableColumn="idart">
+                                ID Art.
+                                <p-sortIcon field="idart"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="idart" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('nomart')" pSortableColumn="nomart">
+                                Nombre Artículo
+                                <p-sortIcon field="nomart"></p-sortIcon>
+                                <p-columnFilter type="text" field="nomart" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('fecha')" pSortableColumn="fecha">
+                                Fecha
+                                <p-sortIcon field="fecha"></p-sortIcon>
+                                <p-columnFilter type="date" field="fecha" display="menu" matchMode="dateIs"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('hora')" pSortableColumn="hora">
+                                Hora
+                                <p-sortIcon field="hora"></p-sortIcon>
+                                <p-columnFilter type="text" field="hora" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('cantidad')" pSortableColumn="cantidad">
+                                Cantidad
+                                <p-sortIcon field="cantidad"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="cantidad" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('precio')" pSortableColumn="precio">
+                                Precio
+                                <p-sortIcon field="precio"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="precio" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('descripcion_tarjeta')" pSortableColumn="descripcion_tarjeta">
+                                Forma de Pago
+                                <p-sortIcon field="descripcion_tarjeta"></p-sortIcon>
+                                <p-columnFilter type="text" field="descripcion_tarjeta" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('numerocomprobante')" pSortableColumn="numerocomprobante">
+                                Nro. Comprobante
+                                <p-sortIcon field="numerocomprobante"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="numerocomprobante" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('id_num')" pSortableColumn="id_num">
+                                ID Num.
+                                <p-sortIcon field="id_num"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="id_num" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                        </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-venta>
+                        <tr>
+                            <td *ngIf="isColumnVisible('tipodoc')">{{ venta.tipodoc }}</td>
+                            <td *ngIf="isColumnVisible('puntoventa')">{{ venta.puntoventa }}</td>
+                            <td *ngIf="isColumnVisible('idart')">{{ venta.idart }}</td>
+                            <td *ngIf="isColumnVisible('nomart')">{{ venta.nomart }}</td>
+                            <td *ngIf="isColumnVisible('fecha')">{{ venta.fecha | date:'dd/MM/yyyy' }}</td>
+                            <td *ngIf="isColumnVisible('hora')">{{ venta.hora }}</td>
+                            <td *ngIf="isColumnVisible('cantidad')">{{ venta.cantidad | number:'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('precio')">{{ venta.precio | currency:'$':'symbol':'1.2-4' }}</td>
+                            <td *ngIf="isColumnVisible('descripcion_tarjeta')">{{ venta.descripcion_tarjeta || 'Sin definir' }}</td>
+                            <td *ngIf="isColumnVisible('numerocomprobante')">{{ venta.numerocomprobante }}</td>
+                            <td *ngIf="isColumnVisible('id_num')">{{ venta.id_num }}</td>
+                        </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="paginatorleft">
+                        <p-button type="button" icon="pi pi-refresh" styleClass="p-button-text"
+                            (click)="forceRefresh()" [disabled]="loading"></p-button>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="paginatorright">
+                        <p-button type="button" icon="pi pi-download" styleClass="p-button-text"
+                            (click)="exportExcel()"></p-button>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="11" class="text-center">
+                                <div class="py-4">
+                                    <i class="fa fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No se encontraron registros de ventas para este cliente.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>

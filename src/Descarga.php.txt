@@ -3103,5 +3103,180 @@ public function SubirDatosMarca_post()
     }
 }
 
+public function historialventasxsucxcli_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $idcli = $this->get('idcli');
+    $page = $this->get('page') ? intval($this->get('page')) : 1;
+    $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+    $filters = $this->get('filters');
+    $search = $this->get('search');
+
+    // Validaciones básicas
+    if (!$sucursal || !$idcli) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e idcli"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar límites de paginación
+    $page = max(1, $page);
+    $limit = max(10, min(1000, $limit));
+    $offset = ($page - 1) * $limit;
+
+    // Construir nombre de tabla
+    $tabla = "psucursal" . $sucursal;
+
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tabla)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La tabla $tabla no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Seleccionar campos específicos incluyendo descripción de tarjeta
+        $this->db->select('p.tipodoc, p.puntoventa, p.idart, p.nomart, p.fecha, p.hora, p.cantidad, p.precio, p.cod_tar, p.numerocomprobante, p.id_num, p.idcli, CASE WHEN t.tarjeta IS NOT NULL THEN t.tarjeta ELSE \'Sin definir\' END as descripcion_tarjeta');
+        $this->db->from($tabla . ' p');
+        $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+        
+        // Filtrar por cliente
+        $this->db->where('p.idcli', $idcli);
+
+        // Aplicar búsqueda global si existe
+        if ($search && trim($search) !== '') {
+            $searchTerm = $this->db->escape_like_str($search);
+            $this->db->group_start();
+            $this->db->like('p.nomart', $searchTerm);
+            $this->db->or_like('p.tipodoc', $searchTerm);
+            $this->db->or_like('p.numerocomprobante', $searchTerm);
+            $this->db->or_like('t.tarjeta', $searchTerm);
+            $this->db->group_end();
+        }
+
+        // Aplicar filtros de columna si existen
+        if ($filters && trim($filters) !== '') {
+            $filtersArray = json_decode($filters, true);
+            if ($filtersArray && is_array($filtersArray)) {
+                foreach ($filtersArray as $field => $filter) {
+                    if (isset($filter['value']) && $filter['value'] !== '') {
+                        $value = $filter['value'];
+                        $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                        
+                        // Mapear campos al alias correcto
+                        $dbField = $field;
+                        if ($field === 'descripcion_tarjeta') {
+                            $dbField = 't.tarjeta';
+                        } elseif (in_array($field, ['tipodoc', 'puntoventa', 'idart', 'nomart', 'fecha', 'hora', 'cantidad', 'precio', 'cod_tar', 'numerocomprobante', 'id_num', 'idcli'])) {
+                            $dbField = 'p.' . $field;
+                        }
+                        
+                        switch ($matchMode) {
+                            case 'startsWith':
+                                $this->db->like($dbField, $value, 'after');
+                                break;
+                            case 'contains':
+                                $this->db->like($dbField, $value);
+                                break;
+                            case 'equals':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'gt':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'gte':
+                                $this->db->where($dbField . ' >=', $value);
+                                break;
+                            case 'lt':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            case 'lte':
+                                $this->db->where($dbField . ' <=', $value);
+                                break;
+                            case 'dateIs':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'dateAfter':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'dateBefore':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            default:
+                                $this->db->like($dbField, $value);
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Contar total de registros antes de aplicar límites
+        $totalQuery = clone $this->db;
+        $totalRegistros = $totalQuery->count_all_results('', false);
+
+        // Aplicar ordenamiento
+        if ($sortField && trim($sortField) !== '') {
+            $sortDirection = ($sortOrder === -1) ? 'DESC' : 'ASC';
+            
+            // Mapear campo de ordenamiento al alias correcto
+            $dbSortField = $sortField;
+            if ($sortField === 'descripcion_tarjeta') {
+                $dbSortField = 't.tarjeta';
+            } elseif (in_array($sortField, ['tipodoc', 'puntoventa', 'idart', 'nomart', 'fecha', 'hora', 'cantidad', 'precio', 'cod_tar', 'numerocomprobante', 'id_num', 'idcli'])) {
+                $dbSortField = 'p.' . $sortField;
+            }
+            
+            $this->db->order_by($dbSortField, $sortDirection);
+        } else {
+            // Ordenamiento por defecto: fecha y hora más recientes primero
+            $this->db->order_by('p.fecha', 'DESC');
+            $this->db->order_by('p.hora', 'DESC');
+        }
+
+        // Aplicar paginación
+        $this->db->limit($limit, $offset);
+
+        // Ejecutar consulta
+        $query = $this->db->get();
+        $datos = $query->result_array();
+
+        // Calcular metadatos de paginación
+        $totalPaginas = ceil($totalRegistros / $limit);
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => array(
+                "data" => $datos,
+                "total" => $totalRegistros,
+                "total_pages" => $totalPaginas,
+                "current_page" => $page,
+                "per_page" => $limit,
+                "from" => $offset + 1,
+                "to" => min($offset + $limit, $totalRegistros)
+            )
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al consultar historial de ventas: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
 }
 
