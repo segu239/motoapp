@@ -341,10 +341,18 @@ export class CarritoComponent implements OnDestroy {
             this.numerocomprobante = numero.toString();
           }
           let emailOp = sessionStorage.getItem('emailOp');
+          // Crear datos para descuento de stock (con id_articulo)
+          let stockData = this.itemsEnCarrito.map(obj => {
+            return {
+              id_articulo: obj.id_articulo,
+              cantidad: obj.cantidad,
+              tipodoc: this.tipoDoc
+            };
+          });
+
+          // Crear datos para guardar en psucursal (sin id_articulo)
           let result = this.itemsEnCarrito.map(obj => {
-            // Crear una copia del objeto original sin el campo id_articulo
             const { id_articulo, ...objSinIdArticulo } = obj;
-            
             return {
               ...objSinIdArticulo,
               emailop: emailOp,
@@ -353,8 +361,7 @@ export class CarritoComponent implements OnDestroy {
               numerocomprobante: this.numerocomprobante,
               estado: "NP",
               idven: this.vendedoresV,
-              // Asignar al campo idart de psucursal3 el campo id_articulo de artsucursal
-              idart: id_articulo || obj.idart
+              idart: obj.id_articulo || 0 // Usar id_articulo en el campo idart para psucursal
             };
           });
           this.numerocomprobanteImpresion = this.numerocomprobante;
@@ -379,10 +386,29 @@ export class CarritoComponent implements OnDestroy {
           
           // Usamos el objeto de mapeo, con fallback a 0 si no existe
           exi = mappedValues[sucursal] || 0;
-          this._subirdata.editarStockArtSucxManagedPHP(result, exi).pipe(take(1)).subscribe((data: any) => {
-            console.log(data);
+          this._subirdata.editarStockArtSucxManagedPHP(stockData, exi).pipe(take(1)).subscribe({
+            next: (data: any) => {
+              console.log('Stock actualizado:', data);
+              if (!data.error) {
+                // Solo si el descuento fue exitoso, proceder con el pedido
+                this.agregarPedido(result, sucursal);
+              } else {
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error',
+                  text: 'No se pudo actualizar el stock: ' + data.mensaje
+                });
+              }
+            },
+            error: (error) => {
+              console.error('Error al actualizar stock:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error de conexión al actualizar stock'
+              });
+            }
           });
-          this.agregarPedido(result, sucursal);
         }
       }
     }

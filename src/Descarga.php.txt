@@ -198,27 +198,53 @@ public function UpdateArtsucxappManagedPHP_post()//Función para modificar los s
     $contador = 0;
     
     foreach ($data['result'] as $item) {
-      $idart = $item['idart'];
+      // Obtener el ID del artículo
+      $id_articulo = isset($item['id_articulo']) ? $item['id_articulo'] : null;
       $cantidad = $item['cantidad']; 
       $op = $item['tipodoc'];
       $campo = "exi{$suc}";
       
-      // Aumenta o disminuye el stock según el operador
-      if($op === "FC"  OR $op === "PR" OR $op === "MI-" OR $op === "ND" OR $op === "A-") {
-        $this->db->set($campo, "$campo - $cantidad", FALSE);
-      } else  {
-        $this->db->set($campo, "$campo + $cantidad", FALSE);
+      // Verificar que tenemos un ID válido
+      if (empty($id_articulo) || $id_articulo == 0) {
+        continue; // Saltar este item si no tiene ID válido
       }
       
-      $this->db->where('idart', $idart);
+      // Aumenta o disminuye el stock según el operador
+      if($op === "FC" OR $op === "PR" OR $op === "ND") {
+        // RESTAN STOCK: Facturas, Presupuestos y Notas de Débito
+        $this->db->set($campo, "$campo - $cantidad", FALSE);
+      } else if ($op === "NC" OR $op === "NV") {
+        // SUMAN STOCK: Notas de Crédito y Devoluciones
+        $this->db->set($campo, "$campo + $cantidad", FALSE);
+      } else if ($op === "CS") {
+        // NO AFECTAN STOCK: Consultas
+        log_message('info', "Operación {$op} no afecta stock para id_articulo: {$id_articulo}");
+        continue; // Saltar al siguiente item
+      } else {
+        // Operaciones desconocidas - log para debugging
+        log_message('warning', "Operación desconocida {$op} para id_articulo: {$id_articulo} - no se afecta stock");
+        continue; // Saltar al siguiente item
+      }
+      
+      // Usar id_articulo como condición WHERE
+      $this->db->where('id_articulo', $id_articulo);
       $this->db->update($tabla);
-      $contador += $this->db->affected_rows();
+      $affected = $this->db->affected_rows();
+      $contador += $affected;
+      
+      // Log para debugging si no se actualiza nada
+      if ($affected == 0) {
+        log_message('error', "No se pudo actualizar stock para id_articulo: {$id_articulo}, cantidad: {$cantidad}, op: {$op}");
+      }
     }
     
     $respuesta = [
       "error" => false,
       "mensaje" => "Se actualizaron {$contador} registros",
-      "tabla" => $tabla
+      "tabla" => $tabla,
+      "sucursal_exi" => $suc,
+      "items_procesados" => count($data['result']),
+      "registros_actualizados" => $contador
     ];
     $this->response($respuesta);
     
