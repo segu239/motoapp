@@ -990,6 +990,11 @@ public function PedidossucxappCompleto_post() {
                     }
                 }
                 
+                // Generar descripción automática si tipo_movi es 'A'
+                if (isset($caja_movi['tipo_movi']) && $caja_movi['tipo_movi'] === 'A') {
+                    $caja_movi['descripcion_mov'] = $this->generarDescripcionAutomatica($caja_movi);
+                }
+                
                 try {
                     $this->db->insert('caja_movi', $caja_movi);
                     if ($this->db->affected_rows() > 0) {
@@ -1934,6 +1939,11 @@ public function SubirDatosCajamovi_post()
                    $data[$strField] = null; // O mantener como '' si la DB lo permite/prefiere
               }
          }
+
+        // Generar descripción automática si tipo_movi es 'A'
+        if (isset($data['tipo_movi']) && $data['tipo_movi'] === 'A') {
+            $data['descripcion_mov'] = $this->generarDescripcionAutomatica($data);
+        }
 
         $this->db->trans_start(); // Iniciar transacción
 
@@ -3276,6 +3286,40 @@ public function historialventasxsucxcli_get()
         );
         $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
+
+/**
+ * Genera una descripción automática para movimientos de caja tipo 'A'
+ * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
+ */
+private function generarDescripcionAutomatica($data) {
+    $tipo_comprobante = isset($data['tipo_comprobante']) ? $data['tipo_comprobante'] : '';
+    $numero_comprobante = isset($data['numero_comprobante']) ? $data['numero_comprobante'] : '';
+    $num_operacion = isset($data['num_operacion']) ? $data['num_operacion'] : '';
+    
+    // Si no hay datos suficientes, usar descripción por defecto
+    if (empty($tipo_comprobante) && empty($numero_comprobante)) {
+        return 'Movimiento automático';
+    }
+    
+    // Formato: "FC     21 Rec. Nº 100000"
+    $descripcion = '';
+    
+    if (!empty($tipo_comprobante)) {
+        $descripcion .= $tipo_comprobante;
+    }
+    
+    if (!empty($numero_comprobante)) {
+        // Agregar espacios para formato consistente (ajustar según necesidad)
+        $descripcion .= str_repeat(' ', max(1, 6 - strlen($tipo_comprobante))) . $numero_comprobante;
+    }
+    
+    if (!empty($num_operacion)) {
+        $descripcion .= ' Rec. Nº ' . $num_operacion;
+    }
+    
+    // Asegurar que la descripción no exceda 80 caracteres (límite del campo)
+    return substr($descripcion, 0, 80);
 }
 
 }
