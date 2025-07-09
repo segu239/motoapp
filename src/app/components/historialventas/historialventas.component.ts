@@ -24,6 +24,9 @@ export class HistorialventasComponent implements OnInit, OnDestroy {
   public idCliente: number = 0;
   public loading: boolean = false;
   
+  // Variable para almacenar la venta seleccionada
+  public ventaSeleccionada: HistorialVenta | null = null;
+  
   // Variables para paginación
   public totalRegistros: number = 0;
   public rows: number = 50;
@@ -252,6 +255,41 @@ export class HistorialventasComponent implements OnInit, OnDestroy {
     const data: Blob = new Blob([buffer], { type: EXCEL_TYPE });
     const clienteName = this.clienteInfo?.nombre || 'cliente';
     FileSaver.saveAs(data, `${fileName}_${clienteName}_${new Date().getTime()}${EXCEL_EXTENSION}`);
+  }
+
+  // Manejar selección de fila
+  onRowSelect(event: any): void {
+    console.log('Venta seleccionada:', event.data);
+    this.ventaSeleccionada = event.data;
+  }
+
+  // Función para el botón de información de recibos
+  verInformacionRecibos(): void {
+    if (!this.ventaSeleccionada) {
+      this.showNotification('Por favor seleccione una venta primero', 'warning');
+      return;
+    }
+
+    console.log('Ver información de recibos para:', this.ventaSeleccionada);
+    
+    // Aquí implementarás la lógica para mostrar información de recibos
+    // Por ahora solo mostramos la información de la venta seleccionada
+    Swal.fire({
+      title: 'Información de Recibos',
+      html: `
+        <div class="text-left">
+          <p><strong>ID Num:</strong> ${this.ventaSeleccionada.id_num}</p>
+          <p><strong>Número de Comprobante:</strong> ${this.ventaSeleccionada.numerocomprobante}</p>
+          <p><strong>Artículo:</strong> ${this.ventaSeleccionada.nomart}</p>
+          <p><strong>Precio:</strong> $${this.ventaSeleccionada.precio}</p>
+          <p><strong>Fecha:</strong> ${this.ventaSeleccionada.fecha}</p>
+          <p><strong>Forma de Pago:</strong> ${this.ventaSeleccionada.descripcion_tarjeta || 'Sin definir'}</p>
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Cerrar',
+      width: '500px'
+    });
   }
 
   private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {

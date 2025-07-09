@@ -30,36 +30,56 @@
                     [lazy]="true"
                     (onLazyLoad)="loadDataLazy($event)"
                     [lazyLoadOnInit]="true"
-                    [filterDelay]="300">
+                    [filterDelay]="300"
+                    selectionMode="single" 
+                    [(selection)]="ventaSeleccionada" 
+                    dataKey="id_num"
+                    (onRowSelect)="onRowSelect($event)">
                     
                     <ng-template pTemplate="caption">
-                        <div class="d-flex flex-row align-items-center">
-                            <!-- Columnas selector -->
-                            <div class="ml-2 columnas-container">
-                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
-                                    selectedItemsLabel="{0} Columnas Seleccionadas" 
-                                    placeholder="Elija Columnas"
-                                    (onChange)="onColumnSelectionChange()">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <!-- Selector de columnas -->
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <label class="form-label mb-0 me-2 fw-semibold">Columnas:</label>
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" 
+                                    optionLabel="header" defaultLabel="Seleccionar columnas" 
+                                    (onChange)="onColumnSelectionChange()"
+                                    styleClass="p-column-filter"
+                                    [style]="{'min-width': '200px'}">
+                                    <ng-template pTemplate="selectedItems" let-selectedColumns>
+                                        <div *ngIf="selectedColumns && selectedColumns.length > 0">
+                                            Columnas ({{selectedColumns.length}})
+                                        </div>
+                                        <div *ngIf="!selectedColumns || selectedColumns.length === 0">
+                                            Seleccionar columnas
+                                        </div>
+                                    </ng-template>
                                 </p-multiSelect>
                             </div>
                             
-                            <!-- Botón actualizar -->
-                            <div class="ml-2">
-                                <button class="btn btn-primary btn-actualizar" (click)="forceRefresh()" [disabled]="loading">
-                                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i> Actualizar
-                                </button>
-                            </div>
-                            
-                            <!-- Botón exportar Excel -->
-                            <div class="ml-2">
+                            <!-- Botones de acción -->
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                                <p-button icon="pi pi-file" (click)="verInformacionRecibos()"
+                                    styleClass="p-button-sm p-button-info" 
+                                    pTooltip="Información de recibos"
+                                    tooltipPosition="top"
+                                    [disabled]="!ventaSeleccionada"></p-button>
                                 <p-button icon="pi pi-file-excel" (click)="exportExcel()"
-                                    styleClass="p-button-success"></p-button>
+                                    styleClass="p-button-sm p-button-success" 
+                                    pTooltip="Exportar a Excel"
+                                    tooltipPosition="top"></p-button>
+                                <p-button icon="pi pi-refresh" (click)="forceRefresh()"
+                                    styleClass="p-button-sm p-button-secondary" 
+                                    pTooltip="Recargar datos"
+                                    tooltipPosition="top"
+                                    [disabled]="loading"></p-button>
                             </div>
                         </div>
                     </ng-template>
                     
                     <ng-template pTemplate="header">
                         <tr>
+                            <th style="width: 3rem"></th> <!-- Columna para el selector -->
                             <th *ngIf="isColumnVisible('tipodoc')" pSortableColumn="tipodoc">
                                 Tipo Doc.
                                 <p-sortIcon field="tipodoc"></p-sortIcon>
@@ -119,7 +139,10 @@
                     </ng-template>
                     
                     <ng-template pTemplate="body" let-venta>
-                        <tr>
+                        <tr [pSelectableRow]="venta">
+                            <td>
+                                <p-tableRadioButton [value]="venta"></p-tableRadioButton>
+                            </td>
                             <td *ngIf="isColumnVisible('tipodoc')">{{ venta.tipodoc }}</td>
                             <td *ngIf="isColumnVisible('puntoventa')">{{ venta.puntoventa }}</td>
                             <td *ngIf="isColumnVisible('idart')">{{ venta.idart }}</td>
@@ -146,7 +169,7 @@
                     
                     <ng-template pTemplate="emptymessage">
                         <tr>
-                            <td colspan="11" class="text-center">
+                            <td colspan="12" class="text-center">
                                 <div class="py-4">
                                     <i class="fa fa-search fa-2x text-muted mb-2"></i>
                                     <p class="text-muted">No se encontraron registros de ventas para este cliente.</p>
