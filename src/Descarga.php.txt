@@ -946,6 +946,9 @@ public function PedidossucxappCompleto_post() {
                 }
             }
             
+            // Generar recibo automáticamente para todas las operaciones
+            $this->generarReciboAutomatico($cabecera, $id_num, $id_vend);
+            
             // Insertar caja_movi si está presente
             if ($caja_movi) {
                 // Asignar el id_num de la cabecera al movimiento de caja
@@ -988,6 +991,11 @@ public function PedidossucxappCompleto_post() {
                     if (isset($caja_movi[$strField]) && $caja_movi[$strField] === '') {
                         $caja_movi[$strField] = null;
                     }
+                }
+                
+                // Generar descripción automática si tipo_movi es 'A'
+                if (isset($caja_movi['tipo_movi']) && $caja_movi['tipo_movi'] === 'A') {
+                    $caja_movi['descripcion_mov'] = $this->generarDescripcionAutomatica($caja_movi);
                 }
                 
                 try {
@@ -1074,6 +1082,81 @@ else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
    $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
 }
 
+}
+
+/**
+ * Función auxiliar para generar recibo automáticamente
+ * Se ejecuta para todas las operaciones sin importar el saldo
+ */
+private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
+    try {
+        // Generar número de recibo único
+        $numero_recibo = $this->getNextReciboNumber($id_vend);
+        
+        // Calcular importe total
+        $importe_total = floatval($cabecera['basico']) + floatval($cabecera['iva1']);
+        
+        // Determinar el saldo del recibo (0 para operaciones al contado)
+        $recibo_saldo = isset($cabecera['saldo']) ? floatval($cabecera['saldo']) : 0;
+        
+        // Preparar datos del recibo
+        $recibo = array(
+            'recibo' => $numero_recibo,
+            'c_tipo' => 'RC',
+            'c_numero' => isset($cabecera['numero_fac']) ? $cabecera['numero_fac'] : 0,
+            'c_cuota' => 0,
+            'fecha' => isset($cabecera['emitido']) ? $cabecera['emitido'] : date('Y-m-d'),
+            'importe' => $importe_total,
+            'usuario' => isset($cabecera['usuario']) ? $cabecera['usuario'] : 'sistema',
+            'observacion' => 0,
+            'cod_lugar' => '1',
+            'sesion' => 0,
+            'c_tipf' => isset($cabecera['letra']) ? $cabecera['letra'] : 'B',
+            'c_puntoventa' => isset($cabecera['puntoventa']) ? $cabecera['puntoventa'] : 0,
+            'recibo_asoc' => $id_num,
+            'recibo_saldo' => $recibo_saldo,
+            'cod_sucursal' => $id_vend,
+            'fec_proceso' => date('Y-m-d'),
+            'bonifica' => isset($cabecera['bonifica']) ? $cabecera['bonifica'] : 0,
+            'interes' => isset($cabecera['interes']) ? $cabecera['interes'] : 0,
+            'id_fac' => $id_num
+        );
+        
+        // Insertar recibo en la tabla correspondiente
+        $tabla_recibos = 'recibos' . $id_vend;
+        $this->db->insert($tabla_recibos, $recibo);
+        
+        // Log del recibo generado
+        log_message('info', 'Recibo generado automáticamente: ' . $numero_recibo . ' para operación: ' . $id_num);
+        
+    } catch (Exception $e) {
+        // Log del error pero no interrumpir la transacción principal
+        log_message('error', 'Error al generar recibo automático: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Función auxiliar para obtener el siguiente número de recibo
+ */
+private function getNextReciboNumber($id_vend) {
+    try {
+        // Obtener el último número de recibo de la tabla correspondiente
+        $tabla_recibos = 'recibos' . $id_vend;
+        $this->db->select('MAX(CAST(recibo AS INTEGER)) as max_recibo');
+        $this->db->from($tabla_recibos);
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            $row = $query->row();
+            $max_recibo = $row->max_recibo;
+            return $max_recibo ? $max_recibo + 1 : 1;
+        } else {
+            return 1;
+        }
+    } catch (Exception $e) {
+        log_message('error', 'Error al obtener número de recibo: ' . $e->getMessage());
+        return 1;
+    }
 }
 
 public function Mixto_post()
@@ -1934,6 +2017,11 @@ public function SubirDatosCajamovi_post()
                    $data[$strField] = null; // O mantener como '' si la DB lo permite/prefiere
               }
          }
+
+        // Generar descripción automática si tipo_movi es 'A'
+        if (isset($data['tipo_movi']) && $data['tipo_movi'] === 'A') {
+            $data['descripcion_mov'] = $this->generarDescripcionAutomatica($data);
+        }
 
         $this->db->trans_start(); // Iniciar transacción
 
@@ -3276,6 +3364,40 @@ public function historialventasxsucxcli_get()
         );
         $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
     }
+}
+
+/**
+ * Genera una descripción automática para movimientos de caja tipo 'A'
+ * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
+ */
+private function generarDescripcionAutomatica($data) {
+    $tipo_comprobante = isset($data['tipo_comprobante']) ? $data['tipo_comprobante'] : '';
+    $numero_comprobante = isset($data['numero_comprobante']) ? $data['numero_comprobante'] : '';
+    $num_operacion = isset($data['num_operacion']) ? $data['num_operacion'] : '';
+    
+    // Si no hay datos suficientes, usar descripción por defecto
+    if (empty($tipo_comprobante) && empty($numero_comprobante)) {
+        return 'Movimiento automático';
+    }
+    
+    // Formato: "FC     21 Rec. Nº 100000"
+    $descripcion = '';
+    
+    if (!empty($tipo_comprobante)) {
+        $descripcion .= $tipo_comprobante;
+    }
+    
+    if (!empty($numero_comprobante)) {
+        // Agregar espacios para formato consistente (ajustar según necesidad)
+        $descripcion .= str_repeat(' ', max(1, 6 - strlen($tipo_comprobante))) . $numero_comprobante;
+    }
+    
+    if (!empty($num_operacion)) {
+        $descripcion .= ' Rec. Nº ' . $num_operacion;
+    }
+    
+    // Asegurar que la descripción no exceda 80 caracteres (límite del campo)
+    return substr($descripcion, 0, 80);
 }
 
 }

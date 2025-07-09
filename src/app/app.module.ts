@@ -42,6 +42,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { VirtualScrollerModule } from 'primeng/virtualscroller';
 import { ChartModule } from 'primeng/chart';
 import { NgChartsModule } from 'ng2-charts';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -214,6 +215,7 @@ import { HistorialventasComponent } from './components/historialventas/historial
     VirtualScrollerModule,
     ChartModule,
     NgChartsModule,
+    TooltipModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,

@@ -939,7 +939,7 @@ try {
         num_operacion: 0, // Se asignará en el backend cuando se genere el id_num
         fecha_mov: fechaFormateada,
         importe_mov: this.suma,
-        descripcion_mov: primerItem.nomart || '',
+        descripcion_mov: '', // Se generará automáticamente en el backend para tipo_movi='A'
         fecha_emibco: primerItem.fechacheque || null,
         banco: limitNumericValue(primerItem.codigobanco, 9999999999),
         num_cheque: limitNumericValue(primerItem.ncheque, 9999999999),
