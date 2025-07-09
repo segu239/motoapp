@@ -11,7 +11,8 @@
       "mcp__postgres__query",
       "Bash(rg:*)",
       "Bash(rg:*)",
-      "mcp__desktop-commander__read_file"
+      "mcp__desktop-commander__read_file",
+      "mcp__desktop-commander__search_code"
     ],
     "deny": []
   },
