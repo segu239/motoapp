@@ -1,0 +1,178 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Historial de Ventas (Facturas)</h4>
+                
+                <!-- Loading indicator -->
+                <div class="alert alert-warning mb-3" *ngIf="loading">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> 
+                    Cargando historial de ventas, por favor espere...
+                </div>
+                
+                <!-- Cliente info -->
+                <div class="alert alert-info mb-3" *ngIf="clienteInfo">
+                    <small>
+                        <i class="fa fa-user"></i> <strong>Cliente:</strong> {{ clienteInfo.nombre }} 
+                        (ID: {{ clienteInfo.idcli }})
+                    </small>
+                </div>
+                
+                <!-- Table with data - Lazy Loading -->
+                <p-table #dtable [value]="historialVentas2" [tableStyle]="{ 'min-width': '50rem' }" 
+                    [paginator]="true" 
+                    [rows]="rows"
+                    [first]="first"
+                    [rowsPerPageOptions]="[25,50,100]"
+                    [totalRecords]="totalRegistros"
+                    [showCurrentPageReport]="true"
+                    [loading]="loading"
+                    [lazy]="true"
+                    (onLazyLoad)="loadDataLazy($event)"
+                    [lazyLoadOnInit]="true"
+                    [filterDelay]="300"
+                    selectionMode="single" 
+                    [(selection)]="ventaSeleccionada" 
+                    dataKey="id"
+                    (onRowSelect)="onRowSelect($event)">
+                    
+                    <ng-template pTemplate="caption">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <!-- Selector de columnas -->
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <label class="form-label mb-0 me-2 fw-semibold">Columnas:</label>
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" 
+                                    optionLabel="header" defaultLabel="Seleccionar columnas" 
+                                    (onChange)="onColumnSelectionChange()"
+                                    styleClass="p-column-filter"
+                                    [style]="{'min-width': '200px'}">
+                                    <ng-template pTemplate="selectedItems" let-selectedColumns>
+                                        <div *ngIf="selectedColumns && selectedColumns.length > 0">
+                                            Columnas ({{selectedColumns.length}})
+                                        </div>
+                                        <div *ngIf="!selectedColumns || selectedColumns.length === 0">
+                                            Seleccionar columnas
+                                        </div>
+                                    </ng-template>
+                                </p-multiSelect>
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                                <p-button icon="pi pi-file" (click)="verRecibo()"
+                                    styleClass="p-button-sm p-button-info" 
+                                    pTooltip="Recibo"
+                                    tooltipPosition="top"
+                                    [disabled]="!ventaSeleccionada"></p-button>
+                                <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                    styleClass="p-button-sm p-button-success" 
+                                    pTooltip="Exportar a Excel"
+                                    tooltipPosition="top"></p-button>
+                                <p-button icon="pi pi-refresh" (click)="forceRefresh()"
+                                    styleClass="p-button-sm p-button-secondary" 
+                                    pTooltip="Recargar datos"
+                                    tooltipPosition="top"
+                                    [disabled]="loading"></p-button>
+                            </div>
+                        </div>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 3rem"></th> <!-- Columna para el selector -->
+                            <th *ngIf="isColumnVisible('sucursal')" pSortableColumn="sucursal">
+                                Sucursal
+                                <p-sortIcon field="sucursal"></p-sortIcon>
+                                <p-columnFilter type="text" field="sucursal" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('tipo')" pSortableColumn="tipo">
+                                Tipo
+                                <p-sortIcon field="tipo"></p-sortIcon>
+                                <p-columnFilter type="text" field="tipo" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('puntoventa')" pSortableColumn="puntoventa">
+                                Punto Venta
+                                <p-sortIcon field="puntoventa"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="puntoventa" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('letra')" pSortableColumn="letra">
+                                Letra
+                                <p-sortIcon field="letra"></p-sortIcon>
+                                <p-columnFilter type="text" field="letra" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('numero_fac')" pSortableColumn="numero_fac">
+                                Número Fac.
+                                <p-sortIcon field="numero_fac"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="numero_fac" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('emitido')" pSortableColumn="emitido">
+                                Emitido
+                                <p-sortIcon field="emitido"></p-sortIcon>
+                                <p-columnFilter type="date" field="emitido" display="menu" matchMode="dateIs"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('vencimiento')" pSortableColumn="vencimiento">
+                                Vencimiento
+                                <p-sortIcon field="vencimiento"></p-sortIcon>
+                                <p-columnFilter type="date" field="vencimiento" display="menu" matchMode="dateIs"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('importe')" pSortableColumn="importe">
+                                Importe
+                                <p-sortIcon field="importe"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="importe" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('saldo')" pSortableColumn="saldo">
+                                Saldo
+                                <p-sortIcon field="saldo"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="saldo" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('usuario')" pSortableColumn="usuario">
+                                Usuario
+                                <p-sortIcon field="usuario"></p-sortIcon>
+                                <p-columnFilter type="text" field="usuario" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                        </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-venta>
+                        <tr [pSelectableRow]="venta">
+                            <td>
+                                <p-tableRadioButton [value]="venta"></p-tableRadioButton>
+                            </td>
+                            <td *ngIf="isColumnVisible('sucursal')">{{ venta.sucursal }}</td>
+                            <td *ngIf="isColumnVisible('tipo')">{{ venta.tipo }}</td>
+                            <td *ngIf="isColumnVisible('puntoventa')">{{ venta.puntoventa }}</td>
+                            <td *ngIf="isColumnVisible('letra')">{{ venta.letra }}</td>
+                            <td *ngIf="isColumnVisible('numero_fac')">{{ venta.numero_fac }}</td>
+                            <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
+                            <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>
+                            <td *ngIf="isColumnVisible('importe')">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('saldo')">{{ venta.saldo | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('usuario')">{{ venta.usuario }}</td>
+                        </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="paginatorleft">
+                        <p-button type="button" icon="pi pi-refresh" styleClass="p-button-text"
+                            (click)="forceRefresh()" [disabled]="loading"></p-button>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="paginatorright">
+                        <p-button type="button" icon="pi pi-download" styleClass="p-button-text"
+                            (click)="exportExcel()"></p-button>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td colspan="12" class="text-center">
+                                <div class="py-4">
+                                    <i class="fa fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No se encontraron registros de facturas para este cliente.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+    </div>
+</div>

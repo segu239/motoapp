@@ -3472,6 +3472,262 @@ public function obtenerDatosRecibo_get()
 }
 
 /**
+ * Obtiene historial de ventas de la tabla factcabx (historialventas2)
+ * con paginación, filtros, búsqueda y ordenamiento
+ */
+public function historialventas2xcli_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $idcli = $this->get('idcli');
+    $page = $this->get('page') ? intval($this->get('page')) : 1;
+    $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+    $filters = $this->get('filters');
+    $search = $this->get('search');
+
+    // Validaciones básicas
+    if (!$sucursal || !$idcli) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e idcli"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar límites de paginación
+    $page = max(1, $page);
+    $limit = max(10, min(1000, $limit));
+    $offset = ($page - 1) * $limit;
+
+    // Construir nombre de tabla
+    $tabla = "factcab" . $sucursal;
+
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tabla)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La tabla $tabla no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Seleccionar campos específicos de factcabx
+        $this->db->select('
+            f.cod_sucursal as sucursal,
+            f.tipo,
+            f.puntoventa,
+            f.letra,
+            f.numero_fac,
+            f.emitido,
+            f.vencimiento,
+            f.exento,
+            f.basico,
+            f.iva1,
+            f.iva2,
+            f.iva3,
+            (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe,
+            f.saldo,
+            f.usuario,
+            f.id_num as id,
+            f.cliente
+        ');
+        $this->db->from($tabla . ' f');
+        
+        // Filtrar por cliente
+        $this->db->where('f.cliente', $idcli);
+
+        // Aplicar búsqueda global si existe
+        if ($search && trim($search) !== '') {
+            $searchTerm = $this->db->escape_like_str($search);
+            $this->db->group_start();
+            $this->db->like('f.tipo', $searchTerm);
+            $this->db->or_like('f.letra', $searchTerm);
+            $this->db->or_like('f.numero_fac', $searchTerm);
+            $this->db->or_like('f.usuario', $searchTerm);
+            $this->db->group_end();
+        }
+
+        // Aplicar filtros de columna si existen
+        if ($filters && trim($filters) !== '') {
+            $filtersArray = json_decode($filters, true);
+            if ($filtersArray && is_array($filtersArray)) {
+                foreach ($filtersArray as $field => $filter) {
+                    if (isset($filter['value']) && $filter['value'] !== '') {
+                        $value = $filter['value'];
+                        $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                        
+                        // Mapear campos al alias correcto
+                        $dbField = 'f.' . $field;
+                        
+                        switch ($matchMode) {
+                            case 'startsWith':
+                                $this->db->like($dbField, $value, 'after');
+                                break;
+                            case 'contains':
+                                $this->db->like($dbField, $value);
+                                break;
+                            case 'equals':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'gt':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'gte':
+                                $this->db->where($dbField . ' >=', $value);
+                                break;
+                            case 'lt':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            case 'lte':
+                                $this->db->where($dbField . ' <=', $value);
+                                break;
+                            case 'dateIs':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'dateAfter':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'dateBefore':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            default:
+                                $this->db->like($dbField, $value);
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Contar total de registros antes de aplicar límites
+        $totalQuery = clone $this->db;
+        $totalRegistros = $totalQuery->count_all_results('', false);
+
+        // Aplicar ordenamiento
+        if ($sortField && trim($sortField) !== '') {
+            $sortDirection = ($sortOrder === -1) ? 'DESC' : 'ASC';
+            $dbSortField = 'f.' . $sortField;
+            $this->db->order_by($dbSortField, $sortDirection);
+        } else {
+            // Ordenamiento por defecto: fecha de emisión más reciente primero
+            $this->db->order_by('f.emitido', 'DESC');
+        }
+
+        // Aplicar paginación
+        $this->db->limit($limit, $offset);
+
+        // Ejecutar consulta
+        $query = $this->db->get();
+        $datos = $query->result_array();
+
+        // Calcular metadatos de paginación
+        $totalPaginas = ceil($totalRegistros / $limit);
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => array(
+                "data" => $datos,
+                "total" => $totalRegistros,
+                "total_pages" => $totalPaginas,
+                "current_page" => $page,
+                "per_page" => $limit,
+                "from" => $offset + 1,
+                "to" => min($offset + $limit, $totalRegistros)
+            )
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al consultar historial de ventas2: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Obtiene los datos completos del recibo basándose en el id de factcabx
+ * para historialventas2
+ */
+public function obtenerDatosRecibo2_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $id = $this->get('id');
+
+    // Validaciones básicas
+    if (!$sucursal || !$id) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e id"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Construir nombres de tablas
+    $tablaFactcab = "factcab" . $sucursal;
+
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tablaFactcab)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La tabla $tablaFactcab no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Consultar datos completos de factcabx
+        $this->db->select('*');
+        $this->db->from($tablaFactcab);
+        $this->db->where('id', $id);
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            $datos = $query->row_array();
+            
+            // Calcular importe total
+            $excento = floatval($datos['excento']) ?: 0;
+            $basico = floatval($datos['basico']) ?: 0;
+            $iva1 = floatval($datos['iva1']) ?: 0;
+            $iva2 = floatval($datos['iva2']) ?: 0;
+            $iva3 = floatval($datos['iva3']) ?: 0;
+            $datos['importe_total'] = $excento + $basico + $iva1 + $iva2 + $iva3;
+            
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => "Datos del recibo obtenidos exitosamente",
+                "data" => $datos
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron datos para el recibo con ID: $id"
+            );
+        }
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener datos del recibo2: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
  * Genera una descripción automática para movimientos de caja tipo 'A'
  * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
  */

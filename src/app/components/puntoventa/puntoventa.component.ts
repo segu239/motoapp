@@ -51,7 +51,7 @@ export class PuntoventaComponent implements OnInit {
   }
   verHistorialVentas(cliente) {
     console.log('Ver historial de ventas para cliente:', cliente);
-    this._router.navigate(['components/historialventas'], { queryParams: { cliente: JSON.stringify(cliente) } });
+    this._router.navigate(['components/historialventas2'], { queryParams: { cliente: JSON.stringify(cliente) } });
   }
   exportExcel() {
     import('xlsx').then((xlsx) => {

@@ -124,6 +124,7 @@ import { ArticulosPaginadosService } from './services/articulos-paginados.servic
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
+import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
 
 @NgModule({
   declarations: [
@@ -206,6 +207,7 @@ import { HistorialventasComponent } from './components/historialventas/historial
     NopermitidoComponent,
     ReporteComponent,
     HistorialventasComponent,
+    Historialventas2Component,
   ],
   imports: [
     ButtonModule,
