@@ -946,6 +946,9 @@ public function PedidossucxappCompleto_post() {
                 }
             }
             
+            // Generar recibo automáticamente para todas las operaciones
+            $this->generarReciboAutomatico($cabecera, $id_num, $id_vend);
+            
             // Insertar caja_movi si está presente
             if ($caja_movi) {
                 // Asignar el id_num de la cabecera al movimiento de caja
@@ -1079,6 +1082,81 @@ else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
    $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
 }
 
+}
+
+/**
+ * Función auxiliar para generar recibo automáticamente
+ * Se ejecuta para todas las operaciones sin importar el saldo
+ */
+private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
+    try {
+        // Generar número de recibo único
+        $numero_recibo = $this->getNextReciboNumber($id_vend);
+        
+        // Calcular importe total
+        $importe_total = floatval($cabecera['basico']) + floatval($cabecera['iva1']);
+        
+        // Determinar el saldo del recibo (0 para operaciones al contado)
+        $recibo_saldo = isset($cabecera['saldo']) ? floatval($cabecera['saldo']) : 0;
+        
+        // Preparar datos del recibo
+        $recibo = array(
+            'recibo' => $numero_recibo,
+            'c_tipo' => 'RC',
+            'c_numero' => isset($cabecera['numero_fac']) ? $cabecera['numero_fac'] : 0,
+            'c_cuota' => 0,
+            'fecha' => isset($cabecera['emitido']) ? $cabecera['emitido'] : date('Y-m-d'),
+            'importe' => $importe_total,
+            'usuario' => isset($cabecera['usuario']) ? $cabecera['usuario'] : 'sistema',
+            'observacion' => 0,
+            'cod_lugar' => '1',
+            'sesion' => 0,
+            'c_tipf' => isset($cabecera['letra']) ? $cabecera['letra'] : 'B',
+            'c_puntoventa' => isset($cabecera['puntoventa']) ? $cabecera['puntoventa'] : 0,
+            'recibo_asoc' => $id_num,
+            'recibo_saldo' => $recibo_saldo,
+            'cod_sucursal' => $id_vend,
+            'fec_proceso' => date('Y-m-d'),
+            'bonifica' => isset($cabecera['bonifica']) ? $cabecera['bonifica'] : 0,
+            'interes' => isset($cabecera['interes']) ? $cabecera['interes'] : 0,
+            'id_fac' => $id_num
+        );
+        
+        // Insertar recibo en la tabla correspondiente
+        $tabla_recibos = 'recibos' . $id_vend;
+        $this->db->insert($tabla_recibos, $recibo);
+        
+        // Log del recibo generado
+        log_message('info', 'Recibo generado automáticamente: ' . $numero_recibo . ' para operación: ' . $id_num);
+        
+    } catch (Exception $e) {
+        // Log del error pero no interrumpir la transacción principal
+        log_message('error', 'Error al generar recibo automático: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Función auxiliar para obtener el siguiente número de recibo
+ */
+private function getNextReciboNumber($id_vend) {
+    try {
+        // Obtener el último número de recibo de la tabla correspondiente
+        $tabla_recibos = 'recibos' . $id_vend;
+        $this->db->select('MAX(CAST(recibo AS INTEGER)) as max_recibo');
+        $this->db->from($tabla_recibos);
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            $row = $query->row();
+            $max_recibo = $row->max_recibo;
+            return $max_recibo ? $max_recibo + 1 : 1;
+        } else {
+            return 1;
+        }
+    } catch (Exception $e) {
+        log_message('error', 'Error al obtener número de recibo: ' . $e->getMessage());
+        return 1;
+    }
 }
 
 public function Mixto_post()
