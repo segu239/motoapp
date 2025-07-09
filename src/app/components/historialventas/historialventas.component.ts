@@ -5,6 +5,7 @@ import { HistorialVentasPaginadosService } from '../../services/historial-ventas
 import { Subscription } from 'rxjs';
 import { LazyLoadEvent } from 'primeng/api';
 import { HistorialVenta } from '../../interfaces/historial-venta';
+import { ReciboDetalle } from '../../interfaces/recibo-detalle';
 import Swal from 'sweetalert2';
 
 interface Column {
@@ -272,23 +273,110 @@ export class HistorialventasComponent implements OnInit, OnDestroy {
 
     console.log('Ver información de recibos para:', this.ventaSeleccionada);
     
-    // Aquí implementarás la lógica para mostrar información de recibos
-    // Por ahora solo mostramos la información de la venta seleccionada
+    // Mostrar loading
     Swal.fire({
-      title: 'Información de Recibos',
+      title: 'Cargando información del recibo...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    // Obtener datos completos del recibo
+    this.historialVentasService.obtenerDatosRecibo(this.ventaSeleccionada.id_num).subscribe({
+      next: (response: any) => {
+        console.log('Respuesta datos del recibo:', response);
+        
+        if (response && !response.error && response.data) {
+          this.mostrarModalRecibo(response.data);
+        } else {
+          this.showNotification('No se encontraron datos del recibo', 'warning');
+        }
+      },
+      error: (error) => {
+        console.error('Error al obtener datos del recibo:', error);
+        this.showNotification('Error al obtener datos del recibo', 'error');
+      }
+    });
+  }
+
+  // Mostrar modal con información completa del recibo
+  private mostrarModalRecibo(datosRecibo: any): void {
+    const formatearFecha = (fecha: string) => {
+      if (!fecha) return 'Sin fecha';
+      return new Date(fecha).toLocaleDateString('es-ES');
+    };
+
+    const formatearImporte = (importe: number) => {
+      if (importe === null || importe === undefined) return 'Sin importe';
+      return new Intl.NumberFormat('es-ES', { 
+        style: 'currency', 
+        currency: 'ARS' 
+      }).format(importe);
+    };
+
+    Swal.fire({
+      title: 'Información Completa del Recibo',
       html: `
-        <div class="text-left">
-          <p><strong>ID Num:</strong> ${this.ventaSeleccionada.id_num}</p>
-          <p><strong>Número de Comprobante:</strong> ${this.ventaSeleccionada.numerocomprobante}</p>
-          <p><strong>Artículo:</strong> ${this.ventaSeleccionada.nomart}</p>
-          <p><strong>Precio:</strong> $${this.ventaSeleccionada.precio}</p>
-          <p><strong>Fecha:</strong> ${this.ventaSeleccionada.fecha}</p>
-          <p><strong>Forma de Pago:</strong> ${this.ventaSeleccionada.descripcion_tarjeta || 'Sin definir'}</p>
+        <div class="text-left" style="max-height: 400px; overflow-y: auto;">
+          <div class="mb-3">
+            <h5 class="text-primary">📋 Información de la Venta</h5>
+            <p><strong>ID Num:</strong> ${datosRecibo.id_num}</p>
+            <p><strong>Número de Comprobante:</strong> ${datosRecibo.numerocomprobante}</p>
+            <p><strong>Punto de Venta:</strong> ${datosRecibo.puntoventa}</p>
+            <p><strong>Tipo de Documento:</strong> ${datosRecibo.tipodoc}</p>
+            <p><strong>Fecha de Venta:</strong> ${formatearFecha(datosRecibo.fecha_venta)}</p>
+            <p><strong>Hora:</strong> ${datosRecibo.hora}</p>
+            <p><strong>Artículo:</strong> ${datosRecibo.nomart}</p>
+            <p><strong>Cantidad:</strong> ${datosRecibo.cantidad}</p>
+            <p><strong>Precio:</strong> ${formatearImporte(datosRecibo.precio)}</p>
+            <p><strong>Forma de Pago:</strong> ${datosRecibo.descripcion_tarjeta || 'Sin definir'}</p>
+          </div>
+
+          ${datosRecibo.recibo ? `
+          <div class="mb-3">
+            <h5 class="text-success">🧾 Información del Recibo</h5>
+            <p><strong>Número de Recibo:</strong> ${datosRecibo.recibo}</p>
+            <p><strong>Tipo de Recibo:</strong> ${datosRecibo.c_tipo}</p>
+            <p><strong>Fecha de Recibo:</strong> ${formatearFecha(datosRecibo.fecha_recibo)}</p>
+            <p><strong>Importe del Recibo:</strong> ${formatearImporte(datosRecibo.importe)}</p>
+            <p><strong>Saldo del Recibo:</strong> ${formatearImporte(datosRecibo.recibo_saldo)}</p>
+            <p><strong>Usuario:</strong> ${datosRecibo.usuario || 'Sin definir'}</p>
+            <p><strong>Sucursal:</strong> ${datosRecibo.cod_sucursal}</p>
+            <p><strong>Fecha de Procesamiento:</strong> ${formatearFecha(datosRecibo.fec_proceso)}</p>
+          </div>
+
+          <div class="mb-3">
+            <h5 class="text-warning">💰 Información Financiera</h5>
+            <p><strong>Bonificación:</strong> ${formatearImporte(datosRecibo.bonifica)}</p>
+            <p><strong>Interés:</strong> ${formatearImporte(datosRecibo.interes)}</p>
+            <p><strong>Cuota:</strong> ${datosRecibo.c_cuota || 'Sin cuota'}</p>
+            <p><strong>Tipo de Factura:</strong> ${datosRecibo.c_tipf}</p>
+          </div>
+
+          <div class="mb-3">
+            <h5 class="text-info">🔧 Información Técnica</h5>
+            <p><strong>Código de Lugar:</strong> ${datosRecibo.cod_lugar}</p>
+            <p><strong>Sesión:</strong> ${datosRecibo.sesion}</p>
+            <p><strong>Recibo Asociado:</strong> ${datosRecibo.recibo_asoc}</p>
+            <p><strong>Observación:</strong> ${datosRecibo.observacion || 'Sin observaciones'}</p>
+          </div>
+          ` : `
+          <div class="mb-3">
+            <h5 class="text-danger">⚠️ Información del Recibo</h5>
+            <p>No se encontró información de recibo asociada a esta venta.</p>
+          </div>
+          `}
         </div>
       `,
       icon: 'info',
       confirmButtonText: 'Cerrar',
-      width: '500px'
+      width: '700px',
+      customClass: {
+        popup: 'swal2-popup-large'
+      }
     });
   }
 

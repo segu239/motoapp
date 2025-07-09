@@ -3367,6 +3367,111 @@ public function historialventasxsucxcli_get()
 }
 
 /**
+ * Obtiene los datos completos del recibo basándose en el id_num de la venta
+ * Relaciona las tablas psucursal y recibos para mostrar información completa
+ */
+public function obtenerDatosRecibo_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $idNum = $this->get('id_num');
+
+    // Validaciones básicas
+    if (!$sucursal || !$idNum) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e id_num"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Construir nombres de tablas
+    $tablaPsucursal = "psucursal" . $sucursal;
+    $tablaRecibos = "recibos" . $sucursal;
+
+    // Verificar si las tablas existen
+    if (!$this->db->table_exists($tablaPsucursal) || !$this->db->table_exists($tablaRecibos)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Las tablas requeridas no existen para la sucursal $sucursal"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Consulta para obtener datos combinados de psucursal y recibos
+        $this->db->select('
+            p.id_num,
+            p.numerocomprobante,
+            p.puntoventa,
+            p.fecha as fecha_venta,
+            p.hora,
+            p.nomart,
+            p.precio,
+            p.cantidad,
+            p.tipodoc,
+            p.idcli,
+            p.idven,
+            p.cod_tar,
+            p.estado,
+            r.recibo,
+            r.c_tipo,
+            r.c_cuota,
+            r.fecha as fecha_recibo,
+            r.importe,
+            r.usuario,
+            r.observacion,
+            r.cod_lugar,
+            r.sesion,
+            r.c_tipf,
+            r.recibo_saldo,
+            r.cod_sucursal,
+            r.fec_proceso,
+            r.bonifica,
+            r.interes,
+            r.recibo_asoc,
+            CASE WHEN t.tarjeta IS NOT NULL THEN t.tarjeta ELSE \'Sin definir\' END as descripcion_tarjeta
+        ');
+        
+        $this->db->from($tablaPsucursal . ' p');
+        $this->db->join($tablaRecibos . ' r', 'p.id_num = r.id_fac', 'left');
+        $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+        $this->db->where('p.id_num', $idNum);
+
+        // Ejecutar consulta
+        $query = $this->db->get();
+        $datos = $query->row_array();
+
+        if (!$datos) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron datos para el id_num: $idNum"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+            return;
+        }
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Datos del recibo obtenidos exitosamente",
+            "data" => $datos
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener datos del recibo: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
  * Genera una descripción automática para movimientos de caja tipo 'A'
  * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
  */

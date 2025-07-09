@@ -10,7 +10,8 @@
       "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -C 15 \"cajamovi\" Descarga.php.txt)",
       "mcp__postgres__query",
       "Bash(rg:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "mcp__desktop-commander__read_file"
     ],
     "deny": []
   },
