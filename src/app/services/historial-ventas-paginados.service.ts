@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { ReciboDetalle } from '../interfaces/recibo-detalle';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +18,7 @@ export class HistorialVentasPaginadosService {
 
   // URLs del backend
   private urlHistorialVentas = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventasxsucxcli";
+  private urlDatosRecibo = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosRecibo";
 
   // Observables públicos
   public paginaActual$ = this.paginaActualSubject.asObservable();
@@ -238,6 +240,33 @@ export class HistorialVentasPaginadosService {
   // Limpiar término de búsqueda
   limpiarTerminoBusqueda(): void {
     this.terminoBusquedaSubject.next('');
+  }
+
+  // Obtener datos completos del recibo
+  obtenerDatosRecibo(idNum: number): Observable<any> {
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      console.error('No se encontró la sucursal en sessionStorage');
+      return throwError('No se encontró la sucursal');
+    }
+
+    const params = new URLSearchParams({
+      sucursal: sucursal,
+      id_num: idNum.toString()
+    });
+
+    const urlCompleta = `${this.urlDatosRecibo}?${params.toString()}`;
+    console.log('HistorialVentasPaginados: Obteniendo datos del recibo:', urlCompleta);
+
+    return this.http.get<any>(urlCompleta).pipe(
+      tap(response => {
+        console.log('Respuesta datos del recibo:', response);
+      }),
+      catchError(error => {
+        console.error('Error al obtener datos del recibo:', error);
+        return throwError(error);
+      })
+    );
   }
 
   // Procesar datos de historial de ventas

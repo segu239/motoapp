@@ -192,13 +192,26 @@ export class EditconflistaComponent implements OnInit {
       // Uso getRawValue() en lugar de value para incluir campos deshabilitados
       const formValues = this.conflistaForm.getRawValue();
       
-      // Depuración: muestra los tipos de datos de los campos importantes
-      console.log('Tipos de datos antes de enviar:');
-      console.log('preciof21 tipo:', typeof formValues.preciof21, 'valor:', formValues.preciof21);
-      console.log('preciof105 tipo:', typeof formValues.preciof105, 'valor:', formValues.preciof105);
-      console.log('originalPreciof21 tipo:', typeof this.originalPreciof21, 'valor:', this.originalPreciof21);
-      console.log('originalPreciof105 tipo:', typeof this.originalPreciof105, 'valor:', this.originalPreciof105);
-      console.log('tipomone valor:', formValues.tipomone);
+      // ==============================================
+      // 🔍 DEBUG FRONTEND - VALIDACIÓN DE DATOS CRÍTICOS
+      // ==============================================
+      console.log('\n=== 🔍 DEBUG FRONTEND - INICIO VALIDACIÓN ===');
+      console.log('📋 VALORES RAW DEL FORMULARIO:', formValues);
+      
+      // Validar campos críticos individualmente
+      console.log('\n🎯 CAMPOS CRÍTICOS:');
+      console.log('• listap - tipo:', typeof formValues.listap, '| valor:', formValues.listap, '| válido:', formValues.listap && ['1','2','3','4'].includes(formValues.listap));
+      console.log('• tipomone - tipo:', typeof formValues.tipomone, '| valor:', formValues.tipomone, '| válido:', formValues.tipomone && !isNaN(Number(formValues.tipomone)));
+      console.log('• id_conflista - tipo:', typeof this.id_conflista, '| valor:', this.id_conflista, '| válido:', this.id_conflista > 0);
+      
+      // Validar precios
+      console.log('\n💰 PRECIOS ACTUALES:');
+      console.log('• preciof21 - tipo:', typeof formValues.preciof21, '| valor:', formValues.preciof21);
+      console.log('• preciof105 - tipo:', typeof formValues.preciof105, '| valor:', formValues.preciof105);
+      
+      console.log('\n💰 PRECIOS ORIGINALES:');
+      console.log('• originalPreciof21 - tipo:', typeof this.originalPreciof21, '| valor:', this.originalPreciof21);
+      console.log('• originalPreciof105 - tipo:', typeof this.originalPreciof105, '| valor:', this.originalPreciof105);
       
       // Convertir a número para asegurar que la comparación sea correcta
       const preciof21Num = Number(formValues.preciof21);
@@ -236,14 +249,45 @@ export class EditconflistaComponent implements OnInit {
         recalcular_105: preciof105Changed
       };
 
-      console.log('Objeto conflistaData completo a enviar:', conflistaData);
-      console.log('Verificación del campo tipomone:', conflistaData.tipomone);
+      // ==============================================
+      // 🚀 DEBUG FRONTEND - OBJETO FINAL A ENVIAR
+      // ==============================================
+      console.log('\n=== 🚀 DEBUG FRONTEND - OBJETO FINAL ===');
+      console.log('📦 conflistaData COMPLETO:', JSON.stringify(conflistaData, null, 2));
+      
+      // Validaciones finales críticas
+      console.log('\n✅ VALIDACIONES FINALES:');
+      console.log('• ¿id_conflista válido?', conflistaData.id_conflista > 0 ? '✅' : '❌', conflistaData.id_conflista);
+      console.log('• ¿listap válido?', ['1','2','3','4'].includes(conflistaData.listap) ? '✅' : '❌', conflistaData.listap);
+      console.log('• ¿tipomone válido?', conflistaData.tipomone && !isNaN(Number(conflistaData.tipomone)) ? '✅' : '❌', conflistaData.tipomone);
+      console.log('• ¿recalcular_21?', conflistaData.recalcular_21 ? '✅ SÍ' : '❌ NO', conflistaData.recalcular_21);
+      console.log('• ¿recalcular_105?', conflistaData.recalcular_105 ? '✅ SÍ' : '❌ NO', conflistaData.recalcular_105);
+      console.log('• Campo precio esperado en backend: prefi' + conflistaData.listap);
+      
+      console.log('\n🌐 ENVIANDO AL BACKEND:', new Date().toISOString());
+      console.log('===========================================\n');
 
       this.subirdata.updateConflista(conflistaData).subscribe(
         (response: any) => {
-          console.log('conflistaData enviada al servidor:', conflistaData);
-          console.log('Valores de precio enviados - preciof21:', conflistaData.preciof21, 'preciof105:', conflistaData.preciof105);
-          console.log('Estado de recalcular precios - recalcular_21:', conflistaData.recalcular_21, 'recalcular_105:', conflistaData.recalcular_105);
+          // ==============================================
+          // 📨 DEBUG FRONTEND - RESPUESTA DEL BACKEND
+          // ==============================================
+          console.log('\n=== 📨 DEBUG FRONTEND - RESPUESTA RECIBIDA ===');
+          console.log('🕒 Timestamp respuesta:', new Date().toISOString());
+          console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(response, null, 2));
+          
+          if (response && response.resultados) {
+            console.log('\n📊 RESULTADOS ESPECÍFICOS:');
+            console.log('• Conflista actualizada:', response.resultados.conflista_actualizada ? '✅' : '❌');
+            console.log('• Productos actualizados IVA 21%:', response.resultados.productos_actualizados_21 || 0);
+            console.log('• Productos actualizados IVA 10.5%:', response.resultados.productos_actualizados_105 || 0);
+          }
+          
+          console.log('\n🔄 DATOS QUE SE ENVIARON AL BACKEND:');
+          console.log('• preciof21:', conflistaData.preciof21, '| recalcular_21:', conflistaData.recalcular_21);
+          console.log('• preciof105:', conflistaData.preciof105, '| recalcular_105:', conflistaData.recalcular_105);
+          console.log('• listap:', conflistaData.listap, '| tipomone:', conflistaData.tipomone);
+          console.log('==========================================\n');
           
           Swal.fire({
             title: 'Actualizando...',
