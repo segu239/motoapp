@@ -32,6 +32,11 @@ export class Historialventas2Component implements OnInit, OnDestroy {
   public expandedRows: { [key: string]: VentaExpandida } = {};
   public loadingExpanded: { [key: string]: boolean } = {};
   
+  // Variables para filtro de fechas
+  public fechaDesde: Date | null = null;
+  public fechaHasta: Date | null = null;
+  public consultaRealizada: boolean = false;
+  
   // Variables para paginación
   public totalRegistros: number = 0;
   public rows: number = 50;
@@ -89,6 +94,9 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       })
     );
+
+    // Inicializar fechas por defecto (último mes)
+    this.inicializarFechasPorDefecto();
   }
 
   ngOnDestroy(): void {
@@ -113,9 +121,85 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     this.selectedColumns = [...this.cols];
   }
 
-  // Lazy loading de datos
+  // Inicializar fechas por defecto (último mes)
+  private inicializarFechasPorDefecto(): void {
+    const hoy = new Date();
+    this.fechaHasta = new Date(hoy);
+    
+    // Fecha desde: hace 30 días
+    this.fechaDesde = new Date(hoy);
+    this.fechaDesde.setDate(hoy.getDate() - 30);
+  }
+
+  // Consultar historial con rango de fechas
+  consultarHistorial(): void {
+    if (!this.fechaDesde || !this.fechaHasta) {
+      this.showNotification('Debe seleccionar ambas fechas para consultar', 'warning');
+      return;
+    }
+
+    if (this.fechaDesde > this.fechaHasta) {
+      this.showNotification('La fecha desde no puede ser mayor que la fecha hasta', 'warning');
+      return;
+    }
+
+    if (this.idCliente === 0) {
+      this.showNotification('ID de cliente no disponible', 'error');
+      return;
+    }
+
+    // Marcar que se realizó una consulta
+    this.consultaRealizada = true;
+    
+    // Resetear paginación
+    this.first = 0;
+
+    // Realizar consulta con rango de fechas
+    this.cargarDatosConFechas(1, this.rows);
+  }
+
+  // Cargar datos con rango de fechas
+  private cargarDatosConFechas(page: number, limit: number, sortField?: string, sortOrder: number = 1, filters: any = {}): void {
+    if (!this.fechaDesde || !this.fechaHasta) {
+      return;
+    }
+
+    console.log('Cargando datos con rango de fechas:', {
+      fechaDesde: this.fechaDesde,
+      fechaHasta: this.fechaHasta,
+      idCliente: this.idCliente,
+      page,
+      limit
+    });
+
+    this.historialVentas2Service.cargarHistorialVentas2ConFechas(
+      this.idCliente,
+      this.fechaDesde,
+      this.fechaHasta,
+      page,
+      limit,
+      sortField,
+      sortOrder,
+      filters
+    ).subscribe({
+      next: (response) => {
+        console.log('Datos cargados exitosamente con fechas');
+      },
+      error: (error) => {
+        console.error('Error al cargar historial de ventas2 con fechas:', error);
+        this.showNotification('Error al cargar el historial de ventas', 'error');
+      }
+    });
+  }
+
+  // Lazy loading de datos (solo si ya se realizó una consulta)
   loadDataLazy(event: LazyLoadEvent): void {
     console.log('Lazy load event:', event);
+    
+    if (!this.consultaRealizada) {
+      console.log('No se ha realizado consulta inicial');
+      return;
+    }
     
     if (this.idCliente === 0) {
       console.log('ID Cliente no disponible aún');
@@ -148,32 +232,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       }
     });
 
-    console.log('Cargando datos con parámetros:', {
-      idCliente: this.idCliente,
-      page,
-      limit,
-      sortField,
-      sortOrder,
-      filters: processedFilters
-    });
-
-    // Cargar datos del servicio
-    this.historialVentas2Service.cargarHistorialVentas2(
-      this.idCliente,
-      page,
-      limit,
-      sortField,
-      sortOrder,
-      processedFilters
-    ).subscribe({
-      next: (response) => {
-        console.log('Datos cargados exitosamente');
-      },
-      error: (error) => {
-        console.error('Error al cargar historial de ventas2:', error);
-        this.showNotification('Error al cargar el historial de ventas', 'error');
-      }
-    });
+    // Cargar datos con fechas si están disponibles
+    this.cargarDatosConFechas(page, limit, sortField, sortOrder, processedFilters);
   }
 
   // Verificar si una columna está visible

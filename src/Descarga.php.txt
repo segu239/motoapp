@@ -3486,6 +3486,8 @@ public function historialventas2xcli_get()
     $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
     $filters = $this->get('filters');
     $search = $this->get('search');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
 
     // Validaciones básicas
     if (!$sucursal || !$idcli) {
@@ -3540,6 +3542,15 @@ public function historialventas2xcli_get()
         
         // Filtrar por cliente
         $this->db->where('f.cliente', $idcli);
+
+        // Aplicar filtro de rango de fechas si se proporciona
+        if ($fecha_desde && $fecha_hasta) {
+            // Validar formato de fechas (YYYY-MM-DD)
+            if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+                $this->db->where('f.emitido >=', $fecha_desde);
+                $this->db->where('f.emitido <=', $fecha_hasta);
+            }
+        }
 
         // Aplicar búsqueda global si existe
         if ($search && trim($search) !== '') {
@@ -3903,6 +3914,20 @@ private function generarDescripcionAutomatica($data) {
     
     // Asegurar que la descripción no exceda 80 caracteres (límite del campo)
     return substr($descripcion, 0, 80);
+}
+
+/**
+ * Valida que una fecha tenga el formato YYYY-MM-DD
+ */
+private function validarFormatoFecha($fecha) {
+    // Verificar formato básico con regex
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+        return false;
+    }
+    
+    // Verificar que sea una fecha válida
+    $parts = explode('-', $fecha);
+    return checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0]);
 }
 
 }

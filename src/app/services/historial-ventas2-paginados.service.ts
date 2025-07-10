@@ -32,7 +32,92 @@ export class HistorialVentas2PaginadosService {
 
   constructor(private http: HttpClient) {}
 
-  // Cargar historial de ventas con filtros y paginación
+  // Cargar historial de ventas con rango de fechas
+  cargarHistorialVentas2ConFechas(
+    idCliente: number,
+    fechaDesde: Date,
+    fechaHasta: Date,
+    page: number = 1,
+    limit: number = 50,
+    sortField?: string,
+    sortOrder: number = 1,
+    filters: any = {}
+  ): Observable<any> {
+    this.cargandoSubject.next(true);
+    
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      console.error('No se encontró la sucursal en sessionStorage');
+      this.cargandoSubject.next(false);
+      return throwError('No se encontró la sucursal');
+    }
+
+    // Formatear fechas para el backend (YYYY-MM-DD)
+    const fechaDesdeStr = this.formatDateForBackend(fechaDesde);
+    const fechaHastaStr = this.formatDateForBackend(fechaHasta);
+
+    const params = new URLSearchParams({
+      sucursal: sucursal,
+      idcli: idCliente.toString(),
+      fecha_desde: fechaDesdeStr,
+      fecha_hasta: fechaHastaStr,
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    // Agregar ordenamiento
+    if (sortField) {
+      params.append('sortField', sortField);
+      params.append('sortOrder', sortOrder.toString());
+    }
+
+    // Agregar filtros
+    if (filters && Object.keys(filters).length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+
+    const urlCompleta = `${this.urlHistorialVentas2}?${params.toString()}`;
+    console.log('HistorialVentas2Paginados: URL completa con fechas:', urlCompleta);
+
+    return this.http.get<any>(urlCompleta).pipe(
+      tap(response => {
+        console.log('Respuesta historial ventas2 con fechas:', response);
+        
+        if (response && !response.error && response.mensaje) {
+          // Formato paginado del backend
+          if (response.mensaje.data !== undefined) {
+            const ventas = Array.isArray(response.mensaje.data) ? response.mensaje.data : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(response.mensaje.total || 0);
+            this.totalPaginasSubject.next(response.mensaje.total_pages || 0);
+            this.paginaActualSubject.next(page);
+          } else {
+            // Formato sin paginación
+            const ventas = Array.isArray(response.mensaje) ? response.mensaje : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(ventas.length);
+            this.totalPaginasSubject.next(ventas.length > 0 ? 1 : 0);
+            this.paginaActualSubject.next(1);
+          }
+        } else {
+          this.historialVentas2Subject.next([]);
+          this.totalItemsSubject.next(0);
+          this.totalPaginasSubject.next(0);
+        }
+        this.cargandoSubject.next(false);
+      }),
+      catchError(error => {
+        console.error('Error al cargar historial de ventas2 con fechas:', error);
+        this.cargandoSubject.next(false);
+        this.historialVentas2Subject.next([]);
+        this.totalItemsSubject.next(0);
+        this.totalPaginasSubject.next(0);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Cargar historial de ventas con filtros y paginación (método original)
   cargarHistorialVentas2(
     idCliente: number,
     page: number = 1,
@@ -296,6 +381,14 @@ export class HistorialVentas2PaginadosService {
         return throwError(error);
       })
     );
+  }
+
+  // Formatear fecha para el backend (YYYY-MM-DD)
+  private formatDateForBackend(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   // Procesar datos de historial de ventas2
