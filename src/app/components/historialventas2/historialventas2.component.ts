@@ -5,6 +5,7 @@ import { HistorialVentas2PaginadosService } from '../../services/historial-venta
 import { Subscription } from 'rxjs';
 import { LazyLoadEvent } from 'primeng/api';
 import { HistorialVenta2 } from '../../interfaces/historial-venta2';
+import { VentaExpandida } from '../../interfaces/recibo-expanded';
 import Swal from 'sweetalert2';
 
 interface Column {
@@ -26,6 +27,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
   
   // Variable para almacenar la venta seleccionada
   public ventaSeleccionada: HistorialVenta2 | null = null;
+  
+  // Variables para expansión de filas
+  public expandedRows: { [key: string]: VentaExpandida } = {};
+  public loadingExpanded: { [key: string]: boolean } = {};
   
   // Variables para paginación
   public totalRegistros: number = 0;
@@ -260,97 +265,74 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     this.ventaSeleccionada = event.data;
   }
 
-  // Función para el botón de recibo (sin funcionalidad por ahora)
-  verRecibo(): void {
-    if (!this.ventaSeleccionada) {
-      this.showNotification('Por favor seleccione una venta primero', 'warning');
+  // Expandir/contraer fila
+  toggleRowExpansion(venta: HistorialVenta2): void {
+    const key = `${venta.id}`;
+    
+    if (this.expandedRows[key]) {
+      // Si ya está expandida, contraer
+      delete this.expandedRows[key];
+    } else {
+      // Si no está expandida, expandir y cargar datos
+      this.loadExpandedData(venta);
+    }
+  }
+
+  // Cargar datos expandidos para una venta
+  private loadExpandedData(venta: HistorialVenta2): void {
+    const key = `${venta.id}`;
+    
+    if (!venta.id) {
+      this.showNotification('ID de factura no válido', 'error');
       return;
     }
-
-    console.log('Ver recibo para:', this.ventaSeleccionada);
     
-    // Mostrar loading
-    Swal.fire({
-      title: 'Cargando información del recibo...',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      showConfirmButton: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
-    // Obtener datos completos del recibo
-    this.historialVentas2Service.obtenerDatosRecibo2(this.ventaSeleccionada.id || 0).subscribe({
+    this.loadingExpanded[key] = true;
+    
+    this.historialVentas2Service.obtenerDatosExpandidos(venta.id).subscribe({
       next: (response: any) => {
-        console.log('Respuesta datos del recibo2:', response);
+        console.log('Datos expandidos recibidos:', response);
         
         if (response && !response.error && response.data) {
-          this.mostrarModalRecibo(response.data);
+          this.expandedRows[key] = {
+            recibos: response.data.recibos || [],
+            psucursal: response.data.psucursal || []
+          };
         } else {
-          this.showNotification('No se encontraron datos del recibo', 'warning');
+          this.expandedRows[key] = {
+            recibos: [],
+            psucursal: []
+          };
         }
+        
+        this.loadingExpanded[key] = false;
       },
       error: (error) => {
-        console.error('Error al obtener datos del recibo2:', error);
-        this.showNotification('Error al obtener datos del recibo', 'error');
+        console.error('Error al cargar datos expandidos:', error);
+        this.showNotification('Error al cargar datos detallados', 'error');
+        this.loadingExpanded[key] = false;
       }
     });
   }
 
-  // Mostrar modal con información completa del recibo
-  private mostrarModalRecibo(datosRecibo: any): void {
-    const formatearFecha = (fecha: string) => {
-      if (!fecha) return 'Sin fecha';
-      return new Date(fecha).toLocaleDateString('es-ES');
-    };
-
-    const formatearImporte = (importe: number) => {
-      if (importe === null || importe === undefined) return 'Sin importe';
-      return new Intl.NumberFormat('es-ES', { 
-        style: 'currency', 
-        currency: 'ARS' 
-      }).format(importe);
-    };
-
-    Swal.fire({
-      title: 'Información del Recibo',
-      html: `
-        <div class="text-left" style="max-height: 400px; overflow-y: auto;">
-          <div class="mb-3">
-            <h5 class="text-primary">📋 Información de la Factura</h5>
-            <p><strong>ID:</strong> ${datosRecibo.id}</p>
-            <p><strong>Sucursal:</strong> ${datosRecibo.sucursal}</p>
-            <p><strong>Tipo:</strong> ${datosRecibo.tipo}</p>
-            <p><strong>Punto de Venta:</strong> ${datosRecibo.puntoventa}</p>
-            <p><strong>Letra:</strong> ${datosRecibo.letra}</p>
-            <p><strong>Número de Factura:</strong> ${datosRecibo.numero_fac}</p>
-            <p><strong>Fecha de Emisión:</strong> ${formatearFecha(datosRecibo.emitido)}</p>
-            <p><strong>Fecha de Vencimiento:</strong> ${formatearFecha(datosRecibo.vencimiento)}</p>
-            <p><strong>Usuario:</strong> ${datosRecibo.usuario || 'Sin definir'}</p>
-          </div>
-
-          <div class="mb-3">
-            <h5 class="text-success">💰 Información Financiera</h5>
-            <p><strong>Exento:</strong> ${formatearImporte(datosRecibo.excento)}</p>
-            <p><strong>Básico:</strong> ${formatearImporte(datosRecibo.basico)}</p>
-            <p><strong>IVA 1:</strong> ${formatearImporte(datosRecibo.iva1)}</p>
-            <p><strong>IVA 2:</strong> ${formatearImporte(datosRecibo.iva2)}</p>
-            <p><strong>IVA 3:</strong> ${formatearImporte(datosRecibo.iva3)}</p>
-            <p><strong>Importe Total:</strong> ${formatearImporte(datosRecibo.importe_total)}</p>
-            <p><strong>Saldo:</strong> ${formatearImporte(datosRecibo.saldo)}</p>
-          </div>
-
-        </div>
-      `,
-      icon: 'info',
-      confirmButtonText: 'Cerrar',
-      width: '700px',
-      customClass: {
-        popup: 'swal2-popup-large'
-      }
-    });
+  // Verificar si una fila está expandida
+  isRowExpanded(venta: HistorialVenta2): boolean {
+    const key = `${venta.id}`;
+    return !!this.expandedRows[key];
   }
+
+  // Verificar si una fila está cargando
+  isRowLoading(venta: HistorialVenta2): boolean {
+    const key = `${venta.id}`;
+    return !!this.loadingExpanded[key];
+  }
+
+  // Obtener datos expandidos de una venta
+  getExpandedData(venta: HistorialVenta2): VentaExpandida | null {
+    const key = `${venta.id}`;
+    return this.expandedRows[key] || null;
+  }
+
 
   private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
     const iconMap: Record<string, any> = {

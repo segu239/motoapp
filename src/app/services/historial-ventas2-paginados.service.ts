@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { HistorialVenta2 } from '../interfaces/historial-venta2';
+import { VentaExpandida } from '../interfaces/recibo-expanded';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +20,7 @@ export class HistorialVentas2PaginadosService {
   // URLs del backend
   private urlHistorialVentas2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventas2xcli";
   private urlDatosRecibo2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosRecibo2";
+  private urlDatosExpandidos = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosExpandidos";
 
   // Observables públicos
   public paginaActual$ = this.paginaActualSubject.asObservable();
@@ -264,6 +266,33 @@ export class HistorialVentas2PaginadosService {
       }),
       catchError(error => {
         console.error('Error al obtener datos del recibo2:', error);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Obtener datos expandidos (recibos y psucursal) para una factura
+  obtenerDatosExpandidos(idFactura: number): Observable<VentaExpandida> {
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      console.error('No se encontró la sucursal en sessionStorage');
+      return throwError('No se encontró la sucursal');
+    }
+
+    const params = new URLSearchParams({
+      sucursal: sucursal,
+      id_factura: idFactura.toString()
+    });
+
+    const urlCompleta = `${this.urlDatosExpandidos}?${params.toString()}`;
+    console.log('HistorialVentas2Paginados: Obteniendo datos expandidos:', urlCompleta);
+
+    return this.http.get<any>(urlCompleta).pipe(
+      tap(response => {
+        console.log('Respuesta datos expandidos:', response);
+      }),
+      catchError(error => {
+        console.error('Error al obtener datos expandidos:', error);
         return throwError(error);
       })
     );

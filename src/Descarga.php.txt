@@ -3728,6 +3728,150 @@ public function obtenerDatosRecibo2_get()
 }
 
 /**
+ * Obtiene datos expandidos (recibos y psucursal) para una factura específica
+ * según las relaciones definidas en el diagrama DBML
+ */
+public function obtenerDatosExpandidos_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $id_factura = $this->get('id_factura');
+
+    // Validaciones básicas
+    if (!$sucursal || !$id_factura) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e id_factura"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Construir nombres de tablas
+    $tablaFactcab = "factcab" . $sucursal;
+    $tablaRecibos = "recibos" . $sucursal;
+    $tablaPsucursal = "psucursal" . $sucursal;
+
+    // Verificar si las tablas existen
+    if (!$this->db->table_exists($tablaFactcab) || !$this->db->table_exists($tablaRecibos) || !$this->db->table_exists($tablaPsucursal)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Una o más tablas no existen para la sucursal: $sucursal"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Obtener datos de recibos asociados a la factura
+        // Relación: recibos.id_fac = factcab.id_num
+        $this->db->select('
+            r.recibo,
+            r.c_tipo,
+            r.c_numero,
+            r.c_cuota,
+            r.fecha,
+            r.importe,
+            r.usuario,
+            r.observacion,
+            r.cod_lugar,
+            r.sesion,
+            r.c_tipf,
+            r.c_puntoventa,
+            r.recibo_asoc,
+            r.recibo_saldo,
+            r.cod_sucursal,
+            r.fec_proceso,
+            r.bonifica,
+            r.interes,
+            r.id_fac
+        ');
+        $this->db->from($tablaRecibos . ' r');
+        $this->db->where('r.id_fac', $id_factura);
+        $this->db->order_by('r.fecha', 'DESC');
+        
+        $queryRecibos = $this->db->get();
+        $recibos = $queryRecibos->result_array();
+
+        // Obtener datos de psucursal
+        // Buscamos registros que compartan punto de venta, cliente y vendedor con la factura
+        $this->db->select('f.puntoventa, f.cliente, f.cod_vendedor');
+        $this->db->from($tablaFactcab . ' f');
+        $this->db->where('f.id_num', $id_factura);
+        $queryFactura = $this->db->get();
+        
+        $psucursal = array();
+        if ($queryFactura->num_rows() > 0) {
+            $datosFactura = $queryFactura->row_array();
+            
+            // Obtener registros de psucursal que coincidan con la factura
+            $this->db->select('
+                p.idart,
+                p.cantidad,
+                p.precio,
+                p.idcli,
+                p.idven,
+                p.fecha,
+                p.hora,
+                p.tipoprecio,
+                p.cod_tar,
+                p.titulartar,
+                p.numerotar,
+                p.cod_mov,
+                p.suc_destino,
+                p.nomart,
+                p.nautotar,
+                p.dni_tar,
+                p.banco,
+                p.ncuenta,
+                p.ncheque,
+                p.nombre,
+                p.plaza,
+                p.importeimputar,
+                p.importecheque,
+                p.fechacheque,
+                p.emailop,
+                p.tipodoc,
+                p.puntoventa,
+                p.numerocomprobante,
+                p.estado,
+                p.id_num
+            ');
+            $this->db->from($tablaPsucursal . ' p');
+            $this->db->where('p.puntoventa', $datosFactura['puntoventa']);
+            $this->db->where('p.idcli', $datosFactura['cliente']);
+            $this->db->where('p.idven', $datosFactura['cod_vendedor']);
+            $this->db->order_by('p.fecha', 'DESC');
+            $this->db->order_by('p.hora', 'DESC');
+            
+            $queryPsucursal = $this->db->get();
+            $psucursal = $queryPsucursal->result_array();
+        }
+
+        // Preparar respuesta con datos expandidos
+        $datosExpandidos = array(
+            'recibos' => $recibos,
+            'psucursal' => $psucursal
+        );
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Datos expandidos obtenidos exitosamente",
+            "data" => $datosExpandidos
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener datos expandidos: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
  * Genera una descripción automática para movimientos de caja tipo 'A'
  * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
  */
