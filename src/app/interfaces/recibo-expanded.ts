@@ -18,6 +18,7 @@ export interface ReciboExpanded {
   bonifica: number;
   interes: number;
   id_fac: number;
+  productos?: PsucursalExpanded[];
 }
 
 export interface PsucursalExpanded {
@@ -30,6 +31,7 @@ export interface PsucursalExpanded {
   hora: string;
   tipoprecio: string;
   cod_tar: number;
+  tarjeta?: string;
   titulartar: string;
   numerotar: number;
   cod_mov: number;
@@ -55,5 +57,4 @@ export interface PsucursalExpanded {
 
 export interface VentaExpandida {
   recibos: ReciboExpanded[];
-  psucursal: PsucursalExpanded[];
 }

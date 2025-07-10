@@ -3804,18 +3804,25 @@ public function obtenerDatosExpandidos_get()
         $queryRecibos = $this->db->get();
         $recibos = $queryRecibos->result_array();
 
-        // Obtener datos de psucursal
-        // Buscamos registros que compartan punto de venta, cliente y vendedor con la factura
-        $this->db->select('f.puntoventa, f.cliente, f.cod_vendedor');
+        // Obtener datos de cliente y factura para filtrado
+        $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
         $this->db->from($tablaFactcab . ' f');
         $this->db->where('f.id_num', $id_factura);
         $queryFactura = $this->db->get();
         
-        $psucursal = array();
+        $cliente_id = null;
+        $datosFactura = null;
         if ($queryFactura->num_rows() > 0) {
             $datosFactura = $queryFactura->row_array();
-            
-            // Obtener registros de psucursal que coincidan con la factura
+            $cliente_id = $datosFactura['cliente'];
+        }
+
+        // Para cada recibo, obtener sus productos específicos
+        foreach ($recibos as $index => $recibo) {
+            // Debug: log de los valores que estamos buscando
+            error_log("Buscando productos para recibo: " . $recibo['recibo'] . 
+                     " - recibo_asoc: " . $recibo['recibo_asoc'] . 
+                     " - cliente_id: " . $cliente_id);
             $this->db->select('
                 p.idart,
                 p.cantidad,
@@ -3826,6 +3833,7 @@ public function obtenerDatosExpandidos_get()
                 p.hora,
                 p.tipoprecio,
                 p.cod_tar,
+                t.tarjeta,
                 p.titulartar,
                 p.numerotar,
                 p.cod_mov,
@@ -3849,20 +3857,30 @@ public function obtenerDatosExpandidos_get()
                 p.id_num
             ');
             $this->db->from($tablaPsucursal . ' p');
-            $this->db->where('p.puntoventa', $datosFactura['puntoventa']);
-            $this->db->where('p.idcli', $datosFactura['cliente']);
-            $this->db->where('p.idven', $datosFactura['cod_vendedor']);
+            $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+            $this->db->where('p.id_num', $recibo['recibo_asoc']);
+            if ($cliente_id) {
+                $this->db->where('p.idcli', trim($cliente_id));
+            }
             $this->db->order_by('p.fecha', 'DESC');
             $this->db->order_by('p.hora', 'DESC');
             
-            $queryPsucursal = $this->db->get();
-            $psucursal = $queryPsucursal->result_array();
+            $queryProductos = $this->db->get();
+            $productos = $queryProductos->result_array();
+            
+            // Debug: log del resultado
+            error_log("Productos encontrados para recibo " . $recibo['recibo'] . ": " . count($productos));
+            if (count($productos) > 0) {
+                error_log("Primer producto: " . json_encode($productos[0]));
+            }
+            
+            // Agregar productos al recibo
+            $recibos[$index]['productos'] = $productos;
         }
 
         // Preparar respuesta con datos expandidos
         $datosExpandidos = array(
-            'recibos' => $recibos,
-            'psucursal' => $psucursal
+            'recibos' => $recibos
         );
 
         $respuesta = array(

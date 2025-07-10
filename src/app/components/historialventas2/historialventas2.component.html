@@ -231,93 +231,104 @@
                             <td [attr.colspan]="selectedColumns.length + 2">
                                 <div class="p-3" style="background-color: #f8f9fa; border-radius: 4px; margin: 8px 0;">
                                     <ng-container *ngIf="getExpandedData(venta) as expandedData">
-                                        <!-- Sección de Recibos -->
+                                        <!-- Sección de Recibos con sus productos -->
                                         <div class="mb-4">
                                             <h6 class="text-primary mb-3">
                                                 <i class="pi pi-file-o me-2"></i>
-                                                Recibos ({{ expandedData.recibos.length }})
+                                                Recibos y Productos Vendidos ({{ expandedData.recibos.length }})
                                             </h6>
                                             
-                                            <div *ngIf="expandedData.recibos.length > 0; else noRecibos" class="table-responsive">
-                                                <table class="table table-sm table-striped">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>Recibo</th>
-                                                            <th>Tipo</th>
-                                                            <th>Número</th>
-                                                            <th>Fecha</th>
-                                                            <th>Importe</th>
-                                                            <th>Usuario</th>
-                                                            <th>Punto Venta</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr *ngFor="let recibo of expandedData.recibos">
-                                                            <td>{{ recibo.recibo }}</td>
-                                                            <td>{{ recibo.c_tipo }}</td>
-                                                            <td>{{ recibo.c_numero }}</td>
-                                                            <td>{{ recibo.fecha | date:'dd/MM/yyyy' }}</td>
-                                                            <td>{{ recibo.importe | currency:'$':'symbol':'1.2-2' }}</td>
-                                                            <td>{{ recibo.usuario }}</td>
-                                                            <td>{{ recibo.c_puntoventa }}</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
+                                            <div *ngIf="expandedData.recibos.length > 0; else noRecibos">
+                                                <!-- Iterar por cada recibo -->
+                                                <div *ngFor="let recibo of expandedData.recibos; let i = index" class="mb-4">
+                                                    <!-- Información del recibo -->
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <div class="row">
+                                                                <div class="col-md-2">
+                                                                    <strong>Recibo:</strong> {{ recibo.recibo }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Tipo:</strong> {{ recibo.c_tipo }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Número:</strong> {{ recibo.c_numero }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Fecha:</strong> {{ recibo.fecha | date:'dd/MM/yyyy' }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Importe:</strong> {{ recibo.importe | currency:'$':'symbol':'1.2-2' }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Usuario:</strong> {{ recibo.usuario }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Productos del recibo -->
+                                                        <div class="card-body">
+                                                            <h6 class="text-success mb-3">
+                                                                <i class="pi pi-shopping-cart me-2"></i>
+                                                                Productos ({{ recibo.productos?.length || 0 }})
+                                                            </h6>
+                                                            
+                                                            <div *ngIf="recibo.productos && recibo.productos.length > 0; else noProductos" class="table-responsive">
+                                                                <table class="table table-sm table-striped">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>Artículo</th>
+                                                                            <th>Nombre</th>
+                                                                            <th>Cantidad</th>
+                                                                            <th>Precio</th>
+                                                                            <th>Tarjeta</th>
+                                                                            <th>Fecha</th>
+                                                                            <th>Hora</th>
+                                                                            <th>Estado</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <tr *ngFor="let item of recibo.productos">
+                                                                            <td>{{ item.idart }}</td>
+                                                                            <td>{{ item.nomart }}</td>
+                                                                            <td>{{ item.cantidad }}</td>
+                                                                            <td>{{ item.precio | currency:'$':'symbol':'1.2-2' }}</td>
+                                                                            <td>
+                                                                                <span class="badge bg-info" *ngIf="item.tarjeta; else noTarjeta">
+                                                                                    {{ item.tarjeta }}
+                                                                                </span>
+                                                                                <ng-template #noTarjeta>
+                                                                                    <span class="badge bg-secondary">Sin tarjeta</span>
+                                                                                </ng-template>
+                                                                            </td>
+                                                                            <td>{{ item.fecha | date:'dd/MM/yyyy' }}</td>
+                                                                            <td>{{ item.hora }}</td>
+                                                                            <td>
+                                                                                <span class="badge" 
+                                                                                    [ngClass]="item.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
+                                                                                    {{ item.estado }}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            
+                                                            <ng-template #noProductos>
+                                                                <div class="alert alert-info">
+                                                                    <i class="pi pi-info-circle me-2"></i>
+                                                                    No hay productos asociados a este recibo.
+                                                                </div>
+                                                            </ng-template>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             <ng-template #noRecibos>
                                                 <div class="alert alert-info">
                                                     <i class="pi pi-info-circle me-2"></i>
                                                     No hay recibos asociados a esta factura.
-                                                </div>
-                                            </ng-template>
-                                        </div>
-                                        
-                                        <!-- Sección de Psucursal -->
-                                        <div class="mb-2">
-                                            <h6 class="text-success mb-3">
-                                                <i class="pi pi-shopping-cart me-2"></i>
-                                                Productos Vendidos ({{ expandedData.psucursal.length }})
-                                            </h6>
-                                            
-                                            <div *ngIf="expandedData.psucursal.length > 0; else noPsucursal" class="table-responsive">
-                                                <table class="table table-sm table-striped">
-                                                    <thead class="table-light">
-                                                        <tr>
-                                                            <th>Artículo</th>
-                                                            <th>Nombre</th>
-                                                            <th>Cantidad</th>
-                                                            <th>Precio</th>
-                                                            <th>Fecha</th>
-                                                            <th>Hora</th>
-                                                            <th>Tipo Doc</th>
-                                                            <th>Estado</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr *ngFor="let item of expandedData.psucursal">
-                                                            <td>{{ item.idart }}</td>
-                                                            <td>{{ item.nomart }}</td>
-                                                            <td>{{ item.cantidad }}</td>
-                                                            <td>{{ item.precio | currency:'$':'symbol':'1.2-2' }}</td>
-                                                            <td>{{ item.fecha | date:'dd/MM/yyyy' }}</td>
-                                                            <td>{{ item.hora }}</td>
-                                                            <td>{{ item.tipodoc }}</td>
-                                                            <td>
-                                                                <span class="badge" 
-                                                                    [ngClass]="item.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
-                                                                    {{ item.estado }}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                            
-                                            <ng-template #noPsucursal>
-                                                <div class="alert alert-info">
-                                                    <i class="pi pi-info-circle me-2"></i>
-                                                    No hay productos asociados a esta factura.
                                                 </div>
                                             </ng-template>
                                         </div>

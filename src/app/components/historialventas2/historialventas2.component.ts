@@ -355,13 +355,11 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         
         if (response && !response.error && response.data) {
           this.expandedRows[key] = {
-            recibos: response.data.recibos || [],
-            psucursal: response.data.psucursal || []
+            recibos: response.data.recibos || []
           };
         } else {
           this.expandedRows[key] = {
-            recibos: [],
-            psucursal: []
+            recibos: []
           };
         }
         
