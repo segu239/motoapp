@@ -19,6 +19,7 @@ export class HistorialVentas2PaginadosService {
 
   // URLs del backend
   private urlHistorialVentas2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventas2xcli";
+  private urlHistorialVentas2Global = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventas2global";
   private urlDatosRecibo2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosRecibo2";
   private urlDatosExpandidos = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosExpandidos";
 
@@ -357,11 +358,15 @@ export class HistorialVentas2PaginadosService {
   }
 
   // Obtener datos expandidos (recibos y psucursal) para una factura
-  obtenerDatosExpandidos(idFactura: number): Observable<VentaExpandida> {
-    const sucursal = sessionStorage.getItem('sucursal');
+  obtenerDatosExpandidos(idFactura: number, sucursalFactura?: string): Observable<VentaExpandida> {
+    // Usar la sucursal de la factura si se proporciona, sino usar la del sessionStorage
+    let sucursal = sucursalFactura;
     if (!sucursal) {
-      console.error('No se encontró la sucursal en sessionStorage');
-      return throwError('No se encontró la sucursal');
+      sucursal = sessionStorage.getItem('sucursal');
+      if (!sucursal) {
+        console.error('No se encontró la sucursal en sessionStorage');
+        return throwError('No se encontró la sucursal');
+      }
     }
 
     const params = new URLSearchParams({
@@ -371,6 +376,7 @@ export class HistorialVentas2PaginadosService {
 
     const urlCompleta = `${this.urlDatosExpandidos}?${params.toString()}`;
     console.log('HistorialVentas2Paginados: Obteniendo datos expandidos:', urlCompleta);
+    console.log('Usando sucursal:', sucursal, 'para factura:', idFactura);
 
     return this.http.get<any>(urlCompleta).pipe(
       tap(response => {
@@ -378,6 +384,160 @@ export class HistorialVentas2PaginadosService {
       }),
       catchError(error => {
         console.error('Error al obtener datos expandidos:', error);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Cargar historial de ventas GLOBAL con rango de fechas (para ADMIN/SUPER)
+  cargarHistorialVentasGlobal(
+    idCliente: number,
+    userRole: string,
+    fechaDesde: Date,
+    fechaHasta: Date,
+    page: number = 1,
+    limit: number = 50,
+    sortField?: string,
+    sortOrder: number = 1,
+    filters: any = {}
+  ): Observable<any> {
+    this.cargandoSubject.next(true);
+    
+    // Validar rol en frontend también
+    if (userRole !== 'admin' && userRole !== 'super') {
+      console.error('Usuario no tiene permisos para vista global');
+      this.cargandoSubject.next(false);
+      return throwError('Usuario no tiene permisos para vista global');
+    }
+
+    // Formatear fechas para el backend (YYYY-MM-DD)
+    const fechaDesdeStr = this.formatDateForBackend(fechaDesde);
+    const fechaHastaStr = this.formatDateForBackend(fechaHasta);
+
+    const params = new URLSearchParams({
+      idcli: idCliente.toString(),
+      user_role: userRole,
+      fecha_desde: fechaDesdeStr,
+      fecha_hasta: fechaHastaStr,
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    // Agregar ordenamiento
+    if (sortField) {
+      params.append('sortField', sortField);
+      params.append('sortOrder', sortOrder.toString());
+    }
+
+    // Agregar filtros
+    if (filters && Object.keys(filters).length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+
+    const urlCompleta = `${this.urlHistorialVentas2Global}?${params.toString()}`;
+    console.log('HistorialVentas2Paginados: URL completa GLOBAL:', urlCompleta);
+
+    return this.http.get<any>(urlCompleta).pipe(
+      tap(response => {
+        console.log('Respuesta historial ventas2 GLOBAL:', response);
+        
+        if (response && !response.error && response.mensaje) {
+          // Formato paginado del backend
+          if (response.mensaje.data !== undefined) {
+            const ventas = Array.isArray(response.mensaje.data) ? response.mensaje.data : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(response.mensaje.total || 0);
+            this.totalPaginasSubject.next(response.mensaje.total_pages || 0);
+            this.paginaActualSubject.next(page);
+            console.log('Sucursales consultadas:', response.mensaje.sucursales_consultadas);
+          } else {
+            // Formato sin paginación
+            const ventas = Array.isArray(response.mensaje) ? response.mensaje : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(ventas.length);
+            this.totalPaginasSubject.next(ventas.length > 0 ? 1 : 0);
+            this.paginaActualSubject.next(1);
+          }
+        } else {
+          this.historialVentas2Subject.next([]);
+          this.totalItemsSubject.next(0);
+          this.totalPaginasSubject.next(0);
+        }
+        this.cargandoSubject.next(false);
+      }),
+      catchError(error => {
+        console.error('Error al cargar historial de ventas2 GLOBAL:', error);
+        this.cargandoSubject.next(false);
+        this.historialVentas2Subject.next([]);
+        this.totalItemsSubject.next(0);
+        this.totalPaginasSubject.next(0);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Buscar en historial de ventas2 GLOBAL
+  buscarGlobal(idCliente: number, userRole: string, termino: string, pagina: number = 1): Observable<any> {
+    this.cargandoSubject.next(true);
+    this.terminoBusquedaSubject.next(termino);
+
+    // Validar rol en frontend también
+    if (userRole !== 'admin' && userRole !== 'super') {
+      console.error('Usuario no tiene permisos para vista global');
+      this.cargandoSubject.next(false);
+      return throwError('Usuario no tiene permisos para vista global');
+    }
+
+    // Si no hay término, resetear y cargar página normal global
+    if (!termino || termino.trim() === '') {
+      this.terminoBusquedaSubject.next('');
+      // Para búsqueda global necesitamos fechas, así que retornamos error
+      this.cargandoSubject.next(false);
+      return throwError('Para vista global se requiere consulta con fechas');
+    }
+
+    const params = new URLSearchParams({
+      idcli: idCliente.toString(),
+      user_role: userRole,
+      search: termino,
+      page: pagina.toString(),
+      limit: this.tamañoPagina.toString()
+    });
+
+    const urlConBusqueda = `${this.urlHistorialVentas2Global}?${params.toString()}`;
+
+    return this.http.get<any>(urlConBusqueda).pipe(
+      tap(response => {
+        console.log('Respuesta de búsqueda historial ventas2 GLOBAL:', response);
+
+        if (response && !response.error && response.mensaje) {
+          if (response.mensaje.data !== undefined) {
+            const ventas = Array.isArray(response.mensaje.data) ? response.mensaje.data : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(response.mensaje.total || 0);
+            this.totalPaginasSubject.next(response.mensaje.total_pages || 0);
+            this.paginaActualSubject.next(pagina);
+          } else {
+            const ventas = Array.isArray(response.mensaje) ? response.mensaje : [];
+            this.historialVentas2Subject.next(this.processHistorialVentas2Data(ventas));
+            this.totalItemsSubject.next(ventas.length);
+            this.totalPaginasSubject.next(ventas.length > 0 ? 1 : 0);
+            this.paginaActualSubject.next(1);
+          }
+        } else {
+          this.historialVentas2Subject.next([]);
+          this.totalItemsSubject.next(0);
+          this.totalPaginasSubject.next(0);
+          this.paginaActualSubject.next(1);
+        }
+        this.cargandoSubject.next(false);
+      }),
+      catchError(error => {
+        console.error('Error al buscar en historial de ventas2 GLOBAL:', error);
+        this.cargandoSubject.next(false);
+        this.historialVentas2Subject.next([]);
+        this.totalItemsSubject.next(0);
+        this.totalPaginasSubject.next(0);
         return throwError(error);
       })
     );

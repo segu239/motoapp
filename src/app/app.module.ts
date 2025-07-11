@@ -43,6 +43,7 @@ import { VirtualScrollerModule } from 'primeng/virtualscroller';
 import { ChartModule } from 'primeng/chart';
 import { NgChartsModule } from 'ng2-charts';
 import { TooltipModule } from 'primeng/tooltip';
+import { InputSwitchModule } from 'primeng/inputswitch';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -220,6 +221,7 @@ import { TotalizadorModalComponent } from './components/historialventas2/totaliz
     ChartModule,
     NgChartsModule,
     TooltipModule,
+    InputSwitchModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,

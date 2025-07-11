@@ -24,7 +24,7 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
           label="Exportar a Excel"
           icon="pi pi-file-excel"
           (click)="exportarTotalizador()"
-          styleClass="p-button-success">
+          styleClass="p-button-success p-button-sm">
         </p-button>
       </div>
 
@@ -80,20 +80,21 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
         </div>
       </div>
 
-      <!-- Acordeón para diferentes vistas -->
-      <div class="accordion" id="totalizadorModalAccordion">
+      <!-- Acordeón mejorado con Bootstrap -->
+      <div class="accordion custom-accordion" id="totalizadorModalAccordion">
         <!-- Tipos de Pago -->
         <div class="accordion-item">
           <h2 class="accordion-header" id="tiposPagoModalHeading">
-            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tiposPagoModalCollapse" aria-expanded="true" aria-controls="tiposPagoModalCollapse">
+            <button class="accordion-button custom-accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tiposPagoModalCollapse" aria-expanded="true" aria-controls="tiposPagoModalCollapse">
               <i class="pi pi-credit-card me-2"></i>
-              Tipos de Pago ({{ totalizador.tiposPago.length }})
+              <span class="fw-semibold">Tipos de Pago</span>
+              <span class="badge bg-info ms-2">{{ totalizador.tiposPago.length }}</span>
             </button>
           </h2>
           <div id="tiposPagoModalCollapse" class="accordion-collapse collapse show" aria-labelledby="tiposPagoModalHeading" data-bs-parent="#totalizadorModalAccordion">
             <div class="accordion-body">
               <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover custom-table">
                   <thead class="table-dark">
                     <tr>
                       <th>Tipo de Pago</th>
@@ -113,10 +114,12 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
                       <td>{{ tipoPago.cantidad }}</td>
                       <td>{{ formatearMoneda(tipoPago.totalImporte) }}</td>
                       <td>
-                        <div class="progress" style="height: 20px;">
-                          <div class="progress-bar" [style.width.%]="tipoPago.porcentaje">
-                            {{ formatearPorcentaje(tipoPago.porcentaje) }}
+                        <div class="d-flex align-items-center">
+                          <div class="progress me-2 custom-progress">
+                            <div class="progress-bar" [style.width.%]="tipoPago.porcentaje">
+                            </div>
                           </div>
+                          <span class="text-sm">{{ formatearPorcentaje(tipoPago.porcentaje) }}</span>
                         </div>
                       </td>
                       <td>{{ formatearMoneda(tipoPago.cantidad > 0 ? tipoPago.totalImporte / tipoPago.cantidad : 0) }}</td>
@@ -131,15 +134,16 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
         <!-- Tipos de Documento -->
         <div class="accordion-item">
           <h2 class="accordion-header" id="tiposDocumentoModalHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tiposDocumentoModalCollapse" aria-expanded="false" aria-controls="tiposDocumentoModalCollapse">
+            <button class="accordion-button collapsed custom-accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tiposDocumentoModalCollapse" aria-expanded="false" aria-controls="tiposDocumentoModalCollapse">
               <i class="pi pi-file me-2"></i>
-              Tipos de Documento ({{ totalizador.tiposDocumento.length }})
+              <span class="fw-semibold">Tipos de Documento</span>
+              <span class="badge bg-success ms-2">{{ totalizador.tiposDocumento.length }}</span>
             </button>
           </h2>
           <div id="tiposDocumentoModalCollapse" class="accordion-collapse collapse" aria-labelledby="tiposDocumentoModalHeading" data-bs-parent="#totalizadorModalAccordion">
             <div class="accordion-body">
               <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover custom-table">
                   <thead class="table-dark">
                     <tr>
                       <th>Tipo Documento</th>
@@ -153,16 +157,18 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
                   <tbody>
                     <tr *ngFor="let tipoDoc of totalizador.tiposDocumento">
                       <td>
-                        <span class="badge bg-primary">{{ tipoDoc.tipo }}</span>
+                        <span class="badge bg-success">{{ tipoDoc.tipo }}</span>
                       </td>
                       <td>{{ tipoDoc.cantidad }}</td>
                       <td>{{ formatearMoneda(tipoDoc.totalImporte) }}</td>
                       <td>{{ formatearMoneda(tipoDoc.totalSaldo) }}</td>
                       <td>
-                        <div class="progress" style="height: 20px;">
-                          <div class="progress-bar bg-success" [style.width.%]="tipoDoc.porcentaje">
-                            {{ formatearPorcentaje(tipoDoc.porcentaje) }}
+                        <div class="d-flex align-items-center">
+                          <div class="progress me-2 custom-progress">
+                            <div class="progress-bar bg-success" [style.width.%]="tipoDoc.porcentaje">
+                            </div>
                           </div>
+                          <span class="text-sm">{{ formatearPorcentaje(tipoDoc.porcentaje) }}</span>
                         </div>
                       </td>
                       <td>{{ formatearMoneda(tipoDoc.cantidad > 0 ? tipoDoc.totalImporte / tipoDoc.cantidad : 0) }}</td>
@@ -177,15 +183,16 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
         <!-- Sucursales -->
         <div class="accordion-item">
           <h2 class="accordion-header" id="sucursalesModalHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sucursalesModalCollapse" aria-expanded="false" aria-controls="sucursalesModalCollapse">
+            <button class="accordion-button collapsed custom-accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#sucursalesModalCollapse" aria-expanded="false" aria-controls="sucursalesModalCollapse">
               <i class="pi pi-building me-2"></i>
-              Sucursales ({{ totalizador.sucursales.length }})
+              <span class="fw-semibold">Sucursales</span>
+              <span class="badge bg-warning ms-2">{{ totalizador.sucursales.length }}</span>
             </button>
           </h2>
           <div id="sucursalesModalCollapse" class="accordion-collapse collapse" aria-labelledby="sucursalesModalHeading" data-bs-parent="#totalizadorModalAccordion">
             <div class="accordion-body">
               <div class="table-responsive">
-                <table class="table table-striped table-hover">
+                <table class="table table-striped table-hover custom-table">
                   <thead class="table-dark">
                     <tr>
                       <th>Sucursal</th>
@@ -199,16 +206,18 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
                   <tbody>
                     <tr *ngFor="let sucursal of totalizador.sucursales">
                       <td>
-                        <span class="badge bg-warning">{{ sucursal.sucursal }}</span>
+                        <span class="badge bg-warning text-dark">{{ sucursal.sucursal }}</span>
                       </td>
                       <td>{{ sucursal.cantidad }}</td>
                       <td>{{ formatearMoneda(sucursal.totalImporte) }}</td>
                       <td>{{ formatearMoneda(sucursal.totalSaldo) }}</td>
                       <td>
-                        <div class="progress" style="height: 20px;">
-                          <div class="progress-bar bg-warning" [style.width.%]="sucursal.porcentaje">
-                            {{ formatearPorcentaje(sucursal.porcentaje) }}
+                        <div class="d-flex align-items-center">
+                          <div class="progress me-2 custom-progress">
+                            <div class="progress-bar bg-warning" [style.width.%]="sucursal.porcentaje">
+                            </div>
                           </div>
+                          <span class="text-sm">{{ formatearPorcentaje(sucursal.porcentaje) }}</span>
                         </div>
                       </td>
                       <td>{{ formatearMoneda(sucursal.cantidad > 0 ? sucursal.totalImporte / sucursal.cantidad : 0) }}</td>
@@ -223,9 +232,9 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
         <!-- Estadísticas -->
         <div class="accordion-item">
           <h2 class="accordion-header" id="estadisticasModalHeading">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#estadisticasModalCollapse" aria-expanded="false" aria-controls="estadisticasModalCollapse">
+            <button class="accordion-button collapsed custom-accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#estadisticasModalCollapse" aria-expanded="false" aria-controls="estadisticasModalCollapse">
               <i class="pi pi-chart-bar me-2"></i>
-              Estadísticas Detalladas
+              <span class="fw-semibold">Estadísticas Detalladas</span>
             </button>
           </h2>
           <div id="estadisticasModalCollapse" class="accordion-collapse collapse" aria-labelledby="estadisticasModalHeading" data-bs-parent="#totalizadorModalAccordion">
@@ -323,7 +332,7 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
   `,
   styles: [`
     .totalizador-modal {
-      max-height: 70vh;
+      max-height: 75vh;
       overflow-y: auto;
     }
     
@@ -332,34 +341,135 @@ import { TotalizadorGeneral } from '../../interfaces/totalizador-historial';
       overflow-y: auto;
     }
     
-    .progress {
-      position: relative;
-    }
-    
-    .progress-bar {
-      min-width: 30px;
-      color: #000;
-      text-align: center;
-      line-height: 20px;
-    }
-    
     .card {
       margin-bottom: 1rem;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    .accordion-button {
+    .fw-semibold {
       font-weight: 600;
     }
     
-    .badge {
-      font-size: 0.85em;
+    .text-sm {
+      font-size: 0.875rem;
     }
     
-    .table th {
+    /* Estilo mejorado para el acordeón */
+    .custom-accordion .accordion-item {
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .custom-accordion-button {
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      border-radius: 8px 8px 0 0;
+      background-color: #f8f9fa;
+      border: none;
+      font-weight: 600;
+    }
+    
+    .custom-accordion-button:not(.collapsed) {
+      background-color: #e9ecef;
+      border-bottom: 2px solid #007bff;
+    }
+    
+    .custom-accordion-button:focus {
+      box-shadow: 0 0 0 0.25rem rgba(0,123,255,0.25);
+    }
+    
+    /* Mejorar las tablas */
+    .custom-table {
+      font-size: 0.875rem;
+      margin-bottom: 0;
+    }
+    
+    .custom-table th {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      background-color: #212529;
+      border-bottom: 2px solid #dee2e6;
       position: sticky;
       top: 0;
-      background-color: #212529;
       z-index: 10;
+    }
+    
+    .custom-table td {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      vertical-align: middle;
+    }
+    
+    /* Mejorar las barras de progreso */
+    .custom-progress {
+      height: 20px;
+      width: 100px;
+      border-radius: 10px;
+      background-color: #e9ecef;
+      overflow: hidden;
+    }
+    
+    .custom-progress .progress-bar {
+      border-radius: 10px;
+      background: linear-gradient(45deg, #007bff, #0056b3);
+      transition: width 0.3s ease;
+    }
+    
+    .custom-progress .progress-bar.bg-success {
+      background: linear-gradient(45deg, #28a745, #1e7e34);
+    }
+    
+    .custom-progress .progress-bar.bg-warning {
+      background: linear-gradient(45deg, #ffc107, #e0a800);
+    }
+    
+    /* Mejorar los badges */
+    .badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    /* Espaciado mejorado */
+    .d-flex.align-items-center {
+      gap: 0.5rem;
+    }
+    
+    /* Botón de exportar mejorado */
+    .p-button-sm {
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      border-radius: 6px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .totalizador-modal {
+        max-height: 80vh;
+      }
+      
+      .table-responsive {
+        max-height: 300px;
+      }
+      
+      .custom-accordion-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+      }
+      
+      .custom-table {
+        font-size: 0.8rem;
+      }
+      
+      .custom-progress {
+        width: 80px;
+      }
     }
   `]
 })
@@ -379,6 +489,12 @@ export class TotalizadorModalComponent implements OnInit {
     this.rangoFechas = this.config.data.rangoFechas;
     this.clienteInfo = this.config.data.clienteInfo;
     this.exportarTotalizadorCallback = this.config.data.exportarTotalizador;
+    
+    // Debug para verificar datos
+    console.log('Totalizador en modal:', this.totalizador);
+    console.log('Tipos de documento:', this.totalizador.tiposDocumento);
+    console.log('Sucursales:', this.totalizador.sucursales);
+    console.log('Tipos de pago:', this.totalizador.tiposPago);
   }
 
   // Formatear moneda

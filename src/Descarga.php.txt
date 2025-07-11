@@ -3665,6 +3665,484 @@ public function historialventas2xcli_get()
 }
 
 /**
+ * Obtiene historial de ventas GLOBAL de todas las sucursales (factcabx)
+ * Solo para usuarios con rol ADMIN o SUPER
+ * con paginación, filtros, búsqueda y ordenamiento
+ */
+public function historialventas2global_get()
+{
+    // Obtener parámetros de la URL
+    $idcli = $this->get('idcli');
+    $page = $this->get('page') ? intval($this->get('page')) : 1;
+    $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+    $filters = $this->get('filters');
+    $search = $this->get('search');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
+    $user_role = $this->get('user_role'); // Se debe enviar desde el frontend
+
+    // Validaciones básicas
+    if (!$idcli) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta parámetro requerido: idcli"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar permisos - Solo ADMIN y SUPER pueden acceder
+    if (!$user_role || ($user_role !== 'admin' && $user_role !== 'super')) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Acceso denegado: Se requiere rol ADMIN o SUPER para vista global"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+        return;
+    }
+
+    // Validar límites de paginación
+    $page = max(1, $page);
+    $limit = max(10, min(500, $limit)); // Límite más conservador para vista global
+    $offset = ($page - 1) * $limit;
+
+    try {
+        // Obtener lista de sucursales disponibles
+        $sucursales = $this->obtenerSucursalesDisponibles();
+        
+        // Log para debug
+        error_log("Sucursales disponibles encontradas: " . print_r($sucursales, true));
+        
+        if (empty($sucursales)) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron sucursales disponibles"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+            return;
+        }
+
+        // Construir consulta UNION manualmente para evitar problemas con CodeIgniter
+        $unionQueries = array();
+        foreach ($sucursales as $sucursal) {
+            $tabla = "factcab" . $sucursal;
+            
+            // Log para debug
+            error_log("Verificando tabla: " . $tabla);
+            
+            // Verificar si la tabla existe
+            if ($this->db->table_exists($tabla)) {
+                error_log("Tabla {$tabla} existe - construyendo subconsulta");
+                $subQuery = $this->construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters);
+                if ($subQuery) {
+                    $unionQueries[] = $subQuery;
+                    error_log("Subconsulta agregada para {$tabla}: " . substr($subQuery, 0, 100) . "...");
+                }
+            } else {
+                error_log("Tabla {$tabla} NO existe");
+            }
+        }
+
+        if (empty($unionQueries)) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron tablas de facturas disponibles"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+            return;
+        }
+
+        // Construir consulta final con UNION
+        $unionQuery = implode(' UNION ALL ', $unionQueries);
+        
+        // Log de la consulta final
+        error_log("Número de subconsultas UNION: " . count($unionQueries));
+        error_log("Consulta UNION completa: " . $unionQuery);
+        
+        // Aplicar filtro de sucursal DESPUÉS del UNION si existe
+        $whereClause = '';
+        if ($filters && trim($filters) !== '') {
+            $filtersArray = json_decode($filters, true);
+            if ($filtersArray && is_array($filtersArray) && isset($filtersArray['sucursal'])) {
+                $sucursalFilter = $filtersArray['sucursal'];
+                if (isset($sucursalFilter['value']) && $sucursalFilter['value'] !== '') {
+                    $value = $sucursalFilter['value'];
+                    $matchMode = isset($sucursalFilter['matchMode']) ? $sucursalFilter['matchMode'] : 'contains';
+                    $value_escaped = $this->db->escape($value);
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape($value . '%');
+                            break;
+                        case 'contains':
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                        case 'equals':
+                            $whereClause = " WHERE sucursal = {$value_escaped}";
+                            break;
+                        default:
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                    }
+                    
+                    error_log("Filtro de sucursal aplicado después del UNION: " . $whereClause);
+                }
+            }
+        }
+        
+        // Agregar ordenamiento y paginación
+        $sortDirection = ($sortOrder === -1) ? 'DESC' : 'ASC';
+        $orderField = $sortField ? $sortField : 'emitido';
+        
+        $finalQuery = "SELECT * FROM ({$unionQuery}) AS combined_results{$whereClause} ORDER BY {$orderField} {$sortDirection} LIMIT {$limit} OFFSET {$offset}";
+        
+        // Log de la consulta final
+        error_log("Consulta final con paginación: " . $finalQuery);
+        
+        // Contar total de registros
+        $countQuery = "SELECT COUNT(*) as total FROM ({$unionQuery}) AS combined_results{$whereClause}";
+        $countResult = $this->db->query($countQuery)->row_array();
+        $totalRegistros = $countResult['total'];
+
+        // Log del conteo
+        error_log("Total de registros encontrados: " . $totalRegistros);
+
+        // Ejecutar consulta principal
+        $query = $this->db->query($finalQuery);
+        $datos = $query->result_array();
+        
+        // Log de resultados
+        error_log("Registros devueltos: " . count($datos));
+
+        // Calcular metadatos de paginación
+        $totalPaginas = ceil($totalRegistros / $limit);
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => array(
+                "data" => $datos,
+                "total" => $totalRegistros,
+                "total_pages" => $totalPaginas,
+                "current_page" => $page,
+                "per_page" => $limit,
+                "from" => $offset + 1,
+                "to" => min($offset + $limit, $totalRegistros),
+                "sucursales_consultadas" => $sucursales,
+                "vista" => "global"
+            )
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al consultar historial de ventas global: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Construye una subconsulta para una sucursal específica
+ */
+private function construirSubConsultaGlobal($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters)
+{
+    $this->db->select('
+        \'' . $sucursal . '\' as sucursal,
+        tipo,
+        puntoventa,
+        letra,
+        numero_fac,
+        emitido,
+        vencimiento,
+        exento,
+        basico,
+        iva1,
+        iva2,
+        iva3,
+        (exento + basico + iva1 + iva2 + iva3) as importe,
+        saldo,
+        usuario,
+        id_num as id,
+        cliente
+    ');
+    $this->db->from($tabla);
+    $this->db->where('cliente', $idcli);
+
+    // Aplicar filtro de rango de fechas si se proporciona
+    if ($fecha_desde && $fecha_hasta) {
+        if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+            $this->db->where('emitido >=', $fecha_desde);
+            $this->db->where('emitido <=', $fecha_hasta);
+        }
+    }
+
+    // Aplicar búsqueda global si existe
+    if ($search && trim($search) !== '') {
+        $searchTerm = $this->db->escape_like_str($search);
+        $this->db->group_start();
+        $this->db->like('tipo', $searchTerm);
+        $this->db->or_like('letra', $searchTerm);
+        $this->db->or_like('numero_fac', $searchTerm);
+        $this->db->or_like('usuario', $searchTerm);
+        $this->db->group_end();
+    }
+
+    // Aplicar filtros de columna si existen
+    if ($filters && trim($filters) !== '') {
+        $filtersArray = json_decode($filters, true);
+        if ($filtersArray && is_array($filtersArray)) {
+            foreach ($filtersArray as $field => $filter) {
+                if (isset($filter['value']) && $filter['value'] !== '') {
+                    $value = $filter['value'];
+                    $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $this->db->like($field, $value, 'after');
+                            break;
+                        case 'contains':
+                            $this->db->like($field, $value);
+                            break;
+                        case 'equals':
+                            $this->db->where($field, $value);
+                            break;
+                        case 'gt':
+                            $this->db->where($field . ' >', $value);
+                            break;
+                        case 'gte':
+                            $this->db->where($field . ' >=', $value);
+                            break;
+                        case 'lt':
+                            $this->db->where($field . ' <', $value);
+                            break;
+                        case 'lte':
+                            $this->db->where($field . ' <=', $value);
+                            break;
+                        case 'dateIs':
+                            $this->db->where($field, $value);
+                            break;
+                        case 'dateAfter':
+                            $this->db->where($field . ' >', $value);
+                            break;
+                        case 'dateBefore':
+                            $this->db->where($field . ' <', $value);
+                            break;
+                        default:
+                            $this->db->like($field, $value);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    return $this->db->get_compiled_select();
+}
+
+/**
+ * Construye una subconsulta manual para una sucursal específica (evita problemas con CodeIgniter)
+ */
+private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters)
+{
+    // Escapar valores
+    $idcli_escaped = $this->db->escape($idcli);
+    $sucursal_escaped = $this->db->escape($sucursal);
+    $tabla_escaped = $this->db->escape_identifiers($tabla);
+    
+    // Log para debug
+    error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
+    
+    // Construir SELECT base
+    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
+    
+    // Construir WHERE
+    $where = "WHERE cliente = {$idcli_escaped}";
+    
+    // Log de la consulta base
+    error_log("Consulta base para {$tabla}: {$select} {$where}");
+    
+    // Aplicar filtro de rango de fechas si se proporciona
+    if ($fecha_desde && $fecha_hasta) {
+        if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+            $fecha_desde_escaped = $this->db->escape($fecha_desde);
+            $fecha_hasta_escaped = $this->db->escape($fecha_hasta);
+            $where .= " AND emitido >= {$fecha_desde_escaped} AND emitido <= {$fecha_hasta_escaped}";
+        }
+    }
+    
+    // Aplicar búsqueda global si existe
+    if ($search && trim($search) !== '') {
+        $search_escaped = $this->db->escape('%' . $search . '%');
+        $where .= " AND (tipo LIKE {$search_escaped} OR letra LIKE {$search_escaped} OR numero_fac::text LIKE {$search_escaped} OR usuario LIKE {$search_escaped})";
+    }
+    
+    // Aplicar filtros de columna si existen (EXCLUYENDO el filtro de sucursal)
+    if ($filters && trim($filters) !== '') {
+        $filtersArray = json_decode($filters, true);
+        if ($filtersArray && is_array($filtersArray)) {
+            foreach ($filtersArray as $field => $filter) {
+                // EXCLUIR el filtro de sucursal ya que es una columna virtual
+                if ($field === 'sucursal') {
+                    error_log("Filtro de sucursal excluido de subconsulta - se aplicará después del UNION");
+                    continue;
+                }
+                
+                if (isset($filter['value']) && $filter['value'] !== '') {
+                    $value = $filter['value'];
+                    $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                    $value_escaped = $this->db->escape($value);
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $where .= " AND {$field} LIKE " . $this->db->escape($value . '%');
+                            break;
+                        case 'contains':
+                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                        case 'equals':
+                            $where .= " AND {$field} = {$value_escaped}";
+                            break;
+                        case 'gt':
+                            $where .= " AND {$field} > {$value_escaped}";
+                            break;
+                        case 'gte':
+                            $where .= " AND {$field} >= {$value_escaped}";
+                            break;
+                        case 'lt':
+                            $where .= " AND {$field} < {$value_escaped}";
+                            break;
+                        case 'lte':
+                            $where .= " AND {$field} <= {$value_escaped}";
+                            break;
+                        case 'dateIs':
+                            $where .= " AND {$field} = {$value_escaped}";
+                            break;
+                        case 'dateAfter':
+                            $where .= " AND {$field} > {$value_escaped}";
+                            break;
+                        case 'dateBefore':
+                            $where .= " AND {$field} < {$value_escaped}";
+                            break;
+                        default:
+                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    
+    return $select . ' ' . $where;
+}
+
+/**
+ * Obtiene lista de sucursales disponibles
+ */
+private function obtenerSucursalesDisponibles()
+{
+    // Buscar tablas factcab* en la base de datos
+    $tables = $this->db->list_tables();
+    $sucursales = array();
+    
+    error_log("Todas las tablas en la base de datos: " . print_r($tables, true));
+    
+    foreach ($tables as $table) {
+        if (strpos($table, 'factcab') === 0 && strlen($table) > 7) {
+            $sucursal = substr($table, 7); // Extraer número de sucursal
+            if (is_numeric($sucursal)) {
+                $sucursales[] = $sucursal;
+                error_log("Sucursal detectada: " . $sucursal . " de tabla: " . $table);
+            }
+        }
+    }
+    
+    // También intentar con un rango fijo para asegurar cobertura
+    for ($i = 1; $i <= 10; $i++) {
+        $tabla = "factcab" . $i;
+        if ($this->db->table_exists($tabla) && !in_array($i, $sucursales)) {
+            $sucursales[] = $i;
+            error_log("Sucursal adicional detectada: " . $i);
+        }
+    }
+    
+    sort($sucursales); // Ordenar sucursales
+    error_log("Sucursales finales: " . print_r($sucursales, true));
+    return $sucursales;
+}
+
+/**
+ * Endpoint de prueba para verificar sucursales disponibles
+ */
+public function test_sucursales_disponibles_get()
+{
+    $sucursales = $this->obtenerSucursalesDisponibles();
+    
+    $respuesta = array(
+        "error" => false,
+        "mensaje" => array(
+            "sucursales_detectadas" => $sucursales,
+            "total_sucursales" => count($sucursales)
+        )
+    );
+    
+    $this->response($respuesta);
+}
+
+/**
+ * Endpoint de prueba para verificar datos por sucursal
+ */
+public function test_datos_por_sucursal_get()
+{
+    $idcli = $this->get('idcli');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
+    
+    if (!$idcli || !$fecha_desde || !$fecha_hasta) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros: idcli, fecha_desde, fecha_hasta"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+    
+    $sucursales = $this->obtenerSucursalesDisponibles();
+    $resultados = array();
+    
+    foreach ($sucursales as $sucursal) {
+        $tabla = "factcab" . $sucursal;
+        
+        if ($this->db->table_exists($tabla)) {
+            $query = "SELECT COUNT(*) as total FROM {$tabla} WHERE cliente = {$this->db->escape($idcli)} AND emitido >= {$this->db->escape($fecha_desde)} AND emitido <= {$this->db->escape($fecha_hasta)}";
+            $result = $this->db->query($query)->row_array();
+            
+            $resultados[] = array(
+                "sucursal" => $sucursal,
+                "tabla" => $tabla,
+                "registros" => $result['total']
+            );
+        }
+    }
+    
+    $respuesta = array(
+        "error" => false,
+        "mensaje" => array(
+            "cliente" => $idcli,
+            "fecha_desde" => $fecha_desde,
+            "fecha_hasta" => $fecha_hasta,
+            "resultados_por_sucursal" => $resultados
+        )
+    );
+    
+    $this->response($respuesta);
+}
+
+/**
  * Obtiene los datos completos del recibo basándose en el id de factcabx
  * para historialventas2
  */
