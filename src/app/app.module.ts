@@ -125,6 +125,7 @@ import { NopermitidoComponent } from './components/nopermitido/nopermitido.compo
 import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
+import { TotalizadorModalComponent } from './components/historialventas2/totalizador-modal.component';
 
 @NgModule({
   declarations: [
@@ -208,6 +209,7 @@ import { Historialventas2Component } from './components/historialventas2/histori
     ReporteComponent,
     HistorialventasComponent,
     Historialventas2Component,
+    TotalizadorModalComponent,
   ],
   imports: [
     ButtonModule,

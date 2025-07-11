@@ -68,6 +68,21 @@
                                 </p-button>
                             </div>
                             
+                            <div class="col-md-2" *ngIf="consultaRealizada && historialVentas2.length > 0">
+                                <p-button 
+                                    label="Totalizador"
+                                    icon="pi pi-calculator"
+                                    (click)="abrirTotalizador()"
+                                    [loading]="calculandoTotalizador"
+                                    styleClass="w-100 p-button-info"
+                                    [style]="{'height': '38px'}">
+                                </p-button>
+                            </div>
+                            
+                            <div class="col-md-2" *ngIf="!(consultaRealizada && historialVentas2.length > 0)">
+                                <!-- Espacio vacío cuando no hay totalizador -->
+                            </div>
+                            
                             <div class="col-md-4">
                                 <div class="alert alert-warning mb-0 py-2" *ngIf="!consultaRealizada">
                                     <small>
@@ -268,10 +283,21 @@
                                                         
                                                         <!-- Productos del recibo -->
                                                         <div class="card-body">
-                                                            <h6 class="text-success mb-3">
-                                                                <i class="pi pi-shopping-cart me-2"></i>
-                                                                Productos ({{ recibo.productos?.length || 0 }})
-                                                            </h6>
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <h6 class="text-success mb-0">
+                                                                    <i class="pi pi-shopping-cart me-2"></i>
+                                                                    Productos ({{ recibo.productos?.length || 0 }})
+                                                                </h6>
+                                                                <p-button 
+                                                                    *ngIf="recibo.productos && recibo.productos.length > 0"
+                                                                    label="Generar PDF"
+                                                                    icon="pi pi-file-pdf"
+                                                                    class="p-button-sm p-button-outlined p-button-danger"
+                                                                    (onClick)="generarPDF(venta)"
+                                                                    pTooltip="Generar PDF del recibo"
+                                                                    tooltipPosition="top">
+                                                                </p-button>
+                                                            </div>
                                                             
                                                             <div *ngIf="recibo.productos && recibo.productos.length > 0; else noProductos" class="table-responsive">
                                                                 <table class="table table-sm table-striped">
