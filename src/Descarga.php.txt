@@ -2809,129 +2809,145 @@ public function UpdateConflista_post()
 {
     try {
         $data = $this->post();
-        if (isset($data) && count($data) > 0) {
-            // Validar campos obligatorios
-            if (!isset($data['id_conflista'])) {
-                $respuesta = [
-                    'error'   => true,
-                    'mensaje' => 'Falta el ID de la conflista'
-                ];
-                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
-                return;
-            }
-
-            $id             = $data['id_conflista'];
-            $listap         = $data['listap'];
-            $tipomone       = $data['tipomone'];
-            $recalcular_21  = isset($data['recalcular_21'])  ? (bool)$data['recalcular_21']  : false;
-            $recalcular_105 = isset($data['recalcular_105']) ? (bool)$data['recalcular_105'] : false;
-            $preciof21      = isset($data['preciof21'])      ? (float)$data['preciof21']     : 0;
-            $preciof105     = isset($data['preciof105'])     ? (float)$data['preciof105']    : 0;
-
-            // Inicializar resultados
-            $resultados = [
-                'conflista_actualizada'      => false,
-                'productos_actualizados_21'  => 0,
-                'productos_actualizados_105' => 0
-            ];
-
-            // 1) Actualizar conf_lista
-            $this->db->where('id_conflista', $id);
-            $this->db->update('conf_lista', [
-                'listap'      => $data['listap'],
-                'activa'      => $data['activa'],
-                'precosto21'  => $data['precosto21'],
-                'precosto105' => $data['precosto105'],
-                'pordcto'     => $data['pordcto'],
-                'margen'      => $data['margen'],
-                'preciof21'   => $data['preciof21'],
-                'preciof105'  => $data['preciof105'],
-                'rmargen'     => $data['rmargen'],
-                'tipomone'    => $data['tipomone'],
-                'actprov'     => $data['actprov'],
-                'cod_marca'   => $data['cod_marca'],
-                'fecha'       => $data['fecha']
-            ]);
-            $resultados['conflista_actualizada'] = true;
-
-            // Determinar campo de precio según lista
-            $campo_precio = 'prefi' . $listap;
-
-            // 2) Recalcular precios IVA 21%
-            if ($recalcular_21) {
-                $this->db->select('cod_iva');
-                $this->db->where('ROUND(alicuota1,2) =', 21.00);
-                $query_iva21 = $this->db->get('artiva');
-
-                $iva21_records = [];
-                if ($query_iva21->num_rows() > 0) {
-                    foreach ($query_iva21->result() as $row) {
-                        $iva21_records[] = $row->cod_iva;
-                    }
-                }
-
-                if (!empty($iva21_records)) {
-                    $factor21 = 1 + ($preciof21 / 100);
-
-                    $this->db->where_in('cod_iva', $iva21_records);
-                    $this->db->where('tipo_moneda', $tipomone);
-                    $this->db->where('idart', 0);                          // <-- nueva condición
-                    $this->db->set($campo_precio, "precon * {$factor21}", false);
-                    $this->db->update('artsucursal');
-
-                    $resultados['productos_actualizados_21'] = $this->db->affected_rows();
-                }
-            }
-
-            // 3) Recalcular precios IVA 10.5%
-            if ($recalcular_105) {
-                $this->db->select('cod_iva');
-                $this->db->where('ROUND(alicuota1,2) =', 10.50);
-                $query_iva105 = $this->db->get('artiva');
-
-                $iva105_records = [];
-                if ($query_iva105->num_rows() > 0) {
-                    foreach ($query_iva105->result() as $row) {
-                        $iva105_records[] = $row->cod_iva;
-                    }
-                }
-
-                if (!empty($iva105_records)) {
-                    $factor105 = 1 + ($preciof105 / 100);
-
-                    $this->db->where_in('cod_iva', $iva105_records);
-                    $this->db->where('tipo_moneda', $tipomone);
-                    $this->db->where('idart', 0);                          // <-- nueva condición
-                    $this->db->set($campo_precio, "precon * {$factor105}", false);
-                    $this->db->update('artsucursal');
-
-                    $resultados['productos_actualizados_105'] = $this->db->affected_rows();
-                }
-            }
-
-            // 4) Enviar respuesta final
+        
+        // ===================================================
+        // VALIDACIONES BÁSICAS PHP (OPCIONALES - PostgreSQL LAS REPETIRÁ)
+        // ===================================================
+        if (!isset($data['id_conflista'])) {
             $respuesta = [
-                'error'      => false,
-                'mensaje'    => 'Operación completada exitosamente',
-                'resultados' => $resultados
-            ];
-            $this->response($respuesta);
-
-        } else {
-            $respuesta = [
-                'error'   => true,
-                'mensaje' => 'No se recibieron datos en el POST'
+                'error' => true,
+                'mensaje' => 'Falta el ID de la conflista'
             ];
             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
         }
-
-    } catch (Exception $e) {
-        $respuesta = [
-            'error'   => true,
-            'mensaje' => 'Error en el servidor: ' . $e->getMessage(),
-            'file'    => $e->getFile(),
-            'line'    => $e->getLine()
+        
+        // ===================================================
+        // PREPARAR PARÁMETROS PARA POSTGRESQL
+        // CONVERSIÓN ADECUADA DE TIPOS BOOLEAN
+        // ===================================================
+        
+        // Convertir valores 't'/'f' a boolean para PostgreSQL
+        $activa_bool = ($data['activa'] === 't' || $data['activa'] === true || $data['activa'] === 'true') ? true : false;
+        $rmargen_bool = (($data['rmargen'] ?? 'f') === 't' || ($data['rmargen'] ?? false) === true) ? true : false;
+        $actprov_bool = (($data['actprov'] ?? 'f') === 't' || ($data['actprov'] ?? false) === true) ? true : false;
+        
+        $params = [
+            (int)$data['id_conflista'],                                           // p_id_conflista
+            (int)$data['listap'],                                                // p_listap
+            $activa_bool,                                                        // p_activa (boolean)
+            (float)($data['precosto21'] ?? 0),                                   // p_precosto21
+            (float)($data['precosto105'] ?? 0),                                  // p_precosto105
+            (float)($data['pordcto'] ?? 0),                                      // p_pordcto
+            (float)($data['margen'] ?? 0),                                       // p_margen
+            (float)($data['preciof21'] ?? 0),                                    // p_preciof21
+            (float)($data['preciof105'] ?? 0),                                   // p_preciof105
+            $rmargen_bool,                                                       // p_rmargen (boolean)
+            (int)($data['tipomone'] ?? 1),                                       // p_tipomone
+            $actprov_bool,                                                       // p_actprov (boolean)
+            $data['cod_marca'] ?? '',                                            // p_cod_marca
+            $data['fecha'] ?? date('Y-m-d'),                                     // p_fecha
+            isset($data['recalcular_21']) && $data['recalcular_21'] ? true : false,   // p_recalcular_21
+            isset($data['recalcular_105']) && $data['recalcular_105'] ? true : false  // p_recalcular_105
         ];
+        
+        // ===================================================
+        // LLAMADA ÚNICA A POSTGRESQL - TODO ATÓMICO
+        // USANDO CONSULTA DIRECTA PARA EVITAR PROBLEMAS DE CODEIGNITER
+        // ===================================================
+        
+        // Construir la consulta SQL directamente con valores escapados
+        $sql = sprintf(
+            "SELECT update_conflista_con_recalculo(%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d,%s,'%s','%s',%s,%s) as resultado",
+            $params[0],  // id_conflista
+            $params[1],  // listap
+            $params[2] ? 'true' : 'false',  // activa
+            $params[3],  // precosto21
+            $params[4],  // precosto105
+            $params[5],  // pordcto
+            $params[6],  // margen
+            $params[7],  // preciof21
+            $params[8],  // preciof105
+            $params[9] ? 'true' : 'false',  // rmargen
+            $params[10], // tipomone
+            $params[11] ? 'true' : 'false', // actprov
+            $params[12], // cod_marca
+            $params[13], // fecha
+            $params[14] ? 'true' : 'false', // recalcular_21
+            $params[15] ? 'true' : 'false'  // recalcular_105
+        );
+        
+        // Debug de la llamada
+        $debug_llamada = [
+            'timestamp_llamada_php' => date('Y-m-d H:i:s'),
+            'funcion_postgresql' => 'update_conflista_con_recalculo',
+            'sql_generado' => $sql,
+            'parametros_enviados' => [
+                'id_conflista' => $params[0],
+                'listap' => $params[1],
+                'activa' => $params[2],
+                'tipomone' => $params[10],
+                'preciof21' => $params[7],
+                'preciof105' => $params[8],
+                'recalcular_21' => $params[14],
+                'recalcular_105' => $params[15]
+            ]
+        ];
+        
+        $query = $this->db->query($sql);
+        
+        if (!$query) {
+            throw new Exception('Error ejecutando función PostgreSQL: ' . $this->db->error()['message']);
+        }
+        
+        $result = $query->row();
+        
+        if (!$result || !isset($result->resultado)) {
+            throw new Exception('No se recibió respuesta válida de PostgreSQL');
+        }
+        
+        // DEBUG: Ver exactamente qué devuelve PostgreSQL
+        $raw_result = $result->resultado;
+        error_log("=== DEBUG POSTGRESQL RESPONSE ===");
+        error_log("Raw result: " . $raw_result);
+        error_log("SQL ejecutado: " . $sql);
+        
+        // PostgreSQL devuelve JSON, decodificarlo
+        $response = json_decode($raw_result, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error decodificando respuesta JSON de PostgreSQL: ' . json_last_error_msg() . '. Raw response: ' . $raw_result);
+        }
+        
+        // Agregar información de debug de PHP
+        if (isset($response['debug'])) {
+            $response['debug']['llamada_php'] = $debug_llamada;
+            $response['debug']['timestamp_respuesta_php'] = date('Y-m-d H:i:s');
+        }
+        
+        // ===================================================
+        // ENVIAR RESPUESTA DIRECTA DE POSTGRESQL
+        // ===================================================
+        $http_status = $response['error'] ? REST_Controller::HTTP_INTERNAL_SERVER_ERROR : REST_Controller::HTTP_OK;
+        $this->response($response, $http_status);
+        
+    } catch (Exception $e) {
+        // ===================================================
+        // MANEJO DE ERRORES PHP (ERRORES DE COMUNICACIÓN)
+        // ===================================================
+        $respuesta = [
+            'error' => true,
+            'mensaje' => 'Error en PHP al comunicarse con PostgreSQL: ' . $e->getMessage(),
+            'debug' => [
+                'timestamp_error_php' => date('Y-m-d H:i:s'),
+                'error_php' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine(),
+                'datos_recibidos' => $data ?? null,
+                'nota' => 'Este error ocurrió en PHP, no en PostgreSQL. La función PostgreSQL puede no haberse ejecutado.'
+            ]
+        ];
+        
         $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
