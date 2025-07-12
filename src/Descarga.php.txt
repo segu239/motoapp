@@ -2809,129 +2809,145 @@ public function UpdateConflista_post()
 {
     try {
         $data = $this->post();
-        if (isset($data) && count($data) > 0) {
-            // Validar campos obligatorios
-            if (!isset($data['id_conflista'])) {
-                $respuesta = [
-                    'error'   => true,
-                    'mensaje' => 'Falta el ID de la conflista'
-                ];
-                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
-                return;
-            }
-
-            $id             = $data['id_conflista'];
-            $listap         = $data['listap'];
-            $tipomone       = $data['tipomone'];
-            $recalcular_21  = isset($data['recalcular_21'])  ? (bool)$data['recalcular_21']  : false;
-            $recalcular_105 = isset($data['recalcular_105']) ? (bool)$data['recalcular_105'] : false;
-            $preciof21      = isset($data['preciof21'])      ? (float)$data['preciof21']     : 0;
-            $preciof105     = isset($data['preciof105'])     ? (float)$data['preciof105']    : 0;
-
-            // Inicializar resultados
-            $resultados = [
-                'conflista_actualizada'      => false,
-                'productos_actualizados_21'  => 0,
-                'productos_actualizados_105' => 0
-            ];
-
-            // 1) Actualizar conf_lista
-            $this->db->where('id_conflista', $id);
-            $this->db->update('conf_lista', [
-                'listap'      => $data['listap'],
-                'activa'      => $data['activa'],
-                'precosto21'  => $data['precosto21'],
-                'precosto105' => $data['precosto105'],
-                'pordcto'     => $data['pordcto'],
-                'margen'      => $data['margen'],
-                'preciof21'   => $data['preciof21'],
-                'preciof105'  => $data['preciof105'],
-                'rmargen'     => $data['rmargen'],
-                'tipomone'    => $data['tipomone'],
-                'actprov'     => $data['actprov'],
-                'cod_marca'   => $data['cod_marca'],
-                'fecha'       => $data['fecha']
-            ]);
-            $resultados['conflista_actualizada'] = true;
-
-            // Determinar campo de precio según lista
-            $campo_precio = 'prefi' . $listap;
-
-            // 2) Recalcular precios IVA 21%
-            if ($recalcular_21) {
-                $this->db->select('cod_iva');
-                $this->db->where('ROUND(alicuota1,2) =', 21.00);
-                $query_iva21 = $this->db->get('artiva');
-
-                $iva21_records = [];
-                if ($query_iva21->num_rows() > 0) {
-                    foreach ($query_iva21->result() as $row) {
-                        $iva21_records[] = $row->cod_iva;
-                    }
-                }
-
-                if (!empty($iva21_records)) {
-                    $factor21 = 1 + ($preciof21 / 100);
-
-                    $this->db->where_in('cod_iva', $iva21_records);
-                    $this->db->where('tipo_moneda', $tipomone);
-                    $this->db->where('idart', 0);                          // <-- nueva condición
-                    $this->db->set($campo_precio, "precon * {$factor21}", false);
-                    $this->db->update('artsucursal');
-
-                    $resultados['productos_actualizados_21'] = $this->db->affected_rows();
-                }
-            }
-
-            // 3) Recalcular precios IVA 10.5%
-            if ($recalcular_105) {
-                $this->db->select('cod_iva');
-                $this->db->where('ROUND(alicuota1,2) =', 10.50);
-                $query_iva105 = $this->db->get('artiva');
-
-                $iva105_records = [];
-                if ($query_iva105->num_rows() > 0) {
-                    foreach ($query_iva105->result() as $row) {
-                        $iva105_records[] = $row->cod_iva;
-                    }
-                }
-
-                if (!empty($iva105_records)) {
-                    $factor105 = 1 + ($preciof105 / 100);
-
-                    $this->db->where_in('cod_iva', $iva105_records);
-                    $this->db->where('tipo_moneda', $tipomone);
-                    $this->db->where('idart', 0);                          // <-- nueva condición
-                    $this->db->set($campo_precio, "precon * {$factor105}", false);
-                    $this->db->update('artsucursal');
-
-                    $resultados['productos_actualizados_105'] = $this->db->affected_rows();
-                }
-            }
-
-            // 4) Enviar respuesta final
+        
+        // ===================================================
+        // VALIDACIONES BÁSICAS PHP (OPCIONALES - PostgreSQL LAS REPETIRÁ)
+        // ===================================================
+        if (!isset($data['id_conflista'])) {
             $respuesta = [
-                'error'      => false,
-                'mensaje'    => 'Operación completada exitosamente',
-                'resultados' => $resultados
-            ];
-            $this->response($respuesta);
-
-        } else {
-            $respuesta = [
-                'error'   => true,
-                'mensaje' => 'No se recibieron datos en el POST'
+                'error' => true,
+                'mensaje' => 'Falta el ID de la conflista'
             ];
             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
         }
-
-    } catch (Exception $e) {
-        $respuesta = [
-            'error'   => true,
-            'mensaje' => 'Error en el servidor: ' . $e->getMessage(),
-            'file'    => $e->getFile(),
-            'line'    => $e->getLine()
+        
+        // ===================================================
+        // PREPARAR PARÁMETROS PARA POSTGRESQL
+        // CONVERSIÓN ADECUADA DE TIPOS BOOLEAN
+        // ===================================================
+        
+        // Convertir valores 't'/'f' a boolean para PostgreSQL
+        $activa_bool = ($data['activa'] === 't' || $data['activa'] === true || $data['activa'] === 'true') ? true : false;
+        $rmargen_bool = (($data['rmargen'] ?? 'f') === 't' || ($data['rmargen'] ?? false) === true) ? true : false;
+        $actprov_bool = (($data['actprov'] ?? 'f') === 't' || ($data['actprov'] ?? false) === true) ? true : false;
+        
+        $params = [
+            (int)$data['id_conflista'],                                           // p_id_conflista
+            (int)$data['listap'],                                                // p_listap
+            $activa_bool,                                                        // p_activa (boolean)
+            (float)($data['precosto21'] ?? 0),                                   // p_precosto21
+            (float)($data['precosto105'] ?? 0),                                  // p_precosto105
+            (float)($data['pordcto'] ?? 0),                                      // p_pordcto
+            (float)($data['margen'] ?? 0),                                       // p_margen
+            (float)($data['preciof21'] ?? 0),                                    // p_preciof21
+            (float)($data['preciof105'] ?? 0),                                   // p_preciof105
+            $rmargen_bool,                                                       // p_rmargen (boolean)
+            (int)($data['tipomone'] ?? 1),                                       // p_tipomone
+            $actprov_bool,                                                       // p_actprov (boolean)
+            $data['cod_marca'] ?? '',                                            // p_cod_marca
+            $data['fecha'] ?? date('Y-m-d'),                                     // p_fecha
+            isset($data['recalcular_21']) && $data['recalcular_21'] ? true : false,   // p_recalcular_21
+            isset($data['recalcular_105']) && $data['recalcular_105'] ? true : false  // p_recalcular_105
         ];
+        
+        // ===================================================
+        // LLAMADA ÚNICA A POSTGRESQL - TODO ATÓMICO
+        // USANDO CONSULTA DIRECTA PARA EVITAR PROBLEMAS DE CODEIGNITER
+        // ===================================================
+        
+        // Construir la consulta SQL directamente con valores escapados
+        $sql = sprintf(
+            "SELECT update_conflista_con_recalculo(%d,%d,%s,%s,%s,%s,%s,%s,%s,%s,%d,%s,'%s','%s',%s,%s) as resultado",
+            $params[0],  // id_conflista
+            $params[1],  // listap
+            $params[2] ? 'true' : 'false',  // activa
+            $params[3],  // precosto21
+            $params[4],  // precosto105
+            $params[5],  // pordcto
+            $params[6],  // margen
+            $params[7],  // preciof21
+            $params[8],  // preciof105
+            $params[9] ? 'true' : 'false',  // rmargen
+            $params[10], // tipomone
+            $params[11] ? 'true' : 'false', // actprov
+            $params[12], // cod_marca
+            $params[13], // fecha
+            $params[14] ? 'true' : 'false', // recalcular_21
+            $params[15] ? 'true' : 'false'  // recalcular_105
+        );
+        
+        // Debug de la llamada
+        $debug_llamada = [
+            'timestamp_llamada_php' => date('Y-m-d H:i:s'),
+            'funcion_postgresql' => 'update_conflista_con_recalculo',
+            'sql_generado' => $sql,
+            'parametros_enviados' => [
+                'id_conflista' => $params[0],
+                'listap' => $params[1],
+                'activa' => $params[2],
+                'tipomone' => $params[10],
+                'preciof21' => $params[7],
+                'preciof105' => $params[8],
+                'recalcular_21' => $params[14],
+                'recalcular_105' => $params[15]
+            ]
+        ];
+        
+        $query = $this->db->query($sql);
+        
+        if (!$query) {
+            throw new Exception('Error ejecutando función PostgreSQL: ' . $this->db->error()['message']);
+        }
+        
+        $result = $query->row();
+        
+        if (!$result || !isset($result->resultado)) {
+            throw new Exception('No se recibió respuesta válida de PostgreSQL');
+        }
+        
+        // DEBUG: Ver exactamente qué devuelve PostgreSQL
+        $raw_result = $result->resultado;
+        error_log("=== DEBUG POSTGRESQL RESPONSE ===");
+        error_log("Raw result: " . $raw_result);
+        error_log("SQL ejecutado: " . $sql);
+        
+        // PostgreSQL devuelve JSON, decodificarlo
+        $response = json_decode($raw_result, true);
+        
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Error decodificando respuesta JSON de PostgreSQL: ' . json_last_error_msg() . '. Raw response: ' . $raw_result);
+        }
+        
+        // Agregar información de debug de PHP
+        if (isset($response['debug'])) {
+            $response['debug']['llamada_php'] = $debug_llamada;
+            $response['debug']['timestamp_respuesta_php'] = date('Y-m-d H:i:s');
+        }
+        
+        // ===================================================
+        // ENVIAR RESPUESTA DIRECTA DE POSTGRESQL
+        // ===================================================
+        $http_status = $response['error'] ? REST_Controller::HTTP_INTERNAL_SERVER_ERROR : REST_Controller::HTTP_OK;
+        $this->response($response, $http_status);
+        
+    } catch (Exception $e) {
+        // ===================================================
+        // MANEJO DE ERRORES PHP (ERRORES DE COMUNICACIÓN)
+        // ===================================================
+        $respuesta = [
+            'error' => true,
+            'mensaje' => 'Error en PHP al comunicarse con PostgreSQL: ' . $e->getMessage(),
+            'debug' => [
+                'timestamp_error_php' => date('Y-m-d H:i:s'),
+                'error_php' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine(),
+                'datos_recibidos' => $data ?? null,
+                'nota' => 'Este error ocurrió en PHP, no en PostgreSQL. La función PostgreSQL puede no haberse ejecutado.'
+            ]
+        ];
+        
         $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
     }
 }
@@ -3472,6 +3488,913 @@ public function obtenerDatosRecibo_get()
 }
 
 /**
+ * Obtiene historial de ventas de la tabla factcabx (historialventas2)
+ * con paginación, filtros, búsqueda y ordenamiento
+ */
+public function historialventas2xcli_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $idcli = $this->get('idcli');
+    $page = $this->get('page') ? intval($this->get('page')) : 1;
+    $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+    $filters = $this->get('filters');
+    $search = $this->get('search');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
+
+    // Validaciones básicas
+    if (!$sucursal || !$idcli) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e idcli"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar límites de paginación
+    $page = max(1, $page);
+    $limit = max(10, min(1000, $limit));
+    $offset = ($page - 1) * $limit;
+
+    // Construir nombre de tabla
+    $tabla = "factcab" . $sucursal;
+
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tabla)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La tabla $tabla no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Seleccionar campos específicos de factcabx
+        $this->db->select('
+            f.cod_sucursal as sucursal,
+            f.tipo,
+            f.puntoventa,
+            f.letra,
+            f.numero_fac,
+            f.emitido,
+            f.vencimiento,
+            f.exento,
+            f.basico,
+            f.iva1,
+            f.iva2,
+            f.iva3,
+            (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe,
+            f.saldo,
+            f.usuario,
+            f.id_num as id,
+            f.cliente
+        ');
+        $this->db->from($tabla . ' f');
+        
+        // Filtrar por cliente
+        $this->db->where('f.cliente', $idcli);
+
+        // Aplicar filtro de rango de fechas si se proporciona
+        if ($fecha_desde && $fecha_hasta) {
+            // Validar formato de fechas (YYYY-MM-DD)
+            if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+                $this->db->where('f.emitido >=', $fecha_desde);
+                $this->db->where('f.emitido <=', $fecha_hasta);
+            }
+        }
+
+        // Aplicar búsqueda global si existe
+        if ($search && trim($search) !== '') {
+            $searchTerm = $this->db->escape_like_str($search);
+            $this->db->group_start();
+            $this->db->like('f.tipo', $searchTerm);
+            $this->db->or_like('f.letra', $searchTerm);
+            $this->db->or_like('f.numero_fac', $searchTerm);
+            $this->db->or_like('f.usuario', $searchTerm);
+            $this->db->group_end();
+        }
+
+        // Aplicar filtros de columna si existen
+        if ($filters && trim($filters) !== '') {
+            $filtersArray = json_decode($filters, true);
+            if ($filtersArray && is_array($filtersArray)) {
+                foreach ($filtersArray as $field => $filter) {
+                    if (isset($filter['value']) && $filter['value'] !== '') {
+                        $value = $filter['value'];
+                        $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                        
+                        // Mapear campos al alias correcto
+                        $dbField = 'f.' . $field;
+                        
+                        switch ($matchMode) {
+                            case 'startsWith':
+                                $this->db->like($dbField, $value, 'after');
+                                break;
+                            case 'contains':
+                                $this->db->like($dbField, $value);
+                                break;
+                            case 'equals':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'gt':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'gte':
+                                $this->db->where($dbField . ' >=', $value);
+                                break;
+                            case 'lt':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            case 'lte':
+                                $this->db->where($dbField . ' <=', $value);
+                                break;
+                            case 'dateIs':
+                                $this->db->where($dbField, $value);
+                                break;
+                            case 'dateAfter':
+                                $this->db->where($dbField . ' >', $value);
+                                break;
+                            case 'dateBefore':
+                                $this->db->where($dbField . ' <', $value);
+                                break;
+                            default:
+                                $this->db->like($dbField, $value);
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Contar total de registros antes de aplicar límites
+        $totalQuery = clone $this->db;
+        $totalRegistros = $totalQuery->count_all_results('', false);
+
+        // Aplicar ordenamiento
+        if ($sortField && trim($sortField) !== '') {
+            $sortDirection = ($sortOrder === -1) ? 'DESC' : 'ASC';
+            $dbSortField = 'f.' . $sortField;
+            $this->db->order_by($dbSortField, $sortDirection);
+        } else {
+            // Ordenamiento por defecto: fecha de emisión más reciente primero
+            $this->db->order_by('f.emitido', 'DESC');
+        }
+
+        // Aplicar paginación
+        $this->db->limit($limit, $offset);
+
+        // Ejecutar consulta
+        $query = $this->db->get();
+        $datos = $query->result_array();
+
+        // Calcular metadatos de paginación
+        $totalPaginas = ceil($totalRegistros / $limit);
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => array(
+                "data" => $datos,
+                "total" => $totalRegistros,
+                "total_pages" => $totalPaginas,
+                "current_page" => $page,
+                "per_page" => $limit,
+                "from" => $offset + 1,
+                "to" => min($offset + $limit, $totalRegistros)
+            )
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al consultar historial de ventas2: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Obtiene historial de ventas GLOBAL de todas las sucursales (factcabx)
+ * Solo para usuarios con rol ADMIN o SUPER
+ * con paginación, filtros, búsqueda y ordenamiento
+ */
+public function historialventas2global_get()
+{
+    // Obtener parámetros de la URL
+    $idcli = $this->get('idcli');
+    $page = $this->get('page') ? intval($this->get('page')) : 1;
+    $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder') ? intval($this->get('sortOrder')) : 1;
+    $filters = $this->get('filters');
+    $search = $this->get('search');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
+    $user_role = $this->get('user_role'); // Se debe enviar desde el frontend
+
+    // Validaciones básicas
+    if (!$idcli) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta parámetro requerido: idcli"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar permisos - Solo ADMIN y SUPER pueden acceder
+    if (!$user_role || ($user_role !== 'admin' && $user_role !== 'super')) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Acceso denegado: Se requiere rol ADMIN o SUPER para vista global"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+        return;
+    }
+
+    // Validar límites de paginación
+    $page = max(1, $page);
+    $limit = max(10, min(500, $limit)); // Límite más conservador para vista global
+    $offset = ($page - 1) * $limit;
+
+    try {
+        // Obtener lista de sucursales disponibles
+        $sucursales = $this->obtenerSucursalesDisponibles();
+        
+        // Log para debug
+        error_log("Sucursales disponibles encontradas: " . print_r($sucursales, true));
+        
+        if (empty($sucursales)) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron sucursales disponibles"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+            return;
+        }
+
+        // Construir consulta UNION manualmente para evitar problemas con CodeIgniter
+        $unionQueries = array();
+        foreach ($sucursales as $sucursal) {
+            $tabla = "factcab" . $sucursal;
+            
+            // Log para debug
+            error_log("Verificando tabla: " . $tabla);
+            
+            // Verificar si la tabla existe
+            if ($this->db->table_exists($tabla)) {
+                error_log("Tabla {$tabla} existe - construyendo subconsulta");
+                $subQuery = $this->construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters);
+                if ($subQuery) {
+                    $unionQueries[] = $subQuery;
+                    error_log("Subconsulta agregada para {$tabla}: " . substr($subQuery, 0, 100) . "...");
+                }
+            } else {
+                error_log("Tabla {$tabla} NO existe");
+            }
+        }
+
+        if (empty($unionQueries)) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron tablas de facturas disponibles"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+            return;
+        }
+
+        // Construir consulta final con UNION
+        $unionQuery = implode(' UNION ALL ', $unionQueries);
+        
+        // Log de la consulta final
+        error_log("Número de subconsultas UNION: " . count($unionQueries));
+        error_log("Consulta UNION completa: " . $unionQuery);
+        
+        // Aplicar filtro de sucursal DESPUÉS del UNION si existe
+        $whereClause = '';
+        if ($filters && trim($filters) !== '') {
+            $filtersArray = json_decode($filters, true);
+            if ($filtersArray && is_array($filtersArray) && isset($filtersArray['sucursal'])) {
+                $sucursalFilter = $filtersArray['sucursal'];
+                if (isset($sucursalFilter['value']) && $sucursalFilter['value'] !== '') {
+                    $value = $sucursalFilter['value'];
+                    $matchMode = isset($sucursalFilter['matchMode']) ? $sucursalFilter['matchMode'] : 'contains';
+                    $value_escaped = $this->db->escape($value);
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape($value . '%');
+                            break;
+                        case 'contains':
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                        case 'equals':
+                            $whereClause = " WHERE sucursal = {$value_escaped}";
+                            break;
+                        default:
+                            $whereClause = " WHERE sucursal LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                    }
+                    
+                    error_log("Filtro de sucursal aplicado después del UNION: " . $whereClause);
+                }
+            }
+        }
+        
+        // Agregar ordenamiento y paginación
+        $sortDirection = ($sortOrder === -1) ? 'DESC' : 'ASC';
+        $orderField = $sortField ? $sortField : 'emitido';
+        
+        $finalQuery = "SELECT * FROM ({$unionQuery}) AS combined_results{$whereClause} ORDER BY {$orderField} {$sortDirection} LIMIT {$limit} OFFSET {$offset}";
+        
+        // Log de la consulta final
+        error_log("Consulta final con paginación: " . $finalQuery);
+        
+        // Contar total de registros
+        $countQuery = "SELECT COUNT(*) as total FROM ({$unionQuery}) AS combined_results{$whereClause}";
+        $countResult = $this->db->query($countQuery)->row_array();
+        $totalRegistros = $countResult['total'];
+
+        // Log del conteo
+        error_log("Total de registros encontrados: " . $totalRegistros);
+
+        // Ejecutar consulta principal
+        $query = $this->db->query($finalQuery);
+        $datos = $query->result_array();
+        
+        // Log de resultados
+        error_log("Registros devueltos: " . count($datos));
+
+        // Calcular metadatos de paginación
+        $totalPaginas = ceil($totalRegistros / $limit);
+
+        // Formatear respuesta
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => array(
+                "data" => $datos,
+                "total" => $totalRegistros,
+                "total_pages" => $totalPaginas,
+                "current_page" => $page,
+                "per_page" => $limit,
+                "from" => $offset + 1,
+                "to" => min($offset + $limit, $totalRegistros),
+                "sucursales_consultadas" => $sucursales,
+                "vista" => "global"
+            )
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al consultar historial de ventas global: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Construye una subconsulta para una sucursal específica
+ */
+private function construirSubConsultaGlobal($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters)
+{
+    $this->db->select('
+        \'' . $sucursal . '\' as sucursal,
+        tipo,
+        puntoventa,
+        letra,
+        numero_fac,
+        emitido,
+        vencimiento,
+        exento,
+        basico,
+        iva1,
+        iva2,
+        iva3,
+        (exento + basico + iva1 + iva2 + iva3) as importe,
+        saldo,
+        usuario,
+        id_num as id,
+        cliente
+    ');
+    $this->db->from($tabla);
+    $this->db->where('cliente', $idcli);
+
+    // Aplicar filtro de rango de fechas si se proporciona
+    if ($fecha_desde && $fecha_hasta) {
+        if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+            $this->db->where('emitido >=', $fecha_desde);
+            $this->db->where('emitido <=', $fecha_hasta);
+        }
+    }
+
+    // Aplicar búsqueda global si existe
+    if ($search && trim($search) !== '') {
+        $searchTerm = $this->db->escape_like_str($search);
+        $this->db->group_start();
+        $this->db->like('tipo', $searchTerm);
+        $this->db->or_like('letra', $searchTerm);
+        $this->db->or_like('numero_fac', $searchTerm);
+        $this->db->or_like('usuario', $searchTerm);
+        $this->db->group_end();
+    }
+
+    // Aplicar filtros de columna si existen
+    if ($filters && trim($filters) !== '') {
+        $filtersArray = json_decode($filters, true);
+        if ($filtersArray && is_array($filtersArray)) {
+            foreach ($filtersArray as $field => $filter) {
+                if (isset($filter['value']) && $filter['value'] !== '') {
+                    $value = $filter['value'];
+                    $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $this->db->like($field, $value, 'after');
+                            break;
+                        case 'contains':
+                            $this->db->like($field, $value);
+                            break;
+                        case 'equals':
+                            $this->db->where($field, $value);
+                            break;
+                        case 'gt':
+                            $this->db->where($field . ' >', $value);
+                            break;
+                        case 'gte':
+                            $this->db->where($field . ' >=', $value);
+                            break;
+                        case 'lt':
+                            $this->db->where($field . ' <', $value);
+                            break;
+                        case 'lte':
+                            $this->db->where($field . ' <=', $value);
+                            break;
+                        case 'dateIs':
+                            $this->db->where($field, $value);
+                            break;
+                        case 'dateAfter':
+                            $this->db->where($field . ' >', $value);
+                            break;
+                        case 'dateBefore':
+                            $this->db->where($field . ' <', $value);
+                            break;
+                        default:
+                            $this->db->like($field, $value);
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    return $this->db->get_compiled_select();
+}
+
+/**
+ * Construye una subconsulta manual para una sucursal específica (evita problemas con CodeIgniter)
+ */
+private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fecha_desde, $fecha_hasta, $search, $filters)
+{
+    // Escapar valores
+    $idcli_escaped = $this->db->escape($idcli);
+    $sucursal_escaped = $this->db->escape($sucursal);
+    $tabla_escaped = $this->db->escape_identifiers($tabla);
+    
+    // Log para debug
+    error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
+    
+    // Construir SELECT base
+    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
+    
+    // Construir WHERE
+    $where = "WHERE cliente = {$idcli_escaped}";
+    
+    // Log de la consulta base
+    error_log("Consulta base para {$tabla}: {$select} {$where}");
+    
+    // Aplicar filtro de rango de fechas si se proporciona
+    if ($fecha_desde && $fecha_hasta) {
+        if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
+            $fecha_desde_escaped = $this->db->escape($fecha_desde);
+            $fecha_hasta_escaped = $this->db->escape($fecha_hasta);
+            $where .= " AND emitido >= {$fecha_desde_escaped} AND emitido <= {$fecha_hasta_escaped}";
+        }
+    }
+    
+    // Aplicar búsqueda global si existe
+    if ($search && trim($search) !== '') {
+        $search_escaped = $this->db->escape('%' . $search . '%');
+        $where .= " AND (tipo LIKE {$search_escaped} OR letra LIKE {$search_escaped} OR numero_fac::text LIKE {$search_escaped} OR usuario LIKE {$search_escaped})";
+    }
+    
+    // Aplicar filtros de columna si existen (EXCLUYENDO el filtro de sucursal)
+    if ($filters && trim($filters) !== '') {
+        $filtersArray = json_decode($filters, true);
+        if ($filtersArray && is_array($filtersArray)) {
+            foreach ($filtersArray as $field => $filter) {
+                // EXCLUIR el filtro de sucursal ya que es una columna virtual
+                if ($field === 'sucursal') {
+                    error_log("Filtro de sucursal excluido de subconsulta - se aplicará después del UNION");
+                    continue;
+                }
+                
+                if (isset($filter['value']) && $filter['value'] !== '') {
+                    $value = $filter['value'];
+                    $matchMode = isset($filter['matchMode']) ? $filter['matchMode'] : 'contains';
+                    $value_escaped = $this->db->escape($value);
+                    
+                    switch ($matchMode) {
+                        case 'startsWith':
+                            $where .= " AND {$field} LIKE " . $this->db->escape($value . '%');
+                            break;
+                        case 'contains':
+                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                        case 'equals':
+                            $where .= " AND {$field} = {$value_escaped}";
+                            break;
+                        case 'gt':
+                            $where .= " AND {$field} > {$value_escaped}";
+                            break;
+                        case 'gte':
+                            $where .= " AND {$field} >= {$value_escaped}";
+                            break;
+                        case 'lt':
+                            $where .= " AND {$field} < {$value_escaped}";
+                            break;
+                        case 'lte':
+                            $where .= " AND {$field} <= {$value_escaped}";
+                            break;
+                        case 'dateIs':
+                            $where .= " AND {$field} = {$value_escaped}";
+                            break;
+                        case 'dateAfter':
+                            $where .= " AND {$field} > {$value_escaped}";
+                            break;
+                        case 'dateBefore':
+                            $where .= " AND {$field} < {$value_escaped}";
+                            break;
+                        default:
+                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    
+    return $select . ' ' . $where;
+}
+
+/**
+ * Obtiene lista de sucursales disponibles
+ */
+private function obtenerSucursalesDisponibles()
+{
+    // Buscar tablas factcab* en la base de datos
+    $tables = $this->db->list_tables();
+    $sucursales = array();
+    
+    error_log("Todas las tablas en la base de datos: " . print_r($tables, true));
+    
+    foreach ($tables as $table) {
+        if (strpos($table, 'factcab') === 0 && strlen($table) > 7) {
+            $sucursal = substr($table, 7); // Extraer número de sucursal
+            if (is_numeric($sucursal)) {
+                $sucursales[] = $sucursal;
+                error_log("Sucursal detectada: " . $sucursal . " de tabla: " . $table);
+            }
+        }
+    }
+    
+    // También intentar con un rango fijo para asegurar cobertura
+    for ($i = 1; $i <= 10; $i++) {
+        $tabla = "factcab" . $i;
+        if ($this->db->table_exists($tabla) && !in_array($i, $sucursales)) {
+            $sucursales[] = $i;
+            error_log("Sucursal adicional detectada: " . $i);
+        }
+    }
+    
+    sort($sucursales); // Ordenar sucursales
+    error_log("Sucursales finales: " . print_r($sucursales, true));
+    return $sucursales;
+}
+
+/**
+ * Endpoint de prueba para verificar sucursales disponibles
+ */
+public function test_sucursales_disponibles_get()
+{
+    $sucursales = $this->obtenerSucursalesDisponibles();
+    
+    $respuesta = array(
+        "error" => false,
+        "mensaje" => array(
+            "sucursales_detectadas" => $sucursales,
+            "total_sucursales" => count($sucursales)
+        )
+    );
+    
+    $this->response($respuesta);
+}
+
+/**
+ * Endpoint de prueba para verificar datos por sucursal
+ */
+public function test_datos_por_sucursal_get()
+{
+    $idcli = $this->get('idcli');
+    $fecha_desde = $this->get('fecha_desde');
+    $fecha_hasta = $this->get('fecha_hasta');
+    
+    if (!$idcli || !$fecha_desde || !$fecha_hasta) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros: idcli, fecha_desde, fecha_hasta"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+    
+    $sucursales = $this->obtenerSucursalesDisponibles();
+    $resultados = array();
+    
+    foreach ($sucursales as $sucursal) {
+        $tabla = "factcab" . $sucursal;
+        
+        if ($this->db->table_exists($tabla)) {
+            $query = "SELECT COUNT(*) as total FROM {$tabla} WHERE cliente = {$this->db->escape($idcli)} AND emitido >= {$this->db->escape($fecha_desde)} AND emitido <= {$this->db->escape($fecha_hasta)}";
+            $result = $this->db->query($query)->row_array();
+            
+            $resultados[] = array(
+                "sucursal" => $sucursal,
+                "tabla" => $tabla,
+                "registros" => $result['total']
+            );
+        }
+    }
+    
+    $respuesta = array(
+        "error" => false,
+        "mensaje" => array(
+            "cliente" => $idcli,
+            "fecha_desde" => $fecha_desde,
+            "fecha_hasta" => $fecha_hasta,
+            "resultados_por_sucursal" => $resultados
+        )
+    );
+    
+    $this->response($respuesta);
+}
+
+/**
+ * Obtiene los datos completos del recibo basándose en el id de factcabx
+ * para historialventas2
+ */
+public function obtenerDatosRecibo2_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $id = $this->get('id');
+
+    // Validaciones básicas
+    if (!$sucursal || !$id) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e id"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Construir nombres de tablas
+    $tablaFactcab = "factcab" . $sucursal;
+
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tablaFactcab)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La tabla $tablaFactcab no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Consultar datos completos de factcabx
+        $this->db->select('*');
+        $this->db->from($tablaFactcab);
+        $this->db->where('id', $id);
+        $query = $this->db->get();
+        
+        if ($query->num_rows() > 0) {
+            $datos = $query->row_array();
+            
+            // Calcular importe total
+            $excento = floatval($datos['excento']) ?: 0;
+            $basico = floatval($datos['basico']) ?: 0;
+            $iva1 = floatval($datos['iva1']) ?: 0;
+            $iva2 = floatval($datos['iva2']) ?: 0;
+            $iva3 = floatval($datos['iva3']) ?: 0;
+            $datos['importe_total'] = $excento + $basico + $iva1 + $iva2 + $iva3;
+            
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => "Datos del recibo obtenidos exitosamente",
+                "data" => $datos
+            );
+        } else {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontraron datos para el recibo con ID: $id"
+            );
+        }
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener datos del recibo2: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Obtiene datos expandidos (recibos y psucursal) para una factura específica
+ * según las relaciones definidas en el diagrama DBML
+ */
+public function obtenerDatosExpandidos_get()
+{
+    // Obtener parámetros de la URL
+    $sucursal = $this->get('sucursal');
+    $id_factura = $this->get('id_factura');
+
+    // Validaciones básicas
+    if (!$sucursal || !$id_factura) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan parámetros requeridos: sucursal e id_factura"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Construir nombres de tablas
+    $tablaFactcab = "factcab" . $sucursal;
+    $tablaRecibos = "recibos" . $sucursal;
+    $tablaPsucursal = "psucursal" . $sucursal;
+
+    // Verificar si las tablas existen
+    if (!$this->db->table_exists($tablaFactcab) || !$this->db->table_exists($tablaRecibos) || !$this->db->table_exists($tablaPsucursal)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Una o más tablas no existen para la sucursal: $sucursal"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    try {
+        // Obtener datos de recibos asociados a la factura
+        // Relación: recibos.id_fac = factcab.id_num
+        $this->db->select('
+            r.recibo,
+            r.c_tipo,
+            r.c_numero,
+            r.c_cuota,
+            r.fecha,
+            r.importe,
+            r.usuario,
+            r.observacion,
+            r.cod_lugar,
+            r.sesion,
+            r.c_tipf,
+            r.c_puntoventa,
+            r.recibo_asoc,
+            r.recibo_saldo,
+            r.cod_sucursal,
+            r.fec_proceso,
+            r.bonifica,
+            r.interes,
+            r.id_fac
+        ');
+        $this->db->from($tablaRecibos . ' r');
+        $this->db->where('r.id_fac', $id_factura);
+        $this->db->order_by('r.fecha', 'DESC');
+        
+        $queryRecibos = $this->db->get();
+        $recibos = $queryRecibos->result_array();
+
+        // Obtener datos de cliente y factura para filtrado
+        $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
+        $this->db->from($tablaFactcab . ' f');
+        $this->db->where('f.id_num', $id_factura);
+        $queryFactura = $this->db->get();
+        
+        $cliente_id = null;
+        $datosFactura = null;
+        if ($queryFactura->num_rows() > 0) {
+            $datosFactura = $queryFactura->row_array();
+            $cliente_id = $datosFactura['cliente'];
+        }
+
+        // Para cada recibo, obtener sus productos específicos
+        foreach ($recibos as $index => $recibo) {
+            // Debug: log de los valores que estamos buscando
+            error_log("Buscando productos para recibo: " . $recibo['recibo'] . 
+                     " - recibo_asoc: " . $recibo['recibo_asoc'] . 
+                     " - cliente_id: " . $cliente_id);
+            $this->db->select('
+                p.idart,
+                p.cantidad,
+                p.precio,
+                p.idcli,
+                p.idven,
+                p.fecha,
+                p.hora,
+                p.tipoprecio,
+                p.cod_tar,
+                t.tarjeta,
+                p.titulartar,
+                p.numerotar,
+                p.cod_mov,
+                p.suc_destino,
+                p.nomart,
+                p.nautotar,
+                p.dni_tar,
+                p.banco,
+                p.ncuenta,
+                p.ncheque,
+                p.nombre,
+                p.plaza,
+                p.importeimputar,
+                p.importecheque,
+                p.fechacheque,
+                p.emailop,
+                p.tipodoc,
+                p.puntoventa,
+                p.numerocomprobante,
+                p.estado,
+                p.id_num
+            ');
+            $this->db->from($tablaPsucursal . ' p');
+            $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+            $this->db->where('p.id_num', $recibo['recibo_asoc']);
+            if ($cliente_id) {
+                $this->db->where('p.idcli', trim($cliente_id));
+            }
+            $this->db->order_by('p.fecha', 'DESC');
+            $this->db->order_by('p.hora', 'DESC');
+            
+            $queryProductos = $this->db->get();
+            $productos = $queryProductos->result_array();
+            
+            // Debug: log del resultado
+            error_log("Productos encontrados para recibo " . $recibo['recibo'] . ": " . count($productos));
+            if (count($productos) > 0) {
+                error_log("Primer producto: " . json_encode($productos[0]));
+            }
+            
+            // Agregar productos al recibo
+            $recibos[$index]['productos'] = $productos;
+        }
+
+        // Preparar respuesta con datos expandidos
+        $datosExpandidos = array(
+            'recibos' => $recibos
+        );
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Datos expandidos obtenidos exitosamente",
+            "data" => $datosExpandidos
+        );
+
+        $this->response($respuesta);
+
+    } catch (Exception $e) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener datos expandidos: " . $e->getMessage()
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
  * Genera una descripción automática para movimientos de caja tipo 'A'
  * basada en el patrón: tipo_comprobante + numero_comprobante + Rec. Nº + numero_recibo
  */
@@ -3503,6 +4426,20 @@ private function generarDescripcionAutomatica($data) {
     
     // Asegurar que la descripción no exceda 80 caracteres (límite del campo)
     return substr($descripcion, 0, 80);
+}
+
+/**
+ * Valida que una fecha tenga el formato YYYY-MM-DD
+ */
+private function validarFormatoFecha($fecha) {
+    // Verificar formato básico con regex
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+        return false;
+    }
+    
+    // Verificar que sea una fecha válida
+    $parts = explode('-', $fecha);
+    return checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0]);
 }
 
 }

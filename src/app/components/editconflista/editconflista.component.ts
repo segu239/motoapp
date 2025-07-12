@@ -189,48 +189,53 @@ export class EditconflistaComponent implements OnInit {
 
   onSubmit(): void {
     if (this.conflistaForm.valid) {
-      // Uso getRawValue() en lugar de value para incluir campos deshabilitados
+      // ===================================================
+      // SISTEMA DE DEBUG MEJORADO - FRONTEND
+      // ===================================================
+      const debugInfo = {
+        timestamp_inicio: new Date().toISOString(),
+        timestamp_fin: '',
+        form_data: {},
+        validaciones: {},
+        request_data: {},
+        response_data: {},
+        errores: []
+      };
+
       const formValues = this.conflistaForm.getRawValue();
-      
-      // ==============================================
-      // 🔍 DEBUG FRONTEND - VALIDACIÓN DE DATOS CRÍTICOS
-      // ==============================================
-      console.log('\n=== 🔍 DEBUG FRONTEND - INICIO VALIDACIÓN ===');
-      console.log('📋 VALORES RAW DEL FORMULARIO:', formValues);
-      
-      // Validar campos críticos individualmente
-      console.log('\n🎯 CAMPOS CRÍTICOS:');
-      console.log('• listap - tipo:', typeof formValues.listap, '| valor:', formValues.listap, '| válido:', formValues.listap && ['1','2','3','4'].includes(formValues.listap));
-      console.log('• tipomone - tipo:', typeof formValues.tipomone, '| valor:', formValues.tipomone, '| válido:', formValues.tipomone && !isNaN(Number(formValues.tipomone)));
-      console.log('• id_conflista - tipo:', typeof this.id_conflista, '| valor:', this.id_conflista, '| válido:', this.id_conflista > 0);
-      
-      // Validar precios
-      console.log('\n💰 PRECIOS ACTUALES:');
-      console.log('• preciof21 - tipo:', typeof formValues.preciof21, '| valor:', formValues.preciof21);
-      console.log('• preciof105 - tipo:', typeof formValues.preciof105, '| valor:', formValues.preciof105);
-      
-      console.log('\n💰 PRECIOS ORIGINALES:');
-      console.log('• originalPreciof21 - tipo:', typeof this.originalPreciof21, '| valor:', this.originalPreciof21);
-      console.log('• originalPreciof105 - tipo:', typeof this.originalPreciof105, '| valor:', this.originalPreciof105);
-      
-      // Convertir a número para asegurar que la comparación sea correcta
+      debugInfo.form_data = JSON.parse(JSON.stringify(formValues));
+
+      // ===================================================
+      // VALIDACIONES FRONTEND
+      // ===================================================
+      const validacionFrontend = this.validarDatosFrontend(formValues);
+      debugInfo.validaciones = validacionFrontend;
+
+      if (!validacionFrontend.valido) {
+        console.error('❌ VALIDACIÓN FRONTEND FALLIDA:', validacionFrontend.errores);
+        Swal.fire({
+          title: 'Error de Validación',
+          text: 'Errores encontrados: ' + validacionFrontend.errores.join(', '),
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+        return;
+      }
+
+      // ===================================================
+      // PREPARACIÓN DE DATOS PARA BACKEND
+      // ===================================================
       const preciof21Num = Number(formValues.preciof21);
       const preciof105Num = Number(formValues.preciof105);
       const originalPreciof21Num = Number(this.originalPreciof21);
       const originalPreciof105Num = Number(this.originalPreciof105);
-      
-      // Verificar si se modificaron los precios usando los valores numéricos
+
       const preciof21Changed = preciof21Num !== originalPreciof21Num;
       const preciof105Changed = preciof105Num !== originalPreciof105Num;
-      
-      console.log('Comparación de precios:');
-      console.log('preciof21 cambiado:', preciof21Changed, '(', preciof21Num, '!=', originalPreciof21Num, ')');
-      console.log('preciof105 cambiado:', preciof105Changed, '(', preciof105Num, '!=', originalPreciof105Num, ')');
-      
+
       const conflistaData = {
         id_conflista: this.id_conflista,
         listap: formValues.listap,
-        // Convert boolean values back to 't'/'f' for the API
         activa: formValues.activa ? 't' : 'f',
         precosto21: Number(formValues.precosto21),
         precosto105: Number(formValues.precosto105),
@@ -239,91 +244,134 @@ export class EditconflistaComponent implements OnInit {
         preciof21: preciof21Num,
         preciof105: preciof105Num,
         rmargen: formValues.rmargen ? 't' : 'f',
-        // Asegurar que tipomone tenga un valor válido
         tipomone: formValues.tipomone || (this.currentConflista?.tipomone || '1'),
         actprov: formValues.actprov ? 't' : 'f',
         cod_marca: formValues.cod_marca,
         fecha: formValues.fecha,
-        // Solo recalcular si se modificaron los precios
         recalcular_21: preciof21Changed,
         recalcular_105: preciof105Changed
       };
 
-      // ==============================================
-      // 🚀 DEBUG FRONTEND - OBJETO FINAL A ENVIAR
-      // ==============================================
-      console.log('\n=== 🚀 DEBUG FRONTEND - OBJETO FINAL ===');
-      console.log('📦 conflistaData COMPLETO:', JSON.stringify(conflistaData, null, 2));
-      
-      // Validaciones finales críticas
-      console.log('\n✅ VALIDACIONES FINALES:');
-      console.log('• ¿id_conflista válido?', conflistaData.id_conflista > 0 ? '✅' : '❌', conflistaData.id_conflista);
-      console.log('• ¿listap válido?', ['1','2','3','4'].includes(conflistaData.listap) ? '✅' : '❌', conflistaData.listap);
-      console.log('• ¿tipomone válido?', conflistaData.tipomone && !isNaN(Number(conflistaData.tipomone)) ? '✅' : '❌', conflistaData.tipomone);
-      console.log('• ¿recalcular_21?', conflistaData.recalcular_21 ? '✅ SÍ' : '❌ NO', conflistaData.recalcular_21);
-      console.log('• ¿recalcular_105?', conflistaData.recalcular_105 ? '✅ SÍ' : '❌ NO', conflistaData.recalcular_105);
-      console.log('• Campo precio esperado en backend: prefi' + conflistaData.listap);
-      
-      console.log('\n🌐 ENVIANDO AL BACKEND:', new Date().toISOString());
-      console.log('===========================================\n');
+      debugInfo.request_data = JSON.parse(JSON.stringify(conflistaData));
 
-      this.subirdata.updateConflista(conflistaData).subscribe(
-        (response: any) => {
-          // ==============================================
-          // 📨 DEBUG FRONTEND - RESPUESTA DEL BACKEND
-          // ==============================================
-          console.log('\n=== 📨 DEBUG FRONTEND - RESPUESTA RECIBIDA ===');
-          console.log('🕒 Timestamp respuesta:', new Date().toISOString());
-          console.log('📋 RESPUESTA COMPLETA DEL BACKEND:', JSON.stringify(response, null, 2));
-          
-          if (response && response.resultados) {
-            console.log('\n📊 RESULTADOS ESPECÍFICOS:');
-            console.log('• Conflista actualizada:', response.resultados.conflista_actualizada ? '✅' : '❌');
-            console.log('• Productos actualizados IVA 21%:', response.resultados.productos_actualizados_21 || 0);
-            console.log('• Productos actualizados IVA 10.5%:', response.resultados.productos_actualizados_105 || 0);
+      // ===================================================
+      // DEBUG CONSOLE DETALLADO
+      // ===================================================
+      console.group('🔍 DEBUG CONFLISTA - FRONTEND');
+      console.log('📋 Datos del formulario:', debugInfo.form_data);
+      console.log('✅ Validaciones:', debugInfo.validaciones);
+      console.log('📤 Datos a enviar:', debugInfo.request_data);
+      console.log('🔄 Cambios detectados:', {
+        preciof21_changed: preciof21Changed,
+        preciof105_changed: preciof105Changed,
+        precio21_anterior: originalPreciof21Num,
+        precio21_nuevo: preciof21Num,
+        precio105_anterior: originalPreciof105Num,
+        precio105_nuevo: preciof105Num
+      });
+      console.groupEnd();
+
+      // ===================================================
+      // ENVÍO AL BACKEND CON MANEJO DE ERRORES MEJORADO
+      // ===================================================
+      this.subirdata.updateConflista(conflistaData).subscribe({
+        next: (response: any) => {
+          debugInfo.response_data = response;
+          debugInfo.timestamp_fin = new Date().toISOString();
+
+          // ===================================================
+          // ANÁLISIS DE RESPUESTA DETALLADO
+          // ===================================================
+          console.group('📨 RESPUESTA DEL BACKEND');
+          console.log('🕒 Timestamp:', debugInfo.timestamp_fin);
+          console.log('📋 Respuesta completa:', response);
+
+          if (response.error) {
+            console.error('❌ ERROR EN BACKEND:', response.mensaje);
+            if (response.debug) {
+              console.group('🔍 DEBUG BACKEND');
+              console.log('📥 Datos recibidos:', response.debug.datos_recibidos);
+              console.log('✅ Validaciones:', response.debug.validaciones);
+              console.log('🔄 Operaciones:', response.debug.operaciones);
+              console.log('⚠️ Warnings:', response.debug.warnings);
+              console.log('❌ Errores:', response.debug.errores);
+              if (response.debug.rollback_ejecutado) {
+                console.warn('🔄 ROLLBACK EJECUTADO - Todos los cambios fueron revertidos');
+              }
+              console.groupEnd();
+            }
+
+            this.mostrarErrorDetallado(response, debugInfo);
+            return;
           }
-          
-          console.log('\n🔄 DATOS QUE SE ENVIARON AL BACKEND:');
-          console.log('• preciof21:', conflistaData.preciof21, '| recalcular_21:', conflistaData.recalcular_21);
-          console.log('• preciof105:', conflistaData.preciof105, '| recalcular_105:', conflistaData.recalcular_105);
-          console.log('• listap:', conflistaData.listap, '| tipomone:', conflistaData.tipomone);
-          console.log('==========================================\n');
-          
-          Swal.fire({
-            title: 'Actualizando...',
-            timer: 300,
-            didOpen: () => {
-              Swal.showLoading();
+
+          // ===================================================
+          // ÉXITO - MOSTRAR RESULTADOS
+          // ===================================================
+          if (response.resultados) {
+            console.group('📊 RESULTADOS');
+            console.log('✅ Conflista actualizada:', response.resultados.conflista_actualizada);
+            console.log('📈 Productos IVA 21% actualizados:', response.resultados.productos_actualizados_21);
+            console.log('📈 Productos IVA 10.5% actualizados:', response.resultados.productos_actualizados_105);
+            
+            // Mostrar información adicional de PostgreSQL
+            if (response.resultados.productos_candidatos_21 !== undefined) {
+              console.log('🎯 Productos candidatos IVA 21%:', response.resultados.productos_candidatos_21);
             }
-          }).then((result) => {
-            console.log('result de Swal:', result);
-            console.log('respuesta completa del servidor:', response);
-            if (result.dismiss === Swal.DismissReason.timer) {
-              Swal.fire({
-                title: '¡Éxito!',
-                text: 'La conflista se actualizó correctamente',
-                icon: 'success',
-                confirmButtonText: 'Aceptar'
+            if (response.resultados.productos_candidatos_105 !== undefined) {
+              console.log('🎯 Productos candidatos IVA 10.5%:', response.resultados.productos_candidatos_105);
+            }
+            console.groupEnd();
+
+            if (response.debug && response.debug.warnings && response.debug.warnings.length > 0) {
+              console.group('⚠️ WARNINGS');
+              response.debug.warnings.forEach((warning: any, index: number) => {
+                console.warn(`${index + 1}. ${warning}`);
               });
-              console.log('Conflista actualizada correctamente');
-              this.router.navigate(['components/conflista']);
+              console.groupEnd();
             }
+            
+            // Mostrar información específica de PostgreSQL
+            if (response.debug && response.debug.motor_transaccional) {
+              console.group('🐘 INFORMACIÓN POSTGRESQL');
+              console.log('🔧 Motor transaccional:', response.debug.motor_transaccional);
+              console.log('⚡ Duración total:', response.debug.duracion_total_ms + 'ms');
+              console.log('🛡️ Atomicidad garantizada:', response.debug.atomicidad_garantizada);
+              if (response.debug.operaciones) {
+                console.log('📋 Operaciones ejecutadas:', response.debug.operaciones.length);
+              }
+              console.groupEnd();
+            }
+          }
+
+          console.groupEnd();
+
+          // Mostrar éxito con detalles
+          this.mostrarExitoDetallado(response, debugInfo);
+        },
+        error: (error) => {
+          debugInfo.errores.push({
+            tipo: 'http_error',
+            mensaje: error.message,
+            status: error.status,
+            error_completo: error
           });
-        }, 
-        error => {
-          console.error('Error al actualizar conflista:', error);
-          console.error('Detalle del error:', JSON.stringify(error));
-          console.error('Valores que causaron el error - preciof21:', conflistaData.preciof21, 'preciof105:', conflistaData.preciof105);
-          
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo actualizar la conflista. Detalles: ' + (error.error?.mensaje || error.message || 'Error desconocido'),
-            icon: 'error',
-            confirmButtonText: 'OK'
-          });
+
+          console.group('💥 ERROR HTTP');
+          console.error('Status:', error.status);
+          console.error('Mensaje:', error.message);
+          console.error('Error completo:', error);
+          console.error('Debug Info:', debugInfo);
+          console.groupEnd();
+
+          this.mostrarErrorHttp(error, debugInfo);
         }
-      );
+      });
     } else {
+      console.group('❌ FORMULARIO INVÁLIDO');
+      console.log('Errores del formulario:', this.getFormErrors());
+      console.groupEnd();
+
       this.markFormGroupTouched(this.conflistaForm);
       Swal.fire({
         title: 'ERROR',
@@ -356,5 +404,144 @@ export class EditconflistaComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  // ===================================================
+  // FUNCIONES DE VALIDACIÓN FRONTEND
+  // ===================================================
+  private validarDatosFrontend(formValues: any): any {
+    const resultado = {
+      valido: true,
+      errores: [],
+      warnings: []
+    };
+
+    // Validar listap
+    const listasValidas = ['1', '2', '3', '4'];
+    if (!listasValidas.includes(formValues.listap)) {
+      resultado.errores.push(`Lista de precios inválida: ${formValues.listap}`);
+      resultado.valido = false;
+    }
+
+    // Validar precios
+    const preciof21 = Number(formValues.preciof21);
+    const preciof105 = Number(formValues.preciof105);
+
+    if (isNaN(preciof21)) {
+      resultado.errores.push('Precio F21 debe ser numérico');
+      resultado.valido = false;
+    } else if (preciof21 < -100 || preciof21 > 1000) {
+      resultado.warnings.push(`Precio F21 fuera de rango típico: ${preciof21}%`);
+    }
+
+    if (isNaN(preciof105)) {
+      resultado.errores.push('Precio F105 debe ser numérico');
+      resultado.valido = false;
+    } else if (preciof105 < -100 || preciof105 > 1000) {
+      resultado.warnings.push(`Precio F105 fuera de rango típico: ${preciof105}%`);
+    }
+
+    // Validar ID conflista
+    if (!this.id_conflista || this.id_conflista <= 0) {
+      resultado.errores.push('ID de conflista inválido');
+      resultado.valido = false;
+    }
+
+    return resultado;
+  }
+
+  // ===================================================
+  // FUNCIONES DE DISPLAY DE ERRORES
+  // ===================================================
+  private mostrarErrorDetallado(response: any, debugInfo: any): void {
+    let mensajeError = response.mensaje || 'Error desconocido';
+    let detallesTecnicos = '';
+
+    if (response.debug) {
+      if (response.debug.errores && response.debug.errores.length > 0) {
+        detallesTecnicos = '\n\nDetalles técnicos:\n';
+        response.debug.errores.forEach((error: any, index: number) => {
+          if (typeof error === 'string') {
+            detallesTecnicos += `${index + 1}. ${error}\n`;
+          } else {
+            detallesTecnicos += `${index + 1}. ${error.mensaje || JSON.stringify(error)}\n`;
+          }
+        });
+      }
+
+      if (response.debug.rollback_ejecutado) {
+        mensajeError += '\n\n⚠️ IMPORTANTE: Se ejecutó un rollback automático. Todos los cambios fueron revertidos para mantener la consistencia de los datos.';
+      }
+    }
+
+    Swal.fire({
+      title: 'Error al Actualizar Conflista',
+      text: mensajeError + detallesTecnicos,
+      icon: 'error',
+      confirmButtonText: 'OK',
+      footer: 'Revise la consola del navegador para más detalles técnicos'
+    });
+  }
+
+  private mostrarExitoDetallado(response: any, debugInfo: any): void {
+    let mensaje = 'La conflista se actualizó correctamente';
+    let detalles = '';
+
+    if (response.resultados) {
+      const r = response.resultados;
+      detalles = `\n\nResultados:\n`;
+      detalles += `• Conflista actualizada: ${r.conflista_actualizada ? 'Sí' : 'No'}\n`;
+      detalles += `• Productos IVA 21% actualizados: ${r.productos_actualizados_21}\n`;
+      detalles += `• Productos IVA 10.5% actualizados: ${r.productos_actualizados_105}`;
+    }
+
+    let warnings = '';
+    if (response.debug && response.debug.warnings && response.debug.warnings.length > 0) {
+      warnings = '\n\nAdvertencias:\n';
+      response.debug.warnings.forEach((warning: any, index: number) => {
+        warnings += `${index + 1}. ${warning}\n`;
+      });
+    }
+
+    Swal.fire({
+      title: '¡Éxito!',
+      text: mensaje + detalles + warnings,
+      icon: warnings ? 'warning' : 'success',
+      confirmButtonText: 'Aceptar',
+      footer: warnings ? 'Hay advertencias - revise la consola para más detalles' : undefined
+    }).then(() => {
+      this.router.navigate(['components/conflista']);
+    });
+  }
+
+  private mostrarErrorHttp(error: any, debugInfo: any): void {
+    let mensajeError = 'Error de comunicación con el servidor';
+
+    if (error.status === 0) {
+      mensajeError = 'No se pudo conectar con el servidor. Verifique su conexión a internet.';
+    } else if (error.status >= 500) {
+      mensajeError = 'Error interno del servidor. Contacte al administrador.';
+    } else if (error.status >= 400) {
+      mensajeError = 'Error en los datos enviados. Revise la información.';
+    }
+
+    Swal.fire({
+      title: 'Error de Conexión',
+      text: `${mensajeError}\n\nCódigo de error: ${error.status}\nDetalle: ${error.message}`,
+      icon: 'error',
+      confirmButtonText: 'OK',
+      footer: 'Revise la consola del navegador para más detalles'
+    });
+  }
+
+  private getFormErrors(): any {
+    const errors: any = {};
+    Object.keys(this.conflistaForm.controls).forEach(key => {
+      const control = this.conflistaForm.get(key);
+      if (control && control.errors) {
+        errors[key] = control.errors;
+      }
+    });
+    return errors;
   }
 }

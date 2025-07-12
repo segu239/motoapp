@@ -71,6 +71,7 @@ import { SucursalesComponent } from './components/sucursales/sucursales.componen
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
+import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
 
 
 //nuevouser role
@@ -88,6 +89,7 @@ const APP_ROUTES: Routes = [
 children:[
    { path: 'puntoventa', component: PuntoventaComponent, data :{titulo:'Punto de Venta'} },
     { path: 'historialventas', component: HistorialventasComponent, data :{titulo:'Historial de Ventas'} },
+    { path: 'historialventas2', component: Historialventas2Component, data :{titulo:'Historial de Ventas (Facturas)'} },
     { path: 'editcliente', component: EditclienteComponent, data :{titulo:'Editar Cliente'} },
     { path: 'newcliente', component: NewclienteComponent, data :{titulo:'Nuevo Cliente'} },
     { path: 'condicionventa', component: CondicionventaComponent, data :{titulo:'Condicion de Venta'} },

@@ -720,7 +720,7 @@ try {
             r: 3, // Radio de las esquinas (para redondearlas)
             lineWidth: 1, // Grosor de la línea
             lineColor: '#000000', // Color de la línea (ejemplo: azul)
-            fillColor: '#000000', // Color de relleno (ejemplo: gris claro)
+            fillColor: 'transparent', // Color de relleno transparente
           },
         ],
       },

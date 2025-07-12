@@ -43,6 +43,7 @@ import { VirtualScrollerModule } from 'primeng/virtualscroller';
 import { ChartModule } from 'primeng/chart';
 import { NgChartsModule } from 'ng2-charts';
 import { TooltipModule } from 'primeng/tooltip';
+import { InputSwitchModule } from 'primeng/inputswitch';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -124,6 +125,8 @@ import { ArticulosPaginadosService } from './services/articulos-paginados.servic
 import { NopermitidoComponent } from './components/nopermitido/nopermitido.component';
 import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
+import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
+import { TotalizadorModalComponent } from './components/historialventas2/totalizador-modal.component';
 
 @NgModule({
   declarations: [
@@ -206,6 +209,8 @@ import { HistorialventasComponent } from './components/historialventas/historial
     NopermitidoComponent,
     ReporteComponent,
     HistorialventasComponent,
+    Historialventas2Component,
+    TotalizadorModalComponent,
   ],
   imports: [
     ButtonModule,
@@ -216,6 +221,7 @@ import { HistorialventasComponent } from './components/historialventas/historial
     ChartModule,
     NgChartsModule,
     TooltipModule,
+    InputSwitchModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,

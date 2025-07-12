@@ -1,0 +1,123 @@
+/* Estilos específicos para el componente HistorialVentas2 */
+
+/* Alertas */
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Tabla - estilos similares al original */
+:host ::ng-deep .p-datatable {
+    font-size: 0.875rem;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr:hover {
+    background-color: #f5f5f5;
+}
+
+:host ::ng-deep .p-datatable .p-datatable-tbody > tr.p-highlight {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+/* Todas las celdas centradas y comprimidas */
+:host ::ng-deep .p-datatable td {
+    text-align: center;
+    padding: 0.375rem 0.5rem;
+    font-weight: normal;
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+/* Columna selector */
+:host ::ng-deep .p-datatable td:nth-child(1) {
+    width: 3rem;
+}
+
+/* Números de factura alineados a la derecha */
+:host ::ng-deep .p-datatable td:nth-child(6) {
+    text-align: right;
+}
+
+/* Importes y saldos alineados a la derecha */
+:host ::ng-deep .p-datatable td:nth-child(9),
+:host ::ng-deep .p-datatable td:nth-child(10) {
+    text-align: right;
+}
+
+/* Botones - estilo más simple como el original */
+:host ::ng-deep .p-button {
+    height: 2.357rem;
+}
+
+/* Asegurar que no hay bold innecesario */
+:host ::ng-deep .p-datatable td * {
+    font-weight: normal !important;
+}
+
+/* Solo mantener bold en headers */
+:host ::ng-deep .p-datatable th {
+    font-weight: 600 !important;
+}
+
+/* Estilo para campos monetarios sin bold */
+:host ::ng-deep .p-datatable td:nth-child(9),
+:host ::ng-deep .p-datatable td:nth-child(10) {
+    text-align: right;
+    font-weight: normal !important;
+}
+
+/* Mensaje vacío */
+:host ::ng-deep .p-datatable-emptymessage {
+    padding: 2rem;
+    color: #6c757d;
+    text-align: center;
+}
+
+/* Estilos para la barra de herramientas - como el original */
+.d-flex {
+    display: flex !important;
+}
+
+.align-items-center {
+    align-items: center !important;
+}
+
+.justify-content-between {
+    justify-content: space-between !important;
+}
+
+/* Multiselect más compacto */
+:host ::ng-deep .p-multiselect {
+    width: 100%;
+    max-width: 200px;
+}
+
+/* Responsive - más comprimido */
+@media (max-width: 768px) {
+    :host ::ng-deep .p-datatable td {
+        padding: 0.25rem;
+        font-size: 0.8rem;
+    }
+    
+    .d-flex.align-items-center.justify-content-between {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}

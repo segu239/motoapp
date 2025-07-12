@@ -1,0 +1,429 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="card-title mb-0">Historial de Ventas (Facturas)</h4>
+                    
+                    <!-- Toggle Vista Global/Local - Solo para ADMIN/SUPER -->
+                    <div class="d-flex align-items-center" *ngIf="mostrarToggleGlobal">
+                        <div class="btn-group" role="group">
+                            <button 
+                                type="button" 
+                                class="btn btn-sm"
+                                [class]="!vistaGlobal ? 'btn-primary' : 'btn-outline-primary'"
+                                (click)="cambiarVistaLocal()"
+                                [disabled]="loading">
+                                <i class="fa fa-building me-1"></i>
+                                LOCAL
+                            </button>
+                            <button 
+                                type="button" 
+                                class="btn btn-sm"
+                                [class]="vistaGlobal ? 'btn-warning' : 'btn-outline-warning'"
+                                (click)="cambiarVistaGlobal()"
+                                [disabled]="loading">
+                                <i class="fa fa-globe me-1"></i>
+                                GLOBAL
+                            </button>
+                        </div>
+                        <small class="ms-2 text-muted">
+                            {{ vistaGlobal ? '(Todas las Sucursales)' : '(Sucursal Actual)' }}
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Loading indicator -->
+                <div class="alert alert-warning mb-3" *ngIf="loading">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> 
+                    Cargando historial de ventas, por favor espere...
+                </div>
+                
+                <!-- Cliente info -->
+                <div class="alert alert-info mb-3" *ngIf="clienteInfo">
+                    <small>
+                        <i class="fa fa-user"></i> <strong>Cliente:</strong> {{ clienteInfo.nombre }} 
+                        (ID: {{ clienteInfo.idcli }})
+                    </small>
+                </div>
+                
+                <!-- Filtro de rango de fechas -->
+                <div class="card mb-3">
+                    <div class="card-body p-3">
+                        <h6 class="card-title mb-3">
+                            <i class="pi pi-calendar me-2"></i>
+                            Filtro por Rango de Fechas (Fecha de Emisión)
+                        </h6>
+                        
+                        <div class="row align-items-end">
+                            <div class="col-md-3">
+                                <label for="fechaDesde" class="form-label mb-1">
+                                    <small><strong>Fecha Desde:</strong></small>
+                                </label>
+                                <p-calendar 
+                                    id="fechaDesde"
+                                    [(ngModel)]="fechaDesde"
+                                    [showIcon]="true"
+                                    dateFormat="dd/mm/yy"
+                                    [maxDate]="fechaHasta"
+                                    placeholder="Seleccione fecha desde"
+                                    styleClass="w-100">
+                                </p-calendar>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <label for="fechaHasta" class="form-label mb-1">
+                                    <small><strong>Fecha Hasta:</strong></small>
+                                </label>
+                                <p-calendar 
+                                    id="fechaHasta"
+                                    [(ngModel)]="fechaHasta"
+                                    [showIcon]="true"
+                                    dateFormat="dd/mm/yy"
+                                    [minDate]="fechaDesde"
+                                    placeholder="Seleccione fecha hasta"
+                                    styleClass="w-100">
+                                </p-calendar>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <p-button 
+                                    label="Consultar"
+                                    icon="pi pi-search"
+                                    (click)="consultarHistorial()"
+                                    [disabled]="!fechaDesde || !fechaHasta || loading"
+                                    styleClass="w-100"
+                                    [style]="{'height': '38px'}">
+                                </p-button>
+                            </div>
+                            
+                            <div class="col-md-2" *ngIf="consultaRealizada && historialVentas2.length > 0">
+                                <p-button 
+                                    label="Totalizador"
+                                    icon="pi pi-calculator"
+                                    (click)="abrirTotalizador()"
+                                    [loading]="calculandoTotalizador"
+                                    styleClass="w-100 p-button-info"
+                                    [style]="{'height': '38px'}">
+                                </p-button>
+                            </div>
+                            
+                            <div class="col-md-2" *ngIf="!(consultaRealizada && historialVentas2.length > 0)">
+                                <!-- Espacio vacío cuando no hay totalizador -->
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="alert alert-warning mb-0 py-2" *ngIf="!consultaRealizada">
+                                    <small>
+                                        <i class="pi pi-info-circle me-1"></i>
+                                        Seleccione un rango de fechas y presione "Consultar" para ver los datos.
+                                    </small>
+                                </div>
+                                <div class="alert alert-success mb-0 py-2" *ngIf="consultaRealizada && !loading">
+                                    <small>
+                                        <i class="pi pi-check me-1"></i>
+                                        Datos cargados desde {{ fechaDesde | date:'dd/MM/yyyy' }} 
+                                        hasta {{ fechaHasta | date:'dd/MM/yyyy' }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table with data - Lazy Loading -->
+                <p-table #dtable [value]="historialVentas2" [tableStyle]="{ 'min-width': '50rem' }" 
+                    [paginator]="true" 
+                    [rows]="rows"
+                    [first]="first"
+                    [rowsPerPageOptions]="[25,50,100]"
+                    [totalRecords]="totalRegistros"
+                    [showCurrentPageReport]="true"
+                    [loading]="loading"
+                    [lazy]="true"
+                    (onLazyLoad)="loadDataLazy($event)"
+                    [lazyLoadOnInit]="false"
+                    [filterDelay]="300"
+                    selectionMode="single" 
+                    [(selection)]="ventaSeleccionada" 
+                    dataKey="id"
+                    (onRowSelect)="onRowSelect($event)"
+                    *ngIf="consultaRealizada || historialVentas2.length > 0">
+                    
+                    <ng-template pTemplate="caption">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <!-- Selector de columnas -->
+                            <div class="d-flex align-items-center" style="gap: 8px;">
+                                <label class="form-label mb-0 me-2 fw-semibold">Columnas:</label>
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" 
+                                    optionLabel="header" defaultLabel="Seleccionar columnas" 
+                                    (onChange)="onColumnSelectionChange()"
+                                    styleClass="p-column-filter"
+                                    [style]="{'min-width': '200px'}">
+                                    <ng-template pTemplate="selectedItems" let-selectedColumns>
+                                        <div *ngIf="selectedColumns && selectedColumns.length > 0">
+                                            Columnas ({{selectedColumns.length}})
+                                        </div>
+                                        <div *ngIf="!selectedColumns || selectedColumns.length === 0">
+                                            Seleccionar columnas
+                                        </div>
+                                    </ng-template>
+                                </p-multiSelect>
+                            </div>
+                            
+                            <!-- Botones de acción -->
+                            <div class="d-flex align-items-center flex-wrap" style="gap: 8px;">
+                                <p-button icon="pi pi-file-excel" (click)="exportExcel()"
+                                    styleClass="p-button-sm p-button-success" 
+                                    pTooltip="Exportar a Excel"
+                                    tooltipPosition="top"></p-button>
+                                <p-button icon="pi pi-refresh" (click)="forceRefresh()"
+                                    styleClass="p-button-sm p-button-secondary" 
+                                    pTooltip="Recargar datos"
+                                    tooltipPosition="top"
+                                    [disabled]="loading"></p-button>
+                            </div>
+                        </div>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th style="width: 3rem"></th> <!-- Columna para el selector -->
+                            <th style="width: 3rem"></th> <!-- Columna para el desplegable -->
+                            <th *ngIf="isColumnVisible('sucursal')" pSortableColumn="sucursal">
+                                Sucursal
+                                <p-sortIcon field="sucursal"></p-sortIcon>
+                                <p-columnFilter type="text" field="sucursal" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('tipo')" pSortableColumn="tipo">
+                                Tipo
+                                <p-sortIcon field="tipo"></p-sortIcon>
+                                <p-columnFilter type="text" field="tipo" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('puntoventa')" pSortableColumn="puntoventa">
+                                Punto Venta
+                                <p-sortIcon field="puntoventa"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="puntoventa" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('letra')" pSortableColumn="letra">
+                                Letra
+                                <p-sortIcon field="letra"></p-sortIcon>
+                                <p-columnFilter type="text" field="letra" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('numero_fac')" pSortableColumn="numero_fac">
+                                Número Fac.
+                                <p-sortIcon field="numero_fac"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="numero_fac" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('emitido')" pSortableColumn="emitido">
+                                Emitido
+                                <p-sortIcon field="emitido"></p-sortIcon>
+                                <p-columnFilter type="date" field="emitido" display="menu" matchMode="dateIs"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('vencimiento')" pSortableColumn="vencimiento">
+                                Vencimiento
+                                <p-sortIcon field="vencimiento"></p-sortIcon>
+                                <p-columnFilter type="date" field="vencimiento" display="menu" matchMode="dateIs"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('importe')" pSortableColumn="importe">
+                                Importe
+                                <p-sortIcon field="importe"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="importe" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('saldo')" pSortableColumn="saldo">
+                                Saldo
+                                <p-sortIcon field="saldo"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="saldo" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('usuario')" pSortableColumn="usuario">
+                                Usuario
+                                <p-sortIcon field="usuario"></p-sortIcon>
+                                <p-columnFilter type="text" field="usuario" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                        </tr>
+                    </ng-template>
+                    
+                    <ng-template pTemplate="body" let-venta let-expanded="expanded">
+                        <tr [pSelectableRow]="venta">
+                            <td>
+                                <p-tableRadioButton [value]="venta"></p-tableRadioButton>
+                            </td>
+                            <td>
+                                <p-button
+                                    [icon]="isRowExpanded(venta) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                                    class="p-button-text p-button-rounded p-button-plain"
+                                    [loading]="isRowLoading(venta)"
+                                    (onClick)="toggleRowExpansion(venta)"
+                                    pTooltip="Ver detalles"
+                                    tooltipPosition="top">
+                                </p-button>
+                            </td>
+                            <td *ngIf="isColumnVisible('sucursal')">{{ venta.sucursal }}</td>
+                            <td *ngIf="isColumnVisible('tipo')">{{ venta.tipo }}</td>
+                            <td *ngIf="isColumnVisible('puntoventa')">{{ venta.puntoventa }}</td>
+                            <td *ngIf="isColumnVisible('letra')">{{ venta.letra }}</td>
+                            <td *ngIf="isColumnVisible('numero_fac')">{{ venta.numero_fac }}</td>
+                            <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
+                            <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>
+                            <td *ngIf="isColumnVisible('importe')">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('saldo')">{{ venta.saldo | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('usuario')">{{ venta.usuario }}</td>
+                        </tr>
+                        
+                        <!-- Fila expandida -->
+                        <tr *ngIf="isRowExpanded(venta)">
+                            <td [attr.colspan]="selectedColumns.length + 2">
+                                <div class="p-3" style="background-color: #f8f9fa; border-radius: 4px; margin: 8px 0;">
+                                    <ng-container *ngIf="getExpandedData(venta) as expandedData">
+                                        <!-- Sección de Recibos con sus productos -->
+                                        <div class="mb-4">
+                                            <h6 class="text-primary mb-3">
+                                                <i class="pi pi-file-o me-2"></i>
+                                                Recibos y Productos Vendidos ({{ expandedData.recibos.length }})
+                                            </h6>
+                                            
+                                            <div *ngIf="expandedData.recibos.length > 0; else noRecibos">
+                                                <!-- Iterar por cada recibo -->
+                                                <div *ngFor="let recibo of expandedData.recibos; let i = index" class="mb-4">
+                                                    <!-- Información del recibo -->
+                                                    <div class="card">
+                                                        <div class="card-header bg-light">
+                                                            <div class="row">
+                                                                <div class="col-md-2">
+                                                                    <strong>Recibo:</strong> {{ recibo.recibo }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Tipo:</strong> {{ recibo.c_tipo }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Número:</strong> {{ recibo.c_numero }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Fecha:</strong> {{ recibo.fecha | date:'dd/MM/yyyy' }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Importe:</strong> {{ recibo.importe | currency:'$':'symbol':'1.2-2' }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Usuario:</strong> {{ recibo.usuario }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Productos del recibo -->
+                                                        <div class="card-body">
+                                                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                                                <h6 class="text-success mb-0">
+                                                                    <i class="pi pi-shopping-cart me-2"></i>
+                                                                    Productos ({{ recibo.productos?.length || 0 }})
+                                                                </h6>
+                                                                <p-button 
+                                                                    *ngIf="recibo.productos && recibo.productos.length > 0"
+                                                                    label="Generar PDF"
+                                                                    icon="pi pi-file-pdf"
+                                                                    class="p-button-sm p-button-outlined p-button-danger"
+                                                                    (onClick)="generarPDF(venta)"
+                                                                    pTooltip="Generar PDF del recibo"
+                                                                    tooltipPosition="top">
+                                                                </p-button>
+                                                            </div>
+                                                            
+                                                            <div *ngIf="recibo.productos && recibo.productos.length > 0; else noProductos" class="table-responsive">
+                                                                <table class="table table-sm table-striped">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th>Artículo</th>
+                                                                            <th>Nombre</th>
+                                                                            <th>Cantidad</th>
+                                                                            <th>Precio</th>
+                                                                            <th>Tarjeta</th>
+                                                                            <th>Fecha</th>
+                                                                            <th>Hora</th>
+                                                                            <th>Estado</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <tr *ngFor="let item of recibo.productos">
+                                                                            <td>{{ item.idart }}</td>
+                                                                            <td>{{ item.nomart }}</td>
+                                                                            <td>{{ item.cantidad }}</td>
+                                                                            <td>{{ item.precio | currency:'$':'symbol':'1.2-2' }}</td>
+                                                                            <td>
+                                                                                <span class="badge bg-info" *ngIf="item.tarjeta; else noTarjeta">
+                                                                                    {{ item.tarjeta }}
+                                                                                </span>
+                                                                                <ng-template #noTarjeta>
+                                                                                    <span class="badge bg-secondary">Sin tarjeta</span>
+                                                                                </ng-template>
+                                                                            </td>
+                                                                            <td>{{ item.fecha | date:'dd/MM/yyyy' }}</td>
+                                                                            <td>{{ item.hora }}</td>
+                                                                            <td>
+                                                                                <span class="badge" 
+                                                                                    [ngClass]="item.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
+                                                                                    {{ item.estado }}
+                                                                                </span>
+                                                                            </td>
+                                                                        </tr>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            
+                                                            <ng-template #noProductos>
+                                                                <div class="alert alert-info">
+                                                                    <i class="pi pi-info-circle me-2"></i>
+                                                                    No hay productos asociados a este recibo.
+                                                                </div>
+                                                            </ng-template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <ng-template #noRecibos>
+                                                <div class="alert alert-info">
+                                                    <i class="pi pi-info-circle me-2"></i>
+                                                    No hay recibos asociados a esta factura.
+                                                </div>
+                                            </ng-template>
+                                        </div>
+                                    </ng-container>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                    
+                    
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="selectedColumns.length + 2" class="text-center">
+                                <div class="py-4">
+                                    <i class="fa fa-search fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted">No se encontraron registros de facturas para este cliente.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+                
+                <!-- Mensaje cuando no se ha realizado consulta -->
+                <div class="card text-center" *ngIf="!consultaRealizada && historialVentas2.length === 0">
+                    <div class="card-body py-5">
+                        <i class="pi pi-calendar" style="font-size: 3rem; color: #6c757d;"></i>
+                        <h5 class="mt-3 text-muted">Seleccione un rango de fechas</h5>
+                        <p class="text-muted mb-4">
+                            Para consultar el historial de ventas, debe seleccionar una fecha desde y hasta, 
+                            luego presionar el botón "Consultar".
+                        </p>
+                        <p class="text-muted">
+                            <small>
+                                <i class="pi pi-info-circle me-1"></i>
+                                Por defecto se muestran los últimos 30 días.
+                            </small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
