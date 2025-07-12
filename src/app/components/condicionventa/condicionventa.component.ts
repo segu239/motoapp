@@ -96,6 +96,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   // Variable local para loading para evitar NG0100
   public loadingLocal: boolean = false;
   
+  // Variable para controlar si la sucursal es mayorista
+  public esMayorista: boolean = false;
+  
   // NUEVO: Propiedades para lazy loading
   public first: number = 0;
   public rows: number = 50;
@@ -300,6 +303,9 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('CondicionVentaComponent inicializado');
     
+    // Verificar si es sucursal mayorista
+    this.verificarSucursalMayorista();
+    
     // NUEVO: Restaurar estado de tabla al inicializar
     this.restoreTableState();
     
@@ -310,6 +316,11 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       this.tipoVal = condicion.tarjeta;
       this.codTarj = condicion.cod_tarj;
       this.listaPrecio = condicion.listaprecio;
+      
+      // Verificar si hay flag de mayorista guardado
+      if (condicion.esMayorista) {
+        this.esMayorista = condicion.esMayorista;
+      }
       
       // Si hay una condición guardada, mostrar productos y aplicar configuración
       this.mostrarProductos = true;
@@ -643,6 +654,18 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Método para verificar si la sucursal actual es mayorista
+   */
+  verificarSucursalMayorista(): void {
+    const sucursal = sessionStorage.getItem('sucursal');
+    this.esMayorista = sucursal === '5';
+    
+    if (this.esMayorista) {
+      console.log('🏦 MODO MAYORISTA ACTIVADO - Sucursal:', sucursal);
+    }
+  }
+
+  /**
    * Método para procesar productos con su moneda
    * Aplica el multiplicador de cambio correspondiente a los productos con moneda extranjera
    * @param productos Lista de productos a procesar
@@ -753,17 +776,28 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
 
   selectTipo(item: any) {
     console.log(item);
+    
+    // Verificar si es sucursal mayorista
+    this.verificarSucursalMayorista();
+    
     //esto son datos de la tabla tarjcredito
     this.tipoVal = item.tarjeta; // Almacena el centro seleccionado
     this.codTarj = item.cod_tarj;
     this.listaPrecio = item.listaprecio;
     this.activaDatos = item.activadatos;
     
+    // Si es mayorista, forzar lista de precio 3
+    if (this.esMayorista) {
+      this.listaPrecio = '3';
+      console.log('🏦 MAYORISTA: Forzando listaPrecio a 3, original era:', item.listaprecio);
+    }
+    
     // Guardar la condición de venta seleccionada en sessionStorage
     sessionStorage.setItem('condicionVentaSeleccionada', JSON.stringify({
       tarjeta: this.tipoVal,
       cod_tarj: this.codTarj,
-      listaprecio: this.listaPrecio
+      listaprecio: this.listaPrecio,
+      esMayorista: this.esMayorista
     }));
     
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
@@ -1349,7 +1383,13 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   listaPrecioF() {
     // Se eliminan los seteos individuales de prefijos
     // y se trabaja ahora con la selección de columnas directamente
-    console.log(this.listaPrecio);
+    console.log('listaPrecioF - listaPrecio:', this.listaPrecio, 'esMayorista:', this.esMayorista);
+
+    // Si es mayorista, forzar siempre precio 3
+    if (this.esMayorista) {
+      this.listaPrecio = '3';
+      console.log('🏦 MAYORISTA: Forzando configuración de Precio 3');
+    }
 
     // Actualizar el arreglo de columnas seleccionadas según la lista de precios
     if (this.listaPrecio === '0') {
