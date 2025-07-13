@@ -295,11 +295,16 @@ export class CabecerasComponent implements OnDestroy {
         const psucursal = await this.generacionPagoPsucursal();
         const cabecera = await this.generacionReciboCabeceras();
         const recibo = await this.generacionRecibo(this.selectedCabecerasIniciales);
+
+        // ✅ NUEVO: Generar caja_movi en frontend
+        const caja_movi = await this.crearCajaMoviPago();
+
         let pagoCC = {
           cabeceras: this.cabecerasFiltered,//cabeceras, // aca tengo un array con las cabeceras seleccionadas y los saldos ajustados
           psucursal: psucursal, // aca tengo el objeto psucursal
           cabecera: cabecera, // aca tengo el objeto cabecera
-          recibo: recibo // aca tengo el objeto recibo
+          recibo: recibo, // aca tengo el objeto recibo
+          caja_movi: caja_movi  // ✅ NUEVO: Incluir caja_movi
         };
         this.envioDatos(pagoCC);
       } catch (error) {
@@ -1159,6 +1164,82 @@ export class CabecerasComponent implements OnDestroy {
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+  // Nuevo método para crear caja_movi para pagos de cabeceras
+  crearCajaMoviPago(): Promise<any> {
+    const fechaFormateada = new Date().toISOString().split('T')[0];
+
+    // Función auxiliar para limitar valores numéricos (igual que carrito)
+    const limitNumericValue = (value: any, limit: number) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numValue = parseInt(value);
+      return !isNaN(numValue) ? Math.min(numValue, limit) : null;
+    };
+
+    // Buscar información de tarjeta basándose en codTarj
+    let tarjetaInfo: any = null;
+    if (this.codTarj) {
+      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === this.codTarj.toString());
+    }
+
+    // Obtener id_caja de forma asíncrona (IGUAL que en carrito)
+    const obtenerIdCaja = new Promise<number | null>((resolve) => {
+      if (tarjetaInfo && tarjetaInfo.idcp_ingreso) {
+        this._cargardata.getIdCajaFromConcepto(tarjetaInfo.idcp_ingreso).pipe(take(1)).subscribe(
+          (response: any) => {
+            if (response && response.mensaje && response.mensaje.length > 0) {
+              const idCaja = response.mensaje[0].id_caja;
+              console.log(`ID de caja obtenido: ${idCaja} para concepto: ${tarjetaInfo.idcp_ingreso}`);
+              resolve(idCaja);
+            } else {
+              console.error('No se pudo obtener id_caja para concepto:', tarjetaInfo.idcp_ingreso);
+              resolve(null);
+            }
+          },
+          error => {
+            console.error('Error al obtener id_caja:', error);
+            resolve(null);
+          }
+        );
+      } else {
+        resolve(null);
+      }
+    });
+
+    return obtenerIdCaja.then(idCajaObtenido => {
+      const cajaMovi = {
+        sucursal: limitNumericValue(this.sucursal, 999999),
+        codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
+        num_operacion: 0, // Se asignará en backend con id_num
+        fecha_mov: fechaFormateada,
+        importe_mov: this.importe, // Importe ingresado por usuario
+        descripcion_mov: '', // Se generará automáticamente en backend
+        fecha_emibco: this.cheque.FechaCheque || null,
+        banco: limitNumericValue(this.cheque.Banco, 9999999999),
+        num_cheque: limitNumericValue(this.cheque.Ncheque, 9999999999),
+        cuenta_mov: limitNumericValue(this.cheque.Ncuenta, 999999),
+        cliente: limitNumericValue(this.cliente.idcli, 9999999999),
+        proveedor: null,
+        plaza_cheque: this.cheque.Plaza || null,
+        codigo_mbco: null,
+        desc_bancaria: null,
+        filler: null,
+        fecha_cobro_bco: null,
+        fecha_vto_bco: null,
+        tipo_movi: 'A',
+        caja: idCajaObtenido,
+        letra: this.letraSelectedFormCabecera || null,
+        punto_venta: limitNumericValue(this.puntoventaSelectedFormCabecera, 9999),
+        tipo_comprobante: 'RC',
+        numero_comprobante: limitNumericValue(this.numerocomprobantecabecera + 1, 99999999),
+        marca_cerrado: 0,
+        usuario: this.usuario || null,
+        fecha_proceso: fechaFormateada
+      };
+
+      return cajaMovi;
+    });
+  }
+
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
