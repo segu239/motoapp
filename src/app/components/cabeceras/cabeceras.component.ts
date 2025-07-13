@@ -90,12 +90,28 @@ export class CabecerasComponent implements OnDestroy {
   ngOnInit(): void {
     this.clienteFromCuentaCorriente = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFromCuentaCorriente = JSON.parse(this.clienteFromCuentaCorriente);
-    console.log(this.clienteFromCuentaCorriente);
+    console.log('🔍 DEPURACIÓN - Cliente seleccionado:', this.clienteFromCuentaCorriente);
+    console.log('🔍 DEPURACIÓN - ID del cliente:', this.clienteFromCuentaCorriente.idcli);
+    
     let sucursal: string = sessionStorage.getItem('sucursal');
+    console.log('🔍 DEPURACIÓN - Sucursal:', sucursal);
+    console.log('🔍 DEPURACIÓN - Consultando tabla: factcab' + sucursal);
+    
     this._cargardata.cabecerax(sucursal, this.clienteFromCuentaCorriente.idcli).pipe(take(1)).subscribe((resp: any) => {
-      console.log(resp);
+      console.log('🔍 DEPURACIÓN - Respuesta de cabecerax:', resp);
+      console.log('🔍 DEPURACIÓN - Cantidad de registros:', resp.mensaje ? resp.mensaje.length : 0);
+      
+      if (resp.mensaje && resp.mensaje.length > 0) {
+        console.log('🔍 DEPURACIÓN - Primer registro encontrado:', resp.mensaje[0]);
+      } else {
+        console.warn('⚠️ Sin registros de cuenta corriente para cliente ID:', this.clienteFromCuentaCorriente.idcli);
+        console.log('🔍 DEPURACIÓN - Verificar si el cliente tiene facturas con saldo != 0 en factcab' + sucursal);
+      }
+      
       this.cabeceras = resp.mensaje;
-    }, (err) => { console.log(err); });
+    }, (err) => { 
+      console.error('❌ ERROR en cabecerax:', err);
+    });
     //cargo opciones de pago------------------------------
     this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp: any) => {
       this.tipo = resp.mensaje;
@@ -195,7 +211,7 @@ export class CabecerasComponent implements OnDestroy {
     return true;
   }
   calculateTotalSum(selectedCabeceras: any[]) {
-    this.totalSum = selectedCabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0);
+    this.totalSum = parseFloat(selectedCabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
   }
   // New function to handle the payment
   pago() {
@@ -275,6 +291,10 @@ export class CabecerasComponent implements OnDestroy {
       console.log(resp);
       if (resp.mensaje == "Operación exitosa") {
         this.generarReciboImpreso(pagoCC);
+        // Recalcular el totalSum después del pago exitoso
+        this.calculateTotalSum(this.selectedCabeceras);
+        // Limpiar el campo de importe
+        this.importe = null;
         Swal.fire({
           icon: 'success',
           title: 'Pago realizado',
@@ -509,9 +529,9 @@ export class CabecerasComponent implements OnDestroy {
         const currentSaldo = parseFloat(cabecera.saldo.toString());
         if (currentSaldo <= remainingImporte) {
           cabecera.saldo = 0;
-          remainingImporte -= currentSaldo;
+          remainingImporte = parseFloat((remainingImporte - currentSaldo).toFixed(2));
         } else {
-          cabecera.saldo = currentSaldo - remainingImporte;
+          cabecera.saldo = parseFloat((currentSaldo - remainingImporte).toFixed(2));
           remainingImporte = 0;
         }
         this.currentSaldoArray.push(currentSaldo);
@@ -554,45 +574,191 @@ export class CabecerasComponent implements OnDestroy {
     }
   }
   abrirFormularioTarj() {
+    // Estilos CSS personalizados
+    const styles = `
+      <style>
+        /* Container styling */
+        .tarjeta-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .tarjeta-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .tarjeta-header {
+          background-color: #d1ecf1;
+          color: #0c5460;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #bee5eb;
+          display: flex;
+          align-items: center;
+        }
+        
+        .tarjeta-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .tarjeta-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Credit card input styling */
+        .card-input {
+          border-left: 3px solid #17a2b8 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #17a2b8;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos de la tarjeta',
-      html: `<input type="text" id="titular" class="swal2-input" placeholder="Titular">
-             <input type="number" id="dni" class="swal2-input" placeholder="DNI">
-             <input type="number" id="numero" class="swal2-input" placeholder="Número Tarjeta">
-             <input type="number" id="autorizacion" class="swal2-input" placeholder="Autorización">`,
+      title: '',
+      width: 800,
+      html: styles + `
+        <div class="tarjeta-form">
+          <div class="tarjeta-card">
+            <div class="tarjeta-header">
+              <i class="fa fa-credit-card"></i> Información de la Tarjeta
+            </div>
+            <div class="tarjeta-section">
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="titular" class="form-control" placeholder="Ingrese el nombre completo">
+                </div>
+                <div class="form-group">
+                  <label for="dni"><i class="fa fa-id-card"></i> DNI</label>
+                  <input type="number" id="dni" class="form-control" placeholder="Ingrese el DNI">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos de la Tarjeta</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta</label>
+                  <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
+                </div>
+                <div class="form-group">
+                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización</label>
+                  <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#17a2b8',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
         const titular = (<HTMLInputElement>document.getElementById('titular')).value;
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
         const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
+        
         if (!titular || !dni || !numero || !autorizacion) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
+        
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
         let reAutorizacion = new RegExp("^[0-9]{3}$");
-        if (!reNumero.test(numero)) {
-          Swal.showValidationMessage(`El número de la tarjeta no es válido`);
-          //return;
+        
+        if (!reTitular.test(titular)) {
+          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reDni.test(dni)) {
-          Swal.showValidationMessage(`El DNI no es válido`);
-          //return;
+          Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
+          return false;
         }
-        if (!reTitular.test(titular)) {
-          Swal.showValidationMessage(`El titular no es válido`);
-          //return;
+        if (!reNumero.test(numero)) {
+          Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
+          return false;
         }
         if (!reAutorizacion.test(autorizacion)) {
-          Swal.showValidationMessage(`La autorización no es válida`);
-          //return;
+          Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
+          return false;
         }
-        return { titular, dni, numero, autorizacion }
+        
+        return { titular, dni, numero, autorizacion };
       }
     }).then((result) => {
       if (result.value) {
@@ -600,28 +766,194 @@ export class CabecerasComponent implements OnDestroy {
         this.tarjeta.Dni = result.value.dni;
         this.tarjeta.Numero = result.value.numero;
         this.tarjeta.Autorizacion = result.value.autorizacion;
+        
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados',
+          text: 'Los datos de la tarjeta han sido registrados correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
       }
     });
   }
   abrirFormularioCheque() {
+    // Estilos CSS personalizados para cheques
+    const styles = `
+      <style>
+        /* Container styling */
+        .cheque-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .cheque-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .cheque-header {
+          background-color: #cce5ff;
+          color: #004085;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #b8daff;
+          display: flex;
+          align-items: center;
+        }
+        
+        .cheque-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .cheque-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control,
+        input[type="date"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Money inputs styling */
+        .money-input {
+          border-left: 3px solid #dc3545 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #007bff;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos del Cheque',
-      html:
-        `<input type="text" id="banco" class="swal2-input" placeholder="Banco">
-         <input type="number" id="ncuenta" class="swal2-input" placeholder="N° Cuenta">
-         <input type="number" id="ncheque" class="swal2-input" placeholder="N° Cheque">
-         <input type="text" id="nombre" class="swal2-input" placeholder="Nombre">
-         <input type="text" id="plaza" class="swal2-input" placeholder="Plaza">
-         <input type="number" id="importeimputar" class="swal2-input" placeholder="Importe a Imputar">
-         <input type="number" id="importecheque" class="swal2-input" placeholder="Importe del Cheque">
-         <input type="text" id="fechacheque" class="swal2-input" placeholder="Fecha del Cheque">`,
-      didOpen: () => {
-        // Cambiar el tipo de input a 'date' para activar el datepicker nativo
-        document.getElementById('fechacheque').setAttribute('type', 'date');
-      },
+      title: '',
+      width: 800,
+      html: styles + `
+        <div class="cheque-form">
+          <div class="cheque-card">
+            <div class="cheque-header">
+              <i class="fa fa-money-check-alt"></i> Información del Cheque
+            </div>
+            <div class="cheque-section">
+              <h4 class="section-title">Datos del Banco</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="banco"><i class="fa fa-university"></i> Banco</label>
+                  <input type="text" id="banco" class="form-control" placeholder="Nombre del banco">
+                </div>
+                <div class="form-group">
+                  <label for="ncuenta"><i class="fa fa-credit-card"></i> Número de Cuenta</label>
+                  <input type="number" id="ncuenta" class="form-control" placeholder="Ingrese el número de cuenta">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ncheque"><i class="fa fa-file-invoice-dollar"></i> Número de Cheque</label>
+                  <input type="number" id="ncheque" class="form-control" placeholder="Ingrese el número de cheque">
+                </div>
+                <div class="form-group">
+                  <label for="plaza"><i class="fa fa-map-marker-alt"></i> Plaza</label>
+                  <input type="text" id="plaza" class="form-control" placeholder="Ingrese la plaza">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nombre"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="nombre" class="form-control" placeholder="Nombre completo del titular">
+                </div>
+                <div class="form-group">
+                  <label for="fechacheque"><i class="fa fa-calendar"></i> Fecha del Cheque</label>
+                  <input type="date" id="fechacheque" class="form-control">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Importes</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="importeimputar"><i class="fa fa-dollar-sign"></i> Importe a Imputar</label>
+                  <input type="number" id="importeimputar" class="form-control money-input" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="importecheque"><i class="fa fa-money-bill"></i> Importe del Cheque</label>
+                  <input type="number" id="importecheque" class="form-control money-input" placeholder="0.00" step="0.01">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#007bff',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
         const banco = (<HTMLInputElement>document.getElementById('banco')).value;
         const ncuenta = (<HTMLInputElement>document.getElementById('ncuenta')).value;
@@ -633,46 +965,48 @@ export class CabecerasComponent implements OnDestroy {
         const fechacheque = (<HTMLInputElement>document.getElementById('fechacheque')).value;
 
         if (!banco || !ncuenta || !ncheque || !nombre || !plaza || !importeimputar || !importecheque || !fechacheque) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
+        
         let reBanco = new RegExp("^[a-zA-Z ]{1,40}$");
         let reNcuenta = new RegExp("^[0-9]{1,40}$");
         let reNcheque = new RegExp("^[0-9]{1,40}$");
         let reNombre = new RegExp("^[a-zA-Z ]{1,40}$");
         let rePlaza = new RegExp("^[a-zA-Z ]{1,40}$");
-        let reImporteImputar = new RegExp("^[0-9]{1,40}$");
-        let reImporteCheque = new RegExp("^[0-9]{1,40}$");
-        let reFechaCheque = new RegExp("^\\d{2}/\\d{2}/\\d{4}$");//("^[0-9]{1,40}$");
+        let reImporteImputar = new RegExp("^[0-9]+(\\.[0-9]{1,2})?$");
+        let reImporteCheque = new RegExp("^[0-9]+(\\.[0-9]{1,2})?$");
+        
         if (!reBanco.test(banco)) {
-          Swal.showValidationMessage(`El nombre del banco no es válido`);
-          //return;
+          Swal.showValidationMessage(`El nombre del banco no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reNcuenta.test(ncuenta)) {
-          Swal.showValidationMessage(`El numero de cuenta no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cuenta no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNcheque.test(ncheque)) {
-          Swal.showValidationMessage(`El numero de cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cheque no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNombre.test(nombre)) {
-          Swal.showValidationMessage(`El nombre no es válido`);
-          //return;
+          Swal.showValidationMessage(`El nombre no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!rePlaza.test(plaza)) {
-          Swal.showValidationMessage(`La plaza no es válida`);
-          //return;
+          Swal.showValidationMessage(`La plaza no es válida. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reImporteImputar.test(importeimputar)) {
-          Swal.showValidationMessage(`El importe a imputar no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe a imputar no es válido. Debe ser un número válido.`);
+          return false;
         }
         if (!reImporteCheque.test(importecheque)) {
-          Swal.showValidationMessage(`El importe del cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe del cheque no es válido. Debe ser un número válido.`);
+          return false;
         }
-        return { banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque }
+        
+        return { banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque };
       }
     }).then((result) => {
       if (result.value) {
@@ -685,6 +1019,15 @@ export class CabecerasComponent implements OnDestroy {
         this.cheque.ImporteCheque = result.value.importecheque;
         this.cheque.FechaCheque = result.value.fechacheque;
         console.log('Cheque guardado:', this.cheque);
+        
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados',
+          text: 'Los datos del cheque han sido registrados correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
       }
     }).catch((error) => {
       this.showNotification('Error al guardar el cheque');
