@@ -30,6 +30,7 @@ export class CabecerasComponent implements OnDestroy {
   public selectedCabeceras: Cabecera[] = [];
   public selectedCabecerasIniciales: any;
   public totalSum: number = null;
+  public totalGeneralSaldos: number = 0;
   public importe: number = null;
   public tipo: TarjCredito[] = [];
   filteredTipo: TarjCredito[] = [];
@@ -109,6 +110,7 @@ export class CabecerasComponent implements OnDestroy {
       }
       
       this.cabeceras = resp.mensaje;
+      this.calcularTotalGeneralSaldos();
     }, (err) => { 
       console.error('❌ ERROR en cabecerax:', err);
     });
@@ -123,7 +125,17 @@ export class CabecerasComponent implements OnDestroy {
     this.getVendedores();
     //-----------------------------------------------------
     //get clientes-----------------------------------------
-    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
+    const clienteData = sessionStorage.getItem('datoscliente');
+    if (clienteData) {
+      try {
+        this.cliente = JSON.parse(clienteData);
+      } catch (error) {
+        console.error('Error al parsear datos del cliente:', error);
+        this.cliente = this.clienteFromCuentaCorriente;
+      }
+    } else {
+      this.cliente = this.clienteFromCuentaCorriente;
+    }
     //-----------------------------------------------------
     //get sucursal-----------------------------------------
     this.sucursal = sessionStorage.getItem('sucursal');
@@ -213,6 +225,12 @@ export class CabecerasComponent implements OnDestroy {
   calculateTotalSum(selectedCabeceras: any[]) {
     this.totalSum = parseFloat(selectedCabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
   }
+  
+  calcularTotalGeneralSaldos() {
+    if (this.cabeceras && this.cabeceras.length > 0) {
+      this.totalGeneralSaldos = parseFloat(this.cabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
+    }
+  }
   // New function to handle the payment
   pago() {
     console.log(this.tipoVal);
@@ -248,7 +266,22 @@ export class CabecerasComponent implements OnDestroy {
       });
       return;
     }
-    this.generarSalida();
+    
+    // Confirmación antes de procesar el pago
+    Swal.fire({
+      title: 'Confirmar Pago',
+      text: `¿Está seguro de procesar el pago de $${this.importe}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, procesar pago',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.generarSalida();
+      }
+    });
   }
   async generarSalida() {
     if (this.pendientes()) { // si estan completos los campos necesarios 
@@ -271,6 +304,12 @@ export class CabecerasComponent implements OnDestroy {
         this.envioDatos(pagoCC);
       } catch (error) {
         console.error('Error al generar los datos de pago:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al procesar el pago',
+          text: 'Hubo un problema al procesar el pago. Por favor, inténtelo nuevamente.',
+          confirmButtonText: 'Entendido'
+        });
       }
     }
   }
@@ -333,13 +372,13 @@ export class CabecerasComponent implements OnDestroy {
     console.log(numero_int);
     console.log(this.numerocomprobantecabecera + 1);
     //zona de correccion de fallas de tipos de datos
-    if (this.cliente.idcli == "") {
+    if (this.cliente && this.cliente.idcli == "") {
       this.cliente.idcli = 0;
     }
-    if (this.cliente.cod_iva == "") {
+    if (this.cliente && this.cliente.cod_iva == "") {
       this.cliente.cod_iva = 0;
     }
-    if (this.cliente.cuit == "") {
+    if (this.cliente && this.cliente.cuit == "") {
       this.cliente.cuit = 0;
     }
     if (this.codTarj == "") {
@@ -1123,7 +1162,18 @@ export class CabecerasComponent implements OnDestroy {
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
-    let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
+    const clienteDataRec = sessionStorage.getItem('datoscliente');
+    let cliente = null;
+    if (clienteDataRec) {
+      try {
+        cliente = JSON.parse(clienteDataRec);
+      } catch (error) {
+        console.error('Error al parsear datos del cliente para recibo:', error);
+        cliente = this.clienteFromCuentaCorriente;
+      }
+    } else {
+      cliente = this.clienteFromCuentaCorriente;
+    }
     console.log(cliente);
     console.log(pagoCC);
     let numeroenPlabras = this.numeroAPalabras(totalImporte);

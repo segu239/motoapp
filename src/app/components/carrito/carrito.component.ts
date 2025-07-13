@@ -478,9 +478,37 @@ export class CarritoComponent implements OnDestroy {
     let saldo = this.sumarCuentaCorriente();
     
     // Asegurarse de que cliente.idcli no exceda el límite
-    let clienteId = this.cliente.idcli;
-    if (clienteId && parseInt(clienteId) > 999999) {
-      clienteId = '999999';
+    let clienteId;
+    if (this.cliente && this.cliente.idcli) {
+      clienteId = this.cliente.idcli;
+      if (parseInt(clienteId) > 999999) {
+        clienteId = '999999';
+      }
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Cliente no encontrado',
+        text: 'Debe seleccionar un cliente antes de continuar. Diríjase a Artículos para seleccionar un cliente.',
+        confirmButtonText: 'Entendido'
+      });
+      return void 0;
+    }
+    
+    // Verificar datos del cliente antes de crear cabecera
+    if (!this.cliente || !this.cliente.cod_iva) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Datos de cliente incompletos',
+        text: 'Faltan datos del cliente. Diríjase a Artículos para seleccionar un cliente válido.',
+        confirmButtonText: 'Ir a Artículos',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.router.navigate(['/articulos']);
+        }
+      });
+      return void 0;
     }
     
     let cabecera = {

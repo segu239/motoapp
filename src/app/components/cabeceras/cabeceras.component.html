@@ -57,6 +57,11 @@
                     </ng-template>
                 </p-table>
                 
+                <!-- Totalizador general de saldos -->
+                <div *ngIf="totalGeneralSaldos > 0" class="total-general-saldos">
+                    <strong>Total de Saldos: ${{ totalGeneralSaldos | number:'1.2-2' }}</strong>
+                </div>
+                
                 <!-- Total summary -->
                 <div *ngIf="totalSum !== null" class="total-summary">
                     <div class="total-price">Total: ${{ totalSum }}</div>
