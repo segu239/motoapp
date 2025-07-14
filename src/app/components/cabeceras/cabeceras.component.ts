@@ -296,8 +296,9 @@ export class CabecerasComponent implements OnDestroy {
         const cabecera = await this.generacionReciboCabeceras();
         const recibo = await this.generacionRecibo(this.selectedCabecerasIniciales);
 
-        // ✅ NUEVO: Generar caja_movi en frontend
-        const caja_movi = await this.crearCajaMoviPago();
+        // ✅ NUEVO: Capturar importe antes del envío y generar caja_movi
+        const importePago = this.importe; // Capturar ANTES del envío
+        const caja_movi = await this.crearCajaMoviPago(importePago);
 
         let pagoCC = {
           cabeceras: this.cabecerasFiltered,//cabeceras, // aca tengo un array con las cabeceras seleccionadas y los saldos ajustados
@@ -1165,8 +1166,12 @@ export class CabecerasComponent implements OnDestroy {
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
   // Nuevo método para crear caja_movi para pagos de cabeceras
-  crearCajaMoviPago(): Promise<any> {
-    const fechaFormateada = new Date().toISOString().split('T')[0];
+  crearCajaMoviPago(importePago: number): Promise<any> {
+    // ✅ CORREGIDO: Usar fecha argentina en lugar de UTC
+    const fechaArgentina = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires'
+    });
+    const fechaFormateada = fechaArgentina;
 
     // Función auxiliar para limitar valores numéricos (igual que carrito)
     const limitNumericValue = (value: any, limit: number) => {
@@ -1211,7 +1216,7 @@ export class CabecerasComponent implements OnDestroy {
         codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
         num_operacion: 0, // Se asignará en backend con id_num
         fecha_mov: fechaFormateada,
-        importe_mov: this.importe, // Importe ingresado por usuario
+        importe_mov: importePago, // ✅ Usar parámetro en lugar de this.importe
         descripcion_mov: '', // Se generará automáticamente en backend
         fecha_emibco: this.cheque.FechaCheque || null,
         banco: limitNumericValue(this.cheque.Banco, 9999999999),
