@@ -1260,6 +1260,43 @@ public function PagoCabecera_post()
         return;
     }
 
+    // NUEVA VALIDACIÓN: Verificar que todos los documentos sean del mismo tipo
+    $tiposUnicos = array();
+    foreach ($pagoCC['cabeceras'] as $cabecera) {
+        if (isset($cabecera['tipo']) && !in_array($cabecera['tipo'], $tiposUnicos)) {
+            $tiposUnicos[] = $cabecera['tipo'];
+        }
+    }
+    
+    if (count($tiposUnicos) > 1) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se pueden procesar documentos de diferentes tipos en la misma operación"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+    
+    $tipoDocumento = $tiposUnicos[0] ?? 'FC';
+    
+    // NUEVA VALIDACIÓN: Para presupuestos, forzar método de pago a EFECTIVO
+    if ($tipoDocumento === 'PR') {
+        // Verificar que el método de pago sea efectivo
+        if (isset($pagoCC['caja_movi']['cod_tarj']) && $pagoCC['caja_movi']['cod_tarj'] !== '11') {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Los presupuestos solo pueden pagarse en efectivo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+        
+        // Forzar código de efectivo si no está presente
+        if (isset($pagoCC['caja_movi'])) {
+            $pagoCC['caja_movi']['cod_tarj'] = '11';
+        }
+    }
+
     // Iniciar transacción
     $this->db->trans_start();
 

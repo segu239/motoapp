@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Cabecera } from '../../interfaces/cabecera';
 import { Recibo } from 'src/app/interfaces/recibo';
 import { Table } from 'primeng/table';
@@ -85,7 +85,7 @@ export class CabecerasComponent implements OnDestroy {
   public numero_fac: number;
   private destroy$ = new Subject<void>();
 
-  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private cdr: ChangeDetectorRef) {
     this.getNombreSucursal();
   }
   ngOnInit(): void {
@@ -193,18 +193,74 @@ export class CabecerasComponent implements OnDestroy {
     this.filteredTipo = this.tipo.filter(item => item[dayField] === '1');
   }
   onSelectionChange(event: any) {
-    console.log(event);
-    this.selectedCabeceras = event.sort((a: any, b: any) => {
-      const dateA = new Date(a.emitido);
-      const dateB = new Date(b.emitido);
-      return dateA.getTime() - dateB.getTime();
-    });
-    let selectedCabecerasIniciales = this.selectedCabeceras;
-    this.selectedCabecerasIniciales = selectedCabecerasIniciales;
-    console.log(this.selectedCabecerasIniciales);
-    this.letraSelectedFormCabecera = this.selectedCabecerasIniciales[0].letra;
-    this.puntoventaSelectedFormCabecera = this.selectedCabecerasIniciales[0].puntoventa;
-    this.opcionesPagoFlag = this.evaluateEventTypes(event);
+    console.log('Selección cambió:', event);
+    
+    // Verificar que todos los documentos sean del mismo tipo
+    if (event.length > 0) {
+      const primerTipo = event[0].tipo;
+      
+      // Validar que todos los documentos seleccionados sean del mismo tipo
+      const tiposDistintos = event.some(item => item.tipo !== primerTipo);
+      
+      if (tiposDistintos) {
+        // Mostrar alerta y revertir selección
+        Swal.fire({
+          icon: 'warning',
+          title: 'Selección inválida',
+          text: 'No se pueden mezclar documentos de diferentes tipos (FC y PR)',
+          confirmButtonText: 'Entendido'
+        });
+        
+        // Revertir a la selección anterior usando setTimeout para que ocurra después del ciclo de Angular
+        setTimeout(() => {
+          this.selectedCabeceras = [...(this.selectedCabecerasIniciales || [])];
+          // Forzar detección de cambios para actualizar la UI
+          this.cdr.detectChanges();
+          // Recalcular total con la selección revertida
+          this.calculateTotalSum(this.selectedCabeceras);
+        }, 0);
+        return;
+      }
+      
+      // Ordenar por fecha
+      this.selectedCabeceras = event.sort((a: any, b: any) => {
+        const dateA = new Date(a.emitido);
+        const dateB = new Date(b.emitido);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      // Configurar tipo de pago según el tipo de documento
+      if (primerTipo === 'PR') {
+        this.tipoVal = "EFECTIVO";
+        this.opcionesPagoFlag = false; // Ocultar dropdown de métodos de pago
+        this.codTarj = "11"; // Código de EFECTIVO
+      } else if (primerTipo === 'FC') {
+        this.tipoVal = "Condicion de Venta";
+        this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago
+        this.codTarj = ""; // Limpiar selección
+      }
+      
+      // Configurar datos de cabecera
+      if (this.selectedCabeceras.length > 0) {
+        this.letraSelectedFormCabecera = this.selectedCabeceras[0].letra;
+        this.puntoventaSelectedFormCabecera = this.selectedCabeceras[0].puntoventa;
+      }
+      
+      // Guardar selección actual como válida para futuras comparaciones
+      this.selectedCabecerasIniciales = [...this.selectedCabeceras];
+    } else {
+      // Si no hay selección, restablecer valores por defecto
+      this.selectedCabeceras = [];
+      this.tipoVal = "Condicion de Venta";
+      this.opcionesPagoFlag = true;
+      this.codTarj = "";
+      this.selectedCabecerasIniciales = [];
+    }
+    
+    // Actualizar tipoDoc basado en la selección
+    this.tipoDoc = event.length > 0 ? event[0].tipo : "FC";
+    
+    // Calcular total
     this.calculateTotalSum(this.selectedCabeceras);
   }
   evaluateEventTypes(event: any[]): boolean {
@@ -234,11 +290,24 @@ export class CabecerasComponent implements OnDestroy {
   // New function to handle the payment
   pago() {
     console.log(this.tipoVal);
+    
+    // Validar que haya documentos seleccionados
+    if (this.selectedCabeceras.length === 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Debe seleccionar al menos un documento para pagar',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+    
     if (this.totalSum <= 0) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'El saldo total es 0.',
+        text: 'El total a pagar debe ser mayor a 0',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
@@ -246,7 +315,8 @@ export class CabecerasComponent implements OnDestroy {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Por favor, ingrese un importe válido mayor que cero.',
+        text: 'El importe ingresado debe ser mayor a 0',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
@@ -255,14 +325,18 @@ export class CabecerasComponent implements OnDestroy {
         icon: 'error',
         title: 'Error',
         text: 'El importe ingresado es mayor que el saldo total.',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
-    if (this.tipoVal == 'Condicion de Venta') {
+    
+    // Validar método de pago solo para FC
+    if (this.selectedCabeceras[0].tipo === 'FC' && this.tipoVal == 'Condicion de Venta') {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Por favor, seleccione una condición de venta.',
+        text: 'Debe seleccionar un método de pago',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
@@ -1121,6 +1195,16 @@ export class CabecerasComponent implements OnDestroy {
       return true;
     }
   }
+
+  getOperacionTexto(): string {
+    if (this.selectedCabeceras.length === 0) {
+      return 'Seleccione documentos';
+    }
+    
+    const primerTipo = this.selectedCabeceras[0].tipo;
+    return primerTipo === 'FC' ? 'FACTURA' : 'PRESUPUESTO';
+  }
+
   tipoDocChange(event) {
     console.log(event.target.value);
     this.tipoDoc = event.target.value;
