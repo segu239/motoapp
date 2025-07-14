@@ -571,6 +571,7 @@ export class HistorialVentas2PaginadosService {
         tipo: item.tipo || '',
         puntoventa: parseInt(item.puntoventa) || 0,
         letra: item.letra || '',
+        numero_int: parseInt(item.numero_int) || 0,
         numero_fac: parseInt(item.numero_fac) || 0,
         emitido: item.emitido || '',
         vencimiento: item.vencimiento || '',

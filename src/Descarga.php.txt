@@ -3610,6 +3610,7 @@ public function historialventas2xcli_get()
             f.tipo,
             f.puntoventa,
             f.letra,
+            f.numero_int,
             f.numero_fac,
             f.emitido,
             f.vencimiento,
@@ -4044,7 +4045,7 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
     error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
     
     // Construir SELECT base
-    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
+    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_int, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
     
     // Construir WHERE
     $where = "WHERE cliente = {$idcli_escaped}";

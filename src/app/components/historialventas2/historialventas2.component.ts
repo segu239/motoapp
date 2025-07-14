@@ -152,6 +152,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       { field: 'tipo', header: 'Tipo' },
       { field: 'puntoventa', header: 'Punto Venta' },
       { field: 'letra', header: 'Letra' },
+      { field: 'numero_int', header: 'Número Int.' },
       { field: 'numero_fac', header: 'Número Fac.' },
       { field: 'emitido', header: 'Emitido' },
       { field: 'vencimiento', header: 'Vencimiento' },
@@ -514,6 +515,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
             exportRow[col.header] = parseFloat(value.toString()).toFixed(2);
           } else if (col.field === 'saldo' && value) {
             exportRow[col.header] = parseFloat(value.toString()).toFixed(2);
+          } else if (col.field === 'numero_int' && value) {
+            exportRow[col.header] = parseInt(value.toString());
           } else {
             exportRow[col.header] = value || '';
           }

@@ -210,6 +210,11 @@
                                 <p-sortIcon field="letra"></p-sortIcon>
                                 <p-columnFilter type="text" field="letra" display="menu" matchMode="contains"></p-columnFilter>
                             </th>
+                            <th *ngIf="isColumnVisible('numero_int')" pSortableColumn="numero_int">
+                                Número Int.
+                                <p-sortIcon field="numero_int"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="numero_int" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
                             <th *ngIf="isColumnVisible('numero_fac')" pSortableColumn="numero_fac">
                                 Número Fac.
                                 <p-sortIcon field="numero_fac"></p-sortIcon>
@@ -262,6 +267,7 @@
                             <td *ngIf="isColumnVisible('tipo')">{{ venta.tipo }}</td>
                             <td *ngIf="isColumnVisible('puntoventa')">{{ venta.puntoventa }}</td>
                             <td *ngIf="isColumnVisible('letra')">{{ venta.letra }}</td>
+                            <td *ngIf="isColumnVisible('numero_int')">{{ venta.numero_int }}</td>
                             <td *ngIf="isColumnVisible('numero_fac')">{{ venta.numero_fac }}</td>
                             <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>

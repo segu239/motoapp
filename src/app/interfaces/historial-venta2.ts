@@ -3,6 +3,7 @@ export interface HistorialVenta2 {
   tipo: string;
   puntoventa: number;
   letra: string;
+  numero_int: number;
   numero_fac: number;
   emitido: string;
   vencimiento: string;
