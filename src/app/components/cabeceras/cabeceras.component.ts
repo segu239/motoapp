@@ -286,6 +286,27 @@ export class CabecerasComponent implements OnDestroy {
   async generarSalida() {
     if (this.pendientes()) { // si estan completos los campos necesarios 
       try {
+        // ✅ CAPTURAR TODAS LAS VARIABLES AL INICIO ANTES DE CUALQUIER PROCESAMIENTO
+        const importeOriginal = this.importe;
+        const codTarjOriginal = this.codTarj;
+        const usuarioEmail = sessionStorage.getItem('emailOp') || this.usuario;
+
+        // ✅ VALIDAR ANTES DE CONTINUAR
+        if (!importeOriginal || importeOriginal <= 0) {
+          throw new Error('El importe debe ser mayor a 0');
+        }
+
+        console.log('Datos capturados para caja_movi:', {
+          importe: importeOriginal,
+          codTarj: codTarjOriginal,
+          usuario: usuarioEmail
+        });
+
+        // ✅ VALIDACIÓN ADICIONAL DE FORMA DE PAGO
+        if (!codTarjOriginal) {
+          console.warn('⚠️ No se ha seleccionado forma de pago - algunos campos serán NULL');
+        }
+
         await this.getNumeroComprobanteCabecera();
         await this.getNumeroComprobanteRecibo();
         const cabeceras = await this.ajuste(this.selectedCabeceras);
@@ -296,9 +317,8 @@ export class CabecerasComponent implements OnDestroy {
         const cabecera = await this.generacionReciboCabeceras();
         const recibo = await this.generacionRecibo(this.selectedCabecerasIniciales);
 
-        // ✅ NUEVO: Capturar importe antes del envío y generar caja_movi
-        const importePago = this.importe; // Capturar ANTES del envío
-        const caja_movi = await this.crearCajaMoviPago(importePago);
+        // ✅ GENERAR CAJA_MOVI CON VALORES ORIGINALES CAPTURADOS
+        const caja_movi = await this.crearCajaMoviPago(importeOriginal, codTarjOriginal, usuarioEmail);
 
         let pagoCC = {
           cabeceras: this.cabecerasFiltered,//cabeceras, // aca tengo un array con las cabeceras seleccionadas y los saldos ajustados
@@ -1166,7 +1186,7 @@ export class CabecerasComponent implements OnDestroy {
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
   // Nuevo método para crear caja_movi para pagos de cabeceras
-  crearCajaMoviPago(importePago: number): Promise<any> {
+  crearCajaMoviPago(importePago: number, codTarjPago: string, usuarioPago: string): Promise<any> {
     // ✅ CORREGIDO: Usar fecha argentina en lugar de UTC
     const fechaArgentina = new Date().toLocaleDateString('en-CA', {
       timeZone: 'America/Argentina/Buenos_Aires'
@@ -1180,10 +1200,10 @@ export class CabecerasComponent implements OnDestroy {
       return !isNaN(numValue) ? Math.min(numValue, limit) : null;
     };
 
-    // Buscar información de tarjeta basándose en codTarj
+    // ✅ CORREGIDO: Buscar información de tarjeta usando parámetro
     let tarjetaInfo: any = null;
-    if (this.codTarj) {
-      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === this.codTarj.toString());
+    if (codTarjPago) {
+      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
     }
 
     // Obtener id_caja de forma asíncrona (IGUAL que en carrito)
@@ -1237,7 +1257,7 @@ export class CabecerasComponent implements OnDestroy {
         tipo_comprobante: 'RC',
         numero_comprobante: limitNumericValue(this.numerocomprobantecabecera + 1, 99999999),
         marca_cerrado: 0,
-        usuario: this.usuario || null,
+        usuario: usuarioPago || 'usuario_desconocido',
         fecha_proceso: fechaFormateada
       };
 
