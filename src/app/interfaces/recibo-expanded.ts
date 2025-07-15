@@ -57,4 +57,16 @@ export interface PsucursalExpanded {
 
 export interface VentaExpandida {
   recibos: ReciboExpanded[];
+  historialPagos: PagoHistorial[];
+  totalPagado: number;
+}
+
+export interface PagoHistorial {
+  recibo: number;
+  c_tipo: string;
+  c_numero: number;
+  fecha: string;
+  importe: number;
+  usuario: string;
+  c_puntoventa: number;
 }

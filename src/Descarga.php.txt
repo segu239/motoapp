@@ -4406,6 +4406,31 @@ public function obtenerDatosExpandidos_get()
         $queryRecibos = $this->db->get();
         $recibos = $queryRecibos->result_array();
 
+        // NUEVO: Obtener historial de pagos de la factura (solo pagos reales RC)
+        $this->db->select('
+            r.recibo,
+            r.c_tipo,
+            r.c_numero,
+            r.fecha,
+            r.importe,
+            r.usuario,
+            r.c_puntoventa,
+            f.tipo as tipo_documento
+        ');
+        $this->db->from($tablaRecibos . ' r');
+        $this->db->join($tablaFactcab . ' f', 'r.id_fac = f.id_num', 'left');
+        $this->db->where('r.recibo_asoc', $id_factura);
+        $this->db->where('f.tipo', 'RC');  // Filtrar solo pagos reales (Recibos de Cobro)
+        $this->db->order_by('r.fecha', 'ASC');
+        $queryPagos = $this->db->get();
+        $pagos = $queryPagos->result_array();
+
+        // Calcular total pagado
+        $total_pagado = 0;
+        foreach ($pagos as $pago) {
+            $total_pagado += (float)$pago['importe'];
+        }
+
         // Obtener datos de cliente y factura para filtrado
         $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
         $this->db->from($tablaFactcab . ' f');
@@ -4480,9 +4505,11 @@ public function obtenerDatosExpandidos_get()
             $recibos[$index]['productos'] = $productos;
         }
 
-        // Preparar respuesta con datos expandidos
+        // Preparar respuesta con datos expandidos incluyendo historial de pagos
         $datosExpandidos = array(
-            'recibos' => $recibos
+            'recibos' => $recibos,
+            'historialPagos' => $pagos,
+            'totalPagado' => $total_pagado
         );
 
         $respuesta = array(
