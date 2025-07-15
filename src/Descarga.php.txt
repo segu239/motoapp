@@ -21,6 +21,31 @@ header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Ac
   $this->load->database();
 }
 
+/**
+ * FILTRO PARA EXCLUIR RECIBOS RC DE CONSULTAS DE FACTURAS
+ * 
+ * Los recibos RC se almacenan en factcab por dependencias técnicas,
+ * pero deben filtrarse en reportes y consultas de facturación.
+ * 
+ * @param string $tabla_alias Alias de la tabla (ej: 'f', 'factcab')
+ */
+private function aplicarFiltroSinRC($tabla_alias = '') {
+    $prefix = $tabla_alias ? $tabla_alias . '.' : '';
+    $this->db->where($prefix . 'tipo !=', 'RC');
+}
+
+/**
+ * FILTRO PARA INCLUIR SOLO RECIBOS RC
+ * 
+ * Para consultas específicas de recibos RC
+ * 
+ * @param string $tabla_alias Alias de la tabla (ej: 'f', 'factcab')
+ */
+private function aplicarFiltroSoloRC($tabla_alias = '') {
+    $prefix = $tabla_alias ? $tabla_alias . '.' : '';
+    $this->db->where($prefix . 'tipo', 'RC');
+}
+
 public function Clisucxapp_post()//Aca se procesan los envios de clientes de la app y se los inserta en las talaba clientesapp
 {
 $data=$this->post();
@@ -3666,6 +3691,9 @@ public function historialventas2xcli_get()
         
         // Filtrar por cliente
         $this->db->where('f.cliente', $idcli);
+        
+        // FILTRO IMPORTANTE: Excluir recibos RC de historial de ventas
+        $this->aplicarFiltroSinRC('f');
 
         // Aplicar filtro de rango de fechas si se proporciona
         if ($fecha_desde && $fecha_hasta) {
@@ -4085,7 +4113,7 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
     $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_int, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
     
     // Construir WHERE
-    $where = "WHERE cliente = {$idcli_escaped}";
+    $where = "WHERE cliente = {$idcli_escaped} AND tipo != 'RC'";
     
     // Log de la consulta base
     error_log("Consulta base para {$tabla}: {$select} {$where}");
