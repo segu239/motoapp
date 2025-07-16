@@ -1304,22 +1304,11 @@ public function PagoCabecera_post()
     
     $tipoDocumento = $tiposUnicos[0] ?? 'FC';
     
-    // NUEVA VALIDACIÓN: Para presupuestos, forzar método de pago a EFECTIVO
+    // Para presupuestos (PR), el frontend ya maneja la restricción de efectivo
+    // La información del método de pago se almacena en 'codigo_mov' y 'caja', no en cod_tarj
     if ($tipoDocumento === 'PR') {
-        // Verificar que el método de pago sea efectivo
-        if (isset($pagoCC['caja_movi']['cod_tarj']) && $pagoCC['caja_movi']['cod_tarj'] !== '11') {
-            $respuesta = array(
-                "error" => true,
-                "mensaje" => "Los presupuestos solo pueden pagarse en efectivo"
-            );
-            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
-            return;
-        }
-        
-        // Forzar código de efectivo si no está presente
-        if (isset($pagoCC['caja_movi'])) {
-            $pagoCC['caja_movi']['cod_tarj'] = '11';
-        }
+        // Validación manejada en frontend - PR siempre usa efectivo (codTarj = "11")
+        // No se requiere lógica adicional aquí
     }
 
     // Iniciar transacción

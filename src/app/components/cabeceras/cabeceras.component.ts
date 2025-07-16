@@ -1181,6 +1181,14 @@ export class CabecerasComponent implements OnDestroy {
       if (!this.vendedoresV) {
         missingFields.push('Vendedor');
       }
+    } else if (this.tipoDoc == "PR") {
+      // Validaciones específicas para presupuestos (PR)
+      if (!this.FechaCalend) {
+        missingFields.push('Fecha');
+      }
+      if (!this.vendedoresV) {
+        missingFields.push('Vendedor');
+      }
     }
     if (missingFields.length > 0) {
       Swal.fire({
