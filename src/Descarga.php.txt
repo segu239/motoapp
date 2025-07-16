@@ -21,6 +21,31 @@ header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Ac
   $this->load->database();
 }
 
+/**
+ * FILTRO PARA EXCLUIR RECIBOS RC DE CONSULTAS DE FACTURAS
+ * 
+ * Los recibos RC se almacenan en factcab por dependencias técnicas,
+ * pero deben filtrarse en reportes y consultas de facturación.
+ * 
+ * @param string $tabla_alias Alias de la tabla (ej: 'f', 'factcab')
+ */
+private function aplicarFiltroSinRC($tabla_alias = '') {
+    $prefix = $tabla_alias ? $tabla_alias . '.' : '';
+    $this->db->where($prefix . 'tipo !=', 'RC');
+}
+
+/**
+ * FILTRO PARA INCLUIR SOLO RECIBOS RC
+ * 
+ * Para consultas específicas de recibos RC
+ * 
+ * @param string $tabla_alias Alias de la tabla (ej: 'f', 'factcab')
+ */
+private function aplicarFiltroSoloRC($tabla_alias = '') {
+    $prefix = $tabla_alias ? $tabla_alias . '.' : '';
+    $this->db->where($prefix . 'tipo', 'RC');
+}
+
 public function Clisucxapp_post()//Aca se procesan los envios de clientes de la app y se los inserta en las talaba clientesapp
 {
 $data=$this->post();
@@ -1260,14 +1285,54 @@ public function PagoCabecera_post()
         return;
     }
 
+    // NUEVA VALIDACIÓN: Verificar que todos los documentos sean del mismo tipo
+    $tiposUnicos = array();
+    foreach ($pagoCC['cabeceras'] as $cabecera) {
+        if (isset($cabecera['tipo']) && !in_array($cabecera['tipo'], $tiposUnicos)) {
+            $tiposUnicos[] = $cabecera['tipo'];
+        }
+    }
+    
+    if (count($tiposUnicos) > 1) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se pueden procesar documentos de diferentes tipos en la misma operación"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+    
+    $tipoDocumento = $tiposUnicos[0] ?? 'FC';
+    
+    // NUEVA VALIDACIÓN: Para presupuestos, forzar método de pago a EFECTIVO
+    if ($tipoDocumento === 'PR') {
+        // Verificar que el método de pago sea efectivo
+        if (isset($pagoCC['caja_movi']['cod_tarj']) && $pagoCC['caja_movi']['cod_tarj'] !== '11') {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Los presupuestos solo pueden pagarse en efectivo"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+        
+        // Forzar código de efectivo si no está presente
+        if (isset($pagoCC['caja_movi'])) {
+            $pagoCC['caja_movi']['cod_tarj'] = '11';
+        }
+    }
+
     // Iniciar transacción
     $this->db->trans_start();
 
     $registros_afectados = array(
         'factcab' => 0,
         'psucursal' => 0,
-        'recibos' => 0
+        'recibos' => 0,
+        'caja_movi' => 0  // ✅ NUEVO
     );
+
+    $id_num_cabecera = null;
 
     // 1. Actualizar cabeceras en factcab<sucursal>
     foreach ($pagoCC['cabeceras'] as $cabecera) {
@@ -1295,14 +1360,81 @@ public function PagoCabecera_post()
     $this->db->insert('psucursal' . $sucursal, $pagoCC['psucursal']);
     $registros_afectados['psucursal'] = $this->db->affected_rows();
 
-    // 3. Insertar en factcab<sucursal>
+    // 3. Insertar en factcab<sucursal> y obtener ID
     $this->db->insert('factcab' . $sucursal, $pagoCC['cabecera']);
     $registros_afectados['factcab'] += $this->db->affected_rows();
+    $id_num_cabecera = $this->db->insert_id();
 
     // 4. Insertar en recibos<sucursal>
     foreach ($pagoCC['recibo'] as $recibo) {
         $this->db->insert('recibos' . $sucursal, $recibo);
         $registros_afectados['recibos'] += $this->db->affected_rows();
+    }
+
+    // ✅ NUEVO: 5. Insertar caja_movi (REUTILIZANDO LÓGICA DE PedidossucxappCompleto_post)
+    if (isset($pagoCC['caja_movi']) && $pagoCC['caja_movi']) {
+        $caja_movi = $pagoCC['caja_movi'];
+
+        // Asignar el id_num generado
+        $caja_movi['num_operacion'] = $id_num_cabecera;
+
+        // Limpiar campos de fecha nulos o vacíos
+        foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
+            if (isset($caja_movi[$dateField]) && empty($caja_movi[$dateField])) {
+                $caja_movi[$dateField] = null;
+            }
+        }
+
+        // Validar campos numéricos para prevenir desbordamientos
+        $numeric_limit_fields = [
+            'sucursal' => 999999,
+            'codigo_mov' => 9999999999,
+            'num_operacion' => 9999999999,
+            'banco' => 9999999999,
+            'num_cheque' => 9999999999,
+            'cuenta_mov' => 999999,
+            'cliente' => 9999999999,
+            'proveedor' => 9999999999,
+            'codigo_mbco' => 9999999999,
+            'punto_venta' => 9999,
+            'numero_comprobante' => 99999999
+        ];
+
+        foreach ($numeric_limit_fields as $field => $limit) {
+            if (isset($caja_movi[$field]) && !empty($caja_movi[$field])) {
+                if (is_numeric($caja_movi[$field]) && $caja_movi[$field] > $limit) {
+                    $caja_movi[$field] = $limit;
+                }
+            } else {
+                $caja_movi[$field] = null;
+            }
+        }
+
+        // Limpiar campos de texto nulos o vacíos
+        foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
+            if (isset($caja_movi[$strField]) && $caja_movi[$strField] === '') {
+                $caja_movi[$strField] = null;
+            }
+        }
+
+        // Generar descripción automática si tipo_movi es 'A'
+        if (isset($caja_movi['tipo_movi']) && $caja_movi['tipo_movi'] === 'A') {
+            $caja_movi['descripcion_mov'] = $this->generarDescripcionAutomatica($caja_movi);
+        }
+
+        try {
+            $this->db->insert('caja_movi', $caja_movi);
+            $registros_afectados['caja_movi'] = $this->db->affected_rows();
+
+            if ($registros_afectados['caja_movi'] > 0) {
+                log_message('info', 'Movimiento de caja insertado para pago cabecera ID: ' . $id_num_cabecera);
+            } else {
+                log_message('error', 'Error al insertar movimiento de caja para pago ID: ' . $id_num_cabecera);
+            }
+        } catch (Exception $e) {
+            log_message('error', 'Excepción al insertar en caja_movi ID ' . $id_num_cabecera . ': ' . $e->getMessage());
+            // No hacer rollback, permitir que continúe
+        }
     }
 
     // Completar transacción
@@ -3540,6 +3672,7 @@ public function historialventas2xcli_get()
             f.tipo,
             f.puntoventa,
             f.letra,
+            f.numero_int,
             f.numero_fac,
             f.emitido,
             f.vencimiento,
@@ -3558,6 +3691,9 @@ public function historialventas2xcli_get()
         
         // Filtrar por cliente
         $this->db->where('f.cliente', $idcli);
+        
+        // FILTRO IMPORTANTE: Excluir recibos RC de historial de ventas
+        $this->aplicarFiltroSinRC('f');
 
         // Aplicar filtro de rango de fechas si se proporciona
         if ($fecha_desde && $fecha_hasta) {
@@ -3974,10 +4110,10 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
     error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
     
     // Construir SELECT base
-    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
+    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_int, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
     
     // Construir WHERE
-    $where = "WHERE cliente = {$idcli_escaped}";
+    $where = "WHERE cliente = {$idcli_escaped} AND tipo != 'RC'";
     
     // Log de la consulta base
     error_log("Consulta base para {$tabla}: {$select} {$where}");
@@ -4298,6 +4434,31 @@ public function obtenerDatosExpandidos_get()
         $queryRecibos = $this->db->get();
         $recibos = $queryRecibos->result_array();
 
+        // NUEVO: Obtener historial de pagos de la factura (solo pagos reales RC)
+        $this->db->select('
+            r.recibo,
+            r.c_tipo,
+            r.c_numero,
+            r.fecha,
+            r.importe,
+            r.usuario,
+            r.c_puntoventa,
+            f.tipo as tipo_documento
+        ');
+        $this->db->from($tablaRecibos . ' r');
+        $this->db->join($tablaFactcab . ' f', 'r.id_fac = f.id_num', 'left');
+        $this->db->where('r.recibo_asoc', $id_factura);
+        $this->db->where('f.tipo', 'RC');  // Filtrar solo pagos reales (Recibos de Cobro)
+        $this->db->order_by('r.fecha', 'ASC');
+        $queryPagos = $this->db->get();
+        $pagos = $queryPagos->result_array();
+
+        // Calcular total pagado
+        $total_pagado = 0;
+        foreach ($pagos as $pago) {
+            $total_pagado += (float)$pago['importe'];
+        }
+
         // Obtener datos de cliente y factura para filtrado
         $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
         $this->db->from($tablaFactcab . ' f');
@@ -4372,9 +4533,11 @@ public function obtenerDatosExpandidos_get()
             $recibos[$index]['productos'] = $productos;
         }
 
-        // Preparar respuesta con datos expandidos
+        // Preparar respuesta con datos expandidos incluyendo historial de pagos
         $datosExpandidos = array(
-            'recibos' => $recibos
+            'recibos' => $recibos,
+            'historialPagos' => $pagos,
+            'totalPagado' => $total_pagado
         );
 
         $respuesta = array(

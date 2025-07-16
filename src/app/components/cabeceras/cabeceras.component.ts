@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { Cabecera } from '../../interfaces/cabecera';
 import { Recibo } from 'src/app/interfaces/recibo';
 import { Table } from 'primeng/table';
@@ -30,6 +30,7 @@ export class CabecerasComponent implements OnDestroy {
   public selectedCabeceras: Cabecera[] = [];
   public selectedCabecerasIniciales: any;
   public totalSum: number = null;
+  public totalGeneralSaldos: number = 0;
   public importe: number = null;
   public tipo: TarjCredito[] = [];
   filteredTipo: TarjCredito[] = [];
@@ -84,18 +85,35 @@ export class CabecerasComponent implements OnDestroy {
   public numero_fac: number;
   private destroy$ = new Subject<void>();
 
-  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private cdr: ChangeDetectorRef) {
     this.getNombreSucursal();
   }
   ngOnInit(): void {
     this.clienteFromCuentaCorriente = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFromCuentaCorriente = JSON.parse(this.clienteFromCuentaCorriente);
-    console.log(this.clienteFromCuentaCorriente);
+    console.log('🔍 DEPURACIÓN - Cliente seleccionado:', this.clienteFromCuentaCorriente);
+    console.log('🔍 DEPURACIÓN - ID del cliente:', this.clienteFromCuentaCorriente.idcli);
+    
     let sucursal: string = sessionStorage.getItem('sucursal');
+    console.log('🔍 DEPURACIÓN - Sucursal:', sucursal);
+    console.log('🔍 DEPURACIÓN - Consultando tabla: factcab' + sucursal);
+    
     this._cargardata.cabecerax(sucursal, this.clienteFromCuentaCorriente.idcli).pipe(take(1)).subscribe((resp: any) => {
-      console.log(resp);
+      console.log('🔍 DEPURACIÓN - Respuesta de cabecerax:', resp);
+      console.log('🔍 DEPURACIÓN - Cantidad de registros:', resp.mensaje ? resp.mensaje.length : 0);
+      
+      if (resp.mensaje && resp.mensaje.length > 0) {
+        console.log('🔍 DEPURACIÓN - Primer registro encontrado:', resp.mensaje[0]);
+      } else {
+        console.warn('⚠️ Sin registros de cuenta corriente para cliente ID:', this.clienteFromCuentaCorriente.idcli);
+        console.log('🔍 DEPURACIÓN - Verificar si el cliente tiene facturas con saldo != 0 en factcab' + sucursal);
+      }
+      
       this.cabeceras = resp.mensaje;
-    }, (err) => { console.log(err); });
+      this.calcularTotalGeneralSaldos();
+    }, (err) => { 
+      console.error('❌ ERROR en cabecerax:', err);
+    });
     //cargo opciones de pago------------------------------
     this._cargardata.tarjcredito().pipe(take(1)).subscribe((resp: any) => {
       this.tipo = resp.mensaje;
@@ -107,7 +125,17 @@ export class CabecerasComponent implements OnDestroy {
     this.getVendedores();
     //-----------------------------------------------------
     //get clientes-----------------------------------------
-    this.cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
+    const clienteData = sessionStorage.getItem('datoscliente');
+    if (clienteData) {
+      try {
+        this.cliente = JSON.parse(clienteData);
+      } catch (error) {
+        console.error('Error al parsear datos del cliente:', error);
+        this.cliente = this.clienteFromCuentaCorriente;
+      }
+    } else {
+      this.cliente = this.clienteFromCuentaCorriente;
+    }
     //-----------------------------------------------------
     //get sucursal-----------------------------------------
     this.sucursal = sessionStorage.getItem('sucursal');
@@ -165,18 +193,74 @@ export class CabecerasComponent implements OnDestroy {
     this.filteredTipo = this.tipo.filter(item => item[dayField] === '1');
   }
   onSelectionChange(event: any) {
-    console.log(event);
-    this.selectedCabeceras = event.sort((a: any, b: any) => {
-      const dateA = new Date(a.emitido);
-      const dateB = new Date(b.emitido);
-      return dateA.getTime() - dateB.getTime();
-    });
-    let selectedCabecerasIniciales = this.selectedCabeceras;
-    this.selectedCabecerasIniciales = selectedCabecerasIniciales;
-    console.log(this.selectedCabecerasIniciales);
-    this.letraSelectedFormCabecera = this.selectedCabecerasIniciales[0].letra;
-    this.puntoventaSelectedFormCabecera = this.selectedCabecerasIniciales[0].puntoventa;
-    this.opcionesPagoFlag = this.evaluateEventTypes(event);
+    console.log('Selección cambió:', event);
+    
+    // Verificar que todos los documentos sean del mismo tipo
+    if (event.length > 0) {
+      const primerTipo = event[0].tipo;
+      
+      // Validar que todos los documentos seleccionados sean del mismo tipo
+      const tiposDistintos = event.some(item => item.tipo !== primerTipo);
+      
+      if (tiposDistintos) {
+        // Mostrar alerta y revertir selección
+        Swal.fire({
+          icon: 'warning',
+          title: 'Selección inválida',
+          text: 'No se pueden mezclar documentos de diferentes tipos (FC y PR)',
+          confirmButtonText: 'Entendido'
+        });
+        
+        // Revertir a la selección anterior usando setTimeout para que ocurra después del ciclo de Angular
+        setTimeout(() => {
+          this.selectedCabeceras = [...(this.selectedCabecerasIniciales || [])];
+          // Forzar detección de cambios para actualizar la UI
+          this.cdr.detectChanges();
+          // Recalcular total con la selección revertida
+          this.calculateTotalSum(this.selectedCabeceras);
+        }, 0);
+        return;
+      }
+      
+      // Ordenar por fecha
+      this.selectedCabeceras = event.sort((a: any, b: any) => {
+        const dateA = new Date(a.emitido);
+        const dateB = new Date(b.emitido);
+        return dateA.getTime() - dateB.getTime();
+      });
+      
+      // Configurar tipo de pago según el tipo de documento
+      if (primerTipo === 'PR') {
+        this.tipoVal = "EFECTIVO";
+        this.opcionesPagoFlag = false; // Ocultar dropdown de métodos de pago
+        this.codTarj = "11"; // Código de EFECTIVO
+      } else if (primerTipo === 'FC') {
+        this.tipoVal = "Condicion de Venta";
+        this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago
+        this.codTarj = ""; // Limpiar selección
+      }
+      
+      // Configurar datos de cabecera
+      if (this.selectedCabeceras.length > 0) {
+        this.letraSelectedFormCabecera = this.selectedCabeceras[0].letra;
+        this.puntoventaSelectedFormCabecera = this.selectedCabeceras[0].puntoventa;
+      }
+      
+      // Guardar selección actual como válida para futuras comparaciones
+      this.selectedCabecerasIniciales = [...this.selectedCabeceras];
+    } else {
+      // Si no hay selección, restablecer valores por defecto
+      this.selectedCabeceras = [];
+      this.tipoVal = "Condicion de Venta";
+      this.opcionesPagoFlag = true;
+      this.codTarj = "";
+      this.selectedCabecerasIniciales = [];
+    }
+    
+    // Actualizar tipoDoc basado en la selección
+    this.tipoDoc = event.length > 0 ? event[0].tipo : "FC";
+    
+    // Calcular total
     this.calculateTotalSum(this.selectedCabeceras);
   }
   evaluateEventTypes(event: any[]): boolean {
@@ -195,16 +279,35 @@ export class CabecerasComponent implements OnDestroy {
     return true;
   }
   calculateTotalSum(selectedCabeceras: any[]) {
-    this.totalSum = selectedCabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0);
+    this.totalSum = parseFloat(selectedCabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
+  }
+  
+  calcularTotalGeneralSaldos() {
+    if (this.cabeceras && this.cabeceras.length > 0) {
+      this.totalGeneralSaldos = parseFloat(this.cabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
+    }
   }
   // New function to handle the payment
   pago() {
     console.log(this.tipoVal);
+    
+    // Validar que haya documentos seleccionados
+    if (this.selectedCabeceras.length === 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Debe seleccionar al menos un documento para pagar',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+    
     if (this.totalSum <= 0) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'El saldo total es 0.',
+        text: 'El total a pagar debe ser mayor a 0',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
@@ -212,7 +315,8 @@ export class CabecerasComponent implements OnDestroy {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Por favor, ingrese un importe válido mayor que cero.',
+        text: 'El importe ingresado debe ser mayor a 0',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
@@ -221,22 +325,62 @@ export class CabecerasComponent implements OnDestroy {
         icon: 'error',
         title: 'Error',
         text: 'El importe ingresado es mayor que el saldo total.',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
-    if (this.tipoVal == 'Condicion de Venta') {
+    
+    // Validar método de pago solo para FC
+    if (this.selectedCabeceras[0].tipo === 'FC' && this.tipoVal == 'Condicion de Venta') {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Por favor, seleccione una condición de venta.',
+        text: 'Debe seleccionar un método de pago',
+        confirmButtonText: 'Entendido'
       });
       return;
     }
-    this.generarSalida();
+    
+    // Confirmación antes de procesar el pago
+    Swal.fire({
+      title: 'Confirmar Pago',
+      text: `¿Está seguro de procesar el pago de $${this.importe}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, procesar pago',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.generarSalida();
+      }
+    });
   }
   async generarSalida() {
     if (this.pendientes()) { // si estan completos los campos necesarios 
       try {
+        // ✅ CAPTURAR TODAS LAS VARIABLES AL INICIO ANTES DE CUALQUIER PROCESAMIENTO
+        const importeOriginal = this.importe;
+        const codTarjOriginal = this.codTarj;
+        const usuarioEmail = sessionStorage.getItem('emailOp') || this.usuario;
+
+        // ✅ VALIDAR ANTES DE CONTINUAR
+        if (!importeOriginal || importeOriginal <= 0) {
+          throw new Error('El importe debe ser mayor a 0');
+        }
+
+        console.log('Datos capturados para caja_movi:', {
+          importe: importeOriginal,
+          codTarj: codTarjOriginal,
+          usuario: usuarioEmail
+        });
+
+        // ✅ VALIDACIÓN ADICIONAL DE FORMA DE PAGO
+        if (!codTarjOriginal) {
+          console.warn('⚠️ No se ha seleccionado forma de pago - algunos campos serán NULL');
+        }
+
         await this.getNumeroComprobanteCabecera();
         await this.getNumeroComprobanteRecibo();
         const cabeceras = await this.ajuste(this.selectedCabeceras);
@@ -246,15 +390,26 @@ export class CabecerasComponent implements OnDestroy {
         const psucursal = await this.generacionPagoPsucursal();
         const cabecera = await this.generacionReciboCabeceras();
         const recibo = await this.generacionRecibo(this.selectedCabecerasIniciales);
+
+        // ✅ GENERAR CAJA_MOVI CON VALORES ORIGINALES CAPTURADOS
+        const caja_movi = await this.crearCajaMoviPago(importeOriginal, codTarjOriginal, usuarioEmail);
+
         let pagoCC = {
           cabeceras: this.cabecerasFiltered,//cabeceras, // aca tengo un array con las cabeceras seleccionadas y los saldos ajustados
           psucursal: psucursal, // aca tengo el objeto psucursal
           cabecera: cabecera, // aca tengo el objeto cabecera
-          recibo: recibo // aca tengo el objeto recibo
+          recibo: recibo, // aca tengo el objeto recibo
+          caja_movi: caja_movi  // ✅ NUEVO: Incluir caja_movi
         };
         this.envioDatos(pagoCC);
       } catch (error) {
         console.error('Error al generar los datos de pago:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al procesar el pago',
+          text: 'Hubo un problema al procesar el pago. Por favor, inténtelo nuevamente.',
+          confirmButtonText: 'Entendido'
+        });
       }
     }
   }
@@ -275,6 +430,10 @@ export class CabecerasComponent implements OnDestroy {
       console.log(resp);
       if (resp.mensaje == "Operación exitosa") {
         this.generarReciboImpreso(pagoCC);
+        // Recalcular el totalSum después del pago exitoso
+        this.calculateTotalSum(this.selectedCabeceras);
+        // Limpiar el campo de importe
+        this.importe = null;
         Swal.fire({
           icon: 'success',
           title: 'Pago realizado',
@@ -313,13 +472,13 @@ export class CabecerasComponent implements OnDestroy {
     console.log(numero_int);
     console.log(this.numerocomprobantecabecera + 1);
     //zona de correccion de fallas de tipos de datos
-    if (this.cliente.idcli == "") {
+    if (this.cliente && this.cliente.idcli == "") {
       this.cliente.idcli = 0;
     }
-    if (this.cliente.cod_iva == "") {
+    if (this.cliente && this.cliente.cod_iva == "") {
       this.cliente.cod_iva = 0;
     }
-    if (this.cliente.cuit == "") {
+    if (this.cliente && this.cliente.cuit == "") {
       this.cliente.cuit = 0;
     }
     if (this.codTarj == "") {
@@ -509,9 +668,9 @@ export class CabecerasComponent implements OnDestroy {
         const currentSaldo = parseFloat(cabecera.saldo.toString());
         if (currentSaldo <= remainingImporte) {
           cabecera.saldo = 0;
-          remainingImporte -= currentSaldo;
+          remainingImporte = parseFloat((remainingImporte - currentSaldo).toFixed(2));
         } else {
-          cabecera.saldo = currentSaldo - remainingImporte;
+          cabecera.saldo = parseFloat((currentSaldo - remainingImporte).toFixed(2));
           remainingImporte = 0;
         }
         this.currentSaldoArray.push(currentSaldo);
@@ -554,45 +713,191 @@ export class CabecerasComponent implements OnDestroy {
     }
   }
   abrirFormularioTarj() {
+    // Estilos CSS personalizados
+    const styles = `
+      <style>
+        /* Container styling */
+        .tarjeta-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .tarjeta-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .tarjeta-header {
+          background-color: #d1ecf1;
+          color: #0c5460;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #bee5eb;
+          display: flex;
+          align-items: center;
+        }
+        
+        .tarjeta-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .tarjeta-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Credit card input styling */
+        .card-input {
+          border-left: 3px solid #17a2b8 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #17a2b8;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos de la tarjeta',
-      html: `<input type="text" id="titular" class="swal2-input" placeholder="Titular">
-             <input type="number" id="dni" class="swal2-input" placeholder="DNI">
-             <input type="number" id="numero" class="swal2-input" placeholder="Número Tarjeta">
-             <input type="number" id="autorizacion" class="swal2-input" placeholder="Autorización">`,
+      title: '',
+      width: 800,
+      html: styles + `
+        <div class="tarjeta-form">
+          <div class="tarjeta-card">
+            <div class="tarjeta-header">
+              <i class="fa fa-credit-card"></i> Información de la Tarjeta
+            </div>
+            <div class="tarjeta-section">
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="titular" class="form-control" placeholder="Ingrese el nombre completo">
+                </div>
+                <div class="form-group">
+                  <label for="dni"><i class="fa fa-id-card"></i> DNI</label>
+                  <input type="number" id="dni" class="form-control" placeholder="Ingrese el DNI">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos de la Tarjeta</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta</label>
+                  <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
+                </div>
+                <div class="form-group">
+                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización</label>
+                  <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#17a2b8',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
         const titular = (<HTMLInputElement>document.getElementById('titular')).value;
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
         const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
+        
         if (!titular || !dni || !numero || !autorizacion) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
+        
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
         let reAutorizacion = new RegExp("^[0-9]{3}$");
-        if (!reNumero.test(numero)) {
-          Swal.showValidationMessage(`El número de la tarjeta no es válido`);
-          //return;
+        
+        if (!reTitular.test(titular)) {
+          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reDni.test(dni)) {
-          Swal.showValidationMessage(`El DNI no es válido`);
-          //return;
+          Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
+          return false;
         }
-        if (!reTitular.test(titular)) {
-          Swal.showValidationMessage(`El titular no es válido`);
-          //return;
+        if (!reNumero.test(numero)) {
+          Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
+          return false;
         }
         if (!reAutorizacion.test(autorizacion)) {
-          Swal.showValidationMessage(`La autorización no es válida`);
-          //return;
+          Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
+          return false;
         }
-        return { titular, dni, numero, autorizacion }
+        
+        return { titular, dni, numero, autorizacion };
       }
     }).then((result) => {
       if (result.value) {
@@ -600,28 +905,194 @@ export class CabecerasComponent implements OnDestroy {
         this.tarjeta.Dni = result.value.dni;
         this.tarjeta.Numero = result.value.numero;
         this.tarjeta.Autorizacion = result.value.autorizacion;
+        
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados',
+          text: 'Los datos de la tarjeta han sido registrados correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
       }
     });
   }
   abrirFormularioCheque() {
+    // Estilos CSS personalizados para cheques
+    const styles = `
+      <style>
+        /* Container styling */
+        .cheque-form {
+          padding: 0 15px;
+          max-width: 800px;
+          margin: 0 auto;
+        }
+        
+        /* Card styling */
+        .cheque-card {
+          background-color: #fcfcfc;
+          border-radius: 8px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+        
+        /* Header styling */
+        .cheque-header {
+          background-color: #cce5ff;
+          color: #004085;
+          padding: 15px;
+          font-weight: 600;
+          border-bottom: 1px solid #b8daff;
+          display: flex;
+          align-items: center;
+        }
+        
+        .cheque-header i {
+          margin-right: 10px;
+        }
+        
+        /* Form section styling */
+        .cheque-section {
+          padding: 20px;
+        }
+        
+        .form-row {
+          display: flex;
+          flex-wrap: wrap;
+          margin-bottom: 15px;
+        }
+        
+        .form-group {
+          flex: 1;
+          min-width: 250px;
+          padding: 0 10px;
+          margin-bottom: 15px;
+        }
+        
+        .form-group label {
+          display: block;
+          margin-bottom: 5px;
+          font-weight: 600;
+          color: #555;
+          font-size: 14px;
+        }
+        
+        .form-control {
+          width: 100%;
+          padding: 10px;
+          border: 1px solid #ced4da;
+          border-radius: 4px;
+          font-size: 14px;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-control:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        /* Input styling by type */
+        input[type="number"].form-control,
+        input[type="date"].form-control {
+          border-left: 3px solid #28a745;
+        }
+        
+        input[type="text"].form-control {
+          border-left: 3px solid #007bff;
+        }
+        
+        /* Money inputs styling */
+        .money-input {
+          border-left: 3px solid #dc3545 !important;
+          font-weight: 600;
+        }
+        
+        /* Subtitle styling */
+        .section-title {
+          font-size: 16px;
+          color: #343a40;
+          margin: 15px 0;
+          padding-left: 10px;
+          border-left: 4px solid #007bff;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+          .form-group {
+            flex: 100%;
+          }
+        }
+      </style>
+    `;
+
     Swal.fire({
-      title: 'Ingrese los datos del Cheque',
-      html:
-        `<input type="text" id="banco" class="swal2-input" placeholder="Banco">
-         <input type="number" id="ncuenta" class="swal2-input" placeholder="N° Cuenta">
-         <input type="number" id="ncheque" class="swal2-input" placeholder="N° Cheque">
-         <input type="text" id="nombre" class="swal2-input" placeholder="Nombre">
-         <input type="text" id="plaza" class="swal2-input" placeholder="Plaza">
-         <input type="number" id="importeimputar" class="swal2-input" placeholder="Importe a Imputar">
-         <input type="number" id="importecheque" class="swal2-input" placeholder="Importe del Cheque">
-         <input type="text" id="fechacheque" class="swal2-input" placeholder="Fecha del Cheque">`,
-      didOpen: () => {
-        // Cambiar el tipo de input a 'date' para activar el datepicker nativo
-        document.getElementById('fechacheque').setAttribute('type', 'date');
-      },
+      title: '',
+      width: 800,
+      html: styles + `
+        <div class="cheque-form">
+          <div class="cheque-card">
+            <div class="cheque-header">
+              <i class="fa fa-money-check-alt"></i> Información del Cheque
+            </div>
+            <div class="cheque-section">
+              <h4 class="section-title">Datos del Banco</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="banco"><i class="fa fa-university"></i> Banco</label>
+                  <input type="text" id="banco" class="form-control" placeholder="Nombre del banco">
+                </div>
+                <div class="form-group">
+                  <label for="ncuenta"><i class="fa fa-credit-card"></i> Número de Cuenta</label>
+                  <input type="number" id="ncuenta" class="form-control" placeholder="Ingrese el número de cuenta">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="ncheque"><i class="fa fa-file-invoice-dollar"></i> Número de Cheque</label>
+                  <input type="number" id="ncheque" class="form-control" placeholder="Ingrese el número de cheque">
+                </div>
+                <div class="form-group">
+                  <label for="plaza"><i class="fa fa-map-marker-alt"></i> Plaza</label>
+                  <input type="text" id="plaza" class="form-control" placeholder="Ingrese la plaza">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Datos del Titular</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nombre"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <input type="text" id="nombre" class="form-control" placeholder="Nombre completo del titular">
+                </div>
+                <div class="form-group">
+                  <label for="fechacheque"><i class="fa fa-calendar"></i> Fecha del Cheque</label>
+                  <input type="date" id="fechacheque" class="form-control">
+                </div>
+              </div>
+              
+              <h4 class="section-title">Importes</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="importeimputar"><i class="fa fa-dollar-sign"></i> Importe a Imputar</label>
+                  <input type="number" id="importeimputar" class="form-control money-input" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="importecheque"><i class="fa fa-money-bill"></i> Importe del Cheque</label>
+                  <input type="number" id="importecheque" class="form-control money-input" placeholder="0.00" step="0.01">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Guardar',
+      confirmButtonColor: '#007bff',
       cancelButtonText: 'Cancelar',
+      cancelButtonColor: '#dc3545',
+      focusConfirm: false,
       preConfirm: () => {
         const banco = (<HTMLInputElement>document.getElementById('banco')).value;
         const ncuenta = (<HTMLInputElement>document.getElementById('ncuenta')).value;
@@ -633,46 +1104,48 @@ export class CabecerasComponent implements OnDestroy {
         const fechacheque = (<HTMLInputElement>document.getElementById('fechacheque')).value;
 
         if (!banco || !ncuenta || !ncheque || !nombre || !plaza || !importeimputar || !importecheque || !fechacheque) {
-          Swal.showValidationMessage(`Por favor rellene todos los campos`);
-          //return;
+          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+          return false;
         }
+        
         let reBanco = new RegExp("^[a-zA-Z ]{1,40}$");
         let reNcuenta = new RegExp("^[0-9]{1,40}$");
         let reNcheque = new RegExp("^[0-9]{1,40}$");
         let reNombre = new RegExp("^[a-zA-Z ]{1,40}$");
         let rePlaza = new RegExp("^[a-zA-Z ]{1,40}$");
-        let reImporteImputar = new RegExp("^[0-9]{1,40}$");
-        let reImporteCheque = new RegExp("^[0-9]{1,40}$");
-        let reFechaCheque = new RegExp("^\\d{2}/\\d{2}/\\d{4}$");//("^[0-9]{1,40}$");
+        let reImporteImputar = new RegExp("^[0-9]+(\\.[0-9]{1,2})?$");
+        let reImporteCheque = new RegExp("^[0-9]+(\\.[0-9]{1,2})?$");
+        
         if (!reBanco.test(banco)) {
-          Swal.showValidationMessage(`El nombre del banco no es válido`);
-          //return;
+          Swal.showValidationMessage(`El nombre del banco no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reNcuenta.test(ncuenta)) {
-          Swal.showValidationMessage(`El numero de cuenta no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cuenta no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNcheque.test(ncheque)) {
-          Swal.showValidationMessage(`El numero de cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El número de cheque no es válido. Debe contener solo dígitos.`);
+          return false;
         }
         if (!reNombre.test(nombre)) {
-          Swal.showValidationMessage(`El nombre no es válido`);
-          //return;
+          Swal.showValidationMessage(`El nombre no es válido. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!rePlaza.test(plaza)) {
-          Swal.showValidationMessage(`La plaza no es válida`);
-          //return;
+          Swal.showValidationMessage(`La plaza no es válida. Debe contener solo letras y espacios.`);
+          return false;
         }
         if (!reImporteImputar.test(importeimputar)) {
-          Swal.showValidationMessage(`El importe a imputar no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe a imputar no es válido. Debe ser un número válido.`);
+          return false;
         }
         if (!reImporteCheque.test(importecheque)) {
-          Swal.showValidationMessage(`El importe del cheque no es válido`);
-          //return;
+          Swal.showValidationMessage(`El importe del cheque no es válido. Debe ser un número válido.`);
+          return false;
         }
-        return { banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque }
+        
+        return { banco, ncuenta, ncheque, nombre, plaza, importeimputar, importecheque, fechacheque };
       }
     }).then((result) => {
       if (result.value) {
@@ -685,6 +1158,15 @@ export class CabecerasComponent implements OnDestroy {
         this.cheque.ImporteCheque = result.value.importecheque;
         this.cheque.FechaCheque = result.value.fechacheque;
         console.log('Cheque guardado:', this.cheque);
+        
+        // Confirmación visual
+        Swal.fire({
+          icon: 'success',
+          title: 'Datos guardados',
+          text: 'Los datos del cheque han sido registrados correctamente',
+          timer: 1500,
+          showConfirmButton: false
+        });
       }
     }).catch((error) => {
       this.showNotification('Error al guardar el cheque');
@@ -713,6 +1195,16 @@ export class CabecerasComponent implements OnDestroy {
       return true;
     }
   }
+
+  getOperacionTexto(): string {
+    if (this.selectedCabeceras.length === 0) {
+      return 'Seleccione documentos';
+    }
+    
+    const primerTipo = this.selectedCabeceras[0].tipo;
+    return primerTipo === 'FC' ? 'FACTURA' : 'PRESUPUESTO';
+  }
+
   tipoDocChange(event) {
     console.log(event.target.value);
     this.tipoDoc = event.target.value;
@@ -777,10 +1269,101 @@ export class CabecerasComponent implements OnDestroy {
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+  // Nuevo método para crear caja_movi para pagos de cabeceras
+  crearCajaMoviPago(importePago: number, codTarjPago: string, usuarioPago: string): Promise<any> {
+    // ✅ CORREGIDO: Usar fecha argentina en lugar de UTC
+    const fechaArgentina = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires'
+    });
+    const fechaFormateada = fechaArgentina;
+
+    // Función auxiliar para limitar valores numéricos (igual que carrito)
+    const limitNumericValue = (value: any, limit: number) => {
+      if (value === null || value === undefined || value === '') return null;
+      const numValue = parseInt(value);
+      return !isNaN(numValue) ? Math.min(numValue, limit) : null;
+    };
+
+    // ✅ CORREGIDO: Buscar información de tarjeta usando parámetro
+    let tarjetaInfo: any = null;
+    if (codTarjPago) {
+      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+    }
+
+    // Obtener id_caja de forma asíncrona (IGUAL que en carrito)
+    const obtenerIdCaja = new Promise<number | null>((resolve) => {
+      if (tarjetaInfo && tarjetaInfo.idcp_ingreso) {
+        this._cargardata.getIdCajaFromConcepto(tarjetaInfo.idcp_ingreso).pipe(take(1)).subscribe(
+          (response: any) => {
+            if (response && response.mensaje && response.mensaje.length > 0) {
+              const idCaja = response.mensaje[0].id_caja;
+              console.log(`ID de caja obtenido: ${idCaja} para concepto: ${tarjetaInfo.idcp_ingreso}`);
+              resolve(idCaja);
+            } else {
+              console.error('No se pudo obtener id_caja para concepto:', tarjetaInfo.idcp_ingreso);
+              resolve(null);
+            }
+          },
+          error => {
+            console.error('Error al obtener id_caja:', error);
+            resolve(null);
+          }
+        );
+      } else {
+        resolve(null);
+      }
+    });
+
+    return obtenerIdCaja.then(idCajaObtenido => {
+      const cajaMovi = {
+        sucursal: limitNumericValue(this.sucursal, 999999),
+        codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
+        num_operacion: 0, // Se asignará en backend con id_num
+        fecha_mov: fechaFormateada,
+        importe_mov: importePago, // ✅ Usar parámetro en lugar de this.importe
+        descripcion_mov: '', // Se generará automáticamente en backend
+        fecha_emibco: this.cheque.FechaCheque || null,
+        banco: limitNumericValue(this.cheque.Banco, 9999999999),
+        num_cheque: limitNumericValue(this.cheque.Ncheque, 9999999999),
+        cuenta_mov: limitNumericValue(this.cheque.Ncuenta, 999999),
+        cliente: limitNumericValue(this.cliente.idcli, 9999999999),
+        proveedor: null,
+        plaza_cheque: this.cheque.Plaza || null,
+        codigo_mbco: null,
+        desc_bancaria: null,
+        filler: null,
+        fecha_cobro_bco: null,
+        fecha_vto_bco: null,
+        tipo_movi: 'A',
+        caja: idCajaObtenido,
+        letra: this.letraSelectedFormCabecera || null,
+        punto_venta: limitNumericValue(this.puntoventaSelectedFormCabecera, 9999),
+        tipo_comprobante: 'RC',
+        numero_comprobante: limitNumericValue(this.numerocomprobantecabecera + 1, 99999999),
+        marca_cerrado: 0,
+        usuario: usuarioPago || 'usuario_desconocido',
+        fecha_proceso: fechaFormateada
+      };
+
+      return cajaMovi;
+    });
+  }
+
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
-    let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
+    const clienteDataRec = sessionStorage.getItem('datoscliente');
+    let cliente = null;
+    if (clienteDataRec) {
+      try {
+        cliente = JSON.parse(clienteDataRec);
+      } catch (error) {
+        console.error('Error al parsear datos del cliente para recibo:', error);
+        cliente = this.clienteFromCuentaCorriente;
+      }
+    } else {
+      cliente = this.clienteFromCuentaCorriente;
+    }
     console.log(cliente);
     console.log(pagoCC);
     let numeroenPlabras = this.numeroAPalabras(totalImporte);

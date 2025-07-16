@@ -315,6 +315,8 @@ public function Cabecerax_post() //TOMA DE cabecera los datos y los sube a la ap
     // Modified query to filter by client and non-zero balance
     $this->db->where('cliente', $cliente);
     $this->db->where('saldo !=', 0);
+    // FILTRO IMPORTANTE: Solo mostrar facturas reales (no recibos RC) en cuenta corriente
+    $this->db->where('tipo !=', 'RC');
     $query = $this->db->get($tabla);
     $resp = $query->result_array();
 
@@ -356,6 +358,9 @@ public function CabecerasucNombreTarj_post()
                            tarjcredito.id_forma_pago')
                  ->from($tabla)
                  ->join('tarjcredito', $tabla . '.cod_condvta = tarjcredito.cod_tarj', 'left');
+                 
+        // FILTRO IMPORTANTE: Solo mostrar facturas reales (no recibos RC) en reportes
+        $this->db->where($tabla . '.tipo !=', 'RC');
 
         $query = $this->db->get();
         $resp = $query->result_array();
@@ -431,6 +436,8 @@ public function Cabecerasuc_post() //TOMA DE cabecera los datos y los sube a la 
     $tabla = "factcab".$sucursal;
 
     // Modified query to filter by client and non-zero balance
+    // FILTRO IMPORTANTE: Solo mostrar facturas reales (no recibos RC) en consultas generales
+    $this->db->where('tipo !=', 'RC');
     
     $query = $this->db->get($tabla);
     $resp = $query->result_array();

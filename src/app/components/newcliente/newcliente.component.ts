@@ -74,7 +74,7 @@ export class NewclienteComponent {
     if (form.valid)  // si el formulario es valido
     {
       const ivaArray: string[] = ["", "Responsable Inscripto", "Consumidor Final", "Monotributo", "Excento"];
-      let indexnuevocli: number = Math.floor((Math.random() * 9999999) + 10000);//genera un numero entre 10000 y 9999999 incluidos
+      let indexnuevocli: number = Math.floor((Math.random() * 979999) + 10000);//genera un numero entre 10000 y 989999 incluidos - limitado para compatibilidad con factcabx
       let sucursal: any = sessionStorage.getItem('sucursal');
       let nuevoclirandom: number = Math.floor((Math.random() * 99999) + 10000);
       let date = new Date();

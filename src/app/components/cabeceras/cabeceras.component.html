@@ -22,15 +22,16 @@
                 
                 <p-table #dtable [value]="cabeceras" [tableStyle]="{ 'min-width': '50rem' }" [paginator]="true"
                     [rows]="10"
-                    [globalFilterFields]="['tipo', 'numero_fac', 'cod_sucursal', 'emitido', 'vencimiento', 'saldo']"
+                    [globalFilterFields]="['tipo', 'numero_int', 'numero_fac', 'cod_sucursal', 'emitido', 'vencimiento', 'saldo']"
                     [(selection)]="selectedCabeceras" (selectionChange)="onSelectionChange($event)">
                     <ng-template pTemplate="header">
                         <tr>
                             <th style="width: 3rem">
                                 <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
                             </th>
-                            <th pSortableColumn="tipo" style="width:20%">Tipo<p-sortIcon field="tipo"></p-sortIcon></th>
-                            <th pSortableColumn="numero_fac" style="width:20%">N Factura<p-sortIcon
+                            <th pSortableColumn="tipo" style="width:15%">Tipo<p-sortIcon field="tipo"></p-sortIcon></th>
+                            <th pSortableColumn="numero_int" style="width:15%">Número Int<p-sortIcon field="numero_int"></p-sortIcon></th>
+                            <th pSortableColumn="numero_fac" style="width:15%">N Factura<p-sortIcon
                                     field="numero_fac"></p-sortIcon></th>
                             <th pSortableColumn="cod_sucursal" style="width:20%">Cod. Sucursal<p-sortIcon
                                     field="cod_sucursal"></p-sortIcon></th>
@@ -48,6 +49,7 @@
                             <td>
                                 <p-tableCheckbox [value]="cabecera"></p-tableCheckbox>
                             <td>{{ cabecera.tipo }}</td>
+                            <td>{{ cabecera.numero_int }}</td>
                             <td>{{ cabecera.numero_fac }}</td>
                             <td>{{ cabecera.cod_sucursal }}</td>
                             <td>{{ cabecera.emitido }}</td>
@@ -56,6 +58,11 @@
                         </tr>
                     </ng-template>
                 </p-table>
+                
+                <!-- Totalizador general de saldos -->
+                <div *ngIf="totalGeneralSaldos > 0" class="total-general-saldos">
+                    <strong>Total de Saldos: ${{ totalGeneralSaldos | number:'1.2-2' }}</strong>
+                </div>
                 
                 <!-- Total summary -->
                 <div *ngIf="totalSum !== null" class="total-summary">
@@ -83,10 +90,7 @@
                         <div class="form-row">
                             <label>Operación:</label>
                             <div class="input-container">
-                                <select class="form-control custom-select" (change)="tipoDocChange($event)">
-                                    <option value="FC">FACTURA</option>
-                                    <option value="PR">PRESUPUESTO</option>
-                                </select>
+                                <input type="text" class="form-control" [value]="getOperacionTexto()" readonly>
                             </div>
                         </div>
                         
@@ -129,7 +133,7 @@
                     <button class="btn btn-success" (click)="pago()">
                         <i class="fa fa-check"></i> Pagar
                     </button>
-                    <div *ngIf="this.opcionesPagoFlag" class="btn-group">
+                    <div *ngIf="this.opcionesPagoFlag && selectedCabeceras.length > 0 && selectedCabeceras[0].tipo === 'FC'" class="btn-group">
                         <button type="button" class="btn btn-info altura-boton">{{tipoVal}}</button>
                         <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split"
                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -140,6 +144,10 @@
                                 <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
                             </li>
                         </div>
+                    </div>
+                    
+                    <div *ngIf="selectedCabeceras.length > 0 && selectedCabeceras[0].tipo === 'PR'" class="payment-method-fixed">
+                        <span class="badge badge-success">EFECTIVO (Fijo para presupuestos)</span>
                     </div>
                 </div>
             </div>

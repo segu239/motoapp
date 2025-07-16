@@ -1,18 +1,26 @@
 <div class="card">
     <div class="card-body">
         <h4 class="card-title">{{clienteFrompuntoVenta.nombre}} 
-            <span class="badge badge-info" *ngIf="codTarj">Lista de Precios: {{tipoVal}}</span>
+            <span class="badge badge-info" *ngIf="codTarj && !esMayorista">Lista de Precios: {{tipoVal}}</span>
+            <span class="badge badge-warning" *ngIf="codTarj && esMayorista">
+                🏦 MAYORISTA - {{tipoVal}} (Precio 3)
+            </span>
         </h4>
         <div class="btn-group ml-2">
-            <button type="button" class="btn btn-info">{{tipoVal}}</button>
-            <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split" data-toggle="dropdown"
+            <button type="button" class="btn" [class.btn-info]="!esMayorista" [class.btn-warning]="esMayorista">
+                <span *ngIf="!esMayorista">{{tipoVal}}</span>
+                <span *ngIf="esMayorista">🏦 {{tipoVal}} (MAYORISTA)</span>
+            </button>
+            <button type="button" class="btn dropdown-toggle dropdown-toggle-split" [class.btn-info]="!esMayorista" [class.btn-warning]="esMayorista" data-toggle="dropdown"
                 aria-haspopup="true" aria-expanded="false">
             </button>
             <div class="dropdown-menu scroll_list">
                 <input type="text" class="form-control " placeholder="Buscar..." [(ngModel)]="searchText">
                 <li *ngFor="let item of filteredTipo | filter: searchText">
                     <a class="dropdown-item" (click)="selectTipo(item)" [class.active]="codTarj === item.cod_tarj">
-                        {{item.tarjeta }} <i *ngIf="codTarj === item.cod_tarj" class="fas fa-check ml-2"></i>
+                        <span *ngIf="!esMayorista">{{item.tarjeta}}</span>
+                        <span *ngIf="esMayorista">🏦 {{item.tarjeta}} (MAYORISTA - Precio 3)</span>
+                        <i *ngIf="codTarj === item.cod_tarj" class="fas fa-check ml-2"></i>
                     </a>
                 </li>
             </div>
@@ -21,7 +29,8 @@
             <!-- Loading indicator -->
             <div class="alert alert-warning mb-3" *ngIf="loadingLocal">
                 <i class="fa fa-spinner fa-spin mr-2"></i> 
-                Cargando datos, por favor espere...
+                <span *ngIf="!esMayorista">Cargando datos, por favor espere...</span>
+                <span *ngIf="esMayorista">🏦 MAYORISTA - Cargando datos con precios mayoristas...</span>
             </div>
             
             <!-- Mensaje informativo cuando no hay condición de venta seleccionada -->
