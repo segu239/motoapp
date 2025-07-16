@@ -69,6 +69,9 @@ export class Historialventas2Component implements OnInit, OnDestroy {
   public mostrarToggleGlobal: boolean = false;
   public currentUser: User | null = null;
   
+  // Mapeo de usuarios ID -> nombre
+  private usuariosMap: Map<string, string> = new Map();
+  
   // Subscripciones
   private subscriptions: Subscription[] = [];
   private datosSubscription: Subscription | null = null;
@@ -137,6 +140,9 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     
     // Cargar tarjetas para el totalizador
     this.cargarTarjetas();
+    
+    // Cargar usuarios para el mapeo
+    this.cargarUsuarios();
   }
 
   ngOnDestroy(): void {
@@ -797,6 +803,89 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     );
   }
 
+  // Cargar usuarios para el mapeo ID -> nombre
+  private cargarUsuarios(): void {
+    this.subscriptions.push(
+      this.crudService.getListSnap('usuarios/cliente').subscribe({
+        next: (data) => {
+          this.usuariosMap.clear();
+          data.forEach(item => {
+            const usuario = item.payload.val() as any;
+            const uid = item.key;
+            if (uid && usuario) {
+              // Mapear tanto por UID como por username si existe
+              const nombreCompleto = `${usuario.nombre || ''} ${usuario.apellido || ''}`.trim();
+              this.usuariosMap.set(uid, nombreCompleto);
+              
+              // También mapear por username si existe
+              if (usuario.username) {
+                this.usuariosMap.set(usuario.username, nombreCompleto);
+              }
+            }
+          });
+          console.log('Usuarios cargados para mapeo:', this.usuariosMap);
+        },
+        error: (error) => {
+          console.error('Error al cargar usuarios:', error);
+        }
+      })
+    );
+  }
+
+  // Obtener nombre del usuario por ID
+  public obtenerNombreUsuario(usuarioId: string): string {
+    if (!usuarioId) {
+      return 'Usuario desconocido';
+    }
+    
+    // Limpiar espacios en blanco del campo usuario
+    const usuarioLimpio = usuarioId.trim();
+    
+    if (!usuarioLimpio) {
+      return 'Usuario desconocido';
+    }
+    
+    // Si parece ser un nombre (no solo números), devolverlo directamente
+    if (!/^\d+$/.test(usuarioLimpio)) {
+      return usuarioLimpio;
+    }
+    
+    // Si es un ID numérico, intentar mapeo
+    return this.usuariosMap.get(usuarioLimpio) || `Usuario ${usuarioLimpio}`;
+  }
+
+  // Calcular saldo pendiente después de un pago específico
+  public calcularSaldoDespuesPago(pago: any, venta: HistorialVenta2, expandedData: any): number {
+    if (!expandedData.historialPagos || !pago) {
+      return venta.importe;
+    }
+    
+    // Ordenar pagos por fecha ascendente para procesarlos en orden cronológico
+    const pagosOrdenados = [...expandedData.historialPagos].sort((a, b) => {
+      return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+    });
+    
+    // Encontrar el índice del pago actual
+    const indicePagoActual = pagosOrdenados.findIndex(p => 
+      p.recibo === pago.recibo && 
+      p.fecha === pago.fecha && 
+      p.importe === pago.importe
+    );
+    
+    if (indicePagoActual === -1) {
+      return venta.importe;
+    }
+    
+    // Calcular total pagado hasta este pago (inclusive)
+    let totalPagadoHastaPago = 0;
+    for (let i = 0; i <= indicePagoActual; i++) {
+      totalPagadoHastaPago += parseFloat(pagosOrdenados[i].importe) || 0;
+    }
+    
+    // Retornar saldo pendiente después de este pago
+    return venta.importe - totalPagadoHastaPago;
+  }
+
   // Calcular totalizador
   public calcularTotalizador(): void {
     if (!this.historialVentas2 || this.historialVentas2.length === 0) {
@@ -1110,6 +1199,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       // Obtener datos adicionales necesarios
       const cliente = await this.obtenerDatosCliente(venta.cliente!);
       const sucursalNombre = await this.obtenerNombreSucursal(venta.sucursal);
+      
+      // Obtener datos expandidos para calcular saldo
+      const ventaExpandida = this.getExpandedData(venta);
+      const saldoPendiente = ventaExpandida ? this.calcularSaldoDespuesPago(pago, venta, ventaExpandida) : venta.importe;
 
       // Preparar datos para el recibo
       const datosRecibo = {
@@ -1121,7 +1214,9 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         usuario: pago.usuario,
         puntoVenta: pago.c_puntoventa,
         tipoDocumento: pago.c_tipo,
-        numeroFactura: pago.c_numero
+        numeroFactura: pago.c_numero,
+        saldoPendiente: saldoPendiente,
+        importeOriginal: venta.importe
       };
 
       // Generar PDF
@@ -1270,9 +1365,11 @@ export class Historialventas2Component implements OnInit, OnDestroy {
             body: [
               ['Concepto', 'Detalle'],
               ['Pago parcial', `Factura Nº ${datos.numeroFactura}`],
-              ['Importe', `$ ${parseFloat(datos.importe).toFixed(2)}`],
+              ['Importe Original', `$ ${parseFloat(datos.importeOriginal).toFixed(2)}`],
+              ['Importe Pagado', `$ ${parseFloat(datos.importe).toFixed(2)}`],
+              ['Saldo Pendiente', `$ ${parseFloat(datos.saldoPendiente).toFixed(2)}`],
               ['En letras', numeroEnPalabras],
-              ['Usuario', datos.usuario],
+              ['Usuario', this.obtenerNombreUsuario(datos.usuario)],
               ['Punto de Venta', datos.puntoVenta.toString()]
             ],
             bold: true,

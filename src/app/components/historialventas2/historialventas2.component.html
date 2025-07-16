@@ -410,6 +410,7 @@
                                                             <th>Recibo</th>
                                                             <th>Tipo</th>
                                                             <th>Usuario</th>
+                                                            <th>Saldo Pendiente</th>
                                                             <th>Acciones</th>
                                                         </tr>
                                                     </ng-template>
@@ -419,7 +420,12 @@
                                                             <td>{{ pago.importe | currency:'ARS':'symbol':'1.2-2' }}</td>
                                                             <td>{{ pago.recibo }}</td>
                                                             <td>{{ pago.c_tipo }}</td>
-                                                            <td>{{ pago.usuario }}</td>
+                                                            <td>{{ obtenerNombreUsuario(pago.usuario) }}</td>
+                                                            <td>
+                                                                <span class="badge bg-danger">
+                                                                    {{ calcularSaldoDespuesPago(pago, venta, expandedData) | currency:'ARS':'symbol':'1.2-2' }}
+                                                                </span>
+                                                            </td>
                                                             <td>
                                                                 <button 
                                                                     class="btn btn-sm btn-outline-primary"
