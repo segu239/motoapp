@@ -9,6 +9,7 @@ import { HistorialVenta2 } from '../../interfaces/historial-venta2';
 import { VentaExpandida } from '../../interfaces/recibo-expanded';
 import { TotalizadorGeneral, TotalizadorTipoPago, TotalizadorPorTipo, TotalizadorPorSucursal } from '../../interfaces/totalizador-historial';
 import { PdfGeneratorService } from '../../services/pdf-generator.service';
+import { HistorialPdfService } from '../../services/historial-pdf.service';
 import { CargardataService } from '../../services/cargardata.service';
 import { CrudService } from '../../services/crud.service';
 import { AuthService } from '../../services/auth.service';
@@ -82,6 +83,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private pdfGeneratorService: PdfGeneratorService,
+    private historialPdfService: HistorialPdfService,
     private cargardataService: CargardataService,
     private crudService: CrudService,
     private dialogService: DialogService,
@@ -639,6 +641,31 @@ export class Historialventas2Component implements OnInit, OnDestroy {
 
   // Generar PDF del recibo seleccionado
   async generarPDF(venta: HistorialVenta2): Promise<void> {
+    try {
+      Swal.fire({
+        title: 'Generando PDF...',
+        text: 'Por favor espere mientras se prepara el documento',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Usar el nuevo servicio para generar PDF con datos completos
+      await this.historialPdfService.generarPDFHistorialCompleto(venta);
+
+      Swal.close();
+      this.showNotification('PDF generado exitosamente', 'success');
+
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      Swal.close();
+      this.showNotification('Error al generar el PDF: ' + error.message, 'error');
+    }
+  }
+
+  // Método legacy mantenido para compatibilidad
+  async generarPDFLegacy(venta: HistorialVenta2): Promise<void> {
     try {
       Swal.fire({
         title: 'Generando PDF...',
