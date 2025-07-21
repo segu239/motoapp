@@ -529,7 +529,9 @@ export class CarritoComponent implements OnDestroy {
       iva2: 0,
       iva3: 0,
       bonifica: 0,
+      bonifica_tipo: 'P', // Por defecto porcentaje
       interes: 0,
+      interes_tipo: 'P', // Por defecto porcentaje
       saldo: saldo,//this.suma,
       dorigen: true,
       cod_condvta: limitNumericValue(codvent, 999),

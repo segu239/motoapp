@@ -5,6 +5,7 @@ import { HistorialVenta2 } from '../interfaces/historial-venta2';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { CargardataService } from './cargardata.service';
+import { CrudService } from './crud.service';
 import { take } from 'rxjs/operators';
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
@@ -28,6 +29,10 @@ interface DatosRecibo {
   numerocomprobante: string;
   fecha: string;
   total: number;
+  bonifica?: number;
+  bonifica_tipo?: string;
+  interes?: number;
+  interes_tipo?: string;
   cliente: Cliente;
   tipoDoc: string;
   puntoventa: number;
@@ -43,7 +48,8 @@ export class HistorialPdfService {
 
   constructor(
     private http: HttpClient,
-    private _cargardata: CargardataService
+    private _cargardata: CargardataService,
+    private _crud: CrudService
   ) {}
 
   // ========== MÉTODOS DE CONSULTA A LA BASE DE DATOS ==========
@@ -97,6 +103,36 @@ export class HistorialPdfService {
     return this.http.post(`${this.baseUrl}/NumeroComprobantePDF`, payload);
   }
 
+  // ========== MÉTODO PARA OBTENER NÚMERO SECUENCIAL ==========
+
+  private async obtenerNumeroSecuencial(tipoDoc: string): Promise<string> {
+    try {
+      // Mapeo de tipos de documento a claves de Firebase
+      const mapaSecuencial = {
+        'PR': 'presupuesto',
+        'CS': 'consulta', 
+        'RC': 'recibo',
+        'FC': 'factura',
+        'NC': 'notacredito',
+        'ND': 'notadebito',
+        'NV': 'devolucion'
+      };
+
+      const claveFirebase = mapaSecuencial[tipoDoc];
+      
+      if (claveFirebase) {
+        const numero = await this._crud.getNumeroSecuencial(claveFirebase).pipe(take(1)).toPromise();
+        return numero?.toString() || '0';
+      }
+      
+      // Si no se encuentra el tipo, devuelve 0 por defecto
+      return '0';
+    } catch (error) {
+      console.warn('Error al obtener número secuencial:', error);
+      return '0';
+    }
+  }
+
   // ========== MÉTODO PRINCIPAL PARA HISTORIAL ==========
 
   async generarPDFHistorialCompleto(ventaData: HistorialVenta2): Promise<void> {
@@ -110,13 +146,14 @@ export class HistorialPdfService {
         return;
       }
       
-      // Obtener todos los datos necesarios en paralelo
-      const [cabeceraData, clienteData, productosData, sucursalData, numeroData] = await Promise.all([
+      // Obtener todos los datos necesarios en paralelo, incluyendo número secuencial
+      const [cabeceraData, clienteData, productosData, sucursalData, numeroData, numeroSecuencial] = await Promise.all([
         this.getCabeceraCompletaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int).toPromise(),
         this.getClienteCompletoPDF(ventaData.sucursal, ventaData.cliente).toPromise(),
         this.getProductosVentaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int).toPromise(),
         this.getSucursalInfoPDF(ventaData.sucursal).toPromise(),
-        this.getNumeroComprobantePDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int, ventaData.numero_fac).toPromise()
+        this.getNumeroComprobantePDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int, ventaData.numero_fac).toPromise(),
+        this.obtenerNumeroSecuencial(ventaData.tipo)
       ]);
 
       // Procesar y limpiar los datos
@@ -148,9 +185,13 @@ export class HistorialPdfService {
           nomart: item.nomart,
           precio: item.precio
         })),
-        numerocomprobante: numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
+        numerocomprobante: numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
         fecha: ventaData.emitido,
         total: productos.reduce((sum: number, item: any) => sum + (item.cantidad * item.precio), 0),
+        bonifica: ventaData.bonifica || cabecera.bonifica || 0,
+        bonifica_tipo: ventaData.bonifica_tipo || cabecera.bonifica_tipo || 'P',
+        interes: ventaData.interes || cabecera.interes || 0,
+        interes_tipo: ventaData.interes_tipo || cabecera.interes_tipo || 'P',
         cliente: {
           nombre: (cliente.nombre || 'PRUEBA DE LATA').trim(),
           direccion: (cliente.direccion || 'LA PRUEBA').trim(),
@@ -300,6 +341,31 @@ export class HistorialPdfService {
             bold: true,
           },
         },
+        // Información Financiera Adicional
+        ...(datos.bonifica && datos.bonifica > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['BONIFICACIÓN (' + (datos.bonifica_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + datos.bonifica],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
+        ...(datos.interes && datos.interes > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['INTERÉS (' + (datos.interes_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + datos.interes],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
         {
           style: 'tableExample',
           table: {

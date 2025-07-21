@@ -235,6 +235,26 @@
                                 <p-sortIcon field="importe"></p-sortIcon>
                                 <p-columnFilter type="numeric" field="importe" display="menu" matchMode="equals"></p-columnFilter>
                             </th>
+                            <th *ngIf="isColumnVisible('bonifica')" pSortableColumn="bonifica">
+                                Bonificación
+                                <p-sortIcon field="bonifica"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="bonifica" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('bonifica_tipo')" pSortableColumn="bonifica_tipo">
+                                Tipo Bonif.
+                                <p-sortIcon field="bonifica_tipo"></p-sortIcon>
+                                <p-columnFilter type="text" field="bonifica_tipo" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('interes')" pSortableColumn="interes">
+                                Interés
+                                <p-sortIcon field="interes"></p-sortIcon>
+                                <p-columnFilter type="numeric" field="interes" display="menu" matchMode="equals"></p-columnFilter>
+                            </th>
+                            <th *ngIf="isColumnVisible('interes_tipo')" pSortableColumn="interes_tipo">
+                                Tipo Inter.
+                                <p-sortIcon field="interes_tipo"></p-sortIcon>
+                                <p-columnFilter type="text" field="interes_tipo" display="menu" matchMode="contains"></p-columnFilter>
+                            </th>
                             <th *ngIf="isColumnVisible('saldo')" pSortableColumn="saldo">
                                 Saldo
                                 <p-sortIcon field="saldo"></p-sortIcon>
@@ -272,6 +292,18 @@
                             <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('importe')">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('bonifica')">{{ venta.bonifica | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('bonifica_tipo')">
+                                <span class="badge" [class]="venta.bonifica_tipo === 'P' ? 'badge-info' : 'badge-success'">
+                                    {{ venta.bonifica_tipo === 'P' ? '%' : '$' }}
+                                </span>
+                            </td>
+                            <td *ngIf="isColumnVisible('interes')">{{ venta.interes | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('interes_tipo')">
+                                <span class="badge" [class]="venta.interes_tipo === 'P' ? 'badge-info' : 'badge-success'">
+                                    {{ venta.interes_tipo === 'P' ? '%' : '$' }}
+                                </span>
+                            </td>
                             <td *ngIf="isColumnVisible('saldo')">{{ venta.saldo | currency:'$':'symbol':'1.2-2' }}</td>
                             <td *ngIf="isColumnVisible('usuario')">{{ venta.usuario }}</td>
                         </tr>
@@ -312,6 +344,18 @@
                                                                 </div>
                                                                 <div class="col-md-2">
                                                                     <strong>Usuario:</strong> {{ recibo.usuario }}
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Bonificación:</strong> {{ recibo.bonifica | currency:'$':'symbol':'1.2-2' }}
+                                                                    <span class="badge badge-sm ms-1" [class]="recibo.bonifica_tipo === 'P' ? 'badge-info' : 'badge-success'">
+                                                                        {{ recibo.bonifica_tipo === 'P' ? '%' : '$' }}
+                                                                    </span>
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <strong>Interés:</strong> {{ recibo.interes | currency:'$':'symbol':'1.2-2' }}
+                                                                    <span class="badge badge-sm ms-1" [class]="recibo.interes_tipo === 'P' ? 'badge-info' : 'badge-success'">
+                                                                        {{ recibo.interes_tipo === 'P' ? '%' : '$' }}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                         </div>

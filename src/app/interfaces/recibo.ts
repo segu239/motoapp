@@ -16,6 +16,8 @@ export interface Recibo {
     cod_sucursal: number;
     fec_proceso?: any;
     bonifica: number;
+    bonifica_tipo: string;   // Campo requerido, no opcional
     interes: number;
+    interes_tipo: string;    // Campo requerido, no opcional
     id_fac: number;
 }

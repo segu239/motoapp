@@ -350,8 +350,8 @@ export class HistorialventasComponent implements OnInit, OnDestroy {
 
           <div class="mb-3">
             <h5 class="text-warning">💰 Información Financiera</h5>
-            <p><strong>Bonificación:</strong> ${formatearImporte(datosRecibo.bonifica)}</p>
-            <p><strong>Interés:</strong> ${formatearImporte(datosRecibo.interes)}</p>
+            <p><strong>Bonificación:</strong> ${formatearImporte(datosRecibo.bonifica)} (${datosRecibo.bonifica_tipo === 'P' ? 'Porcentaje' : 'Importe'})</p>
+            <p><strong>Interés:</strong> ${formatearImporte(datosRecibo.interes)} (${datosRecibo.interes_tipo === 'P' ? 'Porcentaje' : 'Importe'})</p>
             <p><strong>Cuota:</strong> ${datosRecibo.c_cuota || 'Sin cuota'}</p>
             <p><strong>Tipo de Factura:</strong> ${datosRecibo.c_tipf}</p>
           </div>

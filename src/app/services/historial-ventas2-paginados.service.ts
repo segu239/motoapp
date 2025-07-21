@@ -558,6 +558,15 @@ export class HistorialVentas2PaginadosService {
     }
 
     return ventas.map(item => {
+      // Debug de campos bonifica e interes
+      console.log('DEBUG - Item del backend:', {
+        numero_fac: item.numero_fac,
+        bonifica: item.bonifica,
+        bonifica_tipo: item.bonifica_tipo,
+        interes: item.interes,
+        interes_tipo: item.interes_tipo
+      });
+
       // Calcular importe como exento + basico + iva1 + iva2 + iva3
       const exento = parseFloat(item.exento) || 0;
       const basico = parseFloat(item.basico) || 0;
@@ -576,6 +585,10 @@ export class HistorialVentas2PaginadosService {
         emitido: item.emitido || '',
         vencimiento: item.vencimiento || '',
         importe: parseFloat(importe.toFixed(2)),
+        bonifica: parseFloat(item.bonifica) || 0,
+        bonifica_tipo: item.bonifica_tipo || 'P',
+        interes: parseFloat(item.interes) || 0,
+        interes_tipo: item.interes_tipo || 'P',
         saldo: parseFloat(item.saldo) || 0,
         usuario: item.usuario || '',
         // Campos auxiliares

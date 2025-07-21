@@ -18,6 +18,10 @@ import Swal from 'sweetalert2';
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { TotalizadorModalComponent } from './totalizador-modal.component';
 import { User } from '../../interfaces/user';
+import * as pdfMake from 'pdfmake/build/pdfmake';
+import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
 interface Column {
   field: string;
@@ -165,6 +169,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       { field: 'emitido', header: 'Emitido' },
       { field: 'vencimiento', header: 'Vencimiento' },
       { field: 'importe', header: 'Importe' },
+      { field: 'bonifica', header: 'Bonificación' },
+      { field: 'bonifica_tipo', header: 'Tipo Bonif.' },
+      { field: 'interes', header: 'Interés' },
+      { field: 'interes_tipo', header: 'Tipo Inter.' },
       { field: 'saldo', header: 'Saldo' },
       { field: 'usuario', header: 'Usuario' }
     ];
@@ -1261,13 +1269,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
 
   // Generar PDF del recibo usando pdfMake con la misma estética del carrito
   private async generarPDFReciboPago(datos: any): Promise<void> {
-    // Usar imports estáticos como en cabeceras.component.ts
-    const pdfMake = await import('pdfmake/build/pdfmake');
-    const pdfFonts = await import('pdfmake/build/vfs_fonts');
-    
-    // Configurar vfs de forma compatible con la versión actual
-    const pdfMakeDefault = (pdfMake as any).default || pdfMake;
-    pdfMakeDefault.vfs = pdfFonts.pdfMake.vfs;
+    // Usar imports estáticos ya configurados al inicio del archivo
 
     // Convertir número a palabras (función simplificada)
     const numeroEnPalabras = this.convertirNumeroAPalabras(datos.importe);
@@ -1462,7 +1464,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     // Generar y descargar PDF
     const fechaFormateada = new Date(datos.fecha).toLocaleDateString('es-ES').replace(/\//g, '-');
     const fileName = `${datos.sucursalNombre}_RECIBO_${datos.numeroRecibo}_${fechaFormateada}.pdf`;
-    pdfMakeDefault.createPdf(documentDefinition).download(fileName);
+    pdfMake.createPdf(documentDefinition).download(fileName);
   }
 
   // Convertir número a palabras (función simplificada)

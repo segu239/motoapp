@@ -40,6 +40,8 @@ export class CabecerasComponent implements OnDestroy {
   public activaDatos: number;
   public interes: number = 0;
   public bonificacion: number = 0;
+  public interesType: string = 'P';      // P = Porcentaje, I = Importe
+  public bonificacionType: string = 'P'; // P = Porcentaje, I = Importe
   public tarjeta = {
     Titular: '',
     Dni: 0,
@@ -502,7 +504,9 @@ export class CabecerasComponent implements OnDestroy {
       iva2: 0,
       iva3: 0,
       bonifica: this.bonificacion,
+      bonifica_tipo: this.bonificacionType,
       interes: this.interes,
+      interes_tipo: this.interesType,
       saldo: 0,//this.suma,
       dorigen: false,
       cod_condvta: this.codTarj,
@@ -636,7 +640,9 @@ export class CabecerasComponent implements OnDestroy {
         cod_sucursal: Number(this.sucursal), //fijo para el array
         fec_proceso: this.FechaCalend,//this.FechaCalend,//fecha de cierre con caja puede ser otro dia   ?
         bonifica: this.bonificacion,
+        bonifica_tipo: this.bonificacionType,
         interes: this.interes,
+        interes_tipo: this.interesType,
         id_fac: this.numerocomprobantecabecera + 1// fijo para el array
       };
       if (recibo.importe > 0) {

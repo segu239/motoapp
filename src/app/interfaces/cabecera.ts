@@ -16,7 +16,9 @@ export interface Cabecera {
     iva2?: number;
     iva3?: number;
     bonifica?: number;
+    bonifica_tipo?: string;  // 'P' = Porcentaje, 'I' = Importe
     interes?: number;
+    interes_tipo?: string;   // 'P' = Porcentaje, 'I' = Importe
     saldo?: number;
     dorigen?: boolean;
     cod_condvta?: number;
