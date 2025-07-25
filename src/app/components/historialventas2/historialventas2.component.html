@@ -382,10 +382,11 @@
                                                                     <td>
                                                                         <span *ngIf="pago.bonifica > 0" class="badge bg-warning">
                                                                             <ng-container *ngIf="pago.bonifica_tipo === 'P'; else pagoBonificaMonetaria">
-                                                                                {{ pago.bonifica }}% ({{ calcularValorPorcentaje(pago.bonifica, pago.importe) | currency:'$':'symbol':'1.2-2' }})
+                                                                                <i class="pi pi-percentage me-1"></i>{{ pago.bonifica }}% 
+                                                                                <small>({{ calcularValorPorcentaje(pago.bonifica, pago.importe) | currency:'$':'symbol':'1.2-2' }})</small>
                                                                             </ng-container>
                                                                             <ng-template #pagoBonificaMonetaria>
-                                                                                {{ pago.bonifica | currency:'$':'symbol':'1.2-2' }}
+                                                                                <i class="pi pi-dollar me-1"></i>{{ pago.bonifica | currency:'$':'symbol':'1.2-2' }}
                                                                             </ng-template>
                                                                         </span>
                                                                         <span *ngIf="pago.bonifica <= 0" class="text-muted">-</span>
@@ -393,10 +394,11 @@
                                                                     <td>
                                                                         <span *ngIf="pago.interes > 0" class="badge bg-danger">
                                                                             <ng-container *ngIf="pago.interes_tipo === 'P'; else pagoInteresMonetario">
-                                                                                {{ pago.interes }}% ({{ calcularValorPorcentaje(pago.interes, pago.importe) | currency:'$':'symbol':'1.2-2' }})
+                                                                                <i class="pi pi-percentage me-1"></i>{{ pago.interes }}% 
+                                                                                <small>({{ calcularValorPorcentaje(pago.interes, pago.importe) | currency:'$':'symbol':'1.2-2' }})</small>
                                                                             </ng-container>
                                                                             <ng-template #pagoInteresMonetario>
-                                                                                {{ pago.interes | currency:'$':'symbol':'1.2-2' }}
+                                                                                <i class="pi pi-dollar me-1"></i>{{ pago.interes | currency:'$':'symbol':'1.2-2' }}
                                                                             </ng-template>
                                                                         </span>
                                                                         <span *ngIf="pago.interes <= 0" class="text-muted">-</span>
