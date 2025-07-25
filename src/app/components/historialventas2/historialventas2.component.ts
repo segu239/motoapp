@@ -490,6 +490,14 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
+  // Calcular valor monetario de un porcentaje
+  calcularValorPorcentaje(porcentaje: number | undefined, importe: number | undefined): number {
+    if (!porcentaje || !importe || porcentaje === 0 || importe === 0) {
+      return 0;
+    }
+    return (porcentaje * importe) / 100;
+  }
+
   // Forzar actualización
   forceRefresh(): void {
     if (this.idCliente === 0) {

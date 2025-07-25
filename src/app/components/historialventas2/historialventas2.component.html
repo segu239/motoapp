@@ -292,13 +292,37 @@
                             <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('importe')">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</td>
-                            <td *ngIf="isColumnVisible('bonifica')">{{ venta.bonifica | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('bonifica')">
+                                <ng-container *ngIf="venta.bonifica && venta.bonifica > 0; else noBonifica">
+                                    <ng-container *ngIf="venta.bonifica_tipo === 'P'; else bonificaMonetaria">
+                                        {{ venta.bonifica }}% ({{ calcularValorPorcentaje(venta.bonifica, venta.importe) | currency:'$':'symbol':'1.2-2' }})
+                                    </ng-container>
+                                    <ng-template #bonificaMonetaria>
+                                        {{ venta.bonifica | currency:'$':'symbol':'1.2-2' }}
+                                    </ng-template>
+                                </ng-container>
+                                <ng-template #noBonifica>
+                                    <span class="text-muted">-</span>
+                                </ng-template>
+                            </td>
                             <td *ngIf="isColumnVisible('bonifica_tipo')">
                                 <span class="badge" [class]="venta.bonifica_tipo === 'P' ? 'badge-info' : 'badge-success'">
                                     {{ venta.bonifica_tipo === 'P' ? '%' : '$' }}
                                 </span>
                             </td>
-                            <td *ngIf="isColumnVisible('interes')">{{ venta.interes | currency:'$':'symbol':'1.2-2' }}</td>
+                            <td *ngIf="isColumnVisible('interes')">
+                                <ng-container *ngIf="venta.interes && venta.interes > 0; else noInteres">
+                                    <ng-container *ngIf="venta.interes_tipo === 'P'; else interesMonetario">
+                                        {{ venta.interes }}% ({{ calcularValorPorcentaje(venta.interes, venta.importe) | currency:'$':'symbol':'1.2-2' }})
+                                    </ng-container>
+                                    <ng-template #interesMonetario>
+                                        {{ venta.interes | currency:'$':'symbol':'1.2-2' }}
+                                    </ng-template>
+                                </ng-container>
+                                <ng-template #noInteres>
+                                    <span class="text-muted">-</span>
+                                </ng-template>
+                            </td>
                             <td *ngIf="isColumnVisible('interes_tipo')">
                                 <span class="badge" [class]="venta.interes_tipo === 'P' ? 'badge-info' : 'badge-success'">
                                     {{ venta.interes_tipo === 'P' ? '%' : '$' }}
@@ -413,13 +437,23 @@
                                                                     <td><strong>{{ pago.importe | currency:'$':'symbol':'1.2-2' }}</strong></td>
                                                                     <td>
                                                                         <span *ngIf="pago.bonifica > 0" class="badge bg-warning">
-                                                                            {{ pago.bonifica | currency:'$':'symbol':'1.2-2' }} {{ pago.bonifica_tipo === 'P' ? '%' : '$' }}
+                                                                            <ng-container *ngIf="pago.bonifica_tipo === 'P'; else pagoBonificaMonetaria">
+                                                                                {{ pago.bonifica }}% ({{ calcularValorPorcentaje(pago.bonifica, pago.importe) | currency:'$':'symbol':'1.2-2' }})
+                                                                            </ng-container>
+                                                                            <ng-template #pagoBonificaMonetaria>
+                                                                                {{ pago.bonifica | currency:'$':'symbol':'1.2-2' }}
+                                                                            </ng-template>
                                                                         </span>
                                                                         <span *ngIf="pago.bonifica <= 0" class="text-muted">-</span>
                                                                     </td>
                                                                     <td>
                                                                         <span *ngIf="pago.interes > 0" class="badge bg-danger">
-                                                                            {{ pago.interes | currency:'$':'symbol':'1.2-2' }} {{ pago.interes_tipo === 'P' ? '%' : '$' }}
+                                                                            <ng-container *ngIf="pago.interes_tipo === 'P'; else pagoInteresMonetario">
+                                                                                {{ pago.interes }}% ({{ calcularValorPorcentaje(pago.interes, pago.importe) | currency:'$':'symbol':'1.2-2' }})
+                                                                            </ng-container>
+                                                                            <ng-template #pagoInteresMonetario>
+                                                                                {{ pago.interes | currency:'$':'symbol':'1.2-2' }}
+                                                                            </ng-template>
                                                                         </span>
                                                                         <span *ngIf="pago.interes <= 0" class="text-muted">-</span>
                                                                     </td>
