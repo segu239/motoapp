@@ -671,9 +671,25 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     }
     
     // Filtrar solo los recibos de tipo RC (pagos)
-    const pagos = expandedData.recibos.filter(recibo => recibo.c_tipo === 'RC');
+    const recibos = expandedData.recibos.filter(recibo => recibo.c_tipo === 'RC');
     
-    return pagos.length > 0 ? pagos : null;
+    if (recibos.length === 0) {
+      return null;
+    }
+    
+    // Ordenar todos los recibos cronológicamente (incluyendo deuda original)
+    return recibos.sort((a, b) => {
+      // 1° Ordenar por fecha
+      const fechaA = new Date(a.fecha).getTime();
+      const fechaB = new Date(b.fecha).getTime();
+      
+      if (fechaA !== fechaB) {
+        return fechaA - fechaB; // Cronológico ascendente
+      }
+      
+      // 2° Si misma fecha, ordenar por número de recibo
+      return a.recibo - b.recibo;
+    });
   }
 
   // Generar PDF específico de la factura original
@@ -1301,11 +1317,23 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       const ventaExpandida = this.getExpandedData(venta);
       const saldoPendiente = ventaExpandida ? this.calcularSaldoDespuesPago(pago, venta, ventaExpandida) : venta.importe;
 
+      // Identificar si es deuda original
+      // La deuda original tiene importe = saldo (no reduce la deuda)
+      const esDeudaOriginal = pago.importe === pago.recibo_saldo;
+      
+      // Debug para verificar la lógica
+      console.log('Debug recibo:', {
+        recibo: pago.recibo,
+        importe: pago.importe,
+        recibo_saldo: pago.recibo_saldo,
+        esDeudaOriginal: esDeudaOriginal
+      });
+
       // Preparar datos para el recibo
       const datosRecibo = {
         numeroRecibo: pago.recibo,
         fecha: pago.fecha,
-        importe: pago.importe,
+        importe: esDeudaOriginal ? 0 : pago.importe, // Si es deuda original, importe pagado = 0
         cliente: cliente,
         sucursalNombre: sucursalNombre,
         usuario: pago.usuario,
@@ -1478,7 +1506,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
           table: {
             widths: ['70%', '30%'],
             body: [
-              ['BONIFICACIÓN (' + (datos.bonifica_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + parseFloat(datos.bonifica).toFixed(2)],
+              ['BONIFICACIÓN (' + (datos.bonifica_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                datos.bonifica_tipo === 'P' 
+                  ? datos.bonifica + '% ($' + this.calcularValorPorcentaje(datos.bonifica, datos.importe).toFixed(2) + ')'
+                  : '$' + parseFloat(datos.bonifica).toFixed(2)],
             ],
             bold: false,
             fontSize: 10,
@@ -1490,7 +1521,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
           table: {
             widths: ['70%', '30%'],
             body: [
-              ['INTERÉS (' + (datos.interes_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + parseFloat(datos.interes).toFixed(2)],
+              ['INTERÉS (' + (datos.interes_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                datos.interes_tipo === 'P' 
+                  ? datos.interes + '% ($' + this.calcularValorPorcentaje(datos.interes, datos.importe).toFixed(2) + ')'
+                  : '$' + parseFloat(datos.interes).toFixed(2)],
             ],
             bold: false,
             fontSize: 10,
