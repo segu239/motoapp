@@ -1886,7 +1886,7 @@ public function CabeceraCompletaPDF_post()
     }
     
     // Construir consulta
-    $this->db->select('tipo, numero_int, numero_fac, cliente, emitido, puntoventa, letra, usuario, cod_sucursal');
+    $this->db->select('tipo, numero_int, numero_fac, cliente, emitido, puntoventa, letra, usuario, cod_sucursal, bonifica, bonifica_tipo, interes, interes_tipo');
     $this->db->from($tabla);
     $this->db->where('tipo', $tipo);
     $this->db->where('numero_int', $numero_int);

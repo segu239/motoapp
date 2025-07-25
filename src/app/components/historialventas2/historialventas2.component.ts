@@ -646,6 +646,64 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     return this.expandedRows[key] || null;
   }
 
+  // Obtener la factura original (el primer recibo de tipo FC)
+  getFacturaOriginal(expandedData: VentaExpandida): any | null {
+    if (!expandedData || !expandedData.recibos || expandedData.recibos.length === 0) {
+      return null;
+    }
+    
+    // Buscar el recibo original (tipo FC o el de mayor importe)
+    const facturaOriginal = expandedData.recibos.find(recibo => 
+      recibo.c_tipo === 'FC' || recibo.importe === Math.max(...expandedData.recibos.map(r => r.importe))
+    );
+    
+    return facturaOriginal || expandedData.recibos[0];
+  }
+
+  // Obtener solo los pagos realizados (excluyendo la factura original)
+  getPagosRealizados(expandedData: VentaExpandida): any[] | null {
+    if (!expandedData || !expandedData.recibos || expandedData.recibos.length === 0) {
+      return null;
+    }
+    
+    // Filtrar solo los recibos de tipo RC (pagos)
+    const pagos = expandedData.recibos.filter(recibo => recibo.c_tipo === 'RC');
+    
+    return pagos.length > 0 ? pagos : null;
+  }
+
+  // Generar PDF específico de la factura original
+  async generarPDFFactura(venta: HistorialVenta2): Promise<void> {
+    try {
+      Swal.fire({
+        title: 'Generando PDF de Factura...',
+        text: 'Generando documento de la factura original',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const expandedData = this.getExpandedData(venta);
+      const facturaOriginal = this.getFacturaOriginal(expandedData!);
+      
+      if (!facturaOriginal || !facturaOriginal.productos) {
+        throw new Error('No se encontraron datos de la factura original');
+      }
+
+      // Usar el servicio de PDF existente para generar la factura
+      await this.historialPdfService.generarPDFHistorialCompleto(venta);
+
+      Swal.close();
+      this.showNotification('PDF de factura generado exitosamente', 'success');
+
+    } catch (error) {
+      console.error('Error al generar PDF de factura:', error);
+      Swal.close();
+      this.showNotification('Error al generar el PDF de factura: ' + error.message, 'error');
+    }
+  }
+
 
   // Generar PDF del recibo seleccionado
   async generarPDF(venta: HistorialVenta2): Promise<void> {
@@ -1232,7 +1290,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       });
 
       // Obtener datos adicionales necesarios
-      const cliente = await this.obtenerDatosCliente(venta.cliente!);
+      const cliente = await this.obtenerDatosClienteCorregido(venta.cliente!);
       const sucursalNombre = await this.obtenerNombreSucursal(venta.sucursal);
       
       // Obtener datos expandidos para calcular saldo
@@ -1251,7 +1309,12 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         tipoDocumento: pago.c_tipo,
         numeroFactura: pago.c_numero,
         saldoPendiente: saldoPendiente,
-        importeOriginal: venta.importe
+        importeOriginal: venta.importe,
+        // Agregar bonificaciones e intereses del pago
+        bonifica: pago.bonifica || 0,
+        bonifica_tipo: pago.bonifica_tipo || 'P',
+        interes: pago.interes || 0,
+        interes_tipo: pago.interes_tipo || 'P'
       };
 
       // Generar PDF
@@ -1405,6 +1468,32 @@ export class Historialventas2Component implements OnInit, OnDestroy {
           },
         },
         
+        // Información Financiera Adicional - BONIFICACIONES E INTERESES
+        ...(datos.bonifica && datos.bonifica > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['BONIFICACIÓN (' + (datos.bonifica_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + parseFloat(datos.bonifica).toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
+        ...(datos.interes && datos.interes > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['INTERÉS (' + (datos.interes_tipo === 'P' ? 'Porcentaje' : 'Importe') + '):', '$' + parseFloat(datos.interes).toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
+        
         // Total
         {
           style: 'tableExample',
@@ -1481,6 +1570,103 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     } else {
       return `${entero} pesos con ${decimal} centavos`;
     }
+  }
+
+  // Función corregida para obtener datos del cliente usando ClienteCompletoPDF
+  private async obtenerDatosClienteCorregido(idCliente: number): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const sucursal = sessionStorage.getItem('sucursal') || '1';
+      
+      console.log('🔍 Obteniendo cliente con ClienteCompletoPDF:', { idCliente, sucursal });
+      
+      this.historialPdfService.getClienteCompletoPDF(sucursal, idCliente).pipe(take(1)).subscribe({
+        next: (response: any) => {
+          console.log('📋 Respuesta ClienteCompletePDF:', response);
+          
+          if (response && !response.error && response.data) {
+            const clienteData = response.data;
+            const datosProcessados = {
+              nombre: (clienteData.nombre && clienteData.nombre.trim()) || 'Cliente',
+              direccion: (clienteData.direccion && clienteData.direccion.trim()) || 'Sin dirección',  
+              dni: (clienteData.dni && clienteData.dni !== '0' && clienteData.dni.trim()) || 'Sin DNI',
+              cuit: (clienteData.cuit && clienteData.cuit !== '0' && clienteData.cuit.trim()) || 'Sin CUIT',
+              tipoiva: (clienteData.tipoiva && clienteData.tipoiva.trim()) || 'Consumidor Final'
+            };
+            
+            console.log('✅ Datos cliente procesados:', datosProcessados);
+            resolve(datosProcessados);
+          } else {
+            console.warn('❌ Error o datos vacíos en ClienteCompletePDF:', response);
+            // Fallback al método anterior
+            this.obtenerDatosClienteFallback(idCliente, sucursal, resolve);
+          }
+        },
+        error: (error) => {
+          console.error('💥 Error ClienteCompletePDF, usando fallback:', error);
+          // Fallback al método anterior
+          this.obtenerDatosClienteFallback(idCliente, sucursal, resolve);
+        }
+      });
+    });
+  }
+
+  // Método fallback usando clisucx (método anterior)
+  private obtenerDatosClienteFallback(idCliente: number, sucursal: string, resolve: Function): void {
+    console.log('🔄 Usando método fallback clisucx');
+    
+    this.cargardataService.clisucx(sucursal).pipe(take(1)).subscribe({
+      next: (response: any) => {
+        console.log('📋 Respuesta clisucx:', response?.mensaje?.length || 0, 'clientes');
+        
+        if (response && response.mensaje && response.mensaje.length > 0) {
+          // Búsqueda flexible por tipo de datos
+          const clienteData = response.mensaje.find((cliente: any) => {
+            return cliente.idcli == idCliente || 
+                   cliente.idcli === idCliente.toString() || 
+                   parseInt(cliente.idcli) === parseInt(idCliente.toString());
+          });
+          
+          if (clienteData) {
+            console.log('✅ Cliente encontrado en fallback:', clienteData);
+            resolve({
+              nombre: (clienteData.nombre && clienteData.nombre.trim()) || 'Cliente',
+              direccion: (clienteData.direccion && clienteData.direccion.trim()) || 'Sin dirección',
+              dni: (clienteData.dni && clienteData.dni !== '0' && clienteData.dni.trim()) || 'Sin DNI', 
+              cuit: (clienteData.cuit && clienteData.cuit !== '0' && clienteData.cuit.trim()) || 'Sin CUIT',
+              tipoiva: (clienteData.tipoiva && clienteData.tipoiva.trim()) || 'Consumidor Final'
+            });
+          } else {
+            console.warn('❌ Cliente no encontrado en fallback');
+            resolve({
+              nombre: 'Cliente',
+              direccion: 'Sin dirección', 
+              dni: 'Sin DNI',
+              cuit: 'Sin CUIT',
+              tipoiva: 'Consumidor Final'
+            });
+          }
+        } else {
+          console.warn('📭 Sin datos en fallback');
+          resolve({
+            nombre: 'Cliente',
+            direccion: 'Sin dirección',
+            dni: 'Sin DNI', 
+            cuit: 'Sin CUIT',
+            tipoiva: 'Consumidor Final'
+          });
+        }
+      },
+      error: (error) => {
+        console.error('💥 Error en fallback:', error);
+        resolve({
+          nombre: 'Cliente',
+          direccion: 'Sin dirección',
+          dni: 'Sin DNI',
+          cuit: 'Sin CUIT', 
+          tipoiva: 'Consumidor Final'
+        });
+      }
+    });
   }
 
   private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {

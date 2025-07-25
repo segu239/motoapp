@@ -289,6 +289,29 @@ export class CabecerasComponent implements OnDestroy {
       this.totalGeneralSaldos = parseFloat(this.cabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
     }
   }
+
+  // ✅ NUEVA FUNCIÓN PARA RECARGAR CABECERAS DESPUÉS DEL PAGO
+  recargarCabeceras() {
+    console.log('🔄 Recargando cabeceras después del pago...');
+    let sucursal: string = sessionStorage.getItem('sucursal');
+    
+    this._cargardata.cabecerax(sucursal, this.clienteFromCuentaCorriente.idcli).pipe(take(1)).subscribe((resp: any) => {
+      console.log('🔄 Cabeceras recargadas:', resp);
+      
+      if (resp.mensaje) {
+        this.cabeceras = resp.mensaje;
+        // ✅ RECALCULAR EL TOTAL GENERAL DE SALDOS CON LOS NUEVOS DATOS
+        this.calcularTotalGeneralSaldos();
+        console.log('✅ Total de saldos actualizado:', this.totalGeneralSaldos);
+      } else {
+        console.warn('⚠️ Sin registros después del pago');
+        this.cabeceras = [];
+        this.totalGeneralSaldos = 0;
+      }
+    }, (err) => { 
+      console.error('❌ ERROR al recargar cabeceras:', err);
+    });
+  }
   // New function to handle the payment
   pago() {
     console.log(this.tipoVal);
@@ -432,10 +455,23 @@ export class CabecerasComponent implements OnDestroy {
       console.log(resp);
       if (resp.mensaje == "Operación exitosa") {
         this.generarReciboImpreso(pagoCC);
-        // Recalcular el totalSum después del pago exitoso
-        this.calculateTotalSum(this.selectedCabeceras);
+        
+        // ✅ RECARGAR CABECERAS DESDE EL SERVIDOR
+        this.recargarCabeceras();
+        
         // Limpiar el campo de importe
         this.importe = null;
+        
+        // ✅ LIMPIAR CAMPOS DE BONIFICACIÓN E INTERESES
+        this.bonificacion = 0;
+        this.interes = 0;
+        this.bonificacionType = 'P';
+        this.interesType = 'P';
+        
+        // ✅ LIMPIAR SELECCIÓN DE CABECERAS
+        this.selectedCabeceras = [];
+        this.totalSum = null;
+        
         Swal.fire({
           icon: 'success',
           title: 'Pago realizado',

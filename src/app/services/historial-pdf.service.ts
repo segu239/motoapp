@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, of } from 'rxjs';
+import { timeout, catchError } from 'rxjs/operators';
 import { HistorialVenta2 } from '../interfaces/historial-venta2';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
@@ -133,37 +134,83 @@ export class HistorialPdfService {
     }
   }
 
+  // ========== MÉTODO PARA OBTENER NOMBRE DE SUCURSAL DESDE FIREBASE ==========
+  
+  private async obtenerNombreSucursalDesdeFirebase(sucursalValue: string): Promise<string> {
+    try {
+      // Obtener el ID numérico de la sucursal desde sessionStorage (como hace carrito)
+      const sucursalId = sessionStorage.getItem('sucursal');
+      console.log('🔍 Obteniendo nombre sucursal - sucursalValue:', sucursalValue, 'sucursalId:', sucursalId);
+
+      return new Promise<string>((resolve, reject) => {
+        const subscription = this._crud.getListSnap('sucursales').subscribe(
+          data => {
+            console.log('📋 Lista de sucursales desde Firebase:', data);
+            
+            // Buscar por ID numérico (como hace carrito) - acceder a .payload.val()
+            const sucursalEncontrada = data.find(suc => {
+              const sucursalData = suc.payload.val() as any;
+              return sucursalData && sucursalData.value && sucursalData.value.toString() === sucursalId;
+            });
+            
+            if (sucursalEncontrada) {
+              const sucursalData = sucursalEncontrada.payload.val() as any;
+              console.log('✅ Sucursal encontrada:', sucursalData);
+              subscription.unsubscribe();
+              resolve(sucursalData.nombre || 'SUCURSAL DESCONOCIDA');
+            } else {
+              console.warn('❌ No se encontró la sucursal con ID:', sucursalId);
+              subscription.unsubscribe();
+              resolve(sucursalValue || 'SUCURSAL NO DISPONIBLE');
+            }
+          },
+          error => {
+            console.error('❌ Error al obtener sucursales desde Firebase:', error);
+            subscription.unsubscribe();
+            resolve(sucursalValue || 'SUCURSAL NO DISPONIBLE');
+          }
+        );
+        
+        // Timeout de seguridad
+        setTimeout(() => {
+          subscription.unsubscribe();
+          console.warn('⏰ Timeout obteniendo sucursal desde Firebase, usando fallback');
+          resolve(sucursalValue || 'SUCURSAL NO DISPONIBLE');
+        }, 5000);
+      });
+    } catch (error) {
+      console.error('❌ Error en obtenerNombreSucursalDesdeFirebase:', error);
+      return sucursalValue || 'SUCURSAL NO DISPONIBLE';
+    }
+  }
+
   // ========== MÉTODO PRINCIPAL PARA HISTORIAL ==========
 
   async generarPDFHistorialCompleto(ventaData: HistorialVenta2): Promise<void> {
     try {
       console.log('Generando PDF para:', ventaData);
       
-      // Verificar que tenemos datos mínimos
+      // Verificar que tenemos datos mínimos - continuar con valores por defecto
       if (!ventaData.cliente || ventaData.cliente === 0) {
-        console.warn('Cliente no disponible, usando PDF básico');
-        this.generarPDFBasico(ventaData);
-        return;
+        console.warn('Cliente no disponible, se usarán datos por defecto en el PDF');
+        // No generar PDF básico, continuar con el flujo normal usando datos por defecto
       }
+
+      // OBTENER NOMBRE DE SUCURSAL DESDE FIREBASE (como hace carrito)
+      const nombreSucursalReal = await this.obtenerNombreSucursalDesdeFirebase(ventaData.sucursal);
+      console.log('🔧 Nombre de sucursal obtenido desde Firebase:', nombreSucursalReal);
+
+      // SOLUCIÓN: Usar el nuevo método con forkJoin en lugar de Promise.all
+      const datosCompletos = await this.obtenerDatosSecuencial(ventaData);
       
-      // Obtener todos los datos necesarios en paralelo, incluyendo número secuencial
-      const [cabeceraData, clienteData, productosData, sucursalData, numeroData, numeroSecuencial] = await Promise.all([
-        this.getCabeceraCompletaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int).toPromise(),
-        this.getClienteCompletoPDF(ventaData.sucursal, ventaData.cliente).toPromise(),
-        this.getProductosVentaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int).toPromise(),
-        this.getSucursalInfoPDF(ventaData.sucursal).toPromise(),
-        this.getNumeroComprobantePDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int, ventaData.numero_fac).toPromise(),
-        this.obtenerNumeroSecuencial(ventaData.tipo)
-      ]);
-
       // Procesar y limpiar los datos
-      const cabecera = cabeceraData?.data || cabeceraData?.mensaje || {};
-      const cliente = clienteData?.data || clienteData?.mensaje || {};
-      const productos = productosData?.data || productosData?.mensaje || [];
-      const sucursal = sucursalData?.data || sucursalData?.mensaje || {};
-      const numeroComprobante = numeroData?.data || numeroData?.mensaje || {};
+      const cabecera = datosCompletos.cabeceraData?.data || datosCompletos.cabeceraData?.mensaje || {};
+      const cliente = datosCompletos.clienteData?.data || datosCompletos.clienteData?.mensaje || {};
+      let productos = datosCompletos.productosData?.data || datosCompletos.productosData?.mensaje || [];
+      const sucursal = datosCompletos.sucursalData?.data || datosCompletos.sucursalData?.mensaje || {};
+      const numeroComprobante = datosCompletos.numeroData?.data || datosCompletos.numeroData?.mensaje || {};
 
-      console.log('Datos obtenidos:', {
+      console.log('Datos obtenidos secuencialmente:', {
         cabecera,
         cliente,
         productos: productos.length,
@@ -171,11 +218,69 @@ export class HistorialPdfService {
         numeroComprobante
       });
 
-      // Verificar si tenemos productos
+      // Log específico para bonificaciones e intereses
+      console.log('Datos de bonificación e interés:', {
+        ventaDataBonifica: ventaData.bonifica,
+        ventaDataBonificaTipo: ventaData.bonifica_tipo,
+        ventaDataInteres: ventaData.interes,
+        ventaDataInteresTipo: ventaData.interes_tipo,
+        cabeceraBonifica: cabecera.bonifica,
+        cabeceraBonificaTipo: cabecera.bonifica_tipo,
+        cabeceraInteres: cabecera.interes,
+        cabeceraInteresTipo: cabecera.interes_tipo,
+        finalBonifica: ventaData.bonifica || cabecera.bonifica || 0,
+        finalInteres: ventaData.interes || cabecera.interes || 0
+      });
+
+      // Log específico para datos del cliente
+      console.log('Datos del cliente recibidos:', {
+        clienteRaw: cliente,
+        clienteNombre: cliente.nombre,
+        clienteDireccion: cliente.direccion,
+        clienteDni: cliente.dni,
+        clienteCuit: cliente.cuit,
+        clienteTipoiva: cliente.tipoiva,
+        ventaDataCliente: ventaData.cliente
+      });
+
+      // Log específico para datos de sucursal
+      console.log('Datos de sucursal recibidos:', {
+        sucursalRaw: sucursal,
+        sucursalNombre: sucursal.sucursal,
+        sucursalCompleta: sucursal,
+        ventaDataSucursal: ventaData.sucursal,
+        nombreFinal: (sucursal.sucursal || ventaData.sucursal || 'SUCURSAL NO DISPONIBLE').trim()
+      });
+      
+      // DEBUGGING ESPECÍFICO PARA EL PROBLEMA DE SUCURSAL
+      console.log('🔍 DEBUGGING SUCURSAL PROBLEM:');
+      console.log('- ventaData.sucursal enviado al backend:', ventaData.sucursal);
+      console.log('- Tipo de ventaData.sucursal:', typeof ventaData.sucursal);
+      console.log('- Respuesta del backend sucursalData:', sucursal);
+      console.log('- sucursal.sucursal recibida:', sucursal.sucursal);
+      console.log('- Todas las propiedades de sucursal:', Object.keys(sucursal || {}));
+      if (sucursal && Object.keys(sucursal).length > 0) {
+        Object.entries(sucursal).forEach(([key, value]) => {
+          console.log(`  - ${key}: ${value}`);
+        });
+      }
+
+      // Log específico para número de comprobante
+      console.log('Datos del número de comprobante:', {
+        numeroSecuencial: datosCompletos.numeroSecuencial,
+        numeroComprobante: numeroComprobante,
+        numeroCompleto: numeroComprobante.numero_completo,
+        ventaNumeroFac: ventaData.numero_fac,
+        ventaNumeroInt: ventaData.numero_int,
+        numeroFinal: datosCompletos.numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString()
+      });
+
+      // Verificar si tenemos productos - SOLO mostrar warning, no generar PDF básico
+      // ya que ejecutaremos el PDF completo con los datos que tenemos
       if (!productos || productos.length === 0) {
-        console.warn('No se encontraron productos, usando PDF básico');
-        this.generarPDFBasico(ventaData);
-        return;
+        console.warn('No se encontraron productos desde el backend, usando datos por defecto');
+        // En lugar de generar PDF básico, usar array vacío y continuar
+        productos = [];
       }
 
       // Preparar datos en el formato que espera generarPDFRecibo
@@ -185,7 +290,7 @@ export class HistorialPdfService {
           nomart: item.nomart,
           precio: item.precio
         })),
-        numerocomprobante: numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
+        numerocomprobante: datosCompletos.numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
         fecha: ventaData.emitido,
         total: productos.reduce((sum: number, item: any) => sum + (item.cantidad * item.precio), 0),
         bonifica: ventaData.bonifica || cabecera.bonifica || 0,
@@ -193,16 +298,16 @@ export class HistorialPdfService {
         interes: ventaData.interes || cabecera.interes || 0,
         interes_tipo: ventaData.interes_tipo || cabecera.interes_tipo || 'P',
         cliente: {
-          nombre: (cliente.nombre || 'PRUEBA DE LATA').trim(),
-          direccion: (cliente.direccion || 'LA PRUEBA').trim(),
-          dni: cliente.dni || '2222222',
-          cuit: cliente.cuit || '0',
-          tipoiva: (cliente.tipoiva || 'Consumidor Final').trim()
+          nombre: (cliente.nombre && cliente.nombre.trim()) || 'Cliente',
+          direccion: (cliente.direccion && cliente.direccion.trim()) || 'Sin dirección',
+          dni: (cliente.dni && cliente.dni !== '0') ? cliente.dni : 'Sin DNI',
+          cuit: (cliente.cuit && cliente.cuit !== '0') ? cliente.cuit : 'Sin CUIT',
+          tipoiva: (cliente.tipoiva && cliente.tipoiva.trim()) || 'Consumidor Final'
         },
         tipoDoc: ventaData.tipo,
         puntoventa: ventaData.puntoventa,
         letraValue: ventaData.letra || 'B',
-        sucursalNombre: (sucursal.sucursal || ventaData.sucursal || 'MOTO MATCH DEPOSITO').trim()
+        sucursalNombre: nombreSucursalReal // Usar el nombre obtenido desde Firebase
       };
 
       // Generar el PDF usando el mismo método que el carrito
@@ -210,8 +315,9 @@ export class HistorialPdfService {
 
     } catch (error) {
       console.error('Error al generar PDF:', error);
-      // Generar PDF con datos básicos como fallback
-      this.generarPDFBasico(ventaData);
+      // SOLO mostrar error, no generar PDF básico para evitar conflictos de streams
+      console.error('No se pudo generar el PDF completo. Detalles:', error.message || error);
+      throw error; // Re-lanzar el error para que el componente lo maneje
     }
   }
 
@@ -257,7 +363,7 @@ export class HistorialPdfService {
               text: [
                 { text: 'Vicario Segura 587\n' },
                 { text: 'Capital - Catamarca\n' },
-                { text: datos.sucursalNombre + '\n' },
+                { text: (datos.sucursalNombre || 'Sucursal no especificada') + '\n' },
                 { text: '3834-4172012\n' },
                 { text: 'motomatch01@gmail.com' },
               ],
@@ -307,11 +413,11 @@ export class HistorialPdfService {
           columns: [
             {
               text: [
-                { text: 'Sres: ' + datos.cliente.nombre + '\n' },
-                { text: 'Direccion: ' + datos.cliente.direccion + '\n' },
-                { text: 'DNI: ' + datos.cliente.dni + '\n' },
-                { text: 'CUIT: ' + datos.cliente.cuit + '\n' },
-                { text: 'Condicion de Venta: ' + datos.cliente.tipoiva + '\n' },
+                { text: 'Sres: ' + (datos.cliente?.nombre || 'Cliente no especificado') + '\n' },
+                { text: 'Direccion: ' + (datos.cliente?.direccion || 'No especificada') + '\n' },
+                { text: 'DNI: ' + (datos.cliente?.dni || 'No especificado') + '\n' },
+                { text: 'CUIT: ' + (datos.cliente?.cuit || 'No especificado') + '\n' },
+                { text: 'Condicion de Venta: ' + (datos.cliente?.tipoiva || 'No especificada') + '\n' },
               ],
               fontSize: 10,
               margin: [0, 10, 0, 10],
@@ -341,8 +447,8 @@ export class HistorialPdfService {
             bold: true,
           },
         },
-        // Información Financiera Adicional
-        ...(datos.bonifica && datos.bonifica > 0 ? [{
+        // Información Financiera Adicional - SOLO PARA RECIBOS (RC)
+        ...(datos.tipoDoc === 'RC' && datos.bonifica && datos.bonifica > 0 ? [{
           style: 'tableExample',
           table: {
             widths: ['70%', '30%'],
@@ -354,7 +460,7 @@ export class HistorialPdfService {
           },
           margin: [0, 5, 0, 0]
         }] : []),
-        ...(datos.interes && datos.interes > 0 ? [{
+        ...(datos.tipoDoc === 'RC' && datos.interes && datos.interes > 0 ? [{
           style: 'tableExample',
           table: {
             widths: ['70%', '30%'],
@@ -399,7 +505,7 @@ export class HistorialPdfService {
     };
 
     // Crear el PDF
-    const nombreArchivo = `${datos.sucursalNombre}_${titulo}_${fechaFormateada}.pdf`;
+    const nombreArchivo = `${datos.sucursalNombre || 'Sucursal'}_${titulo}_${fechaFormateada}.pdf`;
     pdfMake.createPdf(documentDefinition).download(nombreArchivo);
   }
 
@@ -469,5 +575,84 @@ export class HistorialPdfService {
     };
 
     pdfMake.createPdf(documentDefinition).download(`${titulo}_${numeroFinal}_basico.pdf`);
+  }
+
+  // ========== MÉTODO MEJORADO PARA OBTENER DATOS SECUENCIALMENTE ==========
+  
+  private obtenerDatosSecuencial(ventaData: HistorialVenta2): Promise<any> {
+    return new Promise((resolve, reject) => {
+      console.log('Iniciando obtención de datos con forkJoin...');
+      
+      const fuentes$ = {
+        cabeceraData: this.getCabeceraCompletaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int)
+          .pipe(
+            timeout(10000), // 10 segundos timeout por llamada
+            catchError(error => {
+              console.warn('Error en cabecera, usando fallback:', error);
+              return of({ error: true, data: {} });
+            })
+          ),
+        clienteData: this.getClienteCompletoPDF(ventaData.sucursal, ventaData.cliente)
+          .pipe(
+            timeout(10000),
+            catchError(error => {
+              console.warn('Error en cliente, usando fallback:', error);
+              return of({ error: true, data: {} });
+            })
+          ),
+        productosData: this.getProductosVentaPDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int)
+          .pipe(
+            timeout(10000),
+            catchError(error => {
+              console.warn('Error en productos, usando fallback:', error);
+              return of({ error: true, data: [] });
+            })
+          ),
+        sucursalData: this.getSucursalInfoPDF(ventaData.sucursal)
+          .pipe(
+            timeout(10000),
+            catchError(error => {
+              console.warn('Error en sucursal, usando fallback:', error);
+              return of({ error: true, data: {} });
+            })
+          ),
+        numeroData: this.getNumeroComprobantePDF(ventaData.sucursal, ventaData.tipo, ventaData.puntoventa, ventaData.numero_int, ventaData.numero_fac)
+          .pipe(
+            timeout(10000),
+            catchError(error => {
+              console.warn('Error en número, usando fallback:', error);
+              return of({ error: true, data: {} });
+            })
+          )
+      };
+
+      const subscription = forkJoin(fuentes$).subscribe({
+        next: async (resultados) => {
+          console.log('Datos obtenidos exitosamente con forkJoin');
+          
+          // Agregar número secuencial (await para resolver la Promise)
+          const numeroSecuencial = await this.obtenerNumeroSecuencial(ventaData.tipo);
+          
+          const datosCompletos = {
+            ...resultados,
+            numeroSecuencial
+          };
+          
+          subscription.unsubscribe();
+          resolve(datosCompletos);
+        },
+        error: (error) => {
+          console.error('Error en forkJoin:', error);
+          subscription.unsubscribe();
+          reject(error);
+        }
+      });
+
+      // Cleanup automático si la operación se cuelga (timeout de seguridad)
+      setTimeout(() => {
+        subscription.unsubscribe();
+        reject(new Error('Timeout general de la operación de datos'));
+      }, 35000); // 35 segundos total
+    });
   }
 }
