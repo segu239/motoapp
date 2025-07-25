@@ -169,10 +169,6 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       { field: 'emitido', header: 'Emitido' },
       { field: 'vencimiento', header: 'Vencimiento' },
       { field: 'importe', header: 'Importe' },
-      { field: 'bonifica', header: 'Bonificación' },
-      { field: 'bonifica_tipo', header: 'Tipo Bonif.' },
-      { field: 'interes', header: 'Interés' },
-      { field: 'interes_tipo', header: 'Tipo Inter.' },
       { field: 'saldo', header: 'Saldo' },
       { field: 'usuario', header: 'Usuario' }
     ];

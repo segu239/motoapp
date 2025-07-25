@@ -235,26 +235,6 @@
                                 <p-sortIcon field="importe"></p-sortIcon>
                                 <p-columnFilter type="numeric" field="importe" display="menu" matchMode="equals"></p-columnFilter>
                             </th>
-                            <th *ngIf="isColumnVisible('bonifica')" pSortableColumn="bonifica">
-                                Bonificación
-                                <p-sortIcon field="bonifica"></p-sortIcon>
-                                <p-columnFilter type="numeric" field="bonifica" display="menu" matchMode="equals"></p-columnFilter>
-                            </th>
-                            <th *ngIf="isColumnVisible('bonifica_tipo')" pSortableColumn="bonifica_tipo">
-                                Tipo Bonif.
-                                <p-sortIcon field="bonifica_tipo"></p-sortIcon>
-                                <p-columnFilter type="text" field="bonifica_tipo" display="menu" matchMode="contains"></p-columnFilter>
-                            </th>
-                            <th *ngIf="isColumnVisible('interes')" pSortableColumn="interes">
-                                Interés
-                                <p-sortIcon field="interes"></p-sortIcon>
-                                <p-columnFilter type="numeric" field="interes" display="menu" matchMode="equals"></p-columnFilter>
-                            </th>
-                            <th *ngIf="isColumnVisible('interes_tipo')" pSortableColumn="interes_tipo">
-                                Tipo Inter.
-                                <p-sortIcon field="interes_tipo"></p-sortIcon>
-                                <p-columnFilter type="text" field="interes_tipo" display="menu" matchMode="contains"></p-columnFilter>
-                            </th>
                             <th *ngIf="isColumnVisible('saldo')" pSortableColumn="saldo">
                                 Saldo
                                 <p-sortIcon field="saldo"></p-sortIcon>
@@ -292,42 +272,6 @@
                             <td *ngIf="isColumnVisible('emitido')">{{ venta.emitido | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('vencimiento')">{{ venta.vencimiento | date:'dd/MM/yyyy' }}</td>
                             <td *ngIf="isColumnVisible('importe')">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</td>
-                            <td *ngIf="isColumnVisible('bonifica')">
-                                <ng-container *ngIf="venta.bonifica && venta.bonifica > 0; else noBonifica">
-                                    <ng-container *ngIf="venta.bonifica_tipo === 'P'; else bonificaMonetaria">
-                                        {{ venta.bonifica }}% ({{ calcularValorPorcentaje(venta.bonifica, venta.importe) | currency:'$':'symbol':'1.2-2' }})
-                                    </ng-container>
-                                    <ng-template #bonificaMonetaria>
-                                        {{ venta.bonifica | currency:'$':'symbol':'1.2-2' }}
-                                    </ng-template>
-                                </ng-container>
-                                <ng-template #noBonifica>
-                                    <span class="text-muted">-</span>
-                                </ng-template>
-                            </td>
-                            <td *ngIf="isColumnVisible('bonifica_tipo')">
-                                <span class="badge" [class]="venta.bonifica_tipo === 'P' ? 'badge-info' : 'badge-success'">
-                                    {{ venta.bonifica_tipo === 'P' ? '%' : '$' }}
-                                </span>
-                            </td>
-                            <td *ngIf="isColumnVisible('interes')">
-                                <ng-container *ngIf="venta.interes && venta.interes > 0; else noInteres">
-                                    <ng-container *ngIf="venta.interes_tipo === 'P'; else interesMonetario">
-                                        {{ venta.interes }}% ({{ calcularValorPorcentaje(venta.interes, venta.importe) | currency:'$':'symbol':'1.2-2' }})
-                                    </ng-container>
-                                    <ng-template #interesMonetario>
-                                        {{ venta.interes | currency:'$':'symbol':'1.2-2' }}
-                                    </ng-template>
-                                </ng-container>
-                                <ng-template #noInteres>
-                                    <span class="text-muted">-</span>
-                                </ng-template>
-                            </td>
-                            <td *ngIf="isColumnVisible('interes_tipo')">
-                                <span class="badge" [class]="venta.interes_tipo === 'P' ? 'badge-info' : 'badge-success'">
-                                    {{ venta.interes_tipo === 'P' ? '%' : '$' }}
-                                </span>
-                            </td>
                             <td *ngIf="isColumnVisible('saldo')">{{ venta.saldo | currency:'$':'symbol':'1.2-2' }}</td>
                             <td *ngIf="isColumnVisible('usuario')">{{ venta.usuario }}</td>
                         </tr>
