@@ -1319,6 +1319,46 @@ export class CabecerasComponent implements OnDestroy {
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+
+  // Método auxiliar para calcular el importe con bonificaciones e intereses para caja_movi
+  private calcularImporteMovConBonificacionesIntereses(importeBase: number): number {
+    let importeFinal = importeBase;
+    
+    // Aplicar bonificaciones (favorable al cliente - se suma porque reduce lo que debe pagar)
+    if (this.bonificacion && this.bonificacion > 0) {
+      if (this.bonificacionType === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        importeFinal += (this.bonificacion * importeBase) / 100;
+      } else {
+        // Si es importe directo
+        importeFinal += this.bonificacion;
+      }
+    }
+    
+    // Aplicar intereses (cargo adicional - se suma como recargo)
+    if (this.interes && this.interes > 0) {
+      if (this.interesType === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        importeFinal += (this.interes * importeBase) / 100;
+      } else {
+        // Si es importe directo
+        importeFinal += this.interes;
+      }
+    }
+    
+    // Log para debug y verificación
+    console.log('🧮 CÁLCULO IMPORTE CAJA_MOVI:', {
+      importeBase: importeBase,
+      bonificacion: this.bonificacion,
+      bonificacionType: this.bonificacionType,
+      interes: this.interes,
+      interesType: this.interesType,
+      importeFinal: parseFloat(importeFinal.toFixed(2))
+    });
+    
+    return parseFloat(importeFinal.toFixed(2));
+  }
+
   // Nuevo método para crear caja_movi para pagos de cabeceras
   crearCajaMoviPago(importePago: number, codTarjPago: string, usuarioPago: string): Promise<any> {
     // ✅ CORREGIDO: Usar fecha argentina en lugar de UTC
@@ -1370,7 +1410,7 @@ export class CabecerasComponent implements OnDestroy {
         codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
         num_operacion: 0, // Se asignará en backend con id_num
         fecha_mov: fechaFormateada,
-        importe_mov: importePago, // ✅ Usar parámetro en lugar de this.importe
+        importe_mov: this.calcularImporteMovConBonificacionesIntereses(importePago), // ✅ CORREGIDO: Incluir bonificaciones e intereses
         descripcion_mov: '', // Se generará automáticamente en backend
         fecha_emibco: this.cheque.FechaCheque || null,
         banco: limitNumericValue(this.cheque.Banco, 9999999999),
