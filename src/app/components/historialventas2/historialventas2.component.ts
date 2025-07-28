@@ -696,6 +696,50 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     });
   }
 
+  // Calcular total de bonificaciones de pagos reales
+  calcularTotalBonificacion(expandedData: VentaExpandida): number {
+    const pagosReales = this.getPagosRealizados(expandedData);
+    if (!pagosReales || pagosReales.length === 0) {
+      return 0;
+    }
+
+    return pagosReales.reduce((total, pago) => {
+      if (!pago.bonifica || pago.bonifica <= 0) {
+        return total;
+      }
+      
+      // Si es porcentaje, calcular el valor monetario
+      if (pago.bonifica_tipo === 'P') {
+        return total + this.calcularValorPorcentaje(pago.bonifica, pago.importe);
+      } else {
+        // Si es importe directo
+        return total + parseFloat(pago.bonifica);
+      }
+    }, 0);
+  }
+
+  // Calcular total de intereses de pagos reales
+  calcularTotalInteres(expandedData: VentaExpandida): number {
+    const pagosReales = this.getPagosRealizados(expandedData);
+    if (!pagosReales || pagosReales.length === 0) {
+      return 0;
+    }
+
+    return pagosReales.reduce((total, pago) => {
+      if (!pago.interes || pago.interes <= 0) {
+        return total;
+      }
+      
+      // Si es porcentaje, calcular el valor monetario
+      if (pago.interes_tipo === 'P') {
+        return total + this.calcularValorPorcentaje(pago.interes, pago.importe);
+      } else {
+        // Si es importe directo
+        return total + parseFloat(pago.interes);
+      }
+    }, 0);
+  }
+
   // Generar PDF específico de la factura original
   async generarPDFFactura(venta: HistorialVenta2): Promise<void> {
     try {

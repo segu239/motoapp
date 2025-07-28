@@ -424,21 +424,42 @@
 
                                                     <!-- Resumen final -->
                                                     <div class="row mt-3 p-3 bg-light rounded">
-                                                        <div class="col-md-4 text-center">
+                                                        <!-- 1. Importe Original -->
+                                                        <div class="col text-center mb-3">
                                                             <div class="border-end">
-                                                                <h6 class="text-primary">Importe Original</h6>
-                                                                <h5 class="text-primary">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                                <h6 class="text-primary mb-1">Importe Original</h6>
+                                                                <h5 class="text-primary mb-0">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</h5>
                                                             </div>
                                                         </div>
-                                                        <div class="col-md-4 text-center">
+                                                        
+                                                        <!-- 2. Total Bonificación -->
+                                                        <div class="col text-center mb-3">
                                                             <div class="border-end">
-                                                                <h6 class="text-success">Total Pagado</h6>
-                                                                <h5 class="text-success">{{ expandedData.totalPagado | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                                <h6 class="text-warning mb-1">Total Bonificación</h6>
+                                                                <h5 class="text-warning mb-0">{{ calcularTotalBonificacion(expandedData) | currency:'$':'symbol':'1.2-2' }}</h5>
                                                             </div>
                                                         </div>
-                                                        <div class="col-md-4 text-center">
-                                                            <h6 class="text-danger">Saldo Pendiente</h6>
-                                                            <h4 class="text-danger">
+                                                        
+                                                        <!-- 3. Total Cobrado Neto -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-success mb-1">Total Cobrado Neto</h6>
+                                                                <h5 class="text-success mb-0">{{ expandedData.totalPagado | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 4. Total Interés -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-info mb-1">Total Interés</h6>
+                                                                <h5 class="text-info mb-0">{{ calcularTotalInteres(expandedData) | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 5. Saldo Pendiente -->
+                                                        <div class="col text-center mb-3">
+                                                            <h6 class="text-danger mb-1">Saldo Pendiente</h6>
+                                                            <h4 class="text-danger mb-0">
                                                                 <strong>{{ (venta.importe - expandedData.totalPagado) | currency:'$':'symbol':'1.2-2' }}</strong>
                                                             </h4>
                                                         </div>
