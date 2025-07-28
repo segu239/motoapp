@@ -670,14 +670,18 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       return null;
     }
     
-    // Filtrar solo los recibos de tipo RC (pagos)
-    const recibos = expandedData.recibos.filter(recibo => recibo.c_tipo === 'RC');
+    // Filtrar solo los recibos de tipo RC (pagos) y excluir la factura original
+    // La factura original se identifica porque importe === recibo_saldo (es la creación de la deuda)
+    const recibos = expandedData.recibos.filter(recibo => 
+      recibo.c_tipo === 'RC' && 
+      recibo.importe !== recibo.recibo_saldo
+    );
     
     if (recibos.length === 0) {
       return null;
     }
     
-    // Ordenar todos los recibos cronológicamente (incluyendo deuda original)
+    // Ordenar todos los recibos cronológicamente (solo pagos reales)
     return recibos.sort((a, b) => {
       // 1° Ordenar por fecha
       const fechaA = new Date(a.fecha).getTime();
