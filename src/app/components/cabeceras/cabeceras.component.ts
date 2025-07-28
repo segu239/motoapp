@@ -1402,6 +1402,13 @@ export class CabecerasComponent implements OnDestroy {
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
+    
+    // Obtener bonificación e interés del primer recibo (todos deberían tener los mismos valores)
+    const primerRecibo = pagoCC.recibo[0];
+    const bonificacionRecibo = primerRecibo.bonifica || 0;
+    const bonificacionTipo = primerRecibo.bonifica_tipo || 'P';
+    const interesRecibo = primerRecibo.interes || 0;
+    const interesTipo = primerRecibo.interes_tipo || 'P';
     const clienteDataRec = sessionStorage.getItem('datoscliente');
     let cliente = null;
     if (clienteDataRec) {
@@ -1588,12 +1595,43 @@ export class CabecerasComponent implements OnDestroy {
           },
           margin: [0, 0, 0, 30],
         },
+        // Sección de bonificaciones e intereses (similar a historialventas2)
+        ...(bonificacionRecibo && bonificacionRecibo > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['BONIFICACIÓN (' + (bonificacionTipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                bonificacionTipo === 'P' 
+                  ? bonificacionRecibo + '% ($' + ((bonificacionRecibo * totalImporte) / 100).toFixed(2) + ')'
+                  : '$' + bonificacionRecibo.toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
+        ...(interesRecibo && interesRecibo > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['INTERÉS (' + (interesTipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                interesTipo === 'P' 
+                  ? interesRecibo + '% ($' + ((interesRecibo * totalImporte) / 100).toFixed(2) + ')'
+                  : '$' + interesRecibo.toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
         {
           style: 'tableExample',
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL APLICADO: $' + totalImporte],
+              ['TOTAL APLICADO: $' + this.calcularTotalEfectivoEnPDF(totalImporte, bonificacionRecibo, bonificacionTipo, interesRecibo, interesTipo).toFixed(2)],
             ],
             bold: true,
             fontSize: 16,
@@ -1634,6 +1672,36 @@ export class CabecerasComponent implements OnDestroy {
       console.error(error);
     });
   }
+
+  // Calcular total efectivo para recibo de cabeceras (importe + intereses + bonificaciones)
+  private calcularTotalEfectivoEnPDF(totalImporte: number, bonificacionRecibo: number, bonificacionTipo: string, interesRecibo: number, interesTipo: string): number {
+    let totalEfectivo = totalImporte;
+    
+    // Sumar bonificaciones (descuentos que se aplican a favor del cliente)
+    if (bonificacionRecibo && bonificacionRecibo > 0) {
+      if (bonificacionTipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += (bonificacionRecibo * totalImporte) / 100;
+      } else {
+        // Si es importe directo
+        totalEfectivo += bonificacionRecibo;
+      }
+    }
+    
+    // Sumar intereses (cargos adicionales)
+    if (interesRecibo && interesRecibo > 0) {
+      if (interesTipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += (interesRecibo * totalImporte) / 100;
+      } else {
+        // Si es importe directo
+        totalEfectivo += interesRecibo;
+      }
+    }
+    
+    return totalEfectivo;
+  }
+
   numeroAPalabras(num: number): string {
     const unidades = ['CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
     const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];

@@ -1410,10 +1410,42 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     }
   }
 
+  // Calcular total efectivo para recibo (importe + intereses + bonificaciones)
+  private calcularTotalEfectivoRecibo(datos: any): number {
+    let totalEfectivo = parseFloat(datos.importe) || 0;
+    
+    // Sumar bonificaciones (descuentos a favor del cliente)
+    if (datos.bonifica && datos.bonifica > 0) {
+      if (datos.bonifica_tipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += this.calcularValorPorcentaje(datos.bonifica, datos.importe);
+      } else {
+        // Si es importe directo
+        totalEfectivo += parseFloat(datos.bonifica);
+      }
+    }
+    
+    // Sumar intereses (cargos adicionales)
+    if (datos.interes && datos.interes > 0) {
+      if (datos.interes_tipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += this.calcularValorPorcentaje(datos.interes, datos.importe);
+      } else {
+        // Si es importe directo
+        totalEfectivo += parseFloat(datos.interes);
+      }
+    }
+    
+    return totalEfectivo;
+  }
+
   // Generar PDF del recibo usando pdfMake con la misma estética del carrito
   private async generarPDFReciboPago(datos: any): Promise<void> {
     // Usar imports estáticos ya configurados al inicio del archivo
 
+    // Calcular total efectivo (importe + intereses - bonificaciones)
+    const totalEfectivo = this.calcularTotalEfectivoRecibo(datos);
+    
     // Convertir número a palabras (función simplificada)
     const numeroEnPalabras = this.convertirNumeroAPalabras(datos.importe);
 
@@ -1586,7 +1618,7 @@ export class Historialventas2Component implements OnInit, OnDestroy {
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL $' + parseFloat(datos.importe).toFixed(2)],
+              ['TOTAL $' + totalEfectivo.toFixed(2)],
             ],
             bold: true,
             fontSize: 16,
