@@ -1747,29 +1747,58 @@ export class CabecerasComponent implements OnDestroy {
     const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
     const decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
     const centenas = ['', 'CIEN', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
-    if (num < 10) return unidades[num];
-    if (num < 20) return especiales[num - 10];
-    if (num < 100) {
-      if (num % 10 === 0) return decenas[Math.floor(num / 10)];
-      return decenas[Math.floor(num / 10)] + ' y ' + unidades[num % 10];
+    
+    // Formatear a máximo 2 decimales y separar
+    const numeroFormateado = parseFloat(num.toFixed(2));
+    const parteEntera = Math.floor(numeroFormateado);
+    const parteDecimal = Math.round((numeroFormateado - parteEntera) * 100);
+    
+    const convertirEntero = (n: number): string => {
+      if (n === 0) return '';
+      if (n < 10) return unidades[n];
+      if (n < 20) return especiales[n - 10];
+      if (n < 100) {
+        if (n % 10 === 0) return decenas[Math.floor(n / 10)];
+        return decenas[Math.floor(n / 10)] + ' Y ' + unidades[n % 10];
+      }
+      if (n < 1000) {
+        const c = Math.floor(n / 100);
+        const resto = n % 100;
+        if (resto === 0) return centenas[c];
+        if (c === 1 && resto < 100) return 'CIENTO ' + convertirEntero(resto);
+        return centenas[c] + ' ' + convertirEntero(resto);
+      }
+      if (n < 10000) {
+        const miles = Math.floor(n / 1000);
+        const resto = n % 1000;
+        if (resto === 0) return unidades[miles] + ' MIL';
+        return unidades[miles] + ' MIL ' + convertirEntero(resto);
+      }
+      if (n < 1000000) {
+        const miles = Math.floor(n / 1000);
+        const resto = n % 1000;
+        if (resto === 0) return convertirEntero(miles) + ' MIL';
+        return convertirEntero(miles) + ' MIL ' + convertirEntero(resto);
+      }
+      if (n < 1000000000) {
+        const miles = Math.floor(n / 1000000);
+        const resto = n % 1000000;
+        if (resto === 0) return convertirEntero(miles) + ' MILLÓN';
+        return convertirEntero(miles) + ' MILLÓN ' + convertirEntero(resto);
+      }
+      return 'Número fuera de rango';
+    };
+    
+    let resultado = parteEntera === 0 ? 'CERO' : convertirEntero(parteEntera);
+    
+    if (parteDecimal > 0) {
+      const centavosTexto = convertirEntero(parteDecimal);
+      resultado += ' CON ' + centavosTexto + (parteDecimal === 1 ? ' CENTAVO' : ' CENTAVOS');
+    } else {
+      resultado += ' CON CERO CENTAVOS';
     }
-    if (num < 1000) {
-      if (num % 100 === 0) return centenas[Math.floor(num / 100)];
-      return centenas[Math.floor(num / 100)] + ' ' + this.numeroAPalabras(num % 100);
-    }
-    if (num < 10000) {
-      if (num % 1000 === 0) return unidades[Math.floor(num / 1000)] + ' MIL';
-      return unidades[Math.floor(num / 1000)] + ' MIL ' + this.numeroAPalabras(num % 1000);
-    }
-    if (num < 1000000) {
-      if (num % 1000 === 0) return this.numeroAPalabras(Math.floor(num / 1000)) + ' MIL';
-      return this.numeroAPalabras(Math.floor(num / 1000)) + ' MIL ' + this.numeroAPalabras(num % 1000);
-    }
-    if (num < 1000000000) {
-      if (num % 1000000 === 0) return this.numeroAPalabras(Math.floor(num / 1000000)) + ' MILLÓN';
-      return this.numeroAPalabras(Math.floor(num / 1000000)) + ' MILLÓN ' + this.numeroAPalabras(num % 1000000);
-    }
-    return 'Número fuera de rango';
+    
+    return resultado;
   }
   showNotification(message: string) {
     Swal.fire({
