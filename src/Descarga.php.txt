@@ -3685,7 +3685,8 @@ public function historialventas2xcli_get()
             f.cliente
         ');
         $this->db->from($tabla . ' f');
-        $this->db->join($tabla . ' rc', 'f.numero_fac = rc.numero_fac AND rc.tipo = \'RC\'', 'left');
+        // CORREGIDO: JOIN mejorado para evitar mezcla de datos entre clientes
+        $this->db->join($tabla . ' rc', 'f.numero_fac = rc.numero_fac AND rc.tipo = \'RC\' AND f.cliente = rc.cliente', 'left');
         $this->db->join('recibos' . substr($tabla, -1) . ' r', 'rc.id_num = r.id_fac', 'left');
         $this->db->group_by('f.cod_sucursal, f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, f.saldo, f.usuario, f.id_num, f.cliente, f.bonifica, f.bonifica_tipo, f.interes, f.interes_tipo');
         
@@ -4109,8 +4110,8 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
     // Log para debug
     error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
     
-    // Construir SELECT base
-    $select = "SELECT {$sucursal_escaped} as sucursal, f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe, COALESCE(MAX(r.bonifica), f.bonifica) as bonifica, COALESCE(MAX(r.bonifica_tipo), f.bonifica_tipo) as bonifica_tipo, COALESCE(MAX(r.interes), f.interes) as interes, COALESCE(MAX(r.interes_tipo), f.interes_tipo) as interes_tipo, f.saldo, f.usuario, f.id_num as id, f.cliente FROM {$tabla_escaped} f LEFT JOIN {$tabla_escaped} rc ON f.numero_fac = rc.numero_fac AND rc.tipo = 'RC' LEFT JOIN recibos" . substr($tabla, -1) . " r ON rc.id_num = r.id_fac GROUP BY f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, f.saldo, f.usuario, f.id_num, f.cliente, f.bonifica, f.bonifica_tipo, f.interes, f.interes_tipo";
+    // Construir SELECT base - CORREGIDO: Agregado filtro por cliente en el JOIN
+    $select = "SELECT {$sucursal_escaped} as sucursal, f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe, COALESCE(MAX(r.bonifica), f.bonifica) as bonifica, COALESCE(MAX(r.bonifica_tipo), f.bonifica_tipo) as bonifica_tipo, COALESCE(MAX(r.interes), f.interes) as interes, COALESCE(MAX(r.interes_tipo), f.interes_tipo) as interes_tipo, f.saldo, f.usuario, f.id_num as id, f.cliente FROM {$tabla_escaped} f LEFT JOIN {$tabla_escaped} rc ON f.numero_fac = rc.numero_fac AND rc.tipo = 'RC' AND f.cliente = rc.cliente LEFT JOIN recibos" . substr($tabla, -1) . " r ON rc.id_num = r.id_fac GROUP BY f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, f.saldo, f.usuario, f.id_num, f.cliente, f.bonifica, f.bonifica_tipo, f.interes, f.interes_tipo";
     
     // Construir WHERE
     $where = "WHERE f.cliente = {$idcli_escaped} AND f.tipo != 'RC'";
@@ -4405,10 +4406,10 @@ public function obtenerDatosExpandidos_get()
 
     try {
         // Obtener datos de recibos asociados a la factura
-        // INCLUIR recibos directos + recibos RC con mismo numero_fac
+        // CORREGIDO: Usar cliente en lugar de numero_fac para evitar mezcla de datos
         
-        // Primero obtener la factura para conseguir su numero_fac
-        $this->db->select('numero_fac');
+        // Primero obtener la factura para conseguir cliente y numero_fac
+        $this->db->select('numero_fac, cliente');
         $this->db->from($tablaFactcab);
         $this->db->where('id_num', $id_factura);
         $queryFactura = $this->db->get();
@@ -4419,8 +4420,10 @@ public function obtenerDatosExpandidos_get()
         }
         
         $numero_fac = $factura['numero_fac'];
+        $cliente_id = $factura['cliente'];
         
-        // Consulta UNION para obtener recibos directos + recibos RC relacionados
+        // Consulta UNION CORREGIDA para obtener recibos directos + recibos RC relacionados
+        // CAMBIO CRÍTICO: Agregado filtro por cliente para evitar mezcla de datos entre clientes
         $query = "
             (
                 SELECT 
@@ -4442,7 +4445,7 @@ public function obtenerDatosExpandidos_get()
                     r.id_fac, 'RC' as origen
                 FROM {$tablaRecibos} r
                 INNER JOIN {$tablaFactcab} f ON r.id_fac = f.id_num
-                WHERE f.numero_fac = '{$numero_fac}' AND f.tipo = 'RC'
+                WHERE r.recibo_asoc = {$id_factura} AND f.tipo = 'RC'
             )
             ORDER BY fecha DESC
         ";
@@ -4451,6 +4454,7 @@ public function obtenerDatosExpandidos_get()
         $recibos = $queryRecibos->result_array();
 
         // NUEVO: Obtener historial de pagos de la factura (solo pagos reales RC)
+        // CORREGIDO: Agregado filtro por cliente para evitar mezcla de datos
         $this->db->select('
             r.recibo,
             r.c_tipo,
@@ -4465,6 +4469,7 @@ public function obtenerDatosExpandidos_get()
         $this->db->join($tablaFactcab . ' f', 'r.id_fac = f.id_num', 'left');
         $this->db->where('r.recibo_asoc', $id_factura);
         $this->db->where('f.tipo', 'RC');  // Filtrar solo pagos reales (Recibos de Cobro)
+        $this->db->where('f.cliente', $cliente_id);  // CRÍTICO: Filtrar por cliente del documento original
         $this->db->order_by('r.fecha', 'ASC');
         $queryPagos = $this->db->get();
         $pagos = $queryPagos->result_array();
@@ -4475,18 +4480,7 @@ public function obtenerDatosExpandidos_get()
             $total_pagado += (float)$pago['importe'];
         }
 
-        // Obtener datos de cliente y factura para filtrado
-        $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
-        $this->db->from($tablaFactcab . ' f');
-        $this->db->where('f.id_num', $id_factura);
-        $queryFactura = $this->db->get();
-        
-        $cliente_id = null;
-        $datosFactura = null;
-        if ($queryFactura->num_rows() > 0) {
-            $datosFactura = $queryFactura->row_array();
-            $cliente_id = $datosFactura['cliente'];
-        }
+        // ELIMINADO: Consulta duplicada ya no necesaria - el cliente_id se obtiene al principio
 
         // Para cada recibo, obtener sus productos específicos
         foreach ($recibos as $index => $recibo) {
