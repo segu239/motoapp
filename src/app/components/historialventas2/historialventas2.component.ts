@@ -20,6 +20,7 @@ import { TotalizadorModalComponent } from './totalizador-modal.component';
 import { User } from '../../interfaces/user';
 import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
+import { NumeroPalabrasService } from '../../services/numero-palabras.service';
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 
@@ -91,7 +92,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     private cargardataService: CargardataService,
     private crudService: CrudService,
     private dialogService: DialogService,
-    private authService: AuthService
+    private authService: AuthService,
+    private numeroPalabrasService: NumeroPalabrasService
   ) {
     this.initializeColumns();
   }
@@ -1674,20 +1676,10 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     pdfMake.createPdf(documentDefinition).download(fileName);
   }
 
-  // Convertir número a palabras (función simplificada)
+  // Convertir número a palabras usando el servicio compartido
   private convertirNumeroAPalabras(numero: any): string {
-    // Convertir a número si es string
     const num = parseFloat(numero);
-    
-    // Implementación básica - en producción usar una librería especializada
-    const entero = Math.floor(num);
-    const decimal = Math.round((num - entero) * 100);
-    
-    if (decimal === 0) {
-      return `${entero} pesos`;
-    } else {
-      return `${entero} pesos con ${decimal} centavos`;
-    }
+    return this.numeroPalabrasService.numeroAPalabrasSimple(num);
   }
 
   // Función corregida para obtener datos del cliente usando ClienteCompletoPDF

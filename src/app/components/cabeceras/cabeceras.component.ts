@@ -17,6 +17,7 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Text } from '@angular/compiler';
 import { TarjCredito } from 'src/app/interfaces/tarjcredito';
+import { NumeroPalabrasService } from '../../services/numero-palabras.service';
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 @Component({
   selector: 'app-cabeceras',
@@ -87,7 +88,15 @@ export class CabecerasComponent implements OnDestroy {
   public numero_fac: number;
   private destroy$ = new Subject<void>();
 
-  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private cdr: ChangeDetectorRef) {
+  constructor(
+    private bot: MotomatchBotService, 
+    private _crud: CrudService, 
+    private activatedRoute: ActivatedRoute, 
+    private _cargardata: CargardataService, 
+    private _router: Router, 
+    private cdr: ChangeDetectorRef,
+    private numeroPalabrasService: NumeroPalabrasService
+  ) {
     this.getNombreSucursal();
   }
   ngOnInit(): void {
@@ -1743,62 +1752,7 @@ export class CabecerasComponent implements OnDestroy {
   }
 
   numeroAPalabras(num: number): string {
-    const unidades = ['CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-    const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
-    const decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
-    const centenas = ['', 'CIEN', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
-    
-    // Formatear a máximo 2 decimales y separar
-    const numeroFormateado = parseFloat(num.toFixed(2));
-    const parteEntera = Math.floor(numeroFormateado);
-    const parteDecimal = Math.round((numeroFormateado - parteEntera) * 100);
-    
-    const convertirEntero = (n: number): string => {
-      if (n === 0) return '';
-      if (n < 10) return unidades[n];
-      if (n < 20) return especiales[n - 10];
-      if (n < 100) {
-        if (n % 10 === 0) return decenas[Math.floor(n / 10)];
-        return decenas[Math.floor(n / 10)] + ' Y ' + unidades[n % 10];
-      }
-      if (n < 1000) {
-        const c = Math.floor(n / 100);
-        const resto = n % 100;
-        if (resto === 0) return centenas[c];
-        if (c === 1 && resto < 100) return 'CIENTO ' + convertirEntero(resto);
-        return centenas[c] + ' ' + convertirEntero(resto);
-      }
-      if (n < 10000) {
-        const miles = Math.floor(n / 1000);
-        const resto = n % 1000;
-        if (resto === 0) return unidades[miles] + ' MIL';
-        return unidades[miles] + ' MIL ' + convertirEntero(resto);
-      }
-      if (n < 1000000) {
-        const miles = Math.floor(n / 1000);
-        const resto = n % 1000;
-        if (resto === 0) return convertirEntero(miles) + ' MIL';
-        return convertirEntero(miles) + ' MIL ' + convertirEntero(resto);
-      }
-      if (n < 1000000000) {
-        const miles = Math.floor(n / 1000000);
-        const resto = n % 1000000;
-        if (resto === 0) return convertirEntero(miles) + ' MILLÓN';
-        return convertirEntero(miles) + ' MILLÓN ' + convertirEntero(resto);
-      }
-      return 'Número fuera de rango';
-    };
-    
-    let resultado = parteEntera === 0 ? 'CERO' : convertirEntero(parteEntera);
-    
-    if (parteDecimal > 0) {
-      const centavosTexto = convertirEntero(parteDecimal);
-      resultado += ' CON ' + centavosTexto + (parteDecimal === 1 ? ' CENTAVO' : ' CENTAVOS');
-    } else {
-      resultado += ' CON CERO CENTAVOS';
-    }
-    
-    return resultado;
+    return this.numeroPalabrasService.numeroAPalabras(num);
   }
   showNotification(message: string) {
     Swal.fire({
