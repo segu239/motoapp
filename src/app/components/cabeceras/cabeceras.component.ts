@@ -581,7 +581,15 @@ export class CabecerasComponent implements OnDestroy {
       cod_vendedor: this.vendedoresV,//// aca hay que ver si se agrega un campo para elegir el nombre del vendedor
       anulado: false,
       cuit: Number(this.cliente.cuit),
-      usuario: this.usuario,//este es el que se logea?
+      usuario: sessionStorage.getItem('emailOp') ? sessionStorage.getItem('emailOp').substring(0, 12) : (() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de sesión',
+          text: 'No se encontró información del usuario logueado. Por favor, inicie sesión nuevamente.',
+          confirmButtonText: 'Entendido'
+        });
+        throw new Error('Usuario no encontrado en sessionStorage');
+      })(), // Limitado a 12 caracteres para evitar error PostgreSQL
       turno: 0,
       pfiscal: `${year}${formattedMonth}`,
       mperc: 0,
@@ -696,7 +704,15 @@ export class CabecerasComponent implements OnDestroy {
         c_cuota: 0,//fijo
         fecha: this.fecha_recibo,//fecha de la cabecera fijo para el array
         importe: importe,//Number(selectedCabecerasIniciales[index].saldo) - selectedCabeceras[index].saldo,// ---> este es el importe pagado de cada cabecera seleccionada
-        usuario: this.usuario, //fijo para el array
+        usuario: sessionStorage.getItem('emailOp') ? sessionStorage.getItem('emailOp').substring(0, 10) : (() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error de sesión',
+            text: 'No se encontró información del usuario logueado. Por favor, inicie sesión nuevamente.',
+            confirmButtonText: 'Entendido'
+          });
+          throw new Error('Usuario no encontrado en sessionStorage');
+        })(), // Limitado a 10 caracteres para tabla recibos
         observacion: 0,//fijo
         cod_lugar: '1',//fijo
         sesion: 0,//fijo

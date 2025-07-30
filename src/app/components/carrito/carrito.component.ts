@@ -539,7 +539,15 @@ export class CarritoComponent implements OnDestroy {
       cod_vendedor: limitNumericValue(this.vendedoresV, 999),//// aca hay que ver si se agrega un campo para elegir el nombre del vendedor
       anulado: false,
       cuit: this.cliente.cuit,
-      usuario: this.usuario,//este es el que se logea?
+      usuario: sessionStorage.getItem('emailOp') ? sessionStorage.getItem('emailOp').substring(0, 12) : (() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de sesión',
+          text: 'No se encontró información del usuario logueado. Por favor, inicie sesión nuevamente.',
+          confirmButtonText: 'Entendido'
+        });
+        throw new Error('Usuario no encontrado en sessionStorage');
+      })(), // Limitado a 12 caracteres para evitar error PostgreSQL
       turno: 0,
       pfiscal: `${year}${formattedMonth}`,
       mperc: 0,
