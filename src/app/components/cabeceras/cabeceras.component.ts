@@ -69,6 +69,20 @@ export class CabecerasComponent implements OnDestroy {
   public letras: any = ["A", "B", "C"];
   public letraValue: string = "A";
   public tipoDoc: string = "FC";
+  
+  // Condiciones de venta específicas para PR
+  public condicionesPR: any[] = [
+    {
+      cod_tarj: "11",
+      tarjeta: "EFECTIVO", 
+      idcp_ingreso: "1"
+    },
+    {
+      cod_tarj: "1112", 
+      tarjeta: "TRANSFERENCIA AJUSTE",
+      idcp_ingreso: "80"
+    }
+  ];
   public puntoventa: number = 0;
   public vendedores: any[] = [];
   public vendedoresV: any;
@@ -243,8 +257,8 @@ export class CabecerasComponent implements OnDestroy {
       // Configurar tipo de pago según el tipo de documento
       if (primerTipo === 'PR') {
         this.tipoVal = "EFECTIVO";
-        this.opcionesPagoFlag = false; // Ocultar dropdown de métodos de pago
-        this.codTarj = "11"; // Código de EFECTIVO
+        this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago para PR
+        this.codTarj = "11"; // Código de EFECTIVO por defecto
       } else if (primerTipo === 'FC') {
         this.tipoVal = "Condicion de Venta";
         this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago
@@ -280,9 +294,17 @@ export class CabecerasComponent implements OnDestroy {
       console.log(item);
       console.log(item.tipo);
       // Verifica si la propiedad tipo es diferente de "FC", "ND", "NC"
-      if (item.tipo == 'PR' || item.tipo == 'NV') {
-        // Si alguna propiedad tipo no coincide, devuelve falso
+      if (item.tipo == 'PR') {
+        // Para PR: habilitar dropdown con dos opciones, EFECTIVO por defecto
         this.tipoVal = "EFECTIVO";
+        this.opcionesPagoFlag = true; // Habilitar dropdown
+        this.codTarj = "11"; // EFECTIVO por defecto
+        return false;
+      } else if (item.tipo == 'NV') {
+        // Para NV: mantener comportamiento original (solo EFECTIVO)
+        this.tipoVal = "EFECTIVO";
+        this.opcionesPagoFlag = false;
+        this.codTarj = "11";
         return false;
       }
     }
@@ -364,7 +386,7 @@ export class CabecerasComponent implements OnDestroy {
       return;
     }
     
-    // Validar método de pago solo para FC
+    // Validar método de pago solo para FC cuando no se ha seleccionado
     if (this.selectedCabeceras[0].tipo === 'FC' && this.tipoVal == 'Condicion de Venta') {
       Swal.fire({
         icon: 'error',
@@ -1386,7 +1408,12 @@ export class CabecerasComponent implements OnDestroy {
     // ✅ CORREGIDO: Buscar información de tarjeta usando parámetro
     let tarjetaInfo: any = null;
     if (codTarjPago) {
-      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      // Para PR, buscar en condicionesPR; para FC, buscar en tipo
+      if (this.selectedCabeceras[0].tipo === 'PR') {
+        tarjetaInfo = this.condicionesPR.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      } else {
+        tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      }
     }
 
     // Obtener id_caja de forma asíncrona (IGUAL que en carrito)
