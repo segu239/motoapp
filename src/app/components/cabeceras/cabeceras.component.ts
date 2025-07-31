@@ -73,9 +73,9 @@ export class CabecerasComponent implements OnDestroy {
   // Condiciones de venta específicas para PR
   public condicionesPR: any[] = [
     {
-      cod_tarj: "11",
-      tarjeta: "EFECTIVO", 
-      idcp_ingreso: "1"
+      cod_tarj: "12",
+      tarjeta: "EFECTIVO AJUSTE", 
+      idcp_ingreso: "77"
     },
     {
       cod_tarj: "1112", 
@@ -256,9 +256,9 @@ export class CabecerasComponent implements OnDestroy {
       
       // Configurar tipo de pago según el tipo de documento
       if (primerTipo === 'PR') {
-        this.tipoVal = "EFECTIVO";
+        this.tipoVal = "EFECTIVO AJUSTE";
         this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago para PR
-        this.codTarj = "11"; // Código de EFECTIVO por defecto
+        this.codTarj = "12"; // Código de EFECTIVO AJUSTE por defecto
       } else if (primerTipo === 'FC') {
         this.tipoVal = "Condicion de Venta";
         this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago
@@ -295,10 +295,10 @@ export class CabecerasComponent implements OnDestroy {
       console.log(item.tipo);
       // Verifica si la propiedad tipo es diferente de "FC", "ND", "NC"
       if (item.tipo == 'PR') {
-        // Para PR: habilitar dropdown con dos opciones, EFECTIVO por defecto
-        this.tipoVal = "EFECTIVO";
+        // Para PR: habilitar dropdown con dos opciones, EFECTIVO AJUSTE por defecto
+        this.tipoVal = "EFECTIVO AJUSTE";
         this.opcionesPagoFlag = true; // Habilitar dropdown
-        this.codTarj = "11"; // EFECTIVO por defecto
+        this.codTarj = "12"; // EFECTIVO AJUSTE por defecto
         return false;
       } else if (item.tipo == 'NV') {
         // Para NV: mantener comportamiento original (solo EFECTIVO)
