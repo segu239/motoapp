@@ -30,6 +30,8 @@ export interface ReciboDetalle {
   cod_sucursal: number;
   fec_proceso: string;
   bonifica: number;
+  bonifica_tipo: string;
   interes: number;
+  interes_tipo: string;
   recibo_asoc: number;
 }

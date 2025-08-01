@@ -1847,5 +1847,266 @@ public function getAllCajamoviByIds_post()
   $this->response($respuesta);
 }
 
+/**
+ * FUNCIONES ESPECÍFICAS PARA GENERACIÓN DE PDF HISTORIAL
+ * Estas funciones obtienen datos completos para generar PDFs correctos
+ */
 
-}//fin
+/**
+ * Obtener cabecera completa de factura/presupuesto
+ * POST: {sucursal: "1", tipo: "PR", numero_int: 12345, puntoventa: 5}
+ */
+public function CabeceraCompletaPDF_post()
+{
+    $data = $this->post();
+    
+    // Validar parámetros requeridos
+    if (!isset($data['sucursal']) || !isset($data['tipo']) || !isset($data['numero_int']) || !isset($data['puntoventa'])) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Faltan parámetros requeridos: sucursal, tipo, numero_int, puntoventa'
+        ], 400);
+        return;
+    }
+    
+    $sucursal = $data['sucursal'];
+    $tipo = $data['tipo'];
+    $numero_int = $data['numero_int'];
+    $puntoventa = $data['puntoventa'];
+    
+    $tabla = 'factcab' . $sucursal;
+    
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tabla)) {
+        $this->response([
+            'error' => true,
+            'mensaje' => "La tabla $tabla no existe"
+        ], 404);
+        return;
+    }
+    
+    // Construir consulta
+    $this->db->select('tipo, numero_int, numero_fac, cliente, emitido, puntoventa, letra, usuario, cod_sucursal, bonifica, bonifica_tipo, interes, interes_tipo');
+    $this->db->from($tabla);
+    $this->db->where('tipo', $tipo);
+    $this->db->where('numero_int', $numero_int);
+    $this->db->where('puntoventa', $puntoventa);
+    $this->db->limit(1);
+    
+    $query = $this->db->get();
+    $result = $query->result_array();
+    
+    if (count($result) > 0) {
+        $this->response([
+            'error' => false,
+            'data' => $result[0]
+        ]);
+    } else {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'No se encontró la cabecera solicitada'
+        ], 404);
+    }
+}
+
+/**
+ * Obtener cliente completo por ID y sucursal
+ * POST: {idCliente: 14243, sucursal: "1"}
+ */
+public function ClienteCompletoPDF_post()
+{
+    $data = $this->post();
+    
+    if (!isset($data['idCliente']) || !isset($data['sucursal'])) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Faltan parámetros requeridos: idCliente, sucursal'
+        ], 400);
+        return;
+    }
+    
+    $idCliente = $data['idCliente'];
+    $sucursal = $data['sucursal'];
+    
+    $this->db->select('idcli, nombre, direccion, dni, cuit, tipoiva');
+    $this->db->from('clisuc');
+    $this->db->where('idcli', $idCliente);
+    // Buscar en cualquier sucursal si no encuentra en la especificada
+    $this->db->limit(1);
+    
+    $query = $this->db->get();
+    $result = $query->result_array();
+    
+    if (count($result) > 0) {
+        // Limpiar datos (trim espacios)
+        $cliente = $result[0];
+        $cliente['nombre'] = trim($cliente['nombre']);
+        $cliente['direccion'] = trim($cliente['direccion']);
+        $cliente['tipoiva'] = trim($cliente['tipoiva']);
+        
+        $this->response([
+            'error' => false,
+            'data' => $cliente
+        ]);
+    } else {
+        $this->response([
+            'error' => true,
+            'mensaje' => "Cliente con ID $idCliente no encontrado en sucursal $sucursal"
+        ], 404);
+    }
+}
+
+/**
+ * Obtener productos de una venta específica
+ * POST: {sucursal: "1", tipodoc: "PR", numerocomprobante: 12345, puntoventa: 5}
+ */
+public function ProductosVentaPDF_post()
+{
+    $data = $this->post();
+    
+    if (!isset($data['sucursal']) || !isset($data['tipodoc']) || !isset($data['numerocomprobante']) || !isset($data['puntoventa'])) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Faltan parámetros requeridos: sucursal, tipodoc, numerocomprobante, puntoventa'
+        ], 400);
+        return;
+    }
+    
+    $sucursal = $data['sucursal'];
+    $tipodoc = $data['tipodoc'];
+    $numerocomprobante = $data['numerocomprobante'];
+    $puntoventa = $data['puntoventa'];
+    
+    $tabla = 'psucursal' . $sucursal;
+    
+    // Verificar si la tabla existe
+    if (!$this->db->table_exists($tabla)) {
+        $this->response([
+            'error' => true,
+            'mensaje' => "La tabla $tabla no existe"
+        ], 404);
+        return;
+    }
+    
+    $this->db->select('idart, cantidad, precio, nomart');
+    $this->db->from($tabla);
+    $this->db->where('tipodoc', $tipodoc);
+    $this->db->where('numerocomprobante', $numerocomprobante);
+    $this->db->where('puntoventa', $puntoventa);
+    // Remover filtro por estado ya que los productos pueden tener diferentes estados
+    $this->db->order_by('idart', 'ASC');
+    
+    $query = $this->db->get();
+    $result = $query->result_array();
+    
+    // Limpiar nombres de productos
+    foreach ($result as &$item) {
+        $item['nomart'] = trim($item['nomart']);
+    }
+    
+    $this->response([
+        'error' => false,
+        'data' => $result
+    ]);
+}
+
+/**
+ * Obtener información de sucursal
+ * POST: {sucursal: "1"}
+ */
+public function SucursalInfoPDF_post()
+{
+    $data = $this->post();
+    
+    if (!isset($data['sucursal'])) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Falta parámetro requerido: sucursal'
+        ], 400);
+        return;
+    }
+    
+    $sucursal = $data['sucursal'];
+    
+    $this->db->select('cod_sucursal, sucursal');
+    $this->db->from('sucursales');
+    $this->db->where('cod_sucursal', $sucursal);
+    $this->db->limit(1);
+    
+    $query = $this->db->get();
+    $result = $query->result_array();
+    
+    if (count($result) > 0) {
+        $sucursalInfo = $result[0];
+        $sucursalInfo['sucursal'] = trim($sucursalInfo['sucursal']);
+        
+        $this->response([
+            'error' => false,
+            'data' => $sucursalInfo
+        ]);
+    } else {
+        // Fallback si no encuentra la sucursal
+        $this->response([
+            'error' => false,
+            'data' => [
+                'cod_sucursal' => $sucursal,
+                'sucursal' => "Sucursal $sucursal"
+            ]
+        ]);
+    }
+}
+
+/**
+ * Determinar número de comprobante correcto para PDFs
+ * POST: {tipo: "PR", numero_fac: 0, numero_int: 12345}
+ */
+public function NumeroComprobantePDF_post()
+{
+    $data = $this->post();
+    
+    if (!isset($data['tipo'])) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Falta parámetro requerido: tipo'
+        ], 400);
+        return;
+    }
+    
+    $tipo = $data['tipo'];
+    $numero_fac = isset($data['numero_fac']) ? intval($data['numero_fac']) : 0;
+    $numero_int = isset($data['numero_int']) ? intval($data['numero_int']) : 0;
+    
+    $numero_final = 0;
+    
+    // Lógica para determinar número correcto
+    if ($tipo === 'PR') {
+        // Para presupuestos, usar numero_int si numero_fac es 0
+        if ($numero_fac > 0) {
+            $numero_final = $numero_fac;
+        } else if ($numero_int > 0) {
+            $numero_final = $numero_int;
+        } else {
+            $numero_final = 1; // Fallback
+        }
+    } else {
+        // Para otros tipos, preferir numero_fac
+        if ($numero_fac > 0) {
+            $numero_final = $numero_fac;
+        } else if ($numero_int > 0) {
+            $numero_final = $numero_int;
+        } else {
+            $numero_final = 1; // Fallback
+        }
+    }
+    
+    $this->response([
+        'error' => false,
+        'data' => [
+            'numero_comprobante' => $numero_final,
+            'numero_formateado' => str_pad($numero_final, 8, '0', STR_PAD_LEFT)
+        ]
+    ]);
+}
+
+}
+

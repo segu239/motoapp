@@ -281,174 +281,199 @@
                             <td [attr.colspan]="selectedColumns.length + 2">
                                 <div class="p-3" style="background-color: #f8f9fa; border-radius: 4px; margin: 8px 0;">
                                     <ng-container *ngIf="getExpandedData(venta) as expandedData">
-                                        <!-- Sección de Recibos con sus productos -->
-                                        <div class="mb-4">
-                                            <h6 class="text-primary mb-3">
-                                                <i class="pi pi-file-o me-2"></i>
-                                                Recibos y Productos Vendidos ({{ expandedData.recibos.length }})
-                                            </h6>
-                                            
-                                            <div *ngIf="expandedData.recibos.length > 0; else noRecibos">
-                                                <!-- Iterar por cada recibo -->
-                                                <div *ngFor="let recibo of expandedData.recibos; let i = index" class="mb-4">
-                                                    <!-- Información del recibo -->
-                                                    <div class="card">
-                                                        <div class="card-header bg-light">
-                                                            <div class="row">
-                                                                <div class="col-md-2">
-                                                                    <strong>Recibo:</strong> {{ recibo.recibo }}
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <strong>Tipo:</strong> {{ recibo.c_tipo }}
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <strong>Número:</strong> {{ recibo.c_numero }}
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <strong>Fecha:</strong> {{ recibo.fecha | date:'dd/MM/yyyy' }}
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <strong>Importe:</strong> {{ recibo.importe | currency:'$':'symbol':'1.2-2' }}
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <strong>Usuario:</strong> {{ recibo.usuario }}
-                                                                </div>
-                                                            </div>
+                                        <!-- SECCIÓN 1: FACTURA ORIGINAL Y PRODUCTOS -->
+                                        <div class="mb-4" *ngIf="getFacturaOriginal(expandedData) as facturaOriginal">
+                                            <div class="card border-primary">
+                                                <div class="card-header bg-primary text-white">
+                                                    <h6 class="mb-0">
+                                                        <i class="pi pi-file me-2"></i>
+                                                        Factura Original - {{ facturaOriginal.c_tipo }} N° {{ facturaOriginal.c_numero }}
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="row mb-3">
+                                                        <div class="col-md-3">
+                                                            <strong>Fecha:</strong> {{ facturaOriginal.fecha | date:'dd/MM/yyyy' }}
                                                         </div>
-                                                        
-                                                        <!-- Productos del recibo -->
-                                                        <div class="card-body">
-                                                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                                                <h6 class="text-success mb-0">
-                                                                    <i class="pi pi-shopping-cart me-2"></i>
-                                                                    Productos ({{ recibo.productos?.length || 0 }})
-                                                                </h6>
-                                                                <p-button 
-                                                                    *ngIf="recibo.productos && recibo.productos.length > 0"
-                                                                    label="Generar PDF"
-                                                                    icon="pi pi-file-pdf"
-                                                                    class="p-button-sm p-button-outlined p-button-danger"
-                                                                    (onClick)="generarPDF(venta)"
-                                                                    pTooltip="Generar PDF del recibo"
-                                                                    tooltipPosition="top">
-                                                                </p-button>
-                                                            </div>
-                                                            
-                                                            <div *ngIf="recibo.productos && recibo.productos.length > 0; else noProductos" class="table-responsive">
-                                                                <table class="table table-sm table-striped">
-                                                                    <thead class="table-light">
-                                                                        <tr>
-                                                                            <th>Artículo</th>
-                                                                            <th>Nombre</th>
-                                                                            <th>Cantidad</th>
-                                                                            <th>Precio</th>
-                                                                            <th>Tarjeta</th>
-                                                                            <th>Fecha</th>
-                                                                            <th>Hora</th>
-                                                                            <th>Estado</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        <tr *ngFor="let item of recibo.productos">
-                                                                            <td>{{ item.idart }}</td>
-                                                                            <td>{{ item.nomart }}</td>
-                                                                            <td>{{ item.cantidad }}</td>
-                                                                            <td>{{ item.precio | currency:'$':'symbol':'1.2-2' }}</td>
-                                                                            <td>
-                                                                                <span class="badge bg-info" *ngIf="item.tarjeta; else noTarjeta">
-                                                                                    {{ item.tarjeta }}
-                                                                                </span>
-                                                                                <ng-template #noTarjeta>
-                                                                                    <span class="badge bg-secondary">Sin tarjeta</span>
-                                                                                </ng-template>
-                                                                            </td>
-                                                                            <td>{{ item.fecha | date:'dd/MM/yyyy' }}</td>
-                                                                            <td>{{ item.hora }}</td>
-                                                                            <td>
-                                                                                <span class="badge" 
-                                                                                    [ngClass]="item.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
-                                                                                    {{ item.estado }}
-                                                                                </span>
-                                                                            </td>
-                                                                        </tr>
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                            
-                                                            <ng-template #noProductos>
-                                                                <div class="alert alert-info">
-                                                                    <i class="pi pi-info-circle me-2"></i>
-                                                                    No hay productos asociados a este recibo.
-                                                                </div>
-                                                            </ng-template>
+                                                        <div class="col-md-3">
+                                                            <strong>Importe Total:</strong> 
+                                                            <span class="badge bg-primary fs-6">{{ facturaOriginal.importe | currency:'$':'symbol':'1.2-2' }}</span>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <strong>Usuario:</strong> {{ facturaOriginal.usuario }}
+                                                        </div>
+                                                        <div class="col-md-3 text-end">
+                                                            <p-button 
+                                                                label="PDF Factura"
+                                                                icon="pi pi-file-pdf"
+                                                                class="p-button-sm p-button-outlined p-button-primary"
+                                                                (onClick)="generarPDFFactura(venta)"
+                                                                pTooltip="Generar PDF de la factura original">
+                                                            </p-button>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Productos vendidos (solo una vez) -->
+                                                    <div *ngIf="facturaOriginal.productos && facturaOriginal.productos.length > 0">
+                                                        <h6 class="text-success">
+                                                            <i class="pi pi-shopping-cart me-2"></i>
+                                                            Productos Vendidos ({{ facturaOriginal.productos.length }})
+                                                        </h6>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-striped">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Artículo</th>
+                                                                        <th>Descripción</th>
+                                                                        <th>Cantidad</th>
+                                                                        <th>Precio Unitario</th>
+                                                                        <th>Subtotal</th>
+                                                                        <th>Método de Pago</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr *ngFor="let item of facturaOriginal.productos">
+                                                                        <td><strong>{{ item.idart }}</strong></td>
+                                                                        <td>{{ item.nomart?.trim() }}</td>
+                                                                        <td>{{ item.cantidad }}</td>
+                                                                        <td>{{ item.precio | currency:'$':'symbol':'1.2-2' }}</td>
+                                                                        <td><strong>{{ (item.cantidad * item.precio) | currency:'$':'symbol':'1.2-2' }}</strong></td>
+                                                                        <td>
+                                                                            <span class="badge bg-info">{{ item.tarjeta || 'CUENTA CORRIENTE' }}</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            
-                                            <ng-template #noRecibos>
-                                                <div class="alert alert-info">
-                                                    <i class="pi pi-info-circle me-2"></i>
-                                                    No hay recibos asociados a esta factura.
-                                                </div>
-                                            </ng-template>
                                         </div>
 
-                                        <!-- NUEVA SECCIÓN: HISTORIAL DE PAGOS -->
-                                        <div class="mt-4">
-                                            <h6 class="text-info mb-3">
-                                                <i class="pi pi-history me-2"></i>
-                                                Historial de Pagos Realizados
-                                            </h6>
+                                        <!-- SECCIÓN 2: PAGOS REALIZADOS -->
+                                        <div class="mt-4" *ngIf="getPagosRealizados(expandedData) as pagosRealizados">
+                                            <div class="card border-success">
+                                                <div class="card-header bg-success text-white">
+                                                    <h6 class="mb-0">
+                                                        <i class="pi pi-money-bill me-2"></i>
+                                                        Pagos Realizados ({{ pagosRealizados.length }})
+                                                    </h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm table-hover">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Fecha</th>
+                                                                    <th>Recibo N°</th>
+                                                                    <th>Importe</th>
+                                                                    <th>Bonificación</th>
+                                                                    <th>Interés</th>
+                                                                    <th>Usuario</th>
+                                                                    <th>Saldo Restante</th>
+                                                                    <th>Acción</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr *ngFor="let pago of pagosRealizados">
+                                                                    <td>{{ pago.fecha | date:'dd/MM/yyyy' }}</td>
+                                                                    <td><span class="badge bg-info">{{ pago.recibo }}</span></td>
+                                                                    <td><strong>{{ pago.importe | currency:'$':'symbol':'1.2-2' }}</strong></td>
+                                                                    <td>
+                                                                        <span *ngIf="pago.bonifica > 0" class="badge bg-warning">
+                                                                            <ng-container *ngIf="pago.bonifica_tipo === 'P'; else pagoBonificaMonetaria">
+                                                                                <i class="pi pi-percentage me-1"></i>{{ pago.bonifica }}% 
+                                                                                <small>({{ calcularValorPorcentaje(pago.bonifica, pago.importe) | currency:'$':'symbol':'1.2-2' }})</small>
+                                                                            </ng-container>
+                                                                            <ng-template #pagoBonificaMonetaria>
+                                                                                <i class="pi pi-dollar me-1"></i>{{ pago.bonifica | currency:'$':'symbol':'1.2-2' }}
+                                                                            </ng-template>
+                                                                        </span>
+                                                                        <span *ngIf="pago.bonifica <= 0" class="text-muted">-</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span *ngIf="pago.interes > 0" class="badge bg-danger">
+                                                                            <ng-container *ngIf="pago.interes_tipo === 'P'; else pagoInteresMonetario">
+                                                                                <i class="pi pi-percentage me-1"></i>{{ pago.interes }}% 
+                                                                                <small>({{ calcularValorPorcentaje(pago.interes, pago.importe) | currency:'$':'symbol':'1.2-2' }})</small>
+                                                                            </ng-container>
+                                                                            <ng-template #pagoInteresMonetario>
+                                                                                <i class="pi pi-dollar me-1"></i>{{ pago.interes | currency:'$':'symbol':'1.2-2' }}
+                                                                            </ng-template>
+                                                                        </span>
+                                                                        <span *ngIf="pago.interes <= 0" class="text-muted">-</span>
+                                                                    </td>
+                                                                    <td>{{ obtenerNombreUsuario(pago.usuario) }}</td>
+                                                                    <td>
+                                                                        <span class="badge bg-danger">
+                                                                            {{ pago.recibo_saldo | currency:'$':'symbol':'1.2-2' }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <p-button 
+                                                                            icon="pi pi-file-pdf"
+                                                                            class="p-button-sm p-button-outlined p-button-info"
+                                                                            (onClick)="generarReciboPago(pago, venta)"
+                                                                            pTooltip="PDF del recibo de pago">
+                                                                        </p-button>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
 
-                                            <div *ngIf="expandedData.historialPagos && expandedData.historialPagos.length > 0; else noPagos">
-                                                <p-table [value]="expandedData.historialPagos" [tableStyle]="{'min-width': '50rem'}">
-                                                    <ng-template pTemplate="header">
-                                                        <tr>
-                                                            <th>Fecha de Pago</th>
-                                                            <th>Importe Pagado</th>
-                                                            <th>Recibo</th>
-                                                            <th>Tipo</th>
-                                                            <th>Usuario</th>
-                                                            <th>Acciones</th>
-                                                        </tr>
-                                                    </ng-template>
-                                                    <ng-template pTemplate="body" let-pago>
-                                                        <tr>
-                                                            <td>{{ pago.fecha | date:'dd/MM/yyyy' }}</td>
-                                                            <td>{{ pago.importe | currency:'ARS':'symbol':'1.2-2' }}</td>
-                                                            <td>{{ pago.recibo }}</td>
-                                                            <td>{{ pago.c_tipo }}</td>
-                                                            <td>{{ pago.usuario }}</td>
-                                                            <td>
-                                                                <button 
-                                                                    class="btn btn-sm btn-outline-primary"
-                                                                    (click)="generarReciboPago(pago, venta)"
-                                                                    title="Descargar Recibo"
-                                                                    [disabled]="isRowLoading(venta)">
-                                                                    <i class="pi pi-download me-1"></i>
-                                                                    Recibo
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    </ng-template>
-                                                </p-table>
-
-                                                <!-- RESUMEN DE SALDO -->
-                                                <div class="mt-3 p-3 bg-light border rounded text-end">
-                                                    <p class="mb-1"><strong>Importe Original: </strong>{{ venta.importe | currency:'ARS':'symbol':'1.2-2' }}</p>
-                                                    <p class="mb-1 text-success"><strong>Total Pagado: </strong>{{ expandedData.totalPagado | currency:'ARS':'symbol':'1.2-2' }}</p>
-                                                    <hr class="my-1">
-                                                    <h5 class="mb-0 text-danger"><strong>Saldo Pendiente: </strong>{{ (venta.importe - expandedData.totalPagado) | currency:'ARS':'symbol':'1.2-2' }}</h5>
+                                                    <!-- Resumen final -->
+                                                    <div class="row mt-3 p-3 bg-light rounded">
+                                                        <!-- 1. Importe Original -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-primary mb-1">Importe Original</h6>
+                                                                <h5 class="text-primary mb-0">{{ venta.importe | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 2. Total Bonificación -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-warning mb-1">Total Bonificación</h6>
+                                                                <h5 class="text-warning mb-0">{{ calcularTotalBonificacion(expandedData) | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 3. Total Cobrado Neto -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-success mb-1">Total Cobrado Neto</h6>
+                                                                <h5 class="text-success mb-0">{{ expandedData.totalPagado | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 4. Total Interés -->
+                                                        <div class="col text-center mb-3">
+                                                            <div class="border-end">
+                                                                <h6 class="text-info mb-1">Total Interés</h6>
+                                                                <h5 class="text-info mb-0">{{ calcularTotalInteres(expandedData) | currency:'$':'symbol':'1.2-2' }}</h5>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- 5. Saldo Pendiente -->
+                                                        <div class="col text-center mb-3">
+                                                            <h6 class="text-danger mb-1">Saldo Pendiente</h6>
+                                                            <h4 class="text-danger mb-0">
+                                                                <strong>{{ (venta.importe - expandedData.totalPagado) | currency:'$':'symbol':'1.2-2' }}</strong>
+                                                            </h4>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <ng-template #noPagos>
-                                                <div class="alert alert-secondary">
-                                                    <i class="pi pi-info-circle me-2"></i>
-                                                    No se encontraron pagos parciales para esta factura.
-                                                </div>
-                                            </ng-template>
+                                        </div>
+                                        
+                                        <!-- Mensaje cuando no hay pagos -->
+                                        <div class="mt-4" *ngIf="!getPagosRealizados(expandedData)">
+                                            <div class="alert alert-info">
+                                                <i class="pi pi-info-circle me-2"></i>
+                                                Esta factura no tiene pagos parciales realizados.
+                                            </div>
                                         </div>
                                     </ng-container>
                                 </div>

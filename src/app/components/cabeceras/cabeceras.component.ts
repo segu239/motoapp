@@ -17,6 +17,8 @@ import * as pdfMake from 'pdfmake/build/pdfmake';
 import * as pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Text } from '@angular/compiler';
 import { TarjCredito } from 'src/app/interfaces/tarjcredito';
+import { NumeroPalabrasService } from '../../services/numero-palabras.service';
+import { getEmpresaConfig } from '../../config/empresa-config';
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
 @Component({
   selector: 'app-cabeceras',
@@ -40,6 +42,8 @@ export class CabecerasComponent implements OnDestroy {
   public activaDatos: number;
   public interes: number = 0;
   public bonificacion: number = 0;
+  public interesType: string = 'P';      // P = Porcentaje, I = Importe
+  public bonificacionType: string = 'P'; // P = Porcentaje, I = Importe
   public tarjeta = {
     Titular: '',
     Dni: 0,
@@ -66,6 +70,20 @@ export class CabecerasComponent implements OnDestroy {
   public letras: any = ["A", "B", "C"];
   public letraValue: string = "A";
   public tipoDoc: string = "FC";
+  
+  // Condiciones de venta específicas para PR
+  public condicionesPR: any[] = [
+    {
+      cod_tarj: "12",
+      tarjeta: "EFECTIVO AJUSTE", 
+      idcp_ingreso: "77"
+    },
+    {
+      cod_tarj: "1112", 
+      tarjeta: "TRANSFERENCIA AJUSTE",
+      idcp_ingreso: "80"
+    }
+  ];
   public puntoventa: number = 0;
   public vendedores: any[] = [];
   public vendedoresV: any;
@@ -85,7 +103,15 @@ export class CabecerasComponent implements OnDestroy {
   public numero_fac: number;
   private destroy$ = new Subject<void>();
 
-  constructor(private bot: MotomatchBotService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private cdr: ChangeDetectorRef) {
+  constructor(
+    private bot: MotomatchBotService, 
+    private _crud: CrudService, 
+    private activatedRoute: ActivatedRoute, 
+    private _cargardata: CargardataService, 
+    private _router: Router, 
+    private cdr: ChangeDetectorRef,
+    private numeroPalabrasService: NumeroPalabrasService
+  ) {
     this.getNombreSucursal();
   }
   ngOnInit(): void {
@@ -231,9 +257,9 @@ export class CabecerasComponent implements OnDestroy {
       
       // Configurar tipo de pago según el tipo de documento
       if (primerTipo === 'PR') {
-        this.tipoVal = "EFECTIVO";
-        this.opcionesPagoFlag = false; // Ocultar dropdown de métodos de pago
-        this.codTarj = "11"; // Código de EFECTIVO
+        this.tipoVal = "EFECTIVO AJUSTE";
+        this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago para PR
+        this.codTarj = "12"; // Código de EFECTIVO AJUSTE por defecto
       } else if (primerTipo === 'FC') {
         this.tipoVal = "Condicion de Venta";
         this.opcionesPagoFlag = true; // Mostrar dropdown de métodos de pago
@@ -269,9 +295,17 @@ export class CabecerasComponent implements OnDestroy {
       console.log(item);
       console.log(item.tipo);
       // Verifica si la propiedad tipo es diferente de "FC", "ND", "NC"
-      if (item.tipo == 'PR' || item.tipo == 'NV') {
-        // Si alguna propiedad tipo no coincide, devuelve falso
+      if (item.tipo == 'PR') {
+        // Para PR: habilitar dropdown con dos opciones, EFECTIVO AJUSTE por defecto
+        this.tipoVal = "EFECTIVO AJUSTE";
+        this.opcionesPagoFlag = true; // Habilitar dropdown
+        this.codTarj = "12"; // EFECTIVO AJUSTE por defecto
+        return false;
+      } else if (item.tipo == 'NV') {
+        // Para NV: mantener comportamiento original (solo EFECTIVO)
         this.tipoVal = "EFECTIVO";
+        this.opcionesPagoFlag = false;
+        this.codTarj = "11";
         return false;
       }
     }
@@ -286,6 +320,29 @@ export class CabecerasComponent implements OnDestroy {
     if (this.cabeceras && this.cabeceras.length > 0) {
       this.totalGeneralSaldos = parseFloat(this.cabeceras.reduce((sum, cabecera) => sum + parseFloat(cabecera.saldo.toString()), 0).toFixed(2));
     }
+  }
+
+  // ✅ NUEVA FUNCIÓN PARA RECARGAR CABECERAS DESPUÉS DEL PAGO
+  recargarCabeceras() {
+    console.log('🔄 Recargando cabeceras después del pago...');
+    let sucursal: string = sessionStorage.getItem('sucursal');
+    
+    this._cargardata.cabecerax(sucursal, this.clienteFromCuentaCorriente.idcli).pipe(take(1)).subscribe((resp: any) => {
+      console.log('🔄 Cabeceras recargadas:', resp);
+      
+      if (resp.mensaje) {
+        this.cabeceras = resp.mensaje;
+        // ✅ RECALCULAR EL TOTAL GENERAL DE SALDOS CON LOS NUEVOS DATOS
+        this.calcularTotalGeneralSaldos();
+        console.log('✅ Total de saldos actualizado:', this.totalGeneralSaldos);
+      } else {
+        console.warn('⚠️ Sin registros después del pago');
+        this.cabeceras = [];
+        this.totalGeneralSaldos = 0;
+      }
+    }, (err) => { 
+      console.error('❌ ERROR al recargar cabeceras:', err);
+    });
   }
   // New function to handle the payment
   pago() {
@@ -330,7 +387,7 @@ export class CabecerasComponent implements OnDestroy {
       return;
     }
     
-    // Validar método de pago solo para FC
+    // Validar método de pago solo para FC cuando no se ha seleccionado
     if (this.selectedCabeceras[0].tipo === 'FC' && this.tipoVal == 'Condicion de Venta') {
       Swal.fire({
         icon: 'error',
@@ -430,10 +487,23 @@ export class CabecerasComponent implements OnDestroy {
       console.log(resp);
       if (resp.mensaje == "Operación exitosa") {
         this.generarReciboImpreso(pagoCC);
-        // Recalcular el totalSum después del pago exitoso
-        this.calculateTotalSum(this.selectedCabeceras);
+        
+        // ✅ RECARGAR CABECERAS DESDE EL SERVIDOR
+        this.recargarCabeceras();
+        
         // Limpiar el campo de importe
         this.importe = null;
+        
+        // ✅ LIMPIAR CAMPOS DE BONIFICACIÓN E INTERESES
+        this.bonificacion = 0;
+        this.interes = 0;
+        this.bonificacionType = 'P';
+        this.interesType = 'P';
+        
+        // ✅ LIMPIAR SELECCIÓN DE CABECERAS
+        this.selectedCabeceras = [];
+        this.totalSum = null;
+        
         Swal.fire({
           icon: 'success',
           title: 'Pago realizado',
@@ -502,7 +572,9 @@ export class CabecerasComponent implements OnDestroy {
       iva2: 0,
       iva3: 0,
       bonifica: this.bonificacion,
+      bonifica_tipo: this.bonificacionType,
       interes: this.interes,
+      interes_tipo: this.interesType,
       saldo: 0,//this.suma,
       dorigen: false,
       cod_condvta: this.codTarj,
@@ -510,7 +582,15 @@ export class CabecerasComponent implements OnDestroy {
       cod_vendedor: this.vendedoresV,//// aca hay que ver si se agrega un campo para elegir el nombre del vendedor
       anulado: false,
       cuit: Number(this.cliente.cuit),
-      usuario: this.usuario,//este es el que se logea?
+      usuario: sessionStorage.getItem('emailOp') ? sessionStorage.getItem('emailOp').substring(0, 12) : (() => {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de sesión',
+          text: 'No se encontró información del usuario logueado. Por favor, inicie sesión nuevamente.',
+          confirmButtonText: 'Entendido'
+        });
+        throw new Error('Usuario no encontrado en sessionStorage');
+      })(), // Limitado a 12 caracteres para evitar error PostgreSQL
       turno: 0,
       pfiscal: `${year}${formattedMonth}`,
       mperc: 0,
@@ -625,7 +705,15 @@ export class CabecerasComponent implements OnDestroy {
         c_cuota: 0,//fijo
         fecha: this.fecha_recibo,//fecha de la cabecera fijo para el array
         importe: importe,//Number(selectedCabecerasIniciales[index].saldo) - selectedCabeceras[index].saldo,// ---> este es el importe pagado de cada cabecera seleccionada
-        usuario: this.usuario, //fijo para el array
+        usuario: sessionStorage.getItem('emailOp') ? sessionStorage.getItem('emailOp').substring(0, 10) : (() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error de sesión',
+            text: 'No se encontró información del usuario logueado. Por favor, inicie sesión nuevamente.',
+            confirmButtonText: 'Entendido'
+          });
+          throw new Error('Usuario no encontrado en sessionStorage');
+        })(), // Limitado a 10 caracteres para tabla recibos
         observacion: 0,//fijo
         cod_lugar: '1',//fijo
         sesion: 0,//fijo
@@ -636,7 +724,9 @@ export class CabecerasComponent implements OnDestroy {
         cod_sucursal: Number(this.sucursal), //fijo para el array
         fec_proceso: this.FechaCalend,//this.FechaCalend,//fecha de cierre con caja puede ser otro dia   ?
         bonifica: this.bonificacion,
+        bonifica_tipo: this.bonificacionType,
         interes: this.interes,
+        interes_tipo: this.interesType,
         id_fac: this.numerocomprobantecabecera + 1// fijo para el array
       };
       if (recibo.importe > 0) {
@@ -1181,6 +1271,14 @@ export class CabecerasComponent implements OnDestroy {
       if (!this.vendedoresV) {
         missingFields.push('Vendedor');
       }
+    } else if (this.tipoDoc == "PR") {
+      // Validaciones específicas para presupuestos (PR)
+      if (!this.FechaCalend) {
+        missingFields.push('Fecha');
+      }
+      if (!this.vendedoresV) {
+        missingFields.push('Vendedor');
+      }
     }
     if (missingFields.length > 0) {
       Swal.fire({
@@ -1269,6 +1367,46 @@ export class CabecerasComponent implements OnDestroy {
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+
+  // Método auxiliar para calcular el importe con bonificaciones e intereses para caja_movi
+  private calcularImporteMovConBonificacionesIntereses(importeBase: number): number {
+    let importeFinal = importeBase;
+    
+    // Aplicar bonificaciones (favorable al cliente - se suma porque reduce lo que debe pagar)
+    if (this.bonificacion && this.bonificacion > 0) {
+      if (this.bonificacionType === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        importeFinal += (this.bonificacion * importeBase) / 100;
+      } else {
+        // Si es importe directo
+        importeFinal += this.bonificacion;
+      }
+    }
+    
+    // Aplicar intereses (cargo adicional - se suma como recargo)
+    if (this.interes && this.interes > 0) {
+      if (this.interesType === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        importeFinal += (this.interes * importeBase) / 100;
+      } else {
+        // Si es importe directo
+        importeFinal += this.interes;
+      }
+    }
+    
+    // Log para debug y verificación
+    console.log('🧮 CÁLCULO IMPORTE CAJA_MOVI:', {
+      importeBase: importeBase,
+      bonificacion: this.bonificacion,
+      bonificacionType: this.bonificacionType,
+      interes: this.interes,
+      interesType: this.interesType,
+      importeFinal: parseFloat(importeFinal.toFixed(2))
+    });
+    
+    return parseFloat(importeFinal.toFixed(2));
+  }
+
   // Nuevo método para crear caja_movi para pagos de cabeceras
   crearCajaMoviPago(importePago: number, codTarjPago: string, usuarioPago: string): Promise<any> {
     // ✅ CORREGIDO: Usar fecha argentina en lugar de UTC
@@ -1287,7 +1425,12 @@ export class CabecerasComponent implements OnDestroy {
     // ✅ CORREGIDO: Buscar información de tarjeta usando parámetro
     let tarjetaInfo: any = null;
     if (codTarjPago) {
-      tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      // Para PR, buscar en condicionesPR; para FC, buscar en tipo
+      if (this.selectedCabeceras[0].tipo === 'PR') {
+        tarjetaInfo = this.condicionesPR.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      } else {
+        tarjetaInfo = this.tipo.find(t => t.cod_tarj.toString() === codTarjPago.toString());
+      }
     }
 
     // Obtener id_caja de forma asíncrona (IGUAL que en carrito)
@@ -1320,7 +1463,7 @@ export class CabecerasComponent implements OnDestroy {
         codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
         num_operacion: 0, // Se asignará en backend con id_num
         fecha_mov: fechaFormateada,
-        importe_mov: importePago, // ✅ Usar parámetro en lugar de this.importe
+        importe_mov: this.calcularImporteMovConBonificacionesIntereses(importePago), // ✅ CORREGIDO: Incluir bonificaciones e intereses
         descripcion_mov: '', // Se generará automáticamente en backend
         fecha_emibco: this.cheque.FechaCheque || null,
         banco: limitNumericValue(this.cheque.Banco, 9999999999),
@@ -1352,6 +1495,13 @@ export class CabecerasComponent implements OnDestroy {
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
+    
+    // Obtener bonificación e interés del primer recibo (todos deberían tener los mismos valores)
+    const primerRecibo = pagoCC.recibo[0];
+    const bonificacionRecibo = primerRecibo.bonifica || 0;
+    const bonificacionTipo = primerRecibo.bonifica_tipo || 'P';
+    const interesRecibo = primerRecibo.interes || 0;
+    const interesTipo = primerRecibo.interes_tipo || 'P';
     const clienteDataRec = sessionStorage.getItem('datoscliente');
     let cliente = null;
     if (clienteDataRec) {
@@ -1384,6 +1534,10 @@ export class CabecerasComponent implements OnDestroy {
       ];
     });
     console.log(tableBody);
+    
+    // Obtener configuración de empresa según sucursal
+    const empresaConfig = getEmpresaConfig();
+    
     // Definir el contenido del documento
     const documentDefinition = {
       background: {
@@ -1402,20 +1556,31 @@ export class CabecerasComponent implements OnDestroy {
         ],
       },
       content: [
-        {
-          image: "data:image/jpeg;base64,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",
-          width: 100,
-          margin: [0, 0, 80, 0], // izquierda, superior,derecha , inferior
-        },
+        // Logo o texto según configuración
+        ...(empresaConfig.logo ? [
+          {
+            image: empresaConfig.logo,
+            width: 100,
+            margin: [0, 0, 80, 0],
+          }
+        ] : [
+          {
+            text: empresaConfig.texto,
+            fontSize: 24,
+            bold: true,
+            margin: [0, 20, 80, 20],
+            style: 'mayorista'
+          }
+        ]),
         {
           columns: [
             {
               text: [
-                { text: 'Vicario Segura 587\n' },
-                { text: 'Capital - Catamarca\n' },
+                { text: empresaConfig.direccion + '\n' },
+                { text: empresaConfig.ciudad + '\n' },
                 { text: this.sucursalNombre + '\n' },
-                { text: '3834-4172012\n' },
-                { text: 'motomatch01@gmail.com' },
+                { text: empresaConfig.telefono + '\n' },
+                { text: empresaConfig.email },
               ],
               fontSize: 10,
               margin: [10, 0, 0, 0],
@@ -1538,12 +1703,43 @@ export class CabecerasComponent implements OnDestroy {
           },
           margin: [0, 0, 0, 30],
         },
+        // Sección de bonificaciones e intereses (similar a historialventas2)
+        ...(bonificacionRecibo && bonificacionRecibo > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['BONIFICACIÓN (' + (bonificacionTipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                bonificacionTipo === 'P' 
+                  ? bonificacionRecibo + '% ($' + ((bonificacionRecibo * totalImporte) / 100).toFixed(2) + ')'
+                  : '$' + bonificacionRecibo.toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
+        ...(interesRecibo && interesRecibo > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['INTERÉS (' + (interesTipo === 'P' ? 'Porcentaje' : 'Importe') + '):', 
+                interesTipo === 'P' 
+                  ? interesRecibo + '% ($' + ((interesRecibo * totalImporte) / 100).toFixed(2) + ')'
+                  : '$' + interesRecibo.toFixed(2)],
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 0]
+        }] : []),
         {
           style: 'tableExample',
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL APLICADO: $' + totalImporte],
+              ['TOTAL APLICADO: $' + this.calcularTotalEfectivoEnPDF(totalImporte, bonificacionRecibo, bonificacionTipo, interesRecibo, interesTipo).toFixed(2)],
             ],
             bold: true,
             fontSize: 16,
@@ -1572,6 +1768,12 @@ export class CabecerasComponent implements OnDestroy {
           fontSize: 8,
           margin: [0, 10, 0, 0],
         },
+        mayorista: {
+          bold: true,
+          fontSize: 24,
+          alignment: 'left',
+          color: '#000000',
+        },
       },
       defaultStyle: {
       },
@@ -1584,34 +1786,38 @@ export class CabecerasComponent implements OnDestroy {
       console.error(error);
     });
   }
+
+  // Calcular total efectivo para recibo de cabeceras (importe + intereses + bonificaciones)
+  private calcularTotalEfectivoEnPDF(totalImporte: number, bonificacionRecibo: number, bonificacionTipo: string, interesRecibo: number, interesTipo: string): number {
+    let totalEfectivo = totalImporte;
+    
+    // Sumar bonificaciones (descuentos que se aplican a favor del cliente)
+    if (bonificacionRecibo && bonificacionRecibo > 0) {
+      if (bonificacionTipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += (bonificacionRecibo * totalImporte) / 100;
+      } else {
+        // Si es importe directo
+        totalEfectivo += bonificacionRecibo;
+      }
+    }
+    
+    // Sumar intereses (cargos adicionales)
+    if (interesRecibo && interesRecibo > 0) {
+      if (interesTipo === 'P') {
+        // Si es porcentaje, calcular el valor monetario
+        totalEfectivo += (interesRecibo * totalImporte) / 100;
+      } else {
+        // Si es importe directo
+        totalEfectivo += interesRecibo;
+      }
+    }
+    
+    return totalEfectivo;
+  }
+
   numeroAPalabras(num: number): string {
-    const unidades = ['CERO', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE'];
-    const especiales = ['DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISÉIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE'];
-    const decenas = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
-    const centenas = ['', 'CIEN', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
-    if (num < 10) return unidades[num];
-    if (num < 20) return especiales[num - 10];
-    if (num < 100) {
-      if (num % 10 === 0) return decenas[Math.floor(num / 10)];
-      return decenas[Math.floor(num / 10)] + ' y ' + unidades[num % 10];
-    }
-    if (num < 1000) {
-      if (num % 100 === 0) return centenas[Math.floor(num / 100)];
-      return centenas[Math.floor(num / 100)] + ' ' + this.numeroAPalabras(num % 100);
-    }
-    if (num < 10000) {
-      if (num % 1000 === 0) return unidades[Math.floor(num / 1000)] + ' MIL';
-      return unidades[Math.floor(num / 1000)] + ' MIL ' + this.numeroAPalabras(num % 1000);
-    }
-    if (num < 1000000) {
-      if (num % 1000 === 0) return this.numeroAPalabras(Math.floor(num / 1000)) + ' MIL';
-      return this.numeroAPalabras(Math.floor(num / 1000)) + ' MIL ' + this.numeroAPalabras(num % 1000);
-    }
-    if (num < 1000000000) {
-      if (num % 1000000 === 0) return this.numeroAPalabras(Math.floor(num / 1000000)) + ' MILLÓN';
-      return this.numeroAPalabras(Math.floor(num / 1000000)) + ' MILLÓN ' + this.numeroAPalabras(num % 1000000);
-    }
-    return 'Número fuera de rango';
+    return this.numeroPalabrasService.numeroAPalabras(num);
   }
   showNotification(message: string) {
     Swal.fire({

@@ -60,7 +60,9 @@ export class AnalisiscajaComponent implements OnInit, OnDestroy {
       { field: 'iva1', header: 'IVA' },
       { field: 'total', header: 'Total' },
       { field: 'bonifica', header: 'Bonifica' },
+      { field: 'bonifica_tipo', header: 'Tipo Bonif.' },
       { field: 'interes', header: 'Interes' },
+      { field: 'interes_tipo', header: 'Tipo Inter.' },
       { field: 'saldo', header: 'Saldo' }
     ];
     this._selectedColumns = this.cols;

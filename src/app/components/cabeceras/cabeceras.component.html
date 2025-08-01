@@ -123,6 +123,27 @@
                                     (ngModelChange)="validateValue($event)" placeholder="0">
                             </div>
                         </div>
+                        
+                        <!-- NUEVOS CAMPOS PARA TIPOS -->
+                        <div class="form-row">
+                            <label>Tipo Bonificación:</label>
+                            <div class="input-container">
+                                <select class="form-control" [(ngModel)]="bonificacionType">
+                                    <option value="P">Porcentaje (%)</option>
+                                    <option value="I">Importe ($)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <label>Tipo Interés:</label>
+                            <div class="input-container">
+                                <select class="form-control" [(ngModel)]="interesType">
+                                    <option value="P">Porcentaje (%)</option>
+                                    <option value="I">Importe ($)</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -133,21 +154,27 @@
                     <button class="btn btn-success" (click)="pago()">
                         <i class="fa fa-check"></i> Pagar
                     </button>
-                    <div *ngIf="this.opcionesPagoFlag && selectedCabeceras.length > 0 && selectedCabeceras[0].tipo === 'FC'" class="btn-group">
+                    <div *ngIf="this.opcionesPagoFlag && selectedCabeceras.length > 0 && (selectedCabeceras[0].tipo === 'FC' || selectedCabeceras[0].tipo === 'PR')" class="btn-group">
                         <button type="button" class="btn btn-info altura-boton">{{tipoVal}}</button>
                         <button type="button" class="btn btn-info dropdown-toggle dropdown-toggle-split"
                             data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         </button>
                         <div class="dropdown-menu scroll_list">
-                            <input type="text" class="form-control" placeholder="Buscar..." [(ngModel)]="searchText">
-                            <li *ngFor="let item of filteredTipo | filter: searchText">
-                                <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
-                            </li>
+                            <!-- Opciones para FC -->
+                            <ng-container *ngIf="selectedCabeceras[0].tipo === 'FC'">
+                                <input type="text" class="form-control" placeholder="Buscar..." [(ngModel)]="searchText">
+                                <li *ngFor="let item of filteredTipo | filter: searchText">
+                                    <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
+                                </li>
+                            </ng-container>
+                            
+                            <!-- Opciones para PR -->
+                            <ng-container *ngIf="selectedCabeceras[0].tipo === 'PR'">
+                                <li *ngFor="let item of condicionesPR">
+                                    <a class="dropdown-item" (click)="selectTipo(item)">{{item.tarjeta }}</a>
+                                </li>
+                            </ng-container>
                         </div>
-                    </div>
-                    
-                    <div *ngIf="selectedCabeceras.length > 0 && selectedCabeceras[0].tipo === 'PR'" class="payment-method-fixed">
-                        <span class="badge badge-success">EFECTIVO (Fijo para presupuestos)</span>
                     </div>
                 </div>
             </div>

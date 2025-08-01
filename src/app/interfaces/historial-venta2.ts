@@ -8,6 +8,10 @@ export interface HistorialVenta2 {
   emitido: string;
   vencimiento: string;
   importe: number; // calculado como exento + basico + iva1 + iva2 + iva3
+  bonifica?: number;
+  bonifica_tipo?: string;
+  interes?: number;
+  interes_tipo?: string;
   saldo: number;
   usuario: string;
   // Campos auxiliares para el cálculo del importe

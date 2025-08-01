@@ -1143,7 +1143,9 @@ private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
             'cod_sucursal' => $id_vend,
             'fec_proceso' => date('Y-m-d'),
             'bonifica' => isset($cabecera['bonifica']) ? $cabecera['bonifica'] : 0,
+            'bonifica_tipo' => isset($cabecera['bonifica_tipo']) ? $cabecera['bonifica_tipo'] : 'P',
             'interes' => isset($cabecera['interes']) ? $cabecera['interes'] : 0,
+            'interes_tipo' => isset($cabecera['interes_tipo']) ? $cabecera['interes_tipo'] : 'P',
             'id_fac' => $id_num
         );
         
@@ -1304,22 +1306,11 @@ public function PagoCabecera_post()
     
     $tipoDocumento = $tiposUnicos[0] ?? 'FC';
     
-    // NUEVA VALIDACIÓN: Para presupuestos, forzar método de pago a EFECTIVO
+    // Para presupuestos (PR), el frontend ya maneja la restricción de efectivo
+    // La información del método de pago se almacena en 'codigo_mov' y 'caja', no en cod_tarj
     if ($tipoDocumento === 'PR') {
-        // Verificar que el método de pago sea efectivo
-        if (isset($pagoCC['caja_movi']['cod_tarj']) && $pagoCC['caja_movi']['cod_tarj'] !== '11') {
-            $respuesta = array(
-                "error" => true,
-                "mensaje" => "Los presupuestos solo pueden pagarse en efectivo"
-            );
-            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
-            return;
-        }
-        
-        // Forzar código de efectivo si no está presente
-        if (isset($pagoCC['caja_movi'])) {
-            $pagoCC['caja_movi']['cod_tarj'] = '11';
-        }
+        // Validación manejada en frontend - PR siempre usa efectivo (codTarj = "11")
+        // No se requiere lógica adicional aquí
     }
 
     // Iniciar transacción
@@ -3578,7 +3569,9 @@ public function obtenerDatosRecibo_get()
             r.cod_sucursal,
             r.fec_proceso,
             r.bonifica,
+            r.bonifica_tipo,
             r.interes,
+            r.interes_tipo,
             r.recibo_asoc,
             CASE WHEN t.tarjeta IS NOT NULL THEN t.tarjeta ELSE \'Sin definir\' END as descripcion_tarjeta
         ');
@@ -3682,12 +3675,20 @@ public function historialventas2xcli_get()
             f.iva2,
             f.iva3,
             (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe,
+            COALESCE(MAX(r.bonifica), f.bonifica) as bonifica,
+            COALESCE(MAX(r.bonifica_tipo), f.bonifica_tipo) as bonifica_tipo,
+            COALESCE(MAX(r.interes), f.interes) as interes,
+            COALESCE(MAX(r.interes_tipo), f.interes_tipo) as interes_tipo,
             f.saldo,
             f.usuario,
             f.id_num as id,
             f.cliente
         ');
         $this->db->from($tabla . ' f');
+        // CORREGIDO: JOIN mejorado para evitar mezcla de datos entre clientes
+        $this->db->join($tabla . ' rc', 'f.numero_fac = rc.numero_fac AND rc.tipo = \'RC\' AND f.cliente = rc.cliente', 'left');
+        $this->db->join('recibos' . substr($tabla, -1) . ' r', 'rc.id_num = r.id_fac', 'left');
+        $this->db->group_by('f.cod_sucursal, f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, f.saldo, f.usuario, f.id_num, f.cliente, f.bonifica, f.bonifica_tipo, f.interes, f.interes_tipo');
         
         // Filtrar por cliente
         $this->db->where('f.cliente', $idcli);
@@ -4109,11 +4110,11 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
     // Log para debug
     error_log("Construyendo subconsulta para tabla: {$tabla}, sucursal: {$sucursal}, cliente: {$idcli}");
     
-    // Construir SELECT base
-    $select = "SELECT {$sucursal_escaped} as sucursal, tipo, puntoventa, letra, numero_int, numero_fac, emitido, vencimiento, exento, basico, iva1, iva2, iva3, (exento + basico + iva1 + iva2 + iva3) as importe, saldo, usuario, id_num as id, cliente FROM {$tabla_escaped}";
+    // Construir SELECT base - CORREGIDO: Agregado filtro por cliente en el JOIN
+    $select = "SELECT {$sucursal_escaped} as sucursal, f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, (f.exento + f.basico + f.iva1 + f.iva2 + f.iva3) as importe, COALESCE(MAX(r.bonifica), f.bonifica) as bonifica, COALESCE(MAX(r.bonifica_tipo), f.bonifica_tipo) as bonifica_tipo, COALESCE(MAX(r.interes), f.interes) as interes, COALESCE(MAX(r.interes_tipo), f.interes_tipo) as interes_tipo, f.saldo, f.usuario, f.id_num as id, f.cliente FROM {$tabla_escaped} f LEFT JOIN {$tabla_escaped} rc ON f.numero_fac = rc.numero_fac AND rc.tipo = 'RC' AND f.cliente = rc.cliente LEFT JOIN recibos" . substr($tabla, -1) . " r ON rc.id_num = r.id_fac GROUP BY f.tipo, f.puntoventa, f.letra, f.numero_int, f.numero_fac, f.emitido, f.vencimiento, f.exento, f.basico, f.iva1, f.iva2, f.iva3, f.saldo, f.usuario, f.id_num, f.cliente, f.bonifica, f.bonifica_tipo, f.interes, f.interes_tipo";
     
     // Construir WHERE
-    $where = "WHERE cliente = {$idcli_escaped} AND tipo != 'RC'";
+    $where = "WHERE f.cliente = {$idcli_escaped} AND f.tipo != 'RC'";
     
     // Log de la consulta base
     error_log("Consulta base para {$tabla}: {$select} {$where}");
@@ -4123,14 +4124,14 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
         if ($this->validarFormatoFecha($fecha_desde) && $this->validarFormatoFecha($fecha_hasta)) {
             $fecha_desde_escaped = $this->db->escape($fecha_desde);
             $fecha_hasta_escaped = $this->db->escape($fecha_hasta);
-            $where .= " AND emitido >= {$fecha_desde_escaped} AND emitido <= {$fecha_hasta_escaped}";
+            $where .= " AND f.emitido >= {$fecha_desde_escaped} AND f.emitido <= {$fecha_hasta_escaped}";
         }
     }
     
     // Aplicar búsqueda global si existe
     if ($search && trim($search) !== '') {
         $search_escaped = $this->db->escape('%' . $search . '%');
-        $where .= " AND (tipo LIKE {$search_escaped} OR letra LIKE {$search_escaped} OR numero_fac::text LIKE {$search_escaped} OR usuario LIKE {$search_escaped})";
+        $where .= " AND (f.tipo LIKE {$search_escaped} OR f.letra LIKE {$search_escaped} OR f.numero_fac::text LIKE {$search_escaped} OR f.usuario LIKE {$search_escaped})";
     }
     
     // Aplicar filtros de columna si existen (EXCLUYENDO el filtro de sucursal)
@@ -4151,37 +4152,37 @@ private function construirSubConsultaGlobalManual($tabla, $sucursal, $idcli, $fe
                     
                     switch ($matchMode) {
                         case 'startsWith':
-                            $where .= " AND {$field} LIKE " . $this->db->escape($value . '%');
+                            $where .= " AND f.{$field} LIKE " . $this->db->escape($value . '%');
                             break;
                         case 'contains':
-                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            $where .= " AND f.{$field} LIKE " . $this->db->escape('%' . $value . '%');
                             break;
                         case 'equals':
-                            $where .= " AND {$field} = {$value_escaped}";
+                            $where .= " AND f.{$field} = {$value_escaped}";
                             break;
                         case 'gt':
-                            $where .= " AND {$field} > {$value_escaped}";
+                            $where .= " AND f.{$field} > {$value_escaped}";
                             break;
                         case 'gte':
-                            $where .= " AND {$field} >= {$value_escaped}";
+                            $where .= " AND f.{$field} >= {$value_escaped}";
                             break;
                         case 'lt':
-                            $where .= " AND {$field} < {$value_escaped}";
+                            $where .= " AND f.{$field} < {$value_escaped}";
                             break;
                         case 'lte':
-                            $where .= " AND {$field} <= {$value_escaped}";
+                            $where .= " AND f.{$field} <= {$value_escaped}";
                             break;
                         case 'dateIs':
-                            $where .= " AND {$field} = {$value_escaped}";
+                            $where .= " AND f.{$field} = {$value_escaped}";
                             break;
                         case 'dateAfter':
-                            $where .= " AND {$field} > {$value_escaped}";
+                            $where .= " AND f.{$field} > {$value_escaped}";
                             break;
                         case 'dateBefore':
-                            $where .= " AND {$field} < {$value_escaped}";
+                            $where .= " AND f.{$field} < {$value_escaped}";
                             break;
                         default:
-                            $where .= " AND {$field} LIKE " . $this->db->escape('%' . $value . '%');
+                            $where .= " AND f.{$field} LIKE " . $this->db->escape('%' . $value . '%');
                             break;
                     }
                 }
@@ -4405,36 +4406,55 @@ public function obtenerDatosExpandidos_get()
 
     try {
         // Obtener datos de recibos asociados a la factura
-        // Relación: recibos.id_fac = factcab.id_num
-        $this->db->select('
-            r.recibo,
-            r.c_tipo,
-            r.c_numero,
-            r.c_cuota,
-            r.fecha,
-            r.importe,
-            r.usuario,
-            r.observacion,
-            r.cod_lugar,
-            r.sesion,
-            r.c_tipf,
-            r.c_puntoventa,
-            r.recibo_asoc,
-            r.recibo_saldo,
-            r.cod_sucursal,
-            r.fec_proceso,
-            r.bonifica,
-            r.interes,
-            r.id_fac
-        ');
-        $this->db->from($tablaRecibos . ' r');
-        $this->db->where('r.id_fac', $id_factura);
-        $this->db->order_by('r.fecha', 'DESC');
+        // CORREGIDO: Usar cliente en lugar de numero_fac para evitar mezcla de datos
         
-        $queryRecibos = $this->db->get();
+        // Primero obtener la factura para conseguir cliente y numero_fac
+        $this->db->select('numero_fac, cliente');
+        $this->db->from($tablaFactcab);
+        $this->db->where('id_num', $id_factura);
+        $queryFactura = $this->db->get();
+        $factura = $queryFactura->row_array();
+        
+        if (!$factura) {
+            throw new Exception("Factura no encontrada con id_num: $id_factura");
+        }
+        
+        $numero_fac = $factura['numero_fac'];
+        $cliente_id = $factura['cliente'];
+        
+        // Consulta UNION CORREGIDA para obtener recibos directos + recibos RC relacionados
+        // CAMBIO CRÍTICO: Agregado filtro por cliente para evitar mezcla de datos entre clientes
+        $query = "
+            (
+                SELECT 
+                    r.recibo, r.c_tipo, r.c_numero, r.c_cuota, r.fecha, r.importe, 
+                    r.usuario, r.observacion, r.cod_lugar, r.sesion, r.c_tipf, 
+                    r.c_puntoventa, r.recibo_asoc, r.recibo_saldo, r.cod_sucursal,
+                    r.fec_proceso, r.bonifica, r.bonifica_tipo, r.interes, r.interes_tipo, 
+                    r.id_fac, 'DIRECTO' as origen
+                FROM {$tablaRecibos} r
+                WHERE r.id_fac = {$id_factura}
+            )
+            UNION ALL
+            (
+                SELECT 
+                    r.recibo, r.c_tipo, r.c_numero, r.c_cuota, r.fecha, r.importe, 
+                    r.usuario, r.observacion, r.cod_lugar, r.sesion, r.c_tipf, 
+                    r.c_puntoventa, r.recibo_asoc, r.recibo_saldo, r.cod_sucursal,
+                    r.fec_proceso, r.bonifica, r.bonifica_tipo, r.interes, r.interes_tipo, 
+                    r.id_fac, 'RC' as origen
+                FROM {$tablaRecibos} r
+                INNER JOIN {$tablaFactcab} f ON r.id_fac = f.id_num
+                WHERE r.recibo_asoc = {$id_factura} AND f.tipo = 'RC'
+            )
+            ORDER BY fecha DESC
+        ";
+        
+        $queryRecibos = $this->db->query($query);
         $recibos = $queryRecibos->result_array();
 
         // NUEVO: Obtener historial de pagos de la factura (solo pagos reales RC)
+        // CORREGIDO: Agregado filtro por cliente para evitar mezcla de datos
         $this->db->select('
             r.recibo,
             r.c_tipo,
@@ -4449,6 +4469,7 @@ public function obtenerDatosExpandidos_get()
         $this->db->join($tablaFactcab . ' f', 'r.id_fac = f.id_num', 'left');
         $this->db->where('r.recibo_asoc', $id_factura);
         $this->db->where('f.tipo', 'RC');  // Filtrar solo pagos reales (Recibos de Cobro)
+        $this->db->where('f.cliente', $cliente_id);  // CRÍTICO: Filtrar por cliente del documento original
         $this->db->order_by('r.fecha', 'ASC');
         $queryPagos = $this->db->get();
         $pagos = $queryPagos->result_array();
@@ -4459,18 +4480,7 @@ public function obtenerDatosExpandidos_get()
             $total_pagado += (float)$pago['importe'];
         }
 
-        // Obtener datos de cliente y factura para filtrado
-        $this->db->select('f.cliente, f.emitido, f.tipo, f.numero_fac');
-        $this->db->from($tablaFactcab . ' f');
-        $this->db->where('f.id_num', $id_factura);
-        $queryFactura = $this->db->get();
-        
-        $cliente_id = null;
-        $datosFactura = null;
-        if ($queryFactura->num_rows() > 0) {
-            $datosFactura = $queryFactura->row_array();
-            $cliente_id = $datosFactura['cliente'];
-        }
+        // ELIMINADO: Consulta duplicada ya no necesaria - el cliente_id se obtiene al principio
 
         // Para cada recibo, obtener sus productos específicos
         foreach ($recibos as $index => $recibo) {
