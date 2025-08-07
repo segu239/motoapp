@@ -24,7 +24,7 @@ constructor(private router:Router, private _login:LoginService, private _crypto:
   else
   {
     this.login=false;
-    this.router.navigate(['/login']);
+    this.router.navigate(['/login2']);
   }
 
   return this.login;
