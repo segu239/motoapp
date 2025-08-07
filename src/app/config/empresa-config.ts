@@ -26,7 +26,7 @@ export function getEmpresaConfig(): EmpresaConfig {
     logo: 'assets/images/motomatch-logo.jpg',
     direccion: 'Vicario Segura 587',
     ciudad: 'Capital - Catamarca',
-    telefono: '3834-4172012',
+    telefono: '3834061575',
     email: 'motomatch01@gmail.com'
   };
 }
