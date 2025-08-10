@@ -1,0 +1,74 @@
+{
+  "$schema": "https://charm.land/crush.json",
+  "mcp": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\Telemetria\\T49E2PT\\angular\\motoapp"],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {}
+    },
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "sbp_03b39f2fe95962f69d65a6297049386a9fea11e5"
+      ],
+      "env": {}
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:eisgrupo@100.65.39.89:5432/motomatchweb?sslmode=disable"
+      ],
+      "env": {}
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": {}
+    },
+    "desktop-commander": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander"],
+      "env": {}
+    },
+    "openmemory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "openmemory"],
+      "env": {
+        "OPENMEMORY_API_KEY": "om-x8v08nmlfbok25n56f6zaoa0fdkam39w",
+        "CLIENT_NAME": "claude"
+      }
+    }
+  },
+  "permissions": {
+    "allowed_tools": [
+      "read_file",
+      "write_file",
+      "list_directory",
+      "execute_sql",
+      "list_tables",
+      "browser_navigate",
+      "browser_click",
+      "browser_type",
+      "add-memory",
+      "search-memories",
+      "list-memories"
+    ]
+  }
+}

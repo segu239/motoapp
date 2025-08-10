@@ -1372,14 +1372,14 @@ export class CabecerasComponent implements OnDestroy {
   private calcularImporteMovConBonificacionesIntereses(importeBase: number): number {
     let importeFinal = importeBase;
     
-    // Aplicar bonificaciones (favorable al cliente - se suma porque reduce lo que debe pagar)
+    // Aplicar bonificaciones (favorable al cliente - se resta del importe que debe pagar)
     if (this.bonificacion && this.bonificacion > 0) {
       if (this.bonificacionType === 'P') {
-        // Si es porcentaje, calcular el valor monetario
-        importeFinal += (this.bonificacion * importeBase) / 100;
+        // Si es porcentaje, calcular el valor monetario y restar
+        importeFinal -= (this.bonificacion * importeBase) / 100;
       } else {
-        // Si es importe directo
-        importeFinal += this.bonificacion;
+        // Si es importe directo, restar
+        importeFinal -= this.bonificacion;
       }
     }
     
@@ -1399,8 +1399,10 @@ export class CabecerasComponent implements OnDestroy {
       importeBase: importeBase,
       bonificacion: this.bonificacion,
       bonificacionType: this.bonificacionType,
+      descuentoPorBonificacion: this.bonificacion ? (this.bonificacionType === 'P' ? (this.bonificacion * importeBase) / 100 : this.bonificacion) : 0,
       interes: this.interes,
       interesType: this.interesType,
+      recargoPorInteres: this.interes ? (this.interesType === 'P' ? (this.interes * importeBase) / 100 : this.interes) : 0,
       importeFinal: parseFloat(importeFinal.toFixed(2))
     });
     

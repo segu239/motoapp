@@ -152,7 +152,7 @@ children:[
 },
 
 // Rutas para autenticación
-{ path: 'login', component: LoginComponent },
+// { path: 'login', component: LoginComponent }, // Ruta comentada - ya no se usa, todo redirige a login2
 { path: 'login2', component: Login2Component },
 { path: 'nopermitido', component: NopermitidoComponent },
 { path: '**', pathMatch: 'full', redirectTo: 'login2' },
