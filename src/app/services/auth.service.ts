@@ -280,4 +280,15 @@ export class AuthService {
       map(user => !!user)
     );
   }
+
+  // Obtener el rol del usuario actual
+  getCurrentUserRole(): Observable<UserRole> {
+    return this.user$.pipe(
+      map(user => {
+        if (!user) return UserRole.USER; // Rol por defecto si no hay usuario
+        return user.nivel as UserRole;
+      }),
+      take(1)
+    );
+  }
 } 
