@@ -15,7 +15,6 @@ import {
 
 interface IndicadorResumen {
   totalRegistros: number;
-  impactoTotal: number;
   variacionPromedio: number;
   registrosPreview: number;
 }
@@ -37,7 +36,6 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   productosPreview: PreviewProduct[] = [];
   indicadores: IndicadorResumen = {
     totalRegistros: 0,
-    impactoTotal: 0,
     variacionPromedio: 0,
     registrosPreview: 0
   };
@@ -97,19 +95,8 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     // Suscripción a cambios individuales de cada filtro para restricción de un solo filtro
     this.setupSingleFilterRestriction();
 
-    // Suscripción a cambios en filtros para actualizar preview automáticamente
-    const formSubscription = this.filtersForm.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged()
-      )
-      .subscribe(() => {
-        if (this.formValid()) {
-          this.generatePreview();
-        }
-      });
-    
-    this.subscriptions.add(formSubscription);
+    // Ya no se genera preview automáticamente - ahora se usa botón manual
+    // Se mantiene solo la restricción de filtros únicos
   }
 
   /**
@@ -237,13 +224,71 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Generar preview de cambios
+   * Generar preview de cambios con validaciones
    */
   generatePreview(): void {
-    if (!this.formValid()) {
+    // Validar que hay exactamente un filtro seleccionado
+    const activeFiltersCount = this.getActiveFiltersCount();
+    
+    if (activeFiltersCount === 0) {
+      Swal.fire({
+        title: 'Filtro Requerido',
+        text: 'Debe seleccionar exactamente un filtro (Marca, Proveedor, Rubro o Tipo IVA) para generar el preview.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
       return;
     }
     
+    if (activeFiltersCount > 1) {
+      const activeFilters = this.getActiveFilters();
+      Swal.fire({
+        title: 'Demasiados Filtros',
+        html: `
+          <div class="text-left">
+            <p>Solo puede usar un filtro a la vez para evitar confusión.</p>
+            <p><strong>Filtros activos:</strong> ${activeFilters.join(', ')}</p>
+            <br>
+            <p class="text-muted">Por favor, mantenga solo un filtro seleccionado.</p>
+          </div>
+        `,
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
+    // Validar formulario completo
+    if (!this.filtersForm.valid) {
+      Swal.fire({
+        title: 'Datos Incompletos',
+        text: 'Complete todos los campos requeridos correctamente antes de generar el preview.',
+        icon: 'error',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
+    // Validar porcentaje diferente de 0
+    const porcentaje = parseFloat(this.filtersForm.value.porcentaje) || 0;
+    if (porcentaje === 0) {
+      Swal.fire({
+        title: 'Porcentaje Requerido',
+        text: 'Debe especificar un porcentaje de modificación diferente de 0%.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
+    // Si todas las validaciones pasan, generar preview
+    this.executeGeneratePreview();
+  }
+
+  /**
+   * Ejecutar generación de preview (método privado)
+   */
+  private executeGeneratePreview(): void {
     this.loadingPreview = true;
     const formValue = this.filtersForm.value;
     
@@ -292,8 +337,7 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       this.indicadores = {
         totalRegistros: response.total_registros,
         registrosPreview: response.registros_preview,
-        variacionPromedio: response.porcentaje_aplicado,
-        impactoTotal: this.calcularImpactoTotal(this.productosPreview)
+        variacionPromedio: response.porcentaje_aplicado
       };
     } else {
       // Si no hay productos o no es exitoso
@@ -353,12 +397,6 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Calcular impacto total
-   */
-  private calcularImpactoTotal(productos: PreviewProduct[]): number {
-    return productos.reduce((total, producto) => total + producto.impacto_inventario, 0);
-  }
 
   /**
    * Aplicar cambios de precios
@@ -414,7 +452,6 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
           <p><strong>Tipo:</strong> ${tipoTexto}</p>
           <p><strong>Variación:</strong> ${porcentajeTexto}</p>
           <p><strong>Productos afectados:</strong> ${this.indicadores.totalRegistros}</p>
-          <p><strong>Impacto total:</strong> $${this.indicadores.impactoTotal.toLocaleString()}</p>
         </div>
         <div class="alert alert-warning mt-3">
           <small><i class="fa fa-warning"></i> Esta acción no se puede deshacer automáticamente</small>
@@ -516,7 +553,7 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Limpiar formulario
+   * Limpiar formulario y preview
    */
   clearFilters(): void {
     this.filtersForm.patchValue({
@@ -528,6 +565,15 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     
     this.productosPreview = [];
     this.resetIndicadores();
+    
+    // Mostrar mensaje de confirmación
+    Swal.fire({
+      title: 'Filtros Limpiados',
+      text: 'Se han limpiado todos los filtros y el preview.',
+      icon: 'info',
+      timer: 2000,
+      showConfirmButton: false
+    });
   }
 
   /**
@@ -591,7 +637,6 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   private resetIndicadores(): void {
     this.indicadores = {
       totalRegistros: 0,
-      impactoTotal: 0,
       variacionPromedio: 0,
       registrosPreview: 0
     };

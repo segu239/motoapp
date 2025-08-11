@@ -126,6 +126,15 @@
                                         <div class="d-flex flex-column gap-2">
                                             <button 
                                                 type="button" 
+                                                class="btn btn-primary btn-sm"
+                                                (click)="generatePreview()"
+                                                [disabled]="loadingPreview || loadingApply">
+                                                <i class="fa fa-eye mr-1" [class.fa-spin]="loadingPreview"></i>
+                                                <span *ngIf="!loadingPreview">Generar Preview</span>
+                                                <span *ngIf="loadingPreview">Generando...</span>
+                                            </button>
+                                            <button 
+                                                type="button" 
                                                 class="btn btn-outline-secondary btn-sm"
                                                 (click)="clearFilters()"
                                                 [disabled]="loadingPreview || loadingApply">
@@ -142,7 +151,7 @@
                 
                 <!-- Panel de Indicadores de Resumen -->
                 <div class="row mb-4" *ngIf="!loading && indicadores.totalRegistros > 0">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-info text-white">
                             <div class="card-body text-center">
                                 <h5 class="card-title">{{ indicadores.totalRegistros | number }}</h5>
@@ -150,15 +159,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card" [ngClass]="indicadores.impactoTotal >= 0 ? 'bg-success' : 'bg-danger'" class="text-white">
-                            <div class="card-body text-center">
-                                <h5 class="card-title">{{ indicadores.impactoTotal | currency:'USD':'symbol':'1.0-0' }}</h5>
-                                <p class="card-text">Impacto Total en Inventario</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-warning text-dark">
                             <div class="card-body text-center">
                                 <h5 class="card-title">{{ indicadores.variacionPromedio }}%</h5>
@@ -166,7 +167,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card bg-secondary text-white">
                             <div class="card-body text-center">
                                 <h5 class="card-title">{{ indicadores.registrosPreview | number }}</h5>
@@ -202,25 +203,18 @@
                         <p class="mt-2">Generando preview de cambios...</p>
                     </div>
                     
-                    <!-- Mensaje cuando no hay filtros -->
-                    <div class="card-body text-center" *ngIf="!loadingPreview && !formValid()">
+                    <!-- Mensaje cuando no hay preview generado -->
+                    <div class="card-body text-center" *ngIf="!loadingPreview && productosPreview.length === 0">
                         <i class="fa fa-info-circle fa-2x text-muted"></i>
                         <p class="mt-2 text-muted">
-                            Selecciona <strong>exactamente un filtro</strong> (Marca, Proveedor, Rubro o Tipo IVA) y configura el porcentaje de modificación para ver el preview
+                            Selecciona <strong>exactamente un filtro</strong> (Marca, Proveedor, Rubro o Tipo IVA), configura el porcentaje y presiona <strong>"Generar Preview"</strong>
                         </p>
                         <small class="text-muted">
                             <i class="fa fa-lightbulb-o mr-1"></i>
-                            Solo puedes usar un filtro a la vez para evitar confusión
+                            Solo puedes usar un filtro a la vez para evitar confusión. El preview te permitirá verificar los cambios antes de aplicarlos.
                         </small>
                     </div>
                     
-                    <!-- Mensaje cuando no hay productos -->
-                    <div class="card-body text-center" *ngIf="!loadingPreview && formValid() && productosPreview.length === 0">
-                        <i class="fa fa-exclamation-triangle fa-2x text-warning"></i>
-                        <p class="mt-2 text-warning">
-                            No se encontraron productos que cumplan con los filtros especificados
-                        </p>
-                    </div>
                     
                     <!-- Tabla de productos -->
                     <div class="table-responsive" *ngIf="!loadingPreview && productosPreview.length > 0">
@@ -240,8 +234,6 @@
                                     <th colspan="2" class="text-center bg-light">Precio Final (con IVA)</th>
                                     <th rowspan="2" class="text-right">Variación</th>
                                     <th rowspan="2" class="text-right">Variación %</th>
-                                    <th rowspan="2" class="text-right">Stock</th>
-                                    <th rowspan="2" class="text-right">Impacto</th>
                                 </tr>
                                 <tr>
                                     <th class="text-right bg-light">Actual</th>
@@ -294,18 +286,12 @@
                                         [ngClass]="producto.variacion_porcentaje >= 0 ? 'text-success' : 'text-danger'">
                                         {{ producto.variacion_porcentaje | number:'1.1-1' }}%
                                     </td>
-                                    
-                                    <td class="text-right">{{ producto.stock_total | number }}</td>
-                                    <td class="text-right" 
-                                        [ngClass]="producto.impacto_inventario >= 0 ? 'text-success' : 'text-danger'">
-                                        {{ producto.impacto_inventario | currency:'USD':'symbol':'1.0-0' }}
-                                    </td>
                                 </tr>
                             </ng-template>
                             
                             <ng-template pTemplate="emptymessage">
                                 <tr>
-                                    <td colspan="12" class="text-center p-4">
+                                    <td colspan="10" class="text-center p-4">
                                         <i class="fa fa-info-circle fa-2x text-muted"></i>
                                         <p class="mt-2 text-muted">No hay productos para mostrar</p>
                                     </td>
@@ -343,7 +329,7 @@
                         <li><strong>Filtros:</strong> Seleccione <u>exactamente un filtro</u> (Marca, Proveedor, Rubro o Tipo IVA). Solo se permite un filtro a la vez para evitar confusión.</li>
                         <li><strong>Tipo de Precio:</strong> "Precio de Costo" modifica el costo y recalcula el precio final. "Precio Final" modifica el precio de venta y recalcula el costo.</li>
                         <li><strong>Porcentaje:</strong> Valores positivos aumentan precios, valores negativos los disminuyen.</li>
-                        <li><strong>Preview:</strong> La tabla muestra una muestra de los productos que serán modificados con los nuevos precios calculados.</li>
+                        <li><strong>Preview:</strong> Presione el botón "Generar Preview" para ver una muestra de los productos que serán modificados con los nuevos precios calculados.</li>
                         <li><strong>Auditoría:</strong> Todos los cambios se registran automáticamente para trazabilidad.</li>
                     </ul>
                 </div>

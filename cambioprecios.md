@@ -39,9 +39,10 @@ Implementar un componente visual llamado **`cambioprecios`** que permita a los u
 ✅ **Diseño basado en página `/articulos`** - Reutilizar layout existente  
 ✅ **Filtros Únicos** - Solo un filtro por vez con validación automática y alertas SweetAlert2  
 ✅ **Tabla de Preview Expandida** - 4 columnas de precios para máxima claridad  
-✅ **Campos Calculados** - Precio nuevo, variación absoluta, variación %, impacto inventario  
-✅ **Indicadores en Tiempo Real** - Total registros, impacto económico, variación promedio  
-✅ **Filtrado Reactivo** - Cambios automáticos sin botones de aplicar
+✅ **Campos Calculados** - Precio nuevo, variación absoluta, variación %  
+✅ **Indicadores Esenciales** - Total registros, variación promedio, registros en preview  
+✅ **Preview Manual** - Generación con botón y validaciones SweetAlert2 completas  
+✅ **UX Optimizada** - Sin cálculos de stock ni impacto innecesarios
 
 ---
 
@@ -405,34 +406,35 @@ private obtenerPorcentajeIva(codIva: string): number {
 }
 ```
 
-#### 6.1.3 Tabla de Preview Mejorada (Actualización 11/08/2025)
+#### 6.1.3 Tabla de Preview Optimizada (Actualización 11/08/2025)
 
-**MEJORA IMPLEMENTADA:** La tabla de preview ha sido mejorada para mostrar mayor claridad en los precios y eliminar la confusión sobre qué precios se están modificando.
+**MEJORAS IMPLEMENTADAS:** La tabla de preview ha sido optimizada para enfocarse en la información esencial de precios y mejorar la experiencia del usuario.
 
 **Problema Original:**
-La tabla original solo mostraba "Precio Actual" y "Precio Nuevo" sin especificar si eran precios de costo o finales, generando confusión en los usuarios.
+- La tabla incluía columnas de Stock e Impacto que no eran necesarias para la toma de decisiones
+- Información innecesaria distraía del objetivo principal: verificar cambios de precios
+- Preview se generaba automáticamente, sin control del usuario
 
-**Estructura Original:**
+**Estructura Optimizada Final:**
 ```html
-<th>Precio Actual</th>
-<th>Precio Nuevo</th>
-```
-
-**Estructura Mejorada:**
-```html
+<!-- Tabla enfocada en precios únicamente -->
+<th rowspan="2">Código</th>
+<th rowspan="2">Nombre</th>
+<th rowspan="2">Marca</th>
+<th rowspan="2">Rubro</th>
 <th colspan="2" class="text-center bg-light">Precio de Costo (sin IVA)</th>
 <th colspan="2" class="text-center bg-light">Precio Final (con IVA)</th>
-<!-- Segundo nivel de headers -->
-<th>Actual</th> <th>Nuevo</th>
-<th>Actual</th> <th>Nuevo</th>
+<th rowspan="2" class="text-right">Variación</th>
+<th rowspan="2" class="text-right">Variación %</th>
+<!-- Stock e Impacto ELIMINADOS -->
 ```
 
-**Beneficios de la Mejora:**
-- ✅ **Claridad Total**: Los usuarios ven exactamente qué precios cambian y cuáles se recalculan automáticamente
-- ✅ **Verificación Completa**: Pueden validar que ambos cálculos (costo y final) sean correctos antes de aplicar cambios
-- ✅ **Eliminación de Confusión**: Ya no hay dudas sobre qué tipo de precio se está viendo
-- ✅ **Resaltado Visual**: Los precios que realmente cambian se destacan de los que permanecen igual
-- ✅ **Compatibilidad Total**: Funciona perfectamente con la función PostgreSQL existente
+**Mejoras Implementadas:**
+- ✅ **Preview Manual**: Botón "Generar Preview" con validaciones SweetAlert2 completas
+- ✅ **Tabla Optimizada**: Eliminadas columnas Stock e Impacto innecesarias
+- ✅ **Panel de Indicadores**: Reducido a 3 métricas esenciales (sin "Impacto Total")
+- ✅ **Validaciones Mejoradas**: Alertas específicas para cada tipo de error
+- ✅ **UX Simplificada**: Enfoque en información relevante para toma de decisiones
 
 **Implementación Técnica:**
 - **Frontend**: Post-procesamiento en `enrichProductsWithPriceFields()` en `cambioprecios.component.ts:213-258`
@@ -959,7 +961,63 @@ $$ LANGUAGE plpgsql;
 
 ---
 
-**Documento preparado por:** Sistema de Análisis Claude
-**Fecha:** 11 de Agosto, 2025
-**Versión:** 1.0
-**Estado:** Análisis Completo - Listo para Implementación
+## 12. Actualizaciones Posteriores (11 de Agosto, 2025)
+
+### 12.1 Sistema de Preview Manual Implementado
+
+**CAMBIO CRÍTICO:** Se modificó el comportamiento de generación de preview de automático a manual con botón.
+
+#### **Problema Identificado:**
+- El preview automático generaba queries innecesarias al cambiar filtros
+- Falta de control del usuario sobre cuándo ejecutar cálculos
+- Posibles confusiones por cambios reactivos no deseados
+
+#### **Solución Implementada:**
+```typescript
+// ANTES (Automático):
+this.filtersForm.valueChanges.subscribe(() => {
+  if (this.formValid()) {
+    this.generatePreview(); // Automático
+  }
+});
+
+// DESPUÉS (Manual):
+generatePreview(): void {
+  // Validaciones SweetAlert2 completas
+  // Solo ejecuta si usuario presiona botón
+}
+```
+
+#### **Validaciones SweetAlert2 Agregadas:**
+- **"Filtro Requerido"**: Si no hay filtros seleccionados
+- **"Demasiados Filtros"**: Si hay múltiples filtros activos
+- **"Datos Incompletos"**: Si faltan campos requeridos  
+- **"Porcentaje Requerido"**: Si porcentaje = 0%
+
+### 12.2 Optimización de Tabla y Panel de Indicadores
+
+#### **Elimintaciones Realizadas:**
+- ❌ **Columna "Stock"**: No necesaria para decisiones de precios
+- ❌ **Columna "Impacto"**: Cálculo innecesario eliminado
+- ❌ **Tarjeta "Impacto Total"**: Métrica removida del panel
+
+#### **Panel de Indicadores Final:**
+```html
+<!-- 3 métricas esenciales (era 4) -->
+<div class="col-md-4">Productos Afectados</div>
+<div class="col-md-4">Variación Promedio</div>  
+<div class="col-md-4">Registros en Preview</div>
+```
+
+#### **Tabla Optimizada:**
+- **10 columnas** (era 12): Código, Nombre, Marca, Rubro + 4 precios + 2 variaciones
+- **Enfoque en precios**: Solo información relevante para toma de decisiones
+- **Mejor performance**: Menos cálculos y rendering más rápido
+
+---
+
+**Documento preparado por:** Sistema de Análisis Claude  
+**Fecha de Creación:** 11 de Agosto, 2025  
+**Última Actualización:** 11 de Agosto, 2025  
+**Versión:** 2.0  
+**Estado:** Implementación Completada - Sistema Optimizado y Funcional
