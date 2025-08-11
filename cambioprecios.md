@@ -37,8 +37,8 @@ Implementar un componente visual llamado **`cambioprecios`** que permita a los u
 
 ### Características Específicas del Frontend
 ✅ **Diseño basado en página `/articulos`** - Reutilizar layout existente  
-✅ **Solo filtros tipo Select** - Sin campos de texto ni botones de eliminar  
-✅ **Tabla de Preview** - Visualización de productos que serán modificados  
+✅ **Filtros Únicos** - Solo un filtro por vez con validación automática y alertas SweetAlert2  
+✅ **Tabla de Preview Expandida** - 4 columnas de precios para máxima claridad  
 ✅ **Campos Calculados** - Precio nuevo, variación absoluta, variación %, impacto inventario  
 ✅ **Indicadores en Tiempo Real** - Total registros, impacto económico, variación promedio  
 ✅ **Filtrado Reactivo** - Cambios automáticos sin botones de aplicar
@@ -405,7 +405,147 @@ private obtenerPorcentajeIva(codIva: string): number {
 }
 ```
 
-#### 6.1.3 Indicadores de Resumen
+#### 6.1.3 Tabla de Preview Mejorada (Actualización 11/08/2025)
+
+**MEJORA IMPLEMENTADA:** La tabla de preview ha sido mejorada para mostrar mayor claridad en los precios y eliminar la confusión sobre qué precios se están modificando.
+
+**Problema Original:**
+La tabla original solo mostraba "Precio Actual" y "Precio Nuevo" sin especificar si eran precios de costo o finales, generando confusión en los usuarios.
+
+**Estructura Original:**
+```html
+<th>Precio Actual</th>
+<th>Precio Nuevo</th>
+```
+
+**Estructura Mejorada:**
+```html
+<th colspan="2" class="text-center bg-light">Precio de Costo (sin IVA)</th>
+<th colspan="2" class="text-center bg-light">Precio Final (con IVA)</th>
+<!-- Segundo nivel de headers -->
+<th>Actual</th> <th>Nuevo</th>
+<th>Actual</th> <th>Nuevo</th>
+```
+
+**Beneficios de la Mejora:**
+- ✅ **Claridad Total**: Los usuarios ven exactamente qué precios cambian y cuáles se recalculan automáticamente
+- ✅ **Verificación Completa**: Pueden validar que ambos cálculos (costo y final) sean correctos antes de aplicar cambios
+- ✅ **Eliminación de Confusión**: Ya no hay dudas sobre qué tipo de precio se está viendo
+- ✅ **Resaltado Visual**: Los precios que realmente cambian se destacan de los que permanecen igual
+- ✅ **Compatibilidad Total**: Funciona perfectamente con la función PostgreSQL existente
+
+**Implementación Técnica:**
+- **Frontend**: Post-procesamiento en `enrichProductsWithPriceFields()` en `cambioprecios.component.ts:213-258`
+- **Interfaz**: Nuevos campos agregados a `PreviewProduct` interface en `price-update.service.ts:28-31`
+- **Cálculos**: Automáticos según tipo de modificación ('costo' vs 'final')
+- **Tabla HTML**: Estructura mejorada con colspan y headers jerárquicos
+
+**Campos Adicionales en PreviewProduct:**
+```typescript
+interface PreviewProduct {
+  // Campos nuevos para mayor claridad
+  precio_costo_actual: number;
+  precio_costo_nuevo: number;
+  precio_final_actual: number;
+  precio_final_nuevo: number;
+  
+  // Campos existentes mantenidos para compatibilidad
+  precio_actual: number;  // Campo del tipo que se está modificando
+  precio_nuevo: number;   // Campo del tipo que se está modificando
+  // ... otros campos existentes
+}
+```
+
+**Función de Enriquecimiento:**
+La función `enrichProductsWithPriceFields()` calcula automáticamente todos los precios según el tipo de modificación:
+- Si `tipoModificacion === 'costo'`: Calcula precios finales agregando IVA
+- Si `tipoModificacion === 'final'`: Calcula precios de costo quitando IVA
+
+Esta mejora resuelve completamente el problema de claridad reportado por el usuario y permite una verificación completa de los cambios antes de su aplicación.
+
+#### 6.1.4 Sistema de Filtros Únicos (Actualización 11/08/2025)
+
+**MEJORA CRÍTICA IMPLEMENTADA:** Sistema de restricción para permitir solo un filtro a la vez, eliminando la confusión en la selección de productos.
+
+**Problema Identificado:**
+- Los usuarios podían seleccionar múltiples filtros simultáneamente (Marca + Proveedor + Rubro)
+- Esto generaba confusión sobre qué productos exactamente serían modificados
+- Riesgo de cambios masivos no deseados en productos no contemplados
+
+**Solución Implementada:**
+
+**1. Restricción Automática:**
+```typescript
+// En cambioprecios.component.ts:118-133
+private setupSingleFilterRestriction(): void {
+  const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+  
+  filterFields.forEach(fieldName => {
+    const fieldSubscription = this.filtersForm.get(fieldName)?.valueChanges.subscribe(value => {
+      if (value !== null && value !== undefined && value !== '') {
+        this.handleSingleFilterSelection(fieldName, value);
+      }
+    });
+  });
+}
+```
+
+**2. Alertas SweetAlert2:**
+```typescript
+// Alerta informativa cuando se detectan múltiples filtros
+Swal.fire({
+  title: 'Solo un filtro por vez',
+  html: `
+    <p><strong>Has seleccionado:</strong> ${fieldLabels[selectedField]}</p>
+    <p><strong>Filtros que serán limpiados:</strong> ${otherFiltersSelected.join(', ')}</p>
+    <p class="text-muted">Para evitar confusión, solo puedes usar un filtro a la vez.</p>
+  `,
+  icon: 'info',
+  showCancelButton: true,
+  confirmButtonText: 'Continuar con ' + fieldLabels[selectedField],
+  cancelButtonText: 'Cancelar'
+})
+```
+
+**3. Validación Mejorada:**
+```typescript
+// Función formValid() actualizada - línea 473-488
+formValid(): boolean {
+  const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+  let activeFilters = 0;
+  
+  filterFields.forEach(field => {
+    const value = this.filtersForm.value[field];
+    if (value !== null && value !== undefined && value !== '') {
+      activeFilters++;
+    }
+  });
+
+  // Debe haber exactamente UN filtro activo
+  return this.filtersForm.valid && activeFilters === 1;
+}
+```
+
+**Beneficios del Sistema:**
+- ✅ **Prevención de Errores**: Imposible seleccionar múltiples filtros accidentalmente
+- ✅ **Claridad Total**: El usuario siempre sabe exactamente qué productos serán afectados
+- ✅ **UX Mejorada**: Alertas informativas con opciones claras (Continuar/Cancelar)
+- ✅ **Limpieza Automática**: Los filtros conflictivos se limpian automáticamente con confirmación
+- ✅ **Validaciones Múltiples**: Verificaciones en diferentes puntos del flujo (preview, aplicación)
+
+**Comportamiento del Usuario:**
+1. **Selección inicial**: Usuario elige cualquier filtro → Funciona normalmente
+2. **Selección adicional**: Usuario intenta agregar segundo filtro → Alerta SweetAlert2
+3. **Opciones disponibles**: 
+   - "Continuar" → Limpia otros filtros, mantiene el nuevo
+   - "Cancelar" → Revierte la selección, mantiene filtros anteriores
+
+**Archivos Modificados:**
+- `cambioprecios.component.ts`: Lógica de restricción y validación
+- `cambioprecios.component.html`: Mensajes informativos actualizados
+- Funciones agregadas: `setupSingleFilterRestriction()`, `handleSingleFilterSelection()`, `clearOtherFilters()`
+
+#### 6.1.5 Indicadores de Resumen
 
 **Métricas Calculadas en Tiempo Real:**
 - **Total de Registros**: Cantidad de productos que serán modificados
@@ -415,9 +555,11 @@ private obtenerPorcentajeIva(codIva: string): number {
 - **Distribución por IVA**: Resumen de productos por tipo de IVA afectado
 
 **Características de Filtros:**
-- **Solo Selects**: Dropdowns y multiselects, sin campos de texto
+- **Solo Selects**: Dropdowns únicos, sin campos de texto ni multiselects
+- **Filtro Único**: Solo un filtro activo por vez con alertas SweetAlert2 preventivas
 - **Sin Botones de Eliminar**: Los filtros se limpian directamente desde los selects
 - **Filtrado Reactivo**: Los cambios se aplican automáticamente al cambiar cualquier filtro
+- **Validación Automática**: Limpieza automática de filtros conflictivos con confirmación
 - **Filtrado Automático por Sucursal**: Aplicado transparentemente según sessionStorage
 
 ### 6.2 Servicio Frontend: `price-update.service.ts`

@@ -94,6 +94,9 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
    * Configurar suscripciones reactivas del formulario
    */
   private setupFormSubscriptions(): void {
+    // Suscripción a cambios individuales de cada filtro para restricción de un solo filtro
+    this.setupSingleFilterRestriction();
+
     // Suscripción a cambios en filtros para actualizar preview automáticamente
     const formSubscription = this.filtersForm.valueChanges
       .pipe(
@@ -107,6 +110,99 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       });
     
     this.subscriptions.add(formSubscription);
+  }
+
+  /**
+   * Configurar restricción de un solo filtro a la vez
+   */
+  private setupSingleFilterRestriction(): void {
+    // Lista de campos de filtro
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    
+    filterFields.forEach(fieldName => {
+      const fieldSubscription = this.filtersForm.get(fieldName)?.valueChanges.subscribe(value => {
+        if (value !== null && value !== undefined && value !== '') {
+          this.handleSingleFilterSelection(fieldName, value);
+        }
+      });
+      
+      if (fieldSubscription) {
+        this.subscriptions.add(fieldSubscription);
+      }
+    });
+  }
+
+  /**
+   * Manejar selección de un filtro único
+   */
+  private handleSingleFilterSelection(selectedField: string, selectedValue: any): void {
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    const fieldLabels: { [key: string]: string } = {
+      'marca': 'Marca',
+      'cd_proveedor': 'Proveedor',
+      'rubro': 'Rubro', 
+      'cod_iva': 'Tipo de IVA'
+    };
+
+    // Verificar si ya hay otro filtro seleccionado
+    let otherFiltersSelected: string[] = [];
+    filterFields.forEach(fieldName => {
+      if (fieldName !== selectedField) {
+        const fieldValue = this.filtersForm.get(fieldName)?.value;
+        if (fieldValue !== null && fieldValue !== undefined && fieldValue !== '') {
+          otherFiltersSelected.push(fieldLabels[fieldName]);
+        }
+      }
+    });
+
+    if (otherFiltersSelected.length > 0) {
+      // Hay otros filtros seleccionados, mostrar alerta y limpiar otros
+      Swal.fire({
+        title: 'Solo un filtro por vez',
+        html: `
+          <div class="text-left">
+            <p><strong>Has seleccionado:</strong> ${fieldLabels[selectedField]}</p>
+            <p><strong>Filtros que serán limpiados:</strong> ${otherFiltersSelected.join(', ')}</p>
+            <br>
+            <p class="text-muted">Para evitar confusión, solo puedes usar un filtro a la vez.</p>
+          </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Continuar con ' + fieldLabels[selectedField],
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Limpiar otros filtros
+          this.clearOtherFilters(selectedField);
+        } else {
+          // Revertir el cambio
+          this.filtersForm.patchValue({ [selectedField]: null }, { emitEvent: false });
+        }
+      });
+    }
+  }
+
+  /**
+   * Limpiar otros filtros excepto el seleccionado
+   */
+  private clearOtherFilters(keepField: string): void {
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    
+    const clearValues: { [key: string]: null } = {};
+    filterFields.forEach(fieldName => {
+      if (fieldName !== keepField) {
+        clearValues[fieldName] = null;
+      }
+    });
+
+    // Actualizar sin emitir eventos para evitar bucles
+    this.filtersForm.patchValue(clearValues, { emitEvent: false });
+    
+    // Forzar detección de cambios
+    this.cdr.detectChanges();
   }
 
   /**
@@ -268,8 +364,36 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
    * Aplicar cambios de precios
    */
   applyChanges(): void {
-    if (!this.formValid()) {
-      Swal.fire('Error', 'Complete todos los campos requeridos', 'error');
+    const activeFiltersCount = this.getActiveFiltersCount();
+    
+    if (activeFiltersCount === 0) {
+      Swal.fire({
+        title: 'Filtro Requerido',
+        text: 'Debe seleccionar exactamente un filtro (Marca, Proveedor, Rubro o Tipo IVA) para aplicar cambios.',
+        icon: 'warning'
+      });
+      return;
+    }
+    
+    if (activeFiltersCount > 1) {
+      const activeFilters = this.getActiveFilters();
+      Swal.fire({
+        title: 'Demasiados Filtros',
+        html: `
+          <div class="text-left">
+            <p>Solo puede usar un filtro a la vez para evitar confusión.</p>
+            <p><strong>Filtros activos:</strong> ${activeFilters.join(', ')}</p>
+            <br>
+            <p class="text-muted">Por favor, mantenga solo un filtro seleccionado.</p>
+          </div>
+        `,
+        icon: 'warning'
+      });
+      return;
+    }
+    
+    if (!this.filtersForm.valid) {
+      Swal.fire('Error', 'Complete todos los campos requeridos correctamente', 'error');
       return;
     }
 
@@ -372,14 +496,23 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Validar formulario
+   * Validar formulario - Debe tener exactamente UN filtro y porcentaje válido
    */
   formValid(): boolean {
-    return this.filtersForm.valid && 
-           (this.filtersForm.value.marca || 
-            this.filtersForm.value.cd_proveedor || 
-            this.filtersForm.value.rubro || 
-            this.filtersForm.value.cod_iva);
+    const formValue = this.filtersForm.value;
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    
+    // Contar filtros activos
+    let activeFilters = 0;
+    filterFields.forEach(field => {
+      const value = formValue[field];
+      if (value !== null && value !== undefined && value !== '') {
+        activeFilters++;
+      }
+    });
+
+    // Debe haber exactamente UN filtro activo y el formulario debe ser válido
+    return this.filtersForm.valid && activeFilters === 1;
   }
 
   /**
@@ -395,6 +528,48 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     
     this.productosPreview = [];
     this.resetIndicadores();
+  }
+
+  /**
+   * Obtener cantidad de filtros activos
+   */
+  getActiveFiltersCount(): number {
+    const formValue = this.filtersForm.value;
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    
+    let activeFilters = 0;
+    filterFields.forEach(field => {
+      const value = formValue[field];
+      if (value !== null && value !== undefined && value !== '') {
+        activeFilters++;
+      }
+    });
+
+    return activeFilters;
+  }
+
+  /**
+   * Obtener lista de filtros activos
+   */
+  getActiveFilters(): string[] {
+    const formValue = this.filtersForm.value;
+    const filterFields = ['marca', 'cd_proveedor', 'rubro', 'cod_iva'];
+    const fieldLabels: { [key: string]: string } = {
+      'marca': 'Marca',
+      'cd_proveedor': 'Proveedor',
+      'rubro': 'Rubro', 
+      'cod_iva': 'Tipo de IVA'
+    };
+
+    const activeFilters: string[] = [];
+    filterFields.forEach(field => {
+      const value = formValue[field];
+      if (value !== null && value !== undefined && value !== '') {
+        activeFilters.push(fieldLabels[field]);
+      }
+    });
+
+    return activeFilters;
   }
 
   /**

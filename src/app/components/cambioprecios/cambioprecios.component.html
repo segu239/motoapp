@@ -206,8 +206,12 @@
                     <div class="card-body text-center" *ngIf="!loadingPreview && !formValid()">
                         <i class="fa fa-info-circle fa-2x text-muted"></i>
                         <p class="mt-2 text-muted">
-                            Selecciona al menos un filtro y configura el porcentaje de modificación para ver el preview
+                            Selecciona <strong>exactamente un filtro</strong> (Marca, Proveedor, Rubro o Tipo IVA) y configura el porcentaje de modificación para ver el preview
                         </p>
+                        <small class="text-muted">
+                            <i class="fa fa-lightbulb-o mr-1"></i>
+                            Solo puedes usar un filtro a la vez para evitar confusión
+                        </small>
                     </div>
                     
                     <!-- Mensaje cuando no hay productos -->
@@ -336,7 +340,7 @@
                         Información Importante
                     </h6>
                     <ul class="mb-0 small">
-                        <li><strong>Filtros:</strong> Seleccione al menos un filtro (Marca, Proveedor, Rubro o Tipo IVA) para especificar qué productos modificar.</li>
+                        <li><strong>Filtros:</strong> Seleccione <u>exactamente un filtro</u> (Marca, Proveedor, Rubro o Tipo IVA). Solo se permite un filtro a la vez para evitar confusión.</li>
                         <li><strong>Tipo de Precio:</strong> "Precio de Costo" modifica el costo y recalcula el precio final. "Precio Final" modifica el precio de venta y recalcula el costo.</li>
                         <li><strong>Porcentaje:</strong> Valores positivos aumentan precios, valores negativos los disminuyen.</li>
                         <li><strong>Preview:</strong> La tabla muestra una muestra de los productos que serán modificados con los nuevos precios calculados.</li>
