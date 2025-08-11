@@ -4615,5 +4615,96 @@ private function validarFormatoFecha($fecha) {
     return checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0]);
 }
 
+// ==================== MÉTODO PARA CAMBIO MASIVO DE PRECIOS ====================
+
+public function PriceUpdate_post()
+{
+    try {
+        $data = $this->post();
+        
+        // Validar datos requeridos
+        if (!isset($data['tipo_modificacion']) || !isset($data['porcentaje'])) {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'Faltan parámetros requeridos: tipo_modificacion, porcentaje'
+            ], 400);
+            return;
+        }
+        
+        // Preparar parámetros
+        $marca = isset($data['marca']) ? $data['marca'] : null;
+        $cd_proveedor = isset($data['cd_proveedor']) ? intval($data['cd_proveedor']) : null;
+        $rubro = isset($data['rubro']) ? $data['rubro'] : null;
+        $cod_iva = isset($data['cod_iva']) ? intval($data['cod_iva']) : null;
+        $tipo_modificacion = $data['tipo_modificacion'];
+        $porcentaje = floatval($data['porcentaje']);
+        $sucursal = isset($data['sucursal']) ? intval($data['sucursal']) : 1;
+        $observacion = isset($data['observacion']) ? $data['observacion'] : 'Cambio masivo desde aplicación web';
+        $usuario = isset($data['usuario']) ? $data['usuario'] : 'sistema';
+        
+        // Iniciar transacción
+        $this->db->trans_begin();
+        
+        // Llamar a la función PostgreSQL para aplicar cambios
+        $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?, ?) as result";
+        $params = array(
+            $marca, 
+            $cd_proveedor, 
+            $rubro, 
+            $cod_iva, 
+            $tipo_modificacion, 
+            $porcentaje, 
+            $sucursal, 
+            $observacion, 
+            $usuario
+        );
+        
+        $query = $this->db->query($sql, $params);
+        
+        if ($query && $query->num_rows() > 0) {
+            $row = $query->row();
+            $result_json = $row->result;
+            $result = json_decode($result_json, true);
+            
+            if ($result && $result['success']) {
+                // Commit la transacción
+                $this->db->trans_commit();
+                
+                // El resultado ya viene como JSON de PostgreSQL
+                $this->response([
+                    'error' => false,
+                    'result' => $result_json
+                ]);
+            } else {
+                // Rollback en caso de error
+                $this->db->trans_rollback();
+                
+                $error_message = isset($result['message']) ? $result['message'] : 'Error desconocido en la actualización';
+                $this->response([
+                    'error' => true,
+                    'mensaje' => $error_message
+                ], 500);
+            }
+        } else {
+            // Rollback en caso de error
+            $this->db->trans_rollback();
+            
+            $this->response([
+                'error' => true,
+                'mensaje' => 'No se pudo ejecutar la actualización masiva de precios'
+            ], 500);
+        }
+        
+    } catch (Exception $e) {
+        // Rollback en caso de excepción
+        $this->db->trans_rollback();
+        
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Error interno: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 }
 

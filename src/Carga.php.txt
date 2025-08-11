@@ -2108,5 +2108,160 @@ public function NumeroComprobantePDF_post()
     ]);
 }
 
+// ==================== MÉTODOS PARA CAMBIO MASIVO DE PRECIOS ====================
+
+public function PriceFilterOptions_get()
+{
+    try {
+        $sucursal = $this->get('sucursal') ? intval($this->get('sucursal')) : 1;
+        
+        // Llamar a la función PostgreSQL
+        $sql = "SELECT get_price_filter_options(?) as result";
+        $query = $this->db->query($sql, array($sucursal));
+        
+        if ($query && $query->num_rows() > 0) {
+            $row = $query->row();
+            $result = $row->result;
+            
+            // El resultado ya viene como JSON de PostgreSQL
+            $this->response([
+                'error' => false,
+                'result' => $result
+            ]);
+        } else {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'No se pudieron obtener las opciones de filtros'
+            ], 500);
+        }
+        
+    } catch (Exception $e) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Error interno: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function PricePreview_post()
+{
+    try {
+        $data = $this->post();
+        
+        // Validar datos requeridos
+        if (!isset($data['tipo_modificacion']) || !isset($data['porcentaje'])) {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'Faltan parámetros requeridos: tipo_modificacion, porcentaje'
+            ], 400);
+            return;
+        }
+        
+        // CORRECCIÓN: Preparar parámetros con manejo seguro de valores NULL
+        $marca = isset($data['marca']) && !empty($data['marca']) ? $data['marca'] : null;
+        
+        // Para campos numéricos: solo convertir si existe y no está vacío
+        $cd_proveedor = null;
+        if (isset($data['cd_proveedor']) && $data['cd_proveedor'] !== '' && $data['cd_proveedor'] !== null) {
+            $cd_proveedor = intval($data['cd_proveedor']);
+        }
+        
+        $rubro = isset($data['rubro']) && !empty($data['rubro']) ? $data['rubro'] : null;
+        
+        $cod_iva = null;
+        if (isset($data['cod_iva']) && $data['cod_iva'] !== '' && $data['cod_iva'] !== null) {
+            $cod_iva = intval($data['cod_iva']);
+        }
+        
+        $tipo_modificacion = $data['tipo_modificacion'];
+        
+        // Porcentaje siempre debe tener un valor válido
+        $porcentaje = floatval($data['porcentaje']);
+        
+        $sucursal = isset($data['sucursal']) && $data['sucursal'] !== '' ? intval($data['sucursal']) : 1;
+        
+        // Debug temporal para verificar parámetros
+        error_log("Parámetros para PostgreSQL: marca=" . var_export($marca, true) . 
+                  ", cd_proveedor=" . var_export($cd_proveedor, true) . 
+                  ", rubro=" . var_export($rubro, true) . 
+                  ", cod_iva=" . var_export($cod_iva, true) . 
+                  ", tipo=" . var_export($tipo_modificacion, true) . 
+                  ", porcentaje=" . var_export($porcentaje, true) . 
+                  ", sucursal=" . var_export($sucursal, true));
+        
+        // Llamar a la función PostgreSQL
+        $sql = "SELECT preview_cambios_precios(?, ?, ?, ?, ?, ?, ?) as result";
+        $params = array($marca, $cd_proveedor, $rubro, $cod_iva, $tipo_modificacion, $porcentaje, $sucursal);
+        
+        $query = $this->db->query($sql, $params);
+        
+        if ($query && $query->num_rows() > 0) {
+            $row = $query->row();
+            $result = $row->result;
+            
+            // El resultado ya viene como JSON de PostgreSQL
+            $this->response([
+                'error' => false,
+                'result' => $result
+            ]);
+        } else {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'No se pudo generar el preview de cambios'
+            ], 500);
+        }
+        
+    } catch (Exception $e) {
+        $this->response([
+            'error' => true,
+            'mensaje' => 'Error interno: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function PriceChangeHistory_get()
+{
+    try {
+        $limit = $this->get('limit') ? intval($this->get('limit')) : 50;
+        
+        // Consulta simple para obtener historial de cambios (si tienes tabla de auditoría)
+        $sql = "
+            SELECT 
+                ca.fecha_cambio,
+                ca.usuario,
+                ca.tipo_modificacion,
+                ca.porcentaje_aplicado,
+                ca.productos_afectados,
+                ca.observacion
+            FROM cambios_masivos_auditoria ca 
+            ORDER BY ca.fecha_cambio DESC 
+            LIMIT ?";
+            
+        $query = $this->db->query($sql, array($limit));
+        
+        if ($query) {
+            $result = $query->result_array();
+            
+            $this->response([
+                'error' => false,
+                'data' => $result
+            ]);
+        } else {
+            // Si no existe la tabla de auditoría, devolver array vacío
+            $this->response([
+                'error' => false,
+                'data' => []
+            ]);
+        }
+        
+    } catch (Exception $e) {
+        // Si hay error (como tabla no existe), devolver array vacío
+        $this->response([
+            'error' => false,
+            'data' => []
+        ]);
+    }
+}
+
 }
 

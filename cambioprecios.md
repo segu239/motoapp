@@ -1,0 +1,823 @@
+# Informe de Análisis: Implementación del Sistema de Cambio de Precios
+
+## Índice
+1. [Resumen Ejecutivo](#1-resumen-ejecutivo)
+2. [Análisis de la Base de Datos](#2-análisis-de-la-base-de-datos)
+3. [Análisis del Backend](#3-análisis-del-backend)
+4. [Análisis de las Fórmulas de Precios](#4-análisis-de-las-fórmulas-de-precios)
+5. [Análisis del Sistema de Filtros](#5-análisis-del-sistema-de-filtros)
+6. [Arquitectura Propuesta](#6-arquitectura-propuesta)
+   - 6.1 [Especificaciones Detalladas del Frontend](#61-componente-frontend-cambioprecios)
+   - 6.2 [Servicio de Comunicación](#62-servicio-frontend-price-updateservicets)
+   - 6.3 [Backend PHP](#63-backend-php-nuevos-endpoints)
+7. [Flujo de Trabajo](#7-flujo-de-trabajo)
+8. [Consideraciones Técnicas](#8-consideraciones-técnicas)
+9. [Plan de Implementación](#9-plan-de-implementación)
+10. [Riesgos y Mitigaciones](#10-riesgos-y-mitigaciones)
+11. [Conclusiones](#11-conclusiones)
+
+---
+
+## 1. Resumen Ejecutivo
+
+### Objetivo del Proyecto
+Implementar un componente visual llamado **`cambioprecios`** que permita a los usuarios modificar precios de productos mediante filtros avanzados en la tabla `artsucursal`.
+
+### Viabilidad
+✅ **VIABLE** - El proyecto es completamente factible con la infraestructura actual.
+
+### Componentes Principales
+- **Frontend**: Componente Angular estilo `/articulos` con:
+  - Tabla de preview mostrando productos a modificar
+  - Filtros tipo `select` únicamente (sin búsqueda de texto)
+  - Campos calculados: precio nuevo, variación, impacto
+  - Indicadores de resumen en tiempo real
+- **Backend**: Nuevos endpoints PHP para filtrado y actualización de precios
+- **Base de Datos**: Uso de tablas existentes con nuevas funcionalidades de auditoría
+
+### Características Específicas del Frontend
+✅ **Diseño basado en página `/articulos`** - Reutilizar layout existente  
+✅ **Solo filtros tipo Select** - Sin campos de texto ni botones de eliminar  
+✅ **Tabla de Preview** - Visualización de productos que serán modificados  
+✅ **Campos Calculados** - Precio nuevo, variación absoluta, variación %, impacto inventario  
+✅ **Indicadores en Tiempo Real** - Total registros, impacto económico, variación promedio  
+✅ **Filtrado Reactivo** - Cambios automáticos sin botones de aplicar
+
+---
+
+## 2. Análisis de la Base de Datos
+
+### 2.1 Tabla Principal: `artsucursal`
+
+**Estructura Relevante:**
+- `id_articulo`: Clave primaria (integer, autoincremental)
+- `nomart`: Nombre del artículo (character)
+- `marca`: Marca del producto (character) - **FILTRO**
+- `cd_proveedor`: Código del proveedor (numeric) - **FILTRO**
+- `rubro`: Rubro del producto (character) - **FILTRO**
+- `cod_iva`: Código de IVA (numeric) - **FILTRO**
+- `cod_deposito`: Código de depósito (numeric) - **FILTRO AUTOMÁTICO**
+- `precostosi`: Precio de costo sin IVA (numeric) - **PRECIO CALCULADO/BASE A MODIFICAR**
+- `precon`: Precio final con IVA (numeric) - **PRECIO CALCULADO/BASE A MODIFICAR**
+- `margen`: Margen de ganancia (numeric) - **NO SE MODIFICA EN CAMBIOS MASIVOS**
+- `descuento`: Descuento aplicado (numeric) - **NO SE MODIFICA EN CAMBIOS MASIVOS**
+
+> **⚠️ CORRECCIÓN IMPORTANTE**: Los campos `margen` y `descuento` NO se utilizan en cambios masivos de precios. Solo se usan en la creación individual de artículos (componente `newarticulo`). Para cambios masivos:
+> - **Si modifico `precostosi`** → `precon = precostosi * (1 + porcentaje_iva/100)`
+> - **Si modifico `precon`** → `precostosi = precon / (1 + porcentaje_iva/100)`
+> 
+> **✅ LÓGICA DE CAMPOS**: Ambos campos (`precostosi` y `precon`) pueden ser **base para modificación** O **calculados automáticamente**, dependiendo de cuál elija el usuario como campo base.
+
+**Registros Actuales:**
+- Total: 5,408 productos
+- Depósito 1: 5,258 productos (97.2%)
+- Depósito 2: 150 productos (2.8%)
+
+### 2.2 Tabla de Relación: `artiva`
+
+**Estructura:**
+- `cod_iva`: Código de IVA (numeric) - **CLAVE DE RELACIÓN**
+- `descripcion`: Descripción del IVA (character)
+- `alicuota1`: Porcentaje de IVA (numeric)
+- `desde`/`hasta`: Fechas de vigencia (date)
+
+### 2.3 Tablas de Auditoría
+
+#### `cactualiza` (Cabecera de Actualización)
+- `id_act`: ID de la actualización (clave primaria)
+- `listap`: Lista de precios afectada
+- `tipo`: Tipo de actualización
+- `porcentaje_21`: Porcentaje para IVA 21%
+- `porcentaje_105`: Porcentaje para IVA 10.5%
+- `precio_costo`: Indica si se modificó precio de costo
+- `precio_venta`: Indica si se modificó precio de venta
+- `fecha`: Timestamp de la operación
+- `usuario`: Usuario que realizó el cambio
+- `id_moneda`: Moneda utilizada
+- `id_proveedor`: Proveedor afectado
+- `id_marca`: Marca afectada
+- `id_rubro`: Rubro afectado
+
+#### `dactualiza` (Detalle de Actualización)
+- `id_actprecios`: ID del detalle (clave primaria)
+- `id_act`: Referencia a cabecera
+- `articulo`: Código del artículo
+- `nombre`: Nombre del artículo
+- **Precios ANTES del cambio:**
+  - `pcosto`: Precio costo anterior
+  - `precio`: Precio venta anterior
+  - `pfinal`: Precio final anterior
+- **Precios DESPUÉS del cambio:**
+  - `pcoston`: Precio costo nuevo
+  - `precion`: Precio venta nuevo
+  - `pfinaln`: Precio final nuevo
+- `fecha`: Fecha del cambio
+
+---
+
+## 3. Análisis del Backend
+
+### 3.1 Archivos PHP Analizados
+
+#### `Carga.php.txt`
+**Funcionalidades Relevantes:**
+- Método `Articulos_get()` en línea 1204: Carga completa de `artsucursal`
+- Método `ArtIva_get()` en línea 1081: Carga de tipos de IVA
+- **Sistema de filtros existente** en líneas 56-74:
+  ```php
+  $columnFilters = $this->get('filters');
+  $filters = array();
+  if (!empty($columnFilters)) {
+    $filters = json_decode($columnFilters, true);
+  }
+  $this->db->from('artsucursal');
+  if ($sucursal === '5') {
+    $this->db->where('cod_deposito', 2);
+  }
+  if (!empty($filters)) {
+    $this->applyColumnFilters($filters);
+  }
+  ```
+
+#### `Descarga.php.txt`
+**Funcionalidades Relevantes:**
+- Inserción en `artsucursal` en línea 1756
+- Sistema de auditoría en `cactualiza` línea 2007 y `dactualiza`
+- Lógica de actualización de precios ya implementada (líneas 2368-2427)
+
+### 3.2 Lógica de Depósitos Implementada
+```php
+// En Carga.php líneas 67-69
+if ($sucursal === '5') {
+  $this->db->where('cod_deposito', 2);
+}
+```
+
+---
+
+## 4. Análisis de las Fórmulas de Precios
+
+### 4.1 Diferencia entre Fórmulas Individuales vs Masivas
+
+#### 4.1.1 Fórmulas del Componente `newarticulo` (INDIVIDUAL)
+Las fórmulas complejas del componente `newarticulo.component.ts` incluyen margen y descuento porque se usan para **creación/edición individual** donde estos campos SÍ se modifican.
+
+#### 4.1.2 Fórmulas para Cambios Masivos (ESTE PROYECTO) - **REINTERPRETACIÓN CORREGIDA**
+
+> **🔄 ACTUALIZACIÓN 11/08/2025**: La interpretación original contenía una ambigüedad sobre qué mostrar vs qué calcular. La lógica correcta se clarificó durante la implementación.
+
+Para cambios masivos de precios, **NO modificamos margen ni descuento**, y la lógica es:
+
+**REQUERIMIENTO CLARIFICADO:**
+1. **Usuario selecciona campo base**: "Precio de Costo" o "Precio Final"  
+2. **Sistema modifica DIRECTAMENTE el campo seleccionado** aplicando el porcentaje
+3. **Sistema recalcula AUTOMÁTICAMENTE el otro campo** usando la relación IVA
+4. **En el PREVIEW se muestra la variación del campo seleccionado**, no del campo recalculado
+
+```typescript
+// CASO 1: Usuario elige "Modificar Precio de Costo"
+if (tipoModificacion === 'costo') {
+  // PASO 1: Modificar directamente precio costo
+  const nuevoPrecoCosto = precostosi * (1 + porcentajeCambio/100);
+  
+  // PASO 2: Recalcular precio final (para BD, no para mostrar variación)
+  const nuevoPrecon = nuevoPrecoCosto * (1 + porcentajeIva/100);
+  
+  // PASO 3: Preview muestra variación en precio costo
+  // Precio Actual = precostosi
+  // Precio Nuevo = nuevoPrecoCosto
+  // Variación = nuevoPrecoCosto - precostosi
+}
+
+// CASO 2: Usuario elige "Modificar Precio Final"
+if (tipoModificacion === 'final') {
+  // PASO 1: Modificar directamente precio final
+  const nuevoPrecon = precon * (1 + porcentajeCambio/100);
+  
+  // PASO 2: Recalcular precio costo (para BD, no para mostrar variación)
+  const nuevoPrecoCosto = nuevoPrecon / (1 + porcentajeIva/100);
+  
+  // PASO 3: Preview muestra variación en precio final
+  // Precio Actual = precon
+  // Precio Nuevo = nuevoPrecon  
+  // Variación = nuevoPrecon - precon
+}
+```
+
+### 4.2 Fórmulas Corregidas para Cambios Masivos
+
+**✅ LÓGICA CORRECTA - SEPARACIÓN DE RESPONSABILIDADES:**
+
+1. **Campo Seleccionado** (mostrar variación):
+   - Precio de Costo: `nuevoPrecoCosto = precostosi * (1 + cambio%/100)`
+   - Precio Final: `nuevoPrecon = precon * (1 + cambio%/100)`
+
+2. **Campo Complementario** (calcular para BD):
+   - Si modificó costo: `nuevoPrecon = nuevoPrecoCosto * (1 + iva%/100)`
+   - Si modificó final: `nuevoPrecoCosto = nuevoPrecon / (1 + iva%/100)`
+
+> **✅ CLARIFICACIÓN CRÍTICA**: El preview muestra la variación **del campo que el usuario eligió modificar**, no del campo recalculado automáticamente. Esto evita confusiones como mostrar "21% de incremento" cuando el usuario no seleccionó porcentaje alguno.
+
+---
+
+## 5. Análisis del Sistema de Filtros
+
+### 5.1 Sistema Actual en `articulos-paginados.service.ts`
+
+**Características Identificadas:**
+- Filtros JSON enviados al backend (línea 330)
+- Filtrado automático por sucursal (líneas 56-60, 117-121)
+- Paginación y lazy loading implementados
+- Sistema de búsqueda de texto existente
+
+```typescript
+// Líneas 298-332: Sistema de filtros completos
+cargarPaginaConFiltros(
+  page: number,
+  limit: number,
+  sortField?: string,
+  sortOrder: number = 1,
+  filters: any = {}
+): Observable<any>
+```
+
+### 5.2 Filtrado Automático por Sucursal
+```typescript
+const sucursal = sessionStorage.getItem('sucursal');
+if (sucursal) {
+  params.append('sucursal', sucursal);
+}
+```
+
+---
+
+## 6. Arquitectura Propuesta
+
+### 6.1 Componente Frontend: `cambioprecios`
+
+**Estructura:**
+```
+src/app/components/cambioprecios/
+├── cambioprecios.component.ts
+├── cambioprecios.component.html
+├── cambioprecios.component.css
+└── cambioprecios.component.spec.ts
+```
+
+#### 6.1.1 Especificaciones Detalladas de UI/UX
+
+**Diseño Visual:**
+- **Basado en `/articulos`**: Mismo layout y estructura visual que la página de artículos existente
+- **Tabla de Preview**: Visualización principal mostrando productos que serán modificados
+- **Panel de Filtros**: Controles tipo `select` para filtrado (sin botones de eliminación)
+- **Sin Funcionalidades**: No incluir busqueda de texto ni filtros de campo avanzados
+
+**Componentes de la Interfaz:**
+
+1. **Panel Superior de Controles:**
+   ```html
+   <!-- Filtros tipo Select (sin botones de eliminar) -->
+   <p-dropdown [options]="marcas" formControlName="marca" placeholder="Seleccionar Marca"></p-dropdown>
+   <p-multiSelect [options]="proveedores" formControlName="cd_proveedor" placeholder="Seleccionar Proveedores"></p-multiSelect>
+   <p-dropdown [options]="rubros" formControlName="rubro" placeholder="Seleccionar Rubro"></p-dropdown>
+   <p-multiSelect [options]="tiposIva" formControlName="cod_iva" placeholder="Seleccionar Tipos IVA"></p-multiSelect>
+   
+   <!-- Tipo de Modificación -->
+   <p-selectButton [options]="tiposModificacion" formControlName="tipoModificacion"></p-selectButton>
+   
+   <!-- Porcentaje de Modificación -->
+   <p-inputNumber formControlName="porcentaje" suffix="%" [min]="-100" [max]="1000"></p-inputNumber>
+   ```
+
+2. **Panel de Indicadores:**
+   ```html
+   <div class="indicadores-resumen">
+     <p-card>
+       <div class="indicador">
+         <span class="valor">{{ totalRegistros }}</span>
+         <span class="etiqueta">Productos que serán modificados</span>
+       </div>
+       <div class="indicador">
+         <span class="valor">{{ impactoTotal | currency }}</span>
+         <span class="etiqueta">Impacto total en inventario</span>
+       </div>
+       <div class="indicador">
+         <span class="valor">{{ promedioVariacion }}%</span>
+         <span class="etiqueta">Variación promedio de precios</span>
+       </div>
+     </p-card>
+   </div>
+   ```
+
+3. **Tabla de Preview con Campos Calculados:**
+   ```html
+   <p-table [value]="productosPreview" [loading]="cargando">
+     <ng-template pTemplate="header">
+       <tr>
+         <th>Código</th>
+         <th>Nombre</th>
+         <th>Marca</th>
+         <th>Precio Actual</th>
+         <th>Precio Nuevo</th>
+         <th>Variación</th>
+         <th>Variación %</th>
+         <th>Impacto</th>
+       </tr>
+     </ng-template>
+     <ng-template pTemplate="body" let-producto>
+       <tr>
+         <td>{{ producto.cd_articulo }}</td>
+         <td>{{ producto.nomart }}</td>
+         <td>{{ producto.marca }}</td>
+         <td>{{ producto.precioActual | currency }}</td>
+         <td class="precio-nuevo">{{ producto.precioNuevo | currency }}</td>
+         <td [class]="producto.variacion >= 0 ? 'variacion-positiva' : 'variacion-negativa'">
+           {{ producto.variacion | currency }}
+         </td>
+         <td [class]="producto.variacionPorcentaje >= 0 ? 'variacion-positiva' : 'variacion-negativa'">
+           {{ producto.variacionPorcentaje | number:'1.2-2' }}%
+         </td>
+         <td>{{ producto.impactoInventario | currency }}</td>
+       </tr>
+     </ng-template>
+   </p-table>
+   ```
+
+#### 6.1.2 Campos Calculados para Preview
+
+**Campos que se mostrarán en la tabla:**
+
+1. **Precio Actual**: Campo base (`precostosi` o `precon` según selección)
+2. **Precio Nuevo**: Precio calculado con el porcentaje aplicado
+3. **Variación**: Diferencia absoluta (Precio Nuevo - Precio Actual)
+4. **Variación %**: Porcentaje real de cambio
+5. **Impacto**: Impacto en inventario (Variación × Stock disponible)
+
+**Lógica de Cálculo Corregida en TypeScript:**
+```typescript
+calcularPreview() {
+  this.productosPreview = this.productosFiltrados.map(producto => {
+    const precioActual = this.tipoModificacion === 'costo' ? 
+      parseFloat(producto.precostosi) : parseFloat(producto.precon);
+    
+    // Obtener porcentaje de IVA para este producto
+    const porcentajeIva = this.obtenerPorcentajeIva(producto.cod_iva);
+    
+    // Calcular precio nuevo según el tipo de modificación
+    let precioNuevo, precioComplementario;
+    
+    if (this.tipoModificacion === 'costo') {
+      // Modificar precio de costo, calcular precio final
+      precioNuevo = precioActual * (1 + this.porcentaje / 100);
+      precioComplementario = precioNuevo * (1 + porcentajeIva / 100);
+    } else {
+      // Modificar precio final, calcular precio de costo  
+      precioNuevo = precioActual * (1 + this.porcentaje / 100);
+      precioComplementario = precioNuevo / (1 + porcentajeIva / 100);
+    }
+    
+    const variacion = precioNuevo - precioActual;
+    const variacionPorcentaje = (variacion / precioActual) * 100;
+    const stockTotal = this.calcularStockTotal(producto);
+    const impactoInventario = variacion * stockTotal;
+    
+    return {
+      ...producto,
+      precioActual,
+      precioNuevo,
+      precioComplementario, // El precio que se recalculará automáticamente
+      variacion,
+      variacionPorcentaje,
+      impactoInventario,
+      stockTotal,
+      porcentajeIva
+    };
+  });
+  
+  this.calcularIndicadores();
+}
+
+// Método auxiliar para obtener porcentaje de IVA
+private obtenerPorcentajeIva(codIva: string): number {
+  if (!this.tiposIva) return 21; // Default
+  const tipoIva = this.tiposIva.find(iva => iva.cod_iva === codIva);
+  return tipoIva ? parseFloat(tipoIva.alicuota1) : 21;
+}
+```
+
+#### 6.1.3 Indicadores de Resumen
+
+**Métricas Calculadas en Tiempo Real:**
+- **Total de Registros**: Cantidad de productos que serán modificados
+- **Impacto Total en Inventario**: Suma del impacto económico total
+- **Variación Promedio**: Promedio ponderado de las variaciones porcentuales
+- **Rango de Precios**: Precio mínimo y máximo que resultará
+- **Distribución por IVA**: Resumen de productos por tipo de IVA afectado
+
+**Características de Filtros:**
+- **Solo Selects**: Dropdowns y multiselects, sin campos de texto
+- **Sin Botones de Eliminar**: Los filtros se limpian directamente desde los selects
+- **Filtrado Reactivo**: Los cambios se aplican automáticamente al cambiar cualquier filtro
+- **Filtrado Automático por Sucursal**: Aplicado transparentemente según sessionStorage
+
+### 6.2 Servicio Frontend: `price-update.service.ts`
+
+**Métodos Principales:**
+```typescript
+interface PriceFilter {
+  marca?: string[];
+  cd_proveedor?: number[];
+  rubro?: string[];
+  cod_iva?: number[];
+}
+
+interface PriceUpdateRequest {
+  filters: PriceFilter;
+  updateType: 'costo' | 'final';
+  percentage: number;
+  sucursal: number;
+}
+
+class PriceUpdateService {
+  previewChanges(request: PriceUpdateRequest): Observable<any>
+  applyChanges(request: PriceUpdateRequest): Observable<any>
+  getFilterOptions(): Observable<FilterOptions>
+}
+```
+
+### 6.3 Backend PHP: Nuevos Endpoints
+
+**Archivo:** `PriceUpdate.php`
+
+**Endpoints y URLs en `ini.ts`:**
+
+Los endpoints se deberán registrar en el archivo `src/app/config/ini.ts` siguiendo el formato existente:
+
+```typescript
+// PRICE UPDATE - Cambios masivos de precios
+export const UrlPriceUpdateFilterOptions = 'https://motoapp.loclx.io/APIAND/index.php/Carga/PriceUpdateFilterOptions';
+export const UrlPriceUpdatePreview = 'https://motoapp.loclx.io/APIAND/index.php/Carga/PriceUpdatePreview';
+export const UrlPriceUpdateApply = 'https://motoapp.loclx.io/APIAND/index.php/Descarga/PriceUpdateApply';
+export const UrlPriceUpdateHistory = 'https://motoapp.loclx.io/APIAND/index.php/Carga/PriceUpdateHistory';
+```
+
+**Endpoints Propuestos:**
+1. **`PriceUpdateFilterOptions`** (GET) - Obtener opciones de filtros (marcas, proveedores, rubros, tipos IVA)
+2. **`PriceUpdatePreview`** (POST) - Previsualizar cambios sin aplicarlos
+3. **`PriceUpdateApply`** (POST) - Aplicar cambios usando función PostgreSQL  
+4. **`PriceUpdateHistory`** (GET) - Historial de cambios desde tabla `cactualiza`
+
+> **Nota**: Los endpoints de **consulta** (`FilterOptions`, `Preview`, `History`) van en el controlador `Carga`, mientras que el endpoint de **modificación** (`Apply`) va en `Descarga`, siguiendo la convención del proyecto.
+
+---
+
+## 7. Flujo de Trabajo
+
+### 7.1 Flujo de Usuario Detallado
+
+```mermaid
+graph TD
+    A[Usuario ingresa a /cambioprecios] --> B[Cargar opciones de filtros]
+    B --> C[Mostrar página estilo /articulos]
+    C --> D[Usuario selecciona filtros desde selects]
+    D --> E[Filtrado automático reactivo]
+    E --> F[Actualizar tabla preview]
+    F --> G[Calcular campos: precio nuevo, variación, impacto]
+    G --> H[Actualizar indicadores de resumen]
+    H --> I[Usuario selecciona tipo: precio costo/final]
+    I --> J[Usuario ingresa porcentaje de modificación]
+    J --> K[Recalcular preview en tiempo real]
+    K --> L{¿Usuario satisfecho con preview?}
+    L -->|No| D
+    L -->|Sí| M[Confirmar aplicación de cambios]
+    M --> N[Aplicar cambios en backend]
+    N --> O[Registrar en tablas de auditoría]
+    O --> P[Mostrar resultado final]
+```
+
+### 7.1.1 Flujo de Preview en Tiempo Real
+
+**Interacciones Reactivas:**
+1. **Cambio de Filtros** → Actualiza tabla automáticamente
+2. **Cambio de Tipo (costo/final)** → Recalcula todos los precios base
+3. **Cambio de Porcentaje** → Recalcula precios nuevos y métricas
+4. **Todo en Tiempo Real** → Sin necesidad de botones "aplicar filtro"
+
+**Métricas que se Actualizan:**
+- Cantidad de productos afectados
+- Impacto total en inventario  
+- Variación promedio de precios
+- Rango de precios resultantes
+- Distribución por tipo de IVA
+
+### 7.2 Flujo de Datos
+
+1. **Carga Inicial:**
+   - Obtener sucursal de sessionStorage
+   - Determinar cod_deposito (1 o 2)
+   - Cargar opciones de filtros desde BD
+
+2. **Filtrado:**
+   - Aplicar filtros seleccionados
+   - Filtrado automático por cod_deposito
+   - Mostrar productos afectados
+
+3. **Previsualización:**
+   - Calcular nuevos precios usando fórmulas identificadas
+   - Mostrar tabla comparativa (antes/después)
+
+4. **Aplicación:**
+   - Crear registro en `cactualiza`
+   - Registrar cada cambio en `dactualiza`
+   - Actualizar precios en `artsucursal`
+   - Commit transacción
+
+---
+
+## 8. Consideraciones Técnicas
+
+### 8.1 Rendimiento
+
+**Problemas Potenciales:**
+- Actualización masiva de registros (hasta 5,258 productos)
+- Riesgo de fallas intermedias en operaciones grandes
+- Timeouts en operaciones PHP de larga duración
+
+**Solución Recomendada: Funciones PostgreSQL**
+
+#### 8.1.1 Implementar Funciones de Base de Datos
+
+**Ventajas de usar funciones PostgreSQL:**
+- ✅ **Performance Superior**: Procesamiento nativo en la base de datos
+- ✅ **Transacciones Atómicas**: Todo-o-nada automático
+- ✅ **Rollback Automático**: En caso de falla intermedia
+- ✅ **Menor Transferencia de Datos**: Solo parámetros, no todos los registros
+- ✅ **Timeouts Controlados**: PostgreSQL maneja mejor operaciones largas
+
+**Función Propuesta:**
+```sql
+-- Función para cambio masivo de precios con rollback automático
+CREATE OR REPLACE FUNCTION update_precios_masivo(
+    p_filtros JSON,               -- Filtros aplicados
+    p_tipo_cambio VARCHAR(10),    -- 'costo' o 'final'
+    p_porcentaje NUMERIC,         -- Porcentaje de cambio
+    p_sucursal INTEGER,           -- Sucursal para cod_deposito
+    p_usuario VARCHAR(50)         -- Usuario que ejecuta
+) RETURNS JSON AS $$
+DECLARE
+    v_count INTEGER := 0;
+    v_id_act INTEGER;
+    v_cod_deposito INTEGER;
+    v_resultado JSON;
+BEGIN
+    -- Determinar cod_deposito según sucursal
+    v_cod_deposito := CASE WHEN p_sucursal = 5 THEN 2 ELSE 1 END;
+    
+    -- Crear registro en cactualiza
+    INSERT INTO cactualiza (tipo, porcentaje_21, precio_costo, precio_venta, fecha, usuario)
+    VALUES (p_tipo_cambio, p_porcentaje, 
+            CASE WHEN p_tipo_cambio = 'costo' THEN 1 ELSE 0 END,
+            CASE WHEN p_tipo_cambio = 'final' THEN 1 ELSE 0 END,
+            NOW(), p_usuario)
+    RETURNING id_act INTO v_id_act;
+    
+    -- Actualizar precios según tipo
+    IF p_tipo_cambio = 'costo' THEN
+        -- Modificar precostosi, recalcular precon
+        UPDATE artsucursal SET 
+            precon = (precostosi * (1 + p_porcentaje/100.0)) * (1 + COALESCE(iva.alicuota1,21)/100.0),
+            precostosi = precostosi * (1 + p_porcentaje/100.0)
+        FROM artiva iva
+        WHERE artsucursal.cod_iva = iva.cod_iva
+          AND cod_deposito = v_cod_deposito
+          AND aplicar_filtros_json(artsucursal, p_filtros);
+    ELSE
+        -- Modificar precon, recalcular precostosi  
+        UPDATE artsucursal SET
+            precostosi = (precon * (1 + p_porcentaje/100.0)) / (1 + COALESCE(iva.alicuota1,21)/100.0),
+            precon = precon * (1 + p_porcentaje/100.0)
+        FROM artiva iva  
+        WHERE artsucursal.cod_iva = iva.cod_iva
+          AND cod_deposito = v_cod_deposito
+          AND aplicar_filtros_json(artsucursal, p_filtros);
+    END IF;
+    
+    GET DIAGNOSTICS v_count = ROW_COUNT;
+    
+    -- Crear resultado JSON
+    SELECT json_build_object(
+        'success', true,
+        'registros_modificados', v_count,
+        'id_actualizacion', v_id_act,
+        'timestamp', NOW()
+    ) INTO v_resultado;
+    
+    RETURN v_resultado;
+    
+EXCEPTION WHEN OTHERS THEN
+    -- Rollback automático + mensaje de error
+    RETURN json_build_object(
+        'success', false,
+        'error', SQLERRM,
+        'registros_modificados', 0
+    );
+END;
+$$ LANGUAGE plpgsql;
+```
+
+#### 8.1.2 Beneficios Adicionales
+- **Auditoría Automática**: Registro en `cactualiza` dentro de la misma transacción
+- **Validaciones Centralizadas**: Lógica de negocio en un solo lugar
+- **Reutilizable**: Puede usarse desde cualquier aplicación
+- **Testing Simplificado**: Función independiente testeable
+
+### 8.2 Seguridad
+
+**Medidas Necesarias:**
+- Validación de permisos de usuario
+- Validación de rangos de porcentajes (-100% a +1000%)
+- Logging completo de operaciones
+- Confirmación doble para cambios masivos
+
+### 8.3 Integridad de Datos
+
+**Validaciones:**
+- Verificar que los productos existen
+- Validar coherencia de precios calculados
+- Verificar rangos de precios razonables
+- Rollback automático en caso de error
+
+---
+
+## 9. Plan de Implementación
+
+### 9.1 Fase 1: Backend y Base de Datos (Estimado: 3-4 días)
+
+#### 9.1.1 Día 1: Funciones PostgreSQL
+1. **Crear función `update_precios_masivo()`**
+   - Función principal con transacciones atómicas
+   - Manejo de rollback automático
+   - Integración con tablas de auditoría
+
+2. **Crear funciones auxiliares**
+   - `aplicar_filtros_json()` para procesamiento de filtros
+   - `preview_cambios_precios()` para previsualización
+   - Testing de funciones con datos reales
+
+#### 9.1.2 Día 2-3: Backend PHP  
+1. **Crear archivo `PriceUpdate.php`**
+   - Endpoint para opciones de filtros
+   - Endpoint para previsualización (usando función PG)
+   - Endpoint para aplicación (llamando función PG)
+
+2. **Implementar lógica simplificada**
+   - Fórmulas directas sin margen/descuento
+   - Validaciones de rangos de porcentajes
+   - Manejo de errores de la función PG
+
+#### 9.1.3 Día 4: Testing y Optimización
+1. **Testing con volúmenes reales**
+   - Pruebas con 1000+ registros
+   - Verificación de performance
+   - Validación de rollbacks
+
+2. **Índices de base de datos**
+   - Índices en campos de filtro si no existen
+   - Optimización de queries de preview
+
+### 9.2 Fase 2: Frontend (Estimado: 4-5 días)
+
+#### 9.2.1 Día 1-2: Estructura Base y Filtros
+1. **Crear componente `cambioprecios`**
+   - Estructura HTML basada en `/articulos`
+   - Implementar panel de filtros con PrimeNG:
+     - `p-dropdown` para marca y rubro
+     - `p-multiSelect` para proveedores y tipos IVA
+     - `p-selectButton` para tipo de modificación
+     - `p-inputNumber` para porcentaje
+   - CSS para indicadores de resumen
+
+2. **Lógica de filtrado reactivo**
+   - Suscripción a cambios en FormControls
+   - Filtrado automático sin botones
+   - Integración con sessionStorage para sucursal
+
+#### 9.2.2 Día 3: Tabla de Preview y Cálculos
+1. **Implementar tabla de preview**
+   - Estructura de `p-table` con campos calculados
+   - Columnas: código, nombre, marca, precio actual, precio nuevo, variación, variación %, impacto
+   - CSS para resaltar variaciones positivas/negativas
+
+2. **Lógica de cálculos en tiempo real**
+   - Método `calcularPreview()` 
+   - Función `calcularStockTotal()`
+   - Cálculo de métricas de resumen
+
+#### 9.2.3 Día 4: Indicadores y Servicios
+1. **Panel de indicadores**
+   - Cards con métricas en tiempo real
+   - Total de registros, impacto total, variación promedio
+   - Animaciones para cambios de valores
+
+2. **Crear servicio `price-update.service.ts`**
+   - Métodos de comunicación con backend
+   - Manejo de estados y errores
+   - Observables para datos reactivos
+
+#### 9.2.4 Día 5: Integración y Pulimento
+1. **Configuración de URLs y rutas**
+   - Agregar URLs en `src/app/config/ini.ts` siguiendo formato existente
+   - Importar URLs en `price-update.service.ts`
+   - Agregar ruta en `app-routing.module.ts`
+   - Configurar permisos según roles
+   - Breadcrumbs y navegación
+
+2. **Refinamiento de UX**
+   - Loading states
+   - Mensajes de error/éxito
+   - Validaciones de formulario
+
+### 9.3 Fase 3: Testing y Refinamiento (Estimado: 2-3 días)
+
+1. **Testing de funcionalidad**
+   - Pruebas de filtros
+   - Validación de cálculos
+   - Testing de rendimiento con datos reales
+
+2. **Refinamiento de UI/UX**
+   - Optimización de interfaz
+   - Mejoras de usabilidad
+   - Validación de mensajes de error
+
+---
+
+## 10. Riesgos y Mitigaciones
+
+### 10.1 Riesgos Identificados
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|-------------|---------|------------|
+| **Corrupción de datos por falla en cálculos** | Media | Alto | Testing exhaustivo, validación de rangos, rollback automático |
+| **Rendimiento lento en actualizaciones masivas** | Alta | Medio | Procesamiento por lotes, optimización de queries |
+| **Conflictos con actualizaciones concurrentes** | Baja | Alto | Locking de registros, transacciones atómicas |
+| **Errores en fórmulas de precios** | Baja | Alto | Validación cruzada con componente existente |
+
+### 10.2 Plan de Contingencia
+
+1. **Backup automático antes de cambios masivos**
+2. **Función de rollback completo**
+3. **Alertas automáticas por cambios anómalos**
+4. **Log detallado para auditoría**
+
+---
+
+## 11. Conclusiones
+
+### 11.1 Viabilidad Técnica
+✅ **ALTA** - La infraestructura actual soporta completamente la implementación:
+- Sistema de filtros ya existente y probado
+- Tablas de auditoría ya diseñadas y en uso
+- **Fórmulas simplificadas** (solo IVA, sin margen/descuento para cambios masivos)
+- Backend PHP con capacidad de extensión
+- **PostgreSQL con funciones** para máximo rendimiento y seguridad
+
+### 11.2 Complejidad
+🟡 **MEDIA** - Requiere integración cuidadosa pero no presenta desafíos técnicos insuperables:
+- Reutilización de componentes existentes
+- Lógica de negocio ya establecida
+- Patrones de desarrollo conocidos
+
+### 11.3 Impacto
+✅ **POSITIVO** - Mejorará significativamente la eficiencia operativa:
+- Reducción de tiempo en actualización de precios
+- Menor posibilidad de errores manuales
+- Mejor trazabilidad de cambios
+- Interfaz intuitiva para usuarios
+
+### 11.4 Recomendación Final
+**PROCEDER CON LA IMPLEMENTACIÓN** siguiendo el plan propuesto en 3 fases, con especial atención a:
+
+#### ✅ **Cambios Clave Validados:**
+1. **Fórmulas Simplificadas**: Solo IVA, ignorar margen/descuento para cambios masivos
+2. **Funciones PostgreSQL**: Máximo rendimiento y rollback automático  
+3. **UI Tipo `/articulos`**: Reutilizar layout familiar para usuarios
+4. **Filtros Solo Select**: Interfaz simplificada sin complejidades
+
+#### 🎯 **Prioridades de Implementación:**
+1. **Día 1**: Crear y testear funciones PostgreSQL con datos reales
+2. **Validación de Fórmulas**: Verificar cálculos con casos de prueba específicos
+3. **Testing de Performance**: Probar con 5,000+ registros antes del despliegue  
+4. **Rollback Testing**: Validar recuperación automática ante fallas
+
+#### 📊 **Métricas de Éxito:**
+- Actualización de 5,000+ productos en < 30 segundos
+- 0% pérdida de datos por rollback automático
+- Interface reactiva con cálculos en < 2 segundos
+- Adopción del 100% por parte de usuarios (familiar a `/articulos`)
+
+---
+
+**Documento preparado por:** Sistema de Análisis Claude
+**Fecha:** 11 de Agosto, 2025
+**Versión:** 1.0
+**Estado:** Análisis Completo - Listo para Implementación

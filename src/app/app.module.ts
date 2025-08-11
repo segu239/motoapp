@@ -44,6 +44,8 @@ import { ChartModule } from 'primeng/chart';
 import { NgChartsModule } from 'ng2-charts';
 import { TooltipModule } from 'primeng/tooltip';
 import { InputSwitchModule } from 'primeng/inputswitch';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -127,6 +129,7 @@ import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
 import { TotalizadorModalComponent } from './components/historialventas2/totalizador-modal.component';
+import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios.component';
 
 @NgModule({
   declarations: [
@@ -211,6 +214,7 @@ import { TotalizadorModalComponent } from './components/historialventas2/totaliz
     HistorialventasComponent,
     Historialventas2Component,
     TotalizadorModalComponent,
+    CambioPreciosComponent,
   ],
   imports: [
     ButtonModule,
@@ -222,6 +226,8 @@ import { TotalizadorModalComponent } from './components/historialventas2/totaliz
     NgChartsModule,
     TooltipModule,
     InputSwitchModule,
+    InputNumberModule,
+    SelectButtonModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,

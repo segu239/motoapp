@@ -1,0 +1,232 @@
+/* =====================================================================
+   ESTILOS PARA COMPONENTE CAMBIO MASIVO DE PRECIOS
+   ===================================================================== */
+
+/* Contenedor principal */
+.card {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card-title {
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Panel de filtros */
+.card.border-primary {
+  border: 2px solid #007bff !important;
+}
+
+.card-header.bg-primary {
+  background-color: #007bff !important;
+}
+
+/* Formularios y controles */
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Botones personalizados */
+.btn-outline-secondary {
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+.btn-outline-secondary:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Indicadores de resumen */
+.card.bg-info, 
+.card.bg-success, 
+.card.bg-danger, 
+.card.bg-warning, 
+.card.bg-secondary {
+  transition: transform 0.2s ease-in-out;
+}
+
+.card.bg-info:hover,
+.card.bg-success:hover,
+.card.bg-danger:hover,
+.card.bg-warning:hover,
+.card.bg-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card.bg-info .card-title,
+.card.bg-success .card-title,
+.card.bg-danger .card-title,
+.card.bg-secondary .card-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+}
+
+.card.bg-warning .card-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  color: #212529 !important;
+}
+
+.card.bg-warning .card-text {
+  color: #495057 !important;
+}
+
+/* Tabla de preview */
+.table-responsive {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Colores para variaciones */
+.text-success {
+  color: #28a745 !important;
+}
+
+.text-danger {
+  color: #dc3545 !important;
+}
+
+/* Iconos de variación */
+.fa-arrow-up {
+  color: #28a745;
+}
+
+.fa-arrow-down {
+  color: #dc3545;
+}
+
+/* Estados de carga */
+.fa-spin {
+  animation: fa-spin 1s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Alertas personalizadas */
+.alert-light.border-left-primary {
+  border-left: 4px solid #007bff;
+  background-color: #f8f9fa;
+  border-color: #dee2e6;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .card-body .row {
+    margin: 0;
+  }
+  
+  .card-body .row [class*="col-"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  .d-flex.flex-column.gap-2 {
+    gap: 0.5rem !important;
+  }
+  
+  /* Hacer la tabla más estrecha en móvil */
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .card.bg-info, 
+  .card.bg-success, 
+  .card.bg-danger, 
+  .card.bg-warning, 
+  .card.bg-secondary {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Mejoras de PrimeNG */
+::ng-deep .p-dropdown,
+::ng-deep .p-inputnumber,
+::ng-deep .p-selectbutton {
+  width: 100%;
+}
+
+::ng-deep .p-selectbutton .p-button {
+  font-size: 0.875rem;
+}
+
+::ng-deep .p-table .p-table-thead > tr > th {
+  background-color: #f8f9fa;
+  border-bottom: 2px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  padding: 1rem 0.75rem;
+}
+
+::ng-deep .p-table .p-table-tbody > tr > td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+::ng-deep .p-table .p-table-tbody > tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Loading states */
+.card-body.text-center {
+  padding: 3rem 1rem;
+}
+
+.card-body.text-center i.fa-2x {
+  font-size: 3rem;
+}
+
+.card-body.text-center p {
+  font-size: 1.1rem;
+  margin-top: 1rem;
+  color: #6c757d;
+}
+
+/* Botón de aplicar cambios */
+.btn-success.btn-sm {
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+.btn-success.btn-sm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Footer de tabla */
+.card-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 0.75rem 1.25rem;
+}
+
+/* Separación de elementos */
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Animaciones sutiles */
+.card {
+  transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Utilidades de espaciado */
+.gap-2 > * + * {
+  margin-top: 0.5rem;
+}
