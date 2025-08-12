@@ -62,6 +62,13 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Validar sucursal antes de continuar
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      this.handleSucursalError();
+      return;
+    }
+    
     this.loadFilterOptions();
     this.setupFormSubscriptions();
   }
@@ -193,6 +200,39 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Manejar error de sucursal faltante
+   */
+  private handleSucursalError(): void {
+    Swal.fire({
+      title: 'Sucursal Requerida',
+      html: `
+        <div class="text-left">
+          <p>No se pudo determinar la sucursal activa.</p>
+          <p>Esta operación requiere tener una sucursal seleccionada para:</p>
+          <ul class="text-left mt-2">
+            <li>Determinar el depósito correcto</li>
+            <li>Aplicar filtros apropiados</li>
+            <li>Garantizar cambios seguros</li>
+          </ul>
+        </div>
+      `,
+      icon: 'error',
+      showCancelButton: true,
+      confirmButtonText: 'Recargar Página',
+      cancelButtonText: 'Ir al Dashboard',
+      allowOutsideClick: false,
+      allowEscapeKey: false
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.location.reload();
+      } else {
+        // Redirigir al dashboard u otra página segura
+        window.location.href = '/dashboard';
+      }
+    });
+  }
+
+  /**
    * Cargar opciones de filtros desde el backend
    */
   loadFilterOptions(): void {
@@ -292,6 +332,14 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     this.loadingPreview = true;
     const formValue = this.filtersForm.value;
     
+    // Validar sucursal antes de proceder
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      this.loadingPreview = false;
+      this.handleSucursalError();
+      return;
+    }
+    
     // Crear request para el preview con validación de campos numéricos
     const previewRequest: PreviewRequest = {
       marca: formValue.marca || undefined,
@@ -300,7 +348,7 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       cod_iva: formValue.cod_iva || undefined,
       tipo_modificacion: formValue.tipoModificacion,
       porcentaje: parseFloat(formValue.porcentaje) || 0, // Asegurar que sea número
-      sucursal: 1 // TODO: Obtener de contexto/usuario
+      sucursal: parseInt(sucursal)
     };
     
     const subscription = this.priceUpdateService.getPreview(previewRequest).subscribe({
@@ -476,6 +524,14 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
     this.loadingApply = true;
     const formValue = this.filtersForm.value;
     
+    // Validar sucursal antes de proceder
+    const sucursal = sessionStorage.getItem('sucursal');
+    if (!sucursal) {
+      this.loadingApply = false;
+      this.handleSucursalError();
+      return;
+    }
+    
     // Crear request para aplicar cambios
     const applyRequest: ApplyChangesRequest = {
       marca: formValue.marca || undefined,
@@ -484,7 +540,7 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       cod_iva: formValue.cod_iva || undefined,
       tipo_modificacion: formValue.tipoModificacion,
       porcentaje: parseFloat(formValue.porcentaje) || 0, // Asegurar que sea número
-      sucursal: 1, // TODO: Obtener de contexto/usuario
+      sucursal: parseInt(sucursal),
       observacion: `Cambio masivo ${formValue.tipoModificacion} ${parseFloat(formValue.porcentaje) || 0}%`
     };
     

@@ -1016,8 +1016,140 @@ generatePreview(): void {
 
 ---
 
+---
+
+## 13. Actualización de Seguridad - Validación de Sucursal (12 de Agosto, 2025)
+
+### 13.1 Validación de Sucursal Implementada
+
+**MEJORA CRÍTICA DE SEGURIDAD:** Se implementó validación obligatoria de sucursal en sessionStorage para todas las operaciones del sistema de cambio de precios.
+
+#### **Problema Identificado:**
+- El sistema utilizaba valores hardcodeados (`sucursal: 1`) en operaciones críticas
+- Riesgo de modificar precios en sucursal incorrecta
+- Falta de validación de contexto de usuario
+
+#### **Solución Implementada:**
+
+**1. Validación en Carga Inicial:**
+```typescript
+ngOnInit(): void {
+  // Validar sucursal antes de continuar
+  const sucursal = sessionStorage.getItem('sucursal');
+  if (!sucursal) {
+    this.handleSucursalError();
+    return;
+  }
+  
+  this.loadFilterOptions();
+  this.setupFormSubscriptions();
+}
+```
+
+**2. Método de Manejo de Error:**
+```typescript
+private handleSucursalError(): void {
+  Swal.fire({
+    title: 'Sucursal Requerida',
+    html: `
+      <div class="text-left">
+        <p>No se pudo determinar la sucursal activa.</p>
+        <p>Esta operación requiere tener una sucursal seleccionada para:</p>
+        <ul class="text-left mt-2">
+          <li>Determinar el depósito correcto</li>
+          <li>Aplicar filtros apropiados</li>
+          <li>Garantizar cambios seguros</li>
+        </ul>
+      </div>
+    `,
+    icon: 'error',
+    showCancelButton: true,
+    confirmButtonText: 'Recargar Página',
+    cancelButtonText: 'Ir al Dashboard',
+    allowOutsideClick: false,
+    allowEscapeKey: false
+  });
+}
+```
+
+**3. Validación en Operaciones Críticas:**
+- **Preview de cambios:** Validación antes de generar preview
+- **Aplicación de cambios:** Validación antes de ejecutar cambios masivos
+- **Carga de filtros:** Validación en servicio price-update
+
+#### **Componentes Modificados:**
+
+**Frontend Angular:**
+- `cambioprecios.component.ts`: Validación en ngOnInit y operaciones críticas
+- `cambioprecios.component.html`: Información actualizada sobre requerimiento de sucursal
+
+**Servicio:**
+- `price-update.service.ts`: Validación en todos los métodos principales
+  - `getFilterOptions()`: Obtiene sucursal de sessionStorage
+  - `getPreview()`: Valida que request tenga sucursal
+  - `applyChanges()`: Valida que request tenga sucursal
+
+#### **Comportamiento del Sistema:**
+
+**Escenarios Manejados:**
+1. **Sin sucursal en carga inicial**: Alert inmediato con opciones de recuperación
+2. **Pérdida de sucursal durante uso**: Validación en cada operación crítica
+3. **Opciones de recuperación**: Recargar página o ir al dashboard
+
+**Mensajes de Error Específicos:**
+- Carga inicial: "Sucursal Requerida" con explicación detallada
+- Servicio: "No se encontró la sucursal en el almacenamiento local"
+- Preview: "La sucursal es requerida para generar el preview"
+- Aplicar: "La sucursal es requerida para aplicar cambios masivos"
+
+### 13.2 Beneficios de Seguridad
+
+**✅ Prevención Total de Errores:**
+- Imposible operar sin contexto de sucursal válido
+- No más valores hardcodeados en operaciones críticas
+- Validación múltiple en component + service + operaciones
+
+**✅ UX Mejorada:**
+- Mensajes claros sobre el problema y su solución
+- Opciones de recuperación inmediatas
+- Información preventiva en la documentación
+
+**✅ Consistencia:**
+- Sigue patrones establecidos en otros servicios críticos
+- Compatible con sistema existente de manejo de sucursales
+- Integración perfecta con sessionStorage existente
+
+### 13.3 Impacto en Funcionalidad
+
+**ANTES (Riesgoso):**
+```typescript
+const previewRequest: PreviewRequest = {
+  // ... otros campos
+  sucursal: 1 // TODO: Obtener de contexto/usuario
+};
+```
+
+**DESPUÉS (Seguro):**
+```typescript
+// Validar sucursal antes de proceder
+const sucursal = sessionStorage.getItem('sucursal');
+if (!sucursal) {
+  this.handleSucursalError();
+  return;
+}
+
+const previewRequest: PreviewRequest = {
+  // ... otros campos
+  sucursal: parseInt(sucursal)
+};
+```
+
+**Estado Final:** Sistema completamente seguro con validación obligatoria de sucursal en todas las operaciones críticas.
+
+---
+
 **Documento preparado por:** Sistema de Análisis Claude  
 **Fecha de Creación:** 11 de Agosto, 2025  
-**Última Actualización:** 11 de Agosto, 2025  
-**Versión:** 2.0  
-**Estado:** Implementación Completada - Sistema Optimizado y Funcional
+**Última Actualización:** 12 de Agosto, 2025  
+**Versión:** 2.1  
+**Estado:** Implementación Completada - Sistema Optimizado, Funcional y Seguro

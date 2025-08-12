@@ -92,7 +92,16 @@ export class PriceUpdateService {
   /**
    * Obtener opciones de filtros para el formulario
    */
-  getFilterOptions(sucursal: number = 1): Observable<PriceFilterOptions> {
+  getFilterOptions(): Observable<PriceFilterOptions> {
+    const sucursal = sessionStorage.getItem('sucursal');
+    
+    if (!sucursal) {
+      return throwError({
+        message: 'No se encontró la sucursal en el almacenamiento local. Por favor, recargue la página.',
+        code: 'SUCURSAL_NOT_FOUND'
+      });
+    }
+
     const params = { sucursal: sucursal.toString() };
 
     return this.http.get<any>(UrlPriceFilterOptions, { 
@@ -108,6 +117,14 @@ export class PriceUpdateService {
    * Obtener preview de cambios de precios
    */
   getPreview(request: PreviewRequest): Observable<PreviewResponse> {
+    // Validar que request tiene sucursal
+    if (!request.sucursal) {
+      return throwError({
+        message: 'La sucursal es requerida para generar el preview de cambios',
+        code: 'SUCURSAL_REQUIRED'
+      });
+    }
+    
     // Limpiar parámetros nulos o vacíos
     const cleanRequest = this.cleanRequest(request);
 
@@ -123,6 +140,14 @@ export class PriceUpdateService {
    * Aplicar cambios masivos de precios
    */
   applyChanges(request: ApplyChangesRequest): Observable<ApplyChangesResponse> {
+    // Validar que request tiene sucursal
+    if (!request.sucursal) {
+      return throwError({
+        message: 'La sucursal es requerida para aplicar cambios masivos de precios',
+        code: 'SUCURSAL_REQUIRED'
+      });
+    }
+    
     // Limpiar parámetros nulos o vacíos
     const cleanRequest = this.cleanRequest(request);
 
