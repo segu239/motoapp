@@ -541,7 +541,8 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       tipo_modificacion: formValue.tipoModificacion,
       porcentaje: parseFloat(formValue.porcentaje) || 0, // Asegurar que sea número
       sucursal: parseInt(sucursal),
-      observacion: `Cambio masivo ${formValue.tipoModificacion} ${parseFloat(formValue.porcentaje) || 0}%`
+      observacion: `Cambio masivo ${formValue.tipoModificacion} ${parseFloat(formValue.porcentaje) || 0}%`,
+      usuario: sessionStorage.getItem('emailOp') || 'usuario_desconocido'  // ✅ AGREGADO
     };
     
     const subscription = this.priceUpdateService.applyChanges(applyRequest).subscribe({

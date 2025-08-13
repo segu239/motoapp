@@ -70,6 +70,7 @@ export interface ApplyChangesRequest {
   porcentaje: number;
   sucursal?: number;
   observacion?: string;
+  usuario?: string;  // ✅ AGREGADO
 }
 
 export interface ApplyChangesResponse {
@@ -336,8 +337,8 @@ export class PriceUpdateService {
       return {
         success: data?.success || false,
         message: data?.message,
-        productos_modificados: data?.productos_modificados || 0,
-        auditoria_id: data?.auditoria_id,
+        productos_modificados: data?.registros_modificados || data?.productos_modificados || 0,
+        auditoria_id: data?.id_actualizacion || data?.auditoria_id,
         error_details: data?.error_details
       };
     } catch (error) {

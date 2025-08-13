@@ -4640,41 +4640,23 @@ public function PriceUpdate_post()
         $porcentaje = floatval($data['porcentaje']);
         $sucursal = isset($data['sucursal']) ? intval($data['sucursal']) : 1;
         $observacion = isset($data['observacion']) ? $data['observacion'] : 'Cambio masivo desde aplicación web';
-        $usuario = isset($data['usuario']) && !empty($data['usuario']) 
-            ? $data['usuario'] 
-            : 'usuario_desconocido';
-        
-        // Construir descripción inteligente para auditoría
-        $tipo_descriptivo = "ACTUALIZACIÓN POR ";
-        
-        if (!empty($marca)) {
-            $tipo_descriptivo .= "MARCA (" . trim($marca) . ") Y ";
-        } elseif (!empty($rubro)) {
-            $tipo_descriptivo .= "RUBRO (" . trim($rubro) . ") Y ";
-        } elseif (!empty($cd_proveedor)) {
-            $tipo_descriptivo .= "PROVEEDOR (" . $cd_proveedor . ") Y ";
-        } elseif (!empty($cod_iva)) {
-            $tipo_descriptivo .= "TIPO IVA (" . $cod_iva . ") Y ";
-        } else {
-            $tipo_descriptivo .= "FILTRO MÚLTIPLE Y ";
-        }
-        
-        $tipo_descriptivo .= strtoupper($tipo_modificacion);
+        $usuario = isset($data['usuario']) ? $data['usuario'] : 'sistema';
         
         // Iniciar transacción
         $this->db->trans_begin();
         
-        // Llamar a la función PostgreSQL para aplicar cambios (8 parámetros corregidos)
-        $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?) as result";
+        // Llamar a la función PostgreSQL para aplicar cambios
+        $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?, ?) as result";
         $params = array(
             $marca, 
             $cd_proveedor, 
             $rubro, 
             $cod_iva, 
-            $tipo_descriptivo,  // Descripción inteligente en lugar de tipo_modificacion
+            $tipo_modificacion, 
             $porcentaje, 
             $sucursal, 
-            $usuario            // Sin observacion - ahora posición 8
+            $observacion, 
+            $usuario
         );
         
         $query = $this->db->query($sql, $params);
