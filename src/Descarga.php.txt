@@ -4664,18 +4664,36 @@ public function PriceUpdate_post()
         // Iniciar transacción
         $this->db->trans_begin();
         
-        // Llamar a la función PostgreSQL para aplicar cambios (8 parámetros corregidos)
-        $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?) as result";
-        $params = array(
-            $marca, 
-            $cd_proveedor, 
-            $rubro, 
-            $cod_iva, 
-            $tipo_descriptivo,  // Descripción inteligente en lugar de tipo_modificacion
-            $porcentaje, 
-            $sucursal, 
-            $usuario            // Sin observacion - ahora posición 8
-        );
+        // ✅ NUEVO: Detectar si usar función atómica o clásica
+        $use_atomic = isset($data['atomic']) && $data['atomic'] === true;
+        
+        if ($use_atomic) {
+            // Llamar a la función ATÓMICA que actualiza precios Y conflistas
+            $sql = "SELECT update_precios_masivo_atomico(?, ?, ?, ?, ?, ?, ?, ?) as result";
+            $params = array(
+                $marca, 
+                $cd_proveedor, 
+                $rubro, 
+                $cod_iva, 
+                $tipo_descriptivo,  // Descripción inteligente incluyendo "ATOMICO"
+                $porcentaje, 
+                $sucursal, 
+                $usuario
+            );
+        } else {
+            // Llamar a la función CLÁSICA (compatibilidad legacy)
+            $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?) as result";
+            $params = array(
+                $marca, 
+                $cd_proveedor, 
+                $rubro, 
+                $cod_iva, 
+                $tipo_descriptivo,  // Descripción inteligente en lugar de tipo_modificacion
+                $porcentaje, 
+                $sucursal, 
+                $usuario            // Sin observacion - ahora posición 8
+            );
+        }
         
         $query = $this->db->query($sql, $params);
         
@@ -4688,20 +4706,41 @@ public function PriceUpdate_post()
                 // Commit la transacción
                 $this->db->trans_commit();
                 
-                // El resultado ya viene como JSON de PostgreSQL
-                $this->response([
+                // ✅ MEJORADO: Agregar información específica de operación atómica
+                $response_data = [
                     'error' => false,
-                    'result' => $result_json
-                ]);
+                    'result' => $result_json,
+                    'atomic_operation' => $use_atomic,  // Indicar si fue operación atómica
+                    'function_used' => $use_atomic ? 'update_precios_masivo_atomico' : 'update_precios_masivo'
+                ];
+                
+                // Si fue operación atómica, agregar detalles adicionales
+                if ($use_atomic && isset($result['conflistas_actualizadas'])) {
+                    $response_data['conflistas_actualizadas'] = $result['conflistas_actualizadas'];
+                }
+                
+                $this->response($response_data);
             } else {
                 // Rollback en caso de error
                 $this->db->trans_rollback();
                 
                 $error_message = isset($result['message']) ? $result['message'] : 'Error desconocido en la actualización';
-                $this->response([
+                
+                // ✅ MEJORADO: Respuesta de error con contexto atómico
+                $error_response = [
                     'error' => true,
-                    'mensaje' => $error_message
-                ], 500);
+                    'mensaje' => $error_message,
+                    'atomic_operation' => $use_atomic,
+                    'rollback_executed' => true
+                ];
+                
+                // Si fue error atómico, incluir información específica
+                if ($use_atomic && isset($result['rollback_completo'])) {
+                    $error_response['rollback_completo'] = $result['rollback_completo'];
+                    $error_response['sqlstate'] = $result['sqlstate'] ?? null;
+                }
+                
+                $this->response($error_response, 500);
             }
         } else {
             // Rollback en caso de error

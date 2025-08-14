@@ -77,7 +77,10 @@ export interface ApplyChangesResponse {
   success: boolean;
   message?: string;
   productos_modificados: number;
+  conflistas_actualizadas?: number;  // ✅ NUEVO: Contador de conflistas actualizadas
   auditoria_id?: string;
+  atomica?: boolean;  // ✅ NUEVO: Indica si fue operación atómica
+  rollback_completo?: boolean;  // ✅ NUEVO: Indica si hubo rollback completo
   error_details?: any;
 }
 
@@ -152,11 +155,41 @@ export class PriceUpdateService {
     // Limpiar parámetros nulos o vacíos
     const cleanRequest = this.cleanRequest(request);
 
+    // ✅ CORREGIDO: Usar emailOp del sessionStorage
+    cleanRequest.usuario = sessionStorage.getItem('emailOp') || 'SYSTEM';
+    
     return this.http.post<any>(UrlPriceUpdate, cleanRequest, {
       headers: this.getHeaders()
     }).pipe(
       map(response => this.parseApplyResponse(response)),
-      catchError(error => this.handleError(error, 'Error al aplicar cambios masivos'))
+      catchError(error => this.handleError(error, 'Error al aplicar cambios atómicos'))
+    );
+  }
+
+  /**
+   * ✅ NUEVO: Aplicar cambios usando la función atómica específicamente
+   */
+  applyChangesAtomic(request: ApplyChangesRequest): Observable<ApplyChangesResponse> {
+    // Validar que request tiene sucursal
+    if (!request.sucursal) {
+      return throwError({
+        message: 'La sucursal es requerida para aplicar cambios atómicos',
+        code: 'SUCURSAL_REQUIRED'
+      });
+    }
+    
+    // Limpiar parámetros nulos o vacíos
+    const cleanRequest = this.cleanRequest(request);
+    
+    // Agregar indicador de operación atómica
+    cleanRequest.atomic = true;
+    cleanRequest.usuario = sessionStorage.getItem('emailOp') || 'SYSTEM';
+    
+    return this.http.post<any>(UrlPriceUpdate, cleanRequest, {
+      headers: this.getHeaders()
+    }).pipe(
+      map(response => this.parseApplyResponse(response)),
+      catchError(error => this.handleAtomicError(error))
     );
   }
 
@@ -338,7 +371,10 @@ export class PriceUpdateService {
         success: data?.success || false,
         message: data?.message,
         productos_modificados: data?.registros_modificados || data?.productos_modificados || 0,
+        conflistas_actualizadas: data?.conflistas_actualizadas || 0,  // ✅ NUEVO
         auditoria_id: data?.id_actualizacion || data?.auditoria_id,
+        atomica: data?.atomica || false,  // ✅ NUEVO
+        rollback_completo: data?.rollback_completo || false,  // ✅ NUEVO
         error_details: data?.error_details
       };
     } catch (error) {
@@ -374,6 +410,32 @@ export class PriceUpdateService {
       message: errorMessage,
       originalError: error,
       context: contextMessage
+    });
+  }
+
+  /**
+   * ✅ NUEVO: Manejo específico de errores atómicos
+   */
+  private handleAtomicError(error: any): Observable<never> {
+    console.error('Error en operación atómica:', error);
+    
+    let errorMessage: string;
+
+    // Verificar si es un error de rollback específico
+    if (error.error && error.error.rollback_completo) {
+      errorMessage = `Operación atómica falló - Rollback completo ejecutado: ${error.error.message || 'Error no especificado'}`;
+    } else if (error.error && error.error.message) {
+      errorMessage = `Error atómico: ${error.error.message}`;
+    } else {
+      errorMessage = 'Error en operación atómica. Todos los cambios fueron revertidos automáticamente.';
+    }
+
+    return throwError({
+      message: errorMessage,
+      originalError: error,
+      context: 'Operación Atómica',
+      atomic: true,
+      rollback_executed: true
     });
   }
 }

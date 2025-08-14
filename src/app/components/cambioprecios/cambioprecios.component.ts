@@ -45,6 +45,10 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
   loadingPreview = false;
   loadingApply = false;
   
+  // ✅ NUEVO: Estados para operación atómica
+  atomicModeEnabled = true;  // Por defecto usar operación atómica
+  lastOperationResult: any = null;
+  
   // Opciones para selectores
   tiposModificacion = [
     { label: 'Precio de Costo', value: 'costo' },
@@ -488,28 +492,38 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Confirmación con detalles del cambio
+    // ✅ ACTUALIZADO: Confirmación con detalles del cambio ATÓMICO
     const formValue = this.filtersForm.value;
     const tipoTexto = formValue.tipoModificacion === 'costo' ? 'Precio de Costo' : 'Precio Final';
     const porcentajeTexto = formValue.porcentaje > 0 ? `+${formValue.porcentaje}%` : `${formValue.porcentaje}%`;
 
     Swal.fire({
-      title: '¿Confirmar cambios masivos?',
+      title: '¿Confirmar cambios ATÓMICOS?',
       html: `
         <div class="text-left">
           <p><strong>Tipo:</strong> ${tipoTexto}</p>
           <p><strong>Variación:</strong> ${porcentajeTexto}</p>
           <p><strong>Productos afectados:</strong> ${this.indicadores.totalRegistros}</p>
+          <hr>
+          <div class="alert alert-info">
+            <h6><i class="fa fa-sync"></i> OPERACIÓN ATÓMICA</h6>
+            <small>
+              • Se actualizarán precios Y conflistas simultáneamente<br>
+              • Si hay algún error, TODO se revierte automáticamente<br>
+              • Garantiza consistencia completa de datos
+            </small>
+          </div>
         </div>
-        <div class="alert alert-warning mt-3">
-          <small><i class="fa fa-warning"></i> Esta acción no se puede deshacer automáticamente</small>
+        <div class="alert alert-warning mt-2">
+          <small><i class="fa fa-warning"></i> Esta acción modifica múltiples tablas de forma atómica</small>
         </div>
       `,
-      icon: 'warning',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Aplicar Cambios',
+      confirmButtonText: 'Aplicar Cambios Atómicos',
       cancelButtonText: 'Cancelar',
-      confirmButtonColor: '#d33',
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d'
     }).then((result) => {
       if (result.isConfirmed) {
         this.executeApplyChanges();
@@ -545,9 +559,14 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       usuario: sessionStorage.getItem('emailOp') || 'usuario_desconocido'  // ✅ AGREGADO
     };
     
-    const subscription = this.priceUpdateService.applyChanges(applyRequest).subscribe({
+    // ✅ ACTUALIZADO: Usar servicio atómico por defecto
+    const subscription = (this.atomicModeEnabled ? 
+      this.priceUpdateService.applyChangesAtomic(applyRequest) : 
+      this.priceUpdateService.applyChanges(applyRequest)
+    ).subscribe({
       next: (response) => {
         this.loadingApply = false;
+        this.lastOperationResult = response;  // ✅ GUARDAR RESULTADO
         
         if (response.success) {
           Swal.fire({
@@ -555,8 +574,10 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
             html: `
               <div class="text-left">
                 <p><strong>Productos modificados:</strong> ${response.productos_modificados}</p>
+                ${response.conflistas_actualizadas ? `<p><strong>Conflistas actualizadas:</strong> ${response.conflistas_actualizadas}</p>` : ''}
                 ${response.auditoria_id ? `<p><strong>ID de auditoría:</strong> ${response.auditoria_id}</p>` : ''}
                 <p><strong>Fecha:</strong> ${new Date().toLocaleString()}</p>
+                ${response.atomica ? '<div class="alert alert-success mt-2"><small><i class="fa fa-check-circle"></i> Operación atómica completada exitosamente</small></div>' : ''}
               </div>
             `,
             icon: 'success',
@@ -565,11 +586,7 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
           
           this.resetForm();
         } else {
-          Swal.fire({
-            title: 'Error al aplicar cambios',
-            text: response.message || 'No se pudieron aplicar los cambios',
-            icon: 'error'
-          });
+          this.handleApplyError(response);
         }
         
         this.cdr.detectChanges();
@@ -577,12 +594,9 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error aplicando cambios:', error);
         this.loadingApply = false;
+        this.lastOperationResult = error;  // ✅ GUARDAR ERROR
         
-        Swal.fire({
-          title: 'Error',
-          text: error.message || 'No se pudieron aplicar los cambios masivos',
-          icon: 'error'
-        });
+        this.handleApplyError(error);
       }
     });
     
@@ -697,6 +711,69 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       variacionPromedio: 0,
       registrosPreview: 0
     };
+  }
+
+  /**
+   * ✅ NUEVO: Manejo específico de errores de aplicación
+   */
+  private handleApplyError(error: any): void {
+    let title = 'Error al aplicar cambios';
+    let message = 'No se pudieron aplicar los cambios';
+    let icon: 'error' | 'warning' = 'error';
+
+    // Verificar si es un error atómico con rollback
+    if (error.atomic && error.rollback_executed) {
+      title = 'Operación Atómica Falló';
+      message = `${error.message}\n\nTodos los cambios fueron revertidos automáticamente para mantener la consistencia de datos.`;
+      icon = 'warning';
+    } else if (error.rollback_completo) {
+      title = 'Rollback Completo Ejecutado';
+      message = `${error.message || 'Error no especificado'}\n\nTodos los cambios fueron revertidos para mantener la consistencia.`;
+      icon = 'warning';
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    Swal.fire({
+      title: title,
+      text: message,
+      icon: icon,
+      confirmButtonText: 'Entendido',
+      footer: error.atomic ? '<small>Operación atómica - Estado de datos consistente</small>' : ''
+    });
+  }
+
+  /**
+   * ✅ NUEVO: Toggle modo atómico (para debugging o casos especiales)
+   */
+  toggleAtomicMode(): void {
+    this.atomicModeEnabled = !this.atomicModeEnabled;
+    
+    Swal.fire({
+      title: `Modo ${this.atomicModeEnabled ? 'Atómico' : 'Clásico'} Activado`,
+      html: this.atomicModeEnabled ? `
+        <div class="alert alert-success">
+          <h6><i class="fa fa-sync"></i> Modo Atómico</h6>
+          <small>
+            • Actualiza precios Y conflistas simultáneamente<br>
+            • Rollback automático en caso de error<br>
+            • Garantía de consistencia de datos
+          </small>
+        </div>
+      ` : `
+        <div class="alert alert-warning">
+          <h6><i class="fa fa-exclamation-triangle"></i> Modo Clásico</h6>
+          <small>
+            • Solo actualiza precios (compatibilidad legacy)<br>
+            • Sin sincronización automática de conflistas<br>
+            • Requiere gestión manual de consistencia
+          </small>
+        </div>
+      `,
+      icon: this.atomicModeEnabled ? 'success' : 'warning',
+      timer: 3000,
+      showConfirmButton: false
+    });
   }
 
 }
