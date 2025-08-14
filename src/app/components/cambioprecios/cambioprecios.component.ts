@@ -400,7 +400,8 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
 
   /**
    * Enriquecer productos con campos adicionales de precios para la tabla
-   * La función PostgreSQL ya nos da los datos base, solo necesitamos calcular los precios complementarios
+   * ✅ CORREGIDO: Usar directamente los datos calculados por PostgreSQL
+   * La función PostgreSQL ya hace todos los cálculos correctos con margen + IVA
    */
   private enrichProductsWithPriceFields(productos: any[], tipoModificacion: string): PreviewProduct[] {
     return productos.map(producto => {
@@ -408,30 +409,19 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       const precioActual = parseFloat(producto.precio_actual) || 0;
       const precioNuevo = parseFloat(producto.precio_nuevo) || 0;
       
-      let precoCostoActual: number;
-      let precoCostoNuevo: number;
-      let precoFinalActual: number;
-      let precoFinalNuevo: number;
+      // ✅ CORRECCIÓN PRINCIPAL: Usar directamente los valores de PostgreSQL
+      // La función PostgreSQL ya calculó correctamente todos los precios con margen + IVA
+      const precoCostoActual = parseFloat(producto.precio_costo_actual) || 0;
+      const precoCostoNuevo = parseFloat(producto.precio_costo_nuevo) || 0;
+      const precoFinalActual = parseFloat(producto.precio_final_actual) || 0;
+      const precoFinalNuevo = parseFloat(producto.precio_final_nuevo) || 0;
       
-      if (tipoModificacion === 'costo') {
-        // El precio_actual y precio_nuevo son precios de costo
-        precoCostoActual = precioActual;
-        precoCostoNuevo = precioNuevo;
-        // Calcular precios finales agregando IVA
-        precoFinalActual = precoCostoActual * (1 + alicuotaIva / 100);
-        precoFinalNuevo = precoCostoNuevo * (1 + alicuotaIva / 100);
-      } else {
-        // El precio_actual y precio_nuevo son precios finales
-        precoFinalActual = precioActual;
-        precoFinalNuevo = precioNuevo;
-        // Calcular precios de costo quitando IVA
-        precoCostoActual = precoFinalActual / (1 + alicuotaIva / 100);
-        precoCostoNuevo = precoFinalNuevo / (1 + alicuotaIva / 100);
-      }
+      // ✅ ELIMINADO: El código que recalculaba los precios ignorando la lógica de negocio
+      // Ya no necesitamos recalcular porque PostgreSQL ya lo hace correctamente
       
       return {
         ...producto,
-        // Campos adicionales para la nueva tabla
+        // ✅ CORRECCIÓN: Usar los valores calculados por PostgreSQL directamente
         precio_costo_actual: Math.round(precoCostoActual * 100) / 100,
         precio_costo_nuevo: Math.round(precoCostoNuevo * 100) / 100,
         precio_final_actual: Math.round(precoFinalActual * 100) / 100,
@@ -444,7 +434,9 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
         impacto_inventario: parseFloat(producto.impacto_inventario) || 0,
         stock_total: parseFloat(producto.stock_total) || 0,
         cod_iva: parseInt(producto.cod_iva) || 0,
-        alicuota_iva: alicuotaIva
+        alicuota_iva: alicuotaIva,
+        // ✅ NUEVO: Incluir margen para debugging (viene de PostgreSQL)
+        margen: parseFloat(producto.margen) || 0
       };
     });
   }

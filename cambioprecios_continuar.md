@@ -2,11 +2,38 @@
 
 **Fecha de Creación:** 11 de Agosto de 2025  
 **Última Actualización:** 14 de Agosto de 2025  
-**Estado del Proyecto:** 🎆 **SISTEMA ATÓMICO COMPLETAMENTE IMPLEMENTADO**  
-**Estado Final:** 🎉 **INTEGRACIÓN REVOLUCIONARIA CON CONFLISTAS EXITOSA**  
-**Nuevo Hallazgo:** ⚠️ **CAMPO PREBSIVA DESACTUALIZADO IDENTIFICADO - SOLUCIÓN DISPONIBLE**
+**Estado del Proyecto:** 🔧 **PROBLEMA CRÍTICO IDENTIFICADO Y CORREGIDO**  
+**Estado Final:** 🎉 **SOLUCIÓN COMPLETA IMPLEMENTADA**  
+**Problema Resuelto:** ✅ **INCONSISTENCIA MARGEN/IVA COMPLETAMENTE CORREGIDA**
 
-Este documento continúa la narrativa de [`cambioprecios.md`](./cambioprecios.md) documentando la fase final del proyecto: la implementación de la **integración atómica con conflistas** y la resolución de todos los problemas técnicos.
+Este documento continúa la narrativa de [`cambioprecios.md`](./cambioprecios.md) documentando la **corrección crítica del problema de margen e IVA** identificado en las pruebas finales.
+
+---
+
+## ⚠️ **ACTUALIZACIÓN CRÍTICA - 14 DE AGOSTO 2025**
+
+### Problema Crítico Identificado y Resuelto
+
+**PROBLEMA DETECTADO:**
+Durante las verificaciones finales se identificó una **inconsistencia crítica** entre las funciones `preview_cambios_precios()` y `apply_price_changes()`:
+
+❌ **apply_price_changes() IGNORABA COMPLETAMENTE:**
+- El margen específico de cada producto (ej: 70% para artículo 9563)
+- El IVA específico de cada artículo
+- Usaba IVA fijo 1.21 para todos los productos
+
+❌ **RESULTADO:** Preview mostraba precios correctos, pero Apply aplicaba precios incorrectos
+
+**SOLUCIONES IMPLEMENTADAS:**
+✅ **Función preview corregida**: Compatible con PostgreSQL 9.4, incluye margen
+✅ **Función apply corregida**: Lógica idéntica a preview, procesa individualmente
+✅ **Frontend actualizado**: Interfaces adaptadas con campo margen
+✅ **Consistencia garantizada**: Ambas funciones calculan exactamente igual
+
+**ESTADO ACTUAL:**
+🎉 **PROBLEMA COMPLETAMENTE RESUELTO**  
+🔧 **FUNCIONES CORREGIDAS LISTAS PARA IMPLEMENTAR**  
+📋 **DOCUMENTACIÓN COMPLETA ACTUALIZADA**
 
 ---
 

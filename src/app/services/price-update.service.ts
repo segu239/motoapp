@@ -30,7 +30,7 @@ export interface PreviewProduct {
   precio_final_actual: number;
   precio_final_nuevo: number;
   // Mantener compatibilidad con campos existentes
-  precio_actual: number;  // Campo del tipo que se está modificando
+  precio_actual: number;  // Campo del tipo que se está modificado
   precio_nuevo: number;   // Campo del tipo que se está modificando
   variacion: number;
   variacion_porcentaje: number;
@@ -38,6 +38,8 @@ export interface PreviewProduct {
   stock_total: number;
   cod_iva: number;
   alicuota_iva: number;
+  // ✅ NUEVO: Agregar margen para debugging
+  margen: number;
 }
 
 export interface PreviewRequest {
