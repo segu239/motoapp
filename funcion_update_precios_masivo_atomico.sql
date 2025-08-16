@@ -31,6 +31,7 @@ DECLARE
     p_act NUMERIC;
     p_nvo_costo NUMERIC;
     p_nvo_final NUMERIC;
+    p_nvo_prebsiva NUMERIC;
     aliq_iva NUMERIC;
     v_id_marca_real INTEGER := NULL;
     v_id_proveedor_real INTEGER := NULL;
@@ -117,6 +118,8 @@ BEGIN
             TRIM(marca) as marca,
             COALESCE(precostosi, 0) as precostosi,
             COALESCE(precon, 0) as precon,
+            COALESCE(prebsiva, 0) as prebsiva,
+            COALESCE(margen, 0) as margen,
             cod_iva
         FROM artsucursal 
         WHERE cod_deposito = v_dep
@@ -133,20 +136,27 @@ BEGIN
         
         IF aliq_iva IS NULL THEN aliq_iva := 21; END IF;
 
-        -- CALCULAR NUEVOS PRECIOS
+        -- CALCULAR NUEVOS PRECIOS (CORREGIDO PARA INCLUIR MARGEN)
         IF v_tipo_real = ''costo'' THEN
             p_act := rec.precostosi;
+            -- ✅ CORRECCIÓN CRÍTICA: Incluir margen en cálculo
             p_nvo_costo := p_act * (1 + COALESCE(p_porcentaje, 0) / 100.0);
-            p_nvo_final := p_nvo_costo * (1 + aliq_iva / 100.0);
+            -- ✅ Calcular prebsiva con margen específico del producto
+            p_nvo_prebsiva := p_nvo_costo * (1 + COALESCE(rec.margen, 0) / 100.0);
+            -- ✅ Calcular precio final con IVA desde prebsiva
+            p_nvo_final := p_nvo_prebsiva * (1 + aliq_iva / 100.0);
         ELSE
             p_act := rec.precon;
             p_nvo_final := p_act * (1 + COALESCE(p_porcentaje, 0) / 100.0);
-            p_nvo_costo := p_nvo_final / (1 + aliq_iva / 100.0);
+            -- ✅ Calcular costo considerando margen e IVA en reversa
+            p_nvo_prebsiva := p_nvo_final / (1 + aliq_iva / 100.0);
+            p_nvo_costo := p_nvo_prebsiva / (1 + COALESCE(rec.margen, 0) / 100.0);
         END IF;
 
         -- Validaciones NULL
         IF p_nvo_costo IS NULL THEN p_nvo_costo := 0; END IF;
         IF p_nvo_final IS NULL THEN p_nvo_final := 0; END IF;
+        IF p_nvo_prebsiva IS NULL THEN p_nvo_prebsiva := 0; END IF;
 
         -- ===== REGISTRO DETALLADO EN DACTUALIZA =====
         BEGIN
@@ -184,6 +194,7 @@ BEGIN
         -- ===== ACTUALIZAR PRECIOS EN ARTSUCURSAL (PARTE 1 ATÓMICA) =====
         UPDATE artsucursal SET 
             precostosi = COALESCE(ROUND(COALESCE(p_nvo_costo, 0), 2), 0),
+            prebsiva = COALESCE(ROUND(COALESCE(p_nvo_prebsiva, 0), 2), 0),
             precon = COALESCE(ROUND(COALESCE(p_nvo_final, 0), 2), 0)
         WHERE id_articulo = rec.id_articulo;
 
@@ -218,14 +229,11 @@ BEGIN
     LOOP
         BEGIN
             -- ✅ RECALCULAR PRECIOS DE CONFLISTA BASADO EN NUEVOS PRECIOS
-            -- Si la conflista usa margen sobre costo, recalcular
+            -- Si la conflista usa margen sobre costo, mantener estructura de margen
             IF rec_conflista.rmargen = true AND rec_conflista.margen > 0 THEN
-                -- Actualizar basado en margen sobre costo
+                -- Solo actualizar fecha - los precios se calculan automáticamente con margen
                 UPDATE conf_lista SET
-                    fecha = NOW(),
-                    -- Los precios finales se recalculan automáticamente con el margen
-                    preciof21 = rec_conflista.margen,
-                    preciof105 = rec_conflista.margen
+                    fecha = NOW()
                 WHERE id_conflista = rec_conflista.id_conflista;
             ELSE
                 -- Aplicar el mismo porcentaje a los precios fijos de la conflista
