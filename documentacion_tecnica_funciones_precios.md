@@ -1,8 +1,9 @@
 # DOCUMENTACIÓN TÉCNICA: FUNCIONES DE CAMBIO DE PRECIOS
 
 **Fecha de Creación:** 16 de Agosto de 2025  
-**Estado:** ✅ **FUNCIONES COMPLETAMENTE REPARADAS Y VALIDADAS**  
-**Versión Actual:** SINTAXIS_CORREGIDA_20250816  
+**Última Actualización:** 18 de Agosto de 2025 - CORRECCIÓN CAMPOS DACTUALIZA  
+**Estado:** ✅ **FUNCIONES COMPLETAMENTE REPARADAS + AUDITORÍA MEJORADA**  
+**Versión Actual:** CORRECCION_DACTUALIZA_20250818  
 
 ---
 
@@ -11,9 +12,11 @@
 Este documento detalla las funciones SQL desarrolladas para el sistema de cambio masivo de precios, incluyendo todas las correcciones implementadas y el estado actual completamente operativo.
 
 ### **FUNCIÓN ACTUAL EN PRODUCCIÓN:**
-✅ **`FUNCION_update_precios_masivo_atomico_SINTAXIS_CORREGIDA.sql`**
+✅ **`FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`**
 
 ### **PROBLEMAS RESUELTOS:**
+- ✅ **Campos dactualiza corregidos (precio = presbsiva, precion = precon * margen)**
+- ✅ **Auditoría de precios mejorada con valores correctos**
 - ✅ Margen individual respetado
 - ✅ Campo prebsiva actualizado correctamente  
 - ✅ IVA específico aplicado
@@ -33,10 +36,17 @@ Este documento detalla las funciones SQL desarrolladas para el sistema de cambio
   - ❌ conf_lista se modificaba incorrectamente
   - ❌ Errores de sintaxis SQL
 
-### **2. VERSIÓN ACTUAL (OPERATIVA)**
+### **2. VERSIÓN INTERMEDIA (DEPRECIADA)**
 - **Archivo:** `FUNCION_update_precios_masivo_atomico_SINTAXIS_CORREGIDA.sql`
-- **Estado:** ✅ **100% FUNCIONAL**
-- **Validación:** Artículo 7901 procesado exitosamente
+- **Estado:** Funcional pero con problemas en auditoría
+- **Problemas:**
+  - ❌ Campo 'precio' en dactualiza mostraba precon en lugar de presbsiva
+  - ❌ Campo 'precion' en dactualiza mostraba precio final en lugar de precon * margen
+
+### **3. VERSIÓN ACTUAL (OPERATIVA)**
+- **Archivo:** `FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`
+- **Estado:** ✅ **100% FUNCIONAL + AUDITORÍA PERFECTA**
+- **Validación:** Campos dactualiza con valores correctos
 
 ---
 

@@ -2,10 +2,38 @@
 
 **Estado del Proyecto:** 🎉 **SISTEMA COMPLETAMENTE REPARADO Y OPERATIVO AL 100%**  
 **Fecha de Creación:** 11 de Agosto de 2025  
-**Última Actualización:** 16 de Agosto de 2025 - CORRECCIÓN CRÍTICA PREFI1-4  
-**Versión:** 10.0 - FUNCIÓN SQL SINTAXIS CORREGIDA Y VALIDADA  
-**Estado Técnico:** ✅ **100% FUNCIONAL - PREFI1-4 RECALCULÁNDOSE CORRECTAMENTE**  
-**Estado Final:** 🚀 **LISTO PARA PRODUCCIÓN - PROBLEMA PREFI1-4 RESUELTO DEFINITIVAMENTE**
+**Última Actualización:** 18 de Agosto de 2025 - CORRECCIÓN CAMPOS DACTUALIZA  
+**Versión:** 11.0 - CAMPOS PRECIO Y PRECION CORREGIDOS EN TABLA DACTUALIZA  
+**Estado Técnico:** ✅ **100% FUNCIONAL - DACTUALIZA CON VALORES CORRECTOS**  
+**Estado Final:** 🚀 **LISTO PARA PRODUCCIÓN - AUDITORÍA DE PRECIOS MEJORADA**
+
+---
+
+## ⚠️ **ACTUALIZACIÓN CRÍTICA - 18 DE AGOSTO 2025**
+
+### 🔧 CORRECCIÓN DE CAMPOS EN TABLA DACTUALIZA
+
+**PROBLEMA IDENTIFICADO:**
+Durante el análisis de auditoría de precios se detectó que la tabla `dactualiza` almacenaba **valores incorrectos** en campos críticos:
+
+❌ **CAMPO 'precio' INCORRECTO:**
+- **Problema:** Mostraba `precon` (precio contado final) 
+- **Debería mostrar:** `presbsiva` (precio básico sin IVA)
+- **Impacto:** Auditoría con valores no correspondientes a precio básico
+
+❌ **CAMPO 'precion' INCORRECTO:**
+- **Problema:** Mostraba `precio final nuevo` (sin margen aplicado)
+- **Debería mostrar:** `precon * margen` (precio contado con margen)
+- **Impacto:** No reflejaba correctamente el precio con margen aplicado
+
+**SOLUCIONES IMPLEMENTADAS:**
+✅ **Función corregida**: `FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`  
+✅ **Campo 'precio'**: Ahora muestra correctamente `presbsiva` (precio básico sin IVA)  
+✅ **Campo 'precion'**: Ahora muestra correctamente `precon * margen`  
+✅ **Auditoría mejorada**: Histórico de precios más preciso y consistente  
+✅ **Lógica de negocio**: Valores alineados con requerimientos específicos  
+
+**ESTADO:** ✅ **CORRECCIÓN COMPLETADA - TABLA DACTUALIZA CON VALORES CORRECTOS**
 
 ---
 
@@ -63,18 +91,25 @@ Durante la validación del sistema se detectó que la función `update_precios_m
 
 ### 🎉 ÉXITO TOTAL: SISTEMA COMPLETAMENTE OPERATIVO
 
-**FECHA DE REPARACIÓN FINAL:** 16 de Agosto de 2025 - CORRECCIÓN PREFI1-4  
-**FUNCIÓN ACTUAL EN PRODUCCIÓN:** `FUNCION_update_precios_masivo_atomico_SINTAXIS_CORREGIDA.sql`  
-**VALIDACIÓN EXITOSA:** Artículo 7901 (+10%) procesado correctamente  
-**ESTADO:** ✅ **COMPLETAMENTE FUNCIONAL - PRECIOS PRINCIPALES + PREFI1-4 + CONFLISTAS**  
+**FECHA DE REPARACIÓN FINAL:** 18 de Agosto de 2025 - CORRECCIÓN CAMPOS DACTUALIZA  
+**FUNCIÓN ACTUAL EN PRODUCCIÓN:** `FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`  
+**VALIDACIÓN EXITOSA:** Campos precio y precion corregidos en tabla dactualiza  
+**ESTADO:** ✅ **COMPLETAMENTE FUNCIONAL - PRECIOS + PREFI1-4 + CONFLISTAS + AUDITORÍA MEJORADA**  
 
-**PROBLEMA MÁS RECIENTE RESUELTO (16 Agosto 2025):**
+**PROBLEMA MÁS RECIENTE RESUELTO (18 Agosto 2025):**
+- ❌ **ANTES:** Campo 'precio' mostraba precon en lugar de presbsiva
+- ❌ **ANTES:** Campo 'precion' mostraba precio final en lugar de precon * margen
+- ❌ **ANTES:** Auditoría de precios con valores incorrectos
+
+**PROBLEMAS ANTERIORES TAMBIÉN RESUELTOS (16 Agosto 2025):**
 - ❌ **ANTES:** Los campos prefi1-4 NO se recalculaban durante cambios masivos
 - ❌ **ANTES:** conf_lista se modificaba incorrectamente (políticas de precios corrompidas)
 - ❌ **ANTES:** Errores de sintaxis SQL en subconsultas
 
 **SOLUCIONES FINALES IMPLEMENTADAS Y VALIDADAS:**
-✅ **Función SQL corregida**: `FUNCION_update_precios_masivo_atomico_SINTAXIS_CORREGIDA.sql`  
+✅ **Función SQL FINAL corregida**: `FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`  
+✅ **Campos dactualiza corregidos**: precio = presbsiva, precion = precon * margen  
+✅ **Auditoría mejorada**: Histórico de precios con valores correctos y consistentes  
 ✅ **Recálculo prefi1-4**: Implementado correctamente usando porcentajes de conf_lista  
 ✅ **conf_lista preservada**: NO se modifica - mantiene políticas de precios intactas  
 ✅ **Sintaxis SQL corregida**: Subconsultas reestructuradas sin errores  

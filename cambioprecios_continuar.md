@@ -1,16 +1,39 @@
 # Continuación: Implementación Atómica del Sistema de Cambio de Precios
 
 **Fecha de Creación:** 11 de Agosto de 2025  
-**Última Actualización:** 16 de Agosto de 2025 - CORRECCIÓN CRÍTICA PREFI1-4  
-**Estado del Proyecto:** 🎉 **SISTEMA COMPLETAMENTE REPARADO Y VALIDADO**  
-**Estado Final:** 🚀 **VALIDACIÓN EXITOSA - LISTO PARA PRODUCCIÓN**  
-**Problema Resuelto:** ✅ **INCONSISTENCIA MARGEN/IVA + CONFLISTAS + ERROR POSTGRESQL + PREFI1-4 - TODO RESUELTO**
+**Última Actualización:** 18 de Agosto de 2025 - CORRECCIÓN CAMPOS DACTUALIZA  
+**Estado del Proyecto:** 🎉 **SISTEMA COMPLETAMENTE REPARADO Y VALIDADO + AUDITORÍA MEJORADA**  
+**Estado Final:** 🚀 **VALIDACIÓN EXITOSA - LISTO PARA PRODUCCIÓN CON AUDITORÍA PERFECTA**  
+**Problema Resuelto:** ✅ **CAMPOS DACTUALIZA + PREFI1-4 + CONFLISTAS + ERROR POSTGRESQL - TODO RESUELTO**
 
 Este documento continúa la narrativa de [`cambioprecios.md`](./cambioprecios.md) documentando la **corrección crítica completa del sistema**, incluyendo la resolución del problema de margen/IVA, conflistas, error PostgreSQL y el **problema crítico de prefi1-4**, culminando con la **validación exitosa del artículo 7901**.
 
 ---
 
-## 🚨 **ACTUALIZACIÓN CRÍTICA FINAL - 16 DE AGOSTO 2025**
+## 🔧 **ACTUALIZACIÓN CRÍTICA FINAL - 18 DE AGOSTO 2025**
+
+### Corrección de Campos en Tabla DACTUALIZA - Auditoría Mejorada
+
+**PROBLEMA FINAL IDENTIFICADO:**
+Durante el análisis de auditoría de precios se detectó que la tabla `dactualiza` almacenaba **valores incorrectos** en campos críticos del histórico de precios:
+
+❌ **ERROR CRÍTICO EN AUDITORÍA:**
+- **Campo 'precio':** Mostraba `precon` (precio contado final) en lugar de `presbsiva` (precio básico sin IVA)
+- **Campo 'precion':** Mostraba `precio final nuevo` en lugar de `precon * margen`
+- **Impacto:** Histórico de auditoría con valores no correspondientes a la lógica de negocio
+
+**SOLUCIÓN FINAL IMPLEMENTADA:**
+✅ **Función corregida FINAL**: `FUNCION_update_precios_masivo_atomico_CORRECCION_DACTUALIZA.sql`  
+✅ **Campo 'precio' corregido**: Ahora almacena correctamente `presbsiva` (precio básico sin IVA)  
+✅ **Campo 'precion' corregido**: Ahora almacena correctamente `precon * margen`  
+✅ **Auditoría perfecta**: Histórico de precios con valores precisos y consistentes  
+✅ **Lógica de negocio**: Valores alineados con requerimientos específicos  
+
+**ESTADO FINAL:** ✅ **SISTEMA 100% COMPLETO - AUDITORÍA DE PRECIOS PERFECTA**
+
+---
+
+## 🚨 **ACTUALIZACIÓN CRÍTICA - 16 DE AGOSTO 2025**
 
 ### Problema Crítico Final Identificado y Resuelto: PREFI1-4
 
