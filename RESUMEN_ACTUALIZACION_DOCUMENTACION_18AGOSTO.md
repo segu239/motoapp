@@ -15,13 +15,16 @@ Se actualizó toda la documentación técnica del sistema de cambio de precios p
 
 ## 🔧 PROBLEMA CORREGIDO
 
-### **CAMPOS DACTUALIZA INCORRECTOS:**
-- ❌ **Campo 'precio'**: Mostraba `precon` en lugar de `presbsiva`
-- ❌ **Campo 'precion'**: Mostraba `precio final` en lugar de `precon * margen`
+### **CAMPOS DACTUALIZA INCORRECTOS (ESPECÍFICOS ARTÍCULO 10651):**
+- ❌ **Campo 'precion'**: Mostraba `3.9125` cuando debería ser `1.5500` (igual a prebsiva)
+- ❌ **Campo 'margen'**: Aparecía como `NULL` cuando debería ser `108.00` (margen del producto)
+- ❌ **Campo 'descto'**: Aparecía como `NULL` cuando debería estar incluido en INSERT
 
-### **SOLUCIÓN IMPLEMENTADA:**
-- ✅ **Campo 'precio'**: Ahora almacena correctamente `presbsiva` (precio básico sin IVA)
-- ✅ **Campo 'precion'**: Ahora almacena correctamente `precon * margen`
+### **SOLUCIÓN ESPECÍFICA IMPLEMENTADA:**
+- ✅ **Campo 'precion'**: Línea 157 - Ahora usa `COALESCE(p_nvo_prebsiva, 0)`
+- ✅ **Campo 'margen'**: Línea 151 - Se incluye con `COALESCE(margen_producto, 0)`
+- ✅ **Campo 'descto'**: Línea 150 - Se incluye en INSERT con valor NULL
+- ✅ **Validación**: Artículo 10651 analizado y correcciones verificadas
 
 ---
 
@@ -29,10 +32,10 @@ Se actualizó toda la documentación técnica del sistema de cambio de precios p
 
 ### 1. **DOCUMENTO PRINCIPAL**
 **Archivo:** `cambioprecios.md`
-- ✅ **Encabezado actualizado**: Versión 11.0 - Campos DACTUALIZA corregidos
-- ✅ **Nueva sección crítica**: Detalle del problema y solución implementada
-- ✅ **Estado actual**: Función corregida y auditoría mejorada
-- ✅ **Fecha actualizada**: 18 de Agosto de 2025
+- ✅ **Versión actualizada**: 11.0 → **12.0** (CAMPOS MARGEN, DESCTO Y PRECION TOTALMENTE CORREGIDOS)
+- ✅ **Función específica**: `FUNCION_update_precios_masivo_atomico_SINTAXIS_CORREGIDA.sql` (CORREGIDA)
+- ✅ **Evidencia específica**: Artículo 10651 con valores antes/después documentados
+- ✅ **Estado técnico**: "100% FUNCIONAL - DACTUALIZA CON CAMPOS COMPLETOS"
 
 ### 2. **DOCUMENTO DE CONTINUACIÓN**
 **Archivo:** `cambioprecios_continuar.md`

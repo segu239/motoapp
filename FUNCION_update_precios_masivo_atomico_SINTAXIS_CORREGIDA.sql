@@ -142,14 +142,21 @@ BEGIN
 
         -- ===== REGISTRO DETALLADO EN DACTUALIZA =====
         INSERT INTO dactualiza (
-            id_act, id_articulo, articulo, nombre, pcosto, precio, pfinal,
-            pcoston, precion, pfinaln, fecha
+            id_act, id_articulo, articulo, nombre, pcosto, descto, margen, precio, pfinal,
+            pcoston, descton, margenn, precion, pfinaln, fecha
         ) VALUES (
             v_id_act, rec.id_articulo, COALESCE(rec.cd_articulo, 0),
             COALESCE(rec.nomart, ''''), COALESCE(rec.precostosi, 0),
-            COALESCE(rec.precon, 0), COALESCE(rec.precon, 0),
-            COALESCE(p_nvo_costo, 0), COALESCE(p_nvo_final, 0),
-            COALESCE(p_nvo_final, 0), NOW()
+            NULL, -- descto (descuento original)
+            COALESCE(margen_producto, 0), -- margen original
+            COALESCE(rec.prebsiva, 0), -- precio sin IVA original
+            COALESCE(rec.precon, 0), -- precio final original
+            COALESCE(p_nvo_costo, 0), -- nuevo costo
+            NULL, -- descton (descuento nuevo - mantener NULL)
+            NULL, -- margenn (margen nuevo - mantener NULL)
+            COALESCE(p_nvo_prebsiva, 0), -- ✅ CORRECCIÓN: precion = nuevo prebsiva
+            COALESCE(p_nvo_final, 0), -- nuevo precio final
+            NOW()
         );
 
         -- ===== ACTUALIZAR PRECIOS BÁSICOS EN ARTSUCURSAL =====
