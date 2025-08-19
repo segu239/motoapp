@@ -400,8 +400,8 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
 
   /**
    * Enriquecer productos con campos adicionales de precios para la tabla
-   * ✅ CORREGIDO: Usar directamente los datos calculados por PostgreSQL
-   * La función PostgreSQL ya hace todos los cálculos correctos con margen + IVA
+   * ✅ MEJORA PRECISIÓN: Preservar 4 decimales de PostgreSQL sin doble redondeo
+   * La función PostgreSQL ya hace todos los cálculos correctos con margen + IVA y máxima precisión
    */
   private enrichProductsWithPriceFields(productos: any[], tipoModificacion: string): PreviewProduct[] {
     return productos.map(producto => {
@@ -421,11 +421,11 @@ export class CambioPreciosComponent implements OnInit, OnDestroy {
       
       return {
         ...producto,
-        // ✅ CORRECCIÓN: Usar los valores calculados por PostgreSQL directamente
-        precio_costo_actual: Math.round(precoCostoActual * 100) / 100,
-        precio_costo_nuevo: Math.round(precoCostoNuevo * 100) / 100,
-        precio_final_actual: Math.round(precoFinalActual * 100) / 100,
-        precio_final_nuevo: Math.round(precoFinalNuevo * 100) / 100,
+        // ✅ MEJORA PRECISIÓN: Preservar 4 decimales de PostgreSQL eliminando doble redondeo
+        precio_costo_actual: parseFloat(precoCostoActual.toFixed(4)),
+        precio_costo_nuevo: parseFloat(precoCostoNuevo.toFixed(4)),
+        precio_final_actual: parseFloat(precoFinalActual.toFixed(4)),
+        precio_final_nuevo: parseFloat(precoFinalNuevo.toFixed(4)),
         // Mantener campos existentes para compatibilidad
         precio_actual: precioActual,
         precio_nuevo: precioNuevo,
