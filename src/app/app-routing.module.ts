@@ -72,6 +72,7 @@ import { NopermitidoComponent } from './components/nopermitido/nopermitido.compo
 import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
+import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios.component';
 
 
 //nuevouser role
@@ -148,6 +149,8 @@ children:[
     { path: 'sucursales', component: SucursalesComponent, canActivate: [AuthGuard], data: { titulo: "Sucursales", roles: [UserRole.SUPER, UserRole.ADMIN] } },
     // Nuevas rutas para la administración de usuarios
     { path: 'user-management', component: UserManagementComponent, canActivate: [AuthGuard], data: { titulo: "Administración de Usuarios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
+    // Ruta para cambio masivo de precios - solo SUPER y ADMIN
+    { path: 'cambioprecios', component: CambioPreciosComponent, canActivate: [AuthGuard], data: { titulo: "Cambio Masivo de Precios", roles: [UserRole.SUPER, UserRole.ADMIN] } },
 ]
 },
 

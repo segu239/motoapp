@@ -235,3 +235,9 @@ export const UrlUpdateCajamovi= "https://motoapp.loclx.io/APIAND/index.php/Desca
 export const UrlUpdateCajaLista= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajalista";
 export const UrlUpdateCajaconcepto= "https://motoapp.loclx.io/APIAND/index.php/Descarga/UpdateCajaconcepto";
 export const UrlCajaConceptoPorIdConcepto= "https://motoapp.loclx.io/APIAND/index.php/Carga/CajaconceptoPorIdConcepto";
+
+// URLs para cambio masivo de precios
+export const UrlPriceFilterOptions = "https://motoapp.loclx.io/APIAND/index.php/Carga/PriceFilterOptions";
+export const UrlPricePreview = "https://motoapp.loclx.io/APIAND/index.php/Carga/PricePreview";
+export const UrlPriceUpdate = "https://motoapp.loclx.io/APIAND/index.php/Descarga/PriceUpdate";
+export const UrlPriceChangeHistory = "https://motoapp.loclx.io/APIAND/index.php/Carga/PriceChangeHistory";

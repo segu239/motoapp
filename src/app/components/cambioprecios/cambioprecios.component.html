@@ -1,0 +1,340 @@
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">
+                    <i class="fa fa-calculator mr-2"></i>
+                    Cambio Masivo de Precios
+                </h4>
+                
+                <!-- Loading indicator inicial -->
+                <div class="alert alert-warning mb-3" *ngIf="loading">
+                    <i class="fa fa-spinner fa-spin mr-2"></i> 
+                    Cargando opciones de filtros, por favor espere...
+                </div>
+                
+                <!-- Formulario de filtros y configuración -->
+                <div class="card border-primary mb-4" *ngIf="!loading && filterOptions">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0">
+                            <i class="fa fa-filter mr-2"></i>
+                            Filtros y Configuración
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form [formGroup]="filtersForm">
+                            <div class="row">
+                                <!-- Panel de Filtros -->
+                                <div class="col-md-8">
+                                    <div class="row">
+                                        <!-- Filtro por Marca -->
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Marca</label>
+                                            <p-dropdown 
+                                                [options]="filterOptions.marcas" 
+                                                formControlName="marca"
+                                                placeholder="Seleccionar Marca"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                [showClear]="true"
+                                                styleClass="w-100">
+                                            </p-dropdown>
+                                        </div>
+                                        
+                                        <!-- Filtro por Proveedor -->
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Proveedor</label>
+                                            <p-dropdown 
+                                                [options]="filterOptions.proveedores" 
+                                                formControlName="cd_proveedor"
+                                                placeholder="Seleccionar Proveedor"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                [showClear]="true"
+                                                styleClass="w-100">
+                                            </p-dropdown>
+                                        </div>
+                                        
+                                        <!-- Filtro por Rubro -->
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Rubro</label>
+                                            <p-dropdown 
+                                                [options]="filterOptions.rubros" 
+                                                formControlName="rubro"
+                                                placeholder="Seleccionar Rubro"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                [showClear]="true"
+                                                styleClass="w-100">
+                                            </p-dropdown>
+                                        </div>
+                                        
+                                        <!-- Filtro por Tipo de IVA -->
+                                        <!-- <div class="col-md-6 mb-3">
+                                            <label class="form-label">Tipo de IVA</label>
+                                            <p-dropdown 
+                                                [options]="filterOptions.tipos_iva" 
+                                                formControlName="cod_iva"
+                                                placeholder="Seleccionar Tipo IVA"
+                                                optionLabel="label"
+                                                optionValue="value"
+                                                [showClear]="true"
+                                                styleClass="w-100">
+                                            </p-dropdown>
+                                        </div> -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Panel de Configuración -->
+                                <div class="col-md-4">
+                                    <div class="border rounded p-3 h-100">
+                                        <h6 class="text-primary mb-3">
+                                            <i class="fa fa-cogs mr-2"></i>
+                                            Configuración de Cambio
+                                        </h6>
+                                        
+                                        <!-- Tipo de Modificación -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Tipo de Precio</label>
+                                            <p-selectButton 
+                                                [options]="tiposModificacion" 
+                                                formControlName="tipoModificacion"
+                                                optionLabel="label" 
+                                                optionValue="value">
+                                            </p-selectButton>
+                                        </div>
+                                        
+                                        <!-- Porcentaje de Modificación -->
+                                        <div class="mb-3">
+                                            <label class="form-label">Porcentaje de Modificación</label>
+                                            <div class="input-group">
+                                                <p-inputNumber 
+                                                    formControlName="porcentaje"
+                                                    [min]="-100" 
+                                                    [max]="1000"
+                                                    suffix="%" 
+                                                    [step]="0.1"
+                                                    styleClass="w-100">
+                                                </p-inputNumber>
+                                            </div>
+                                            <small class="form-text text-muted">
+                                                Rango: -100% a +1000%
+                                            </small>
+                                        </div>
+                                        
+                                        <!-- Botones de Acción -->
+                                        <div class="d-flex flex-column gap-2">
+                                            <button 
+                                                type="button" 
+                                                class="btn btn-primary btn-sm"
+                                                (click)="generatePreview()"
+                                                [disabled]="loadingPreview || loadingApply">
+                                                <i class="fa fa-eye mr-1" [class.fa-spin]="loadingPreview"></i>
+                                                <span *ngIf="!loadingPreview">Generar Preview</span>
+                                                <span *ngIf="loadingPreview">Generando...</span>
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                class="btn btn-outline-secondary btn-sm"
+                                                (click)="clearFilters()"
+                                                [disabled]="loadingPreview || loadingApply">
+                                                <i class="fa fa-eraser mr-1"></i>
+                                                Limpiar Filtros
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Panel de Indicadores de Resumen -->
+                <div class="row mb-4" *ngIf="!loading && indicadores.totalRegistros > 0">
+                    <div class="col-md-4">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ indicadores.totalRegistros | number }}</h5>
+                                <p class="card-text">Productos Afectados</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ indicadores.variacionPromedio }}%</h5>
+                                <p class="card-text">Variación Promedio</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">{{ indicadores.registrosPreview | number }}</h5>
+                                <p class="card-text">Registros en Preview</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabla de Preview -->
+                <div class="card" *ngIf="!loading">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fa fa-table mr-2"></i>
+                            Preview de Cambios
+                        </h6>
+                        <div>
+                            <button 
+                                class="btn btn-success btn-sm mr-2" 
+                                (click)="applyChanges()"
+                                [disabled]="!formValid() || indicadores.totalRegistros === 0 || loadingApply"
+                                *ngIf="productosPreview.length > 0">
+                                <i class="fa fa-check mr-1" [class.fa-spin]="loadingApply"></i>
+                                <span *ngIf="!loadingApply">Aplicar Cambios</span>
+                                <span *ngIf="loadingApply">Aplicando...</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading del Preview -->
+                    <div class="card-body text-center" *ngIf="loadingPreview">
+                        <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+                        <p class="mt-2">Generando preview de cambios...</p>
+                    </div>
+                    
+                    <!-- Mensaje cuando no hay preview generado -->
+                    <div class="card-body text-center" *ngIf="!loadingPreview && productosPreview.length === 0">
+                        <i class="fa fa-info-circle fa-2x text-muted"></i>
+                        <p class="mt-2 text-muted">
+                            Selecciona <strong>exactamente un filtro</strong> (Marca, Proveedor, Rubro o Tipo IVA), configura el porcentaje y presiona <strong>"Generar Preview"</strong>
+                        </p>
+                        <small class="text-muted">
+                            <i class="fa fa-lightbulb-o mr-1"></i>
+                            Solo puedes usar un filtro a la vez para evitar confusión. El preview te permitirá verificar los cambios antes de aplicarlos.
+                        </small>
+                    </div>
+                    
+                    
+                    <!-- Tabla de productos -->
+                    <div class="table-responsive" *ngIf="!loadingPreview && productosPreview.length > 0">
+                        <p-table 
+                            [value]="productosPreview" 
+                            [tableStyle]="{ 'min-width': '50rem' }"
+                            [scrollable]="true"
+                            scrollHeight="400px">
+                            
+                            <ng-template pTemplate="header">
+                                <tr>
+                                    <th rowspan="2">Código</th>
+                                    <th rowspan="2">Nombre</th>
+                                    <th rowspan="2">Marca</th>
+                                    <th rowspan="2">Rubro</th>
+                                    <th colspan="2" class="text-center bg-light">Precio de Costo (sin IVA)</th>
+                                    <th colspan="2" class="text-center bg-light">Precio Final (con IVA)</th>
+                                    <th rowspan="2" class="text-right">Variación</th>
+                                    <th rowspan="2" class="text-right">Variación %</th>
+                                </tr>
+                                <tr>
+                                    <th class="text-right bg-light">Actual</th>
+                                    <th class="text-right bg-light">Nuevo</th>
+                                    <th class="text-right bg-light">Actual</th>
+                                    <th class="text-right bg-light">Nuevo</th>
+                                </tr>
+                            </ng-template>
+                            
+                            <ng-template pTemplate="body" let-producto>
+                                <tr>
+                                    <td>{{ producto.cd_articulo }}</td>
+                                    <td>{{ producto.nomart }}</td>
+                                    <td>{{ producto.marca }}</td>
+                                    <td>{{ producto.rubro }}</td>
+                                    
+                                    <!-- Precio de Costo Actual -->
+                                    <td class="text-right">
+                                        {{ producto.precio_costo_actual | currency:'USD':'symbol':'1.2-2' }}
+                                    </td>
+                                    
+                                    <!-- Precio de Costo Nuevo -->
+                                    <td class="text-right">
+                                        <span [ngClass]="producto.precio_costo_nuevo !== producto.precio_costo_actual ? 'font-weight-bold text-primary' : ''">
+                                            {{ producto.precio_costo_nuevo | currency:'USD':'symbol':'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    
+                                    <!-- Precio Final Actual -->
+                                    <td class="text-right">
+                                        {{ producto.precio_final_actual | currency:'USD':'symbol':'1.2-2' }}
+                                    </td>
+                                    
+                                    <!-- Precio Final Nuevo -->
+                                    <td class="text-right">
+                                        <span [ngClass]="producto.precio_final_nuevo !== producto.precio_final_actual ? 'font-weight-bold text-primary' : ''">
+                                            {{ producto.precio_final_nuevo | currency:'USD':'symbol':'1.2-2' }}
+                                        </span>
+                                    </td>
+                                    
+                                    <!-- Variación (del campo que se está modificando) -->
+                                    <td class="text-right" 
+                                        [ngClass]="producto.variacion >= 0 ? 'text-success' : 'text-danger'">
+                                        <i class="fa" [ngClass]="producto.variacion >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'"></i>
+                                        {{ producto.variacion | currency:'USD':'symbol':'1.2-2' }}
+                                    </td>
+                                    
+                                    <!-- Variación % (del campo que se está modificando) -->
+                                    <td class="text-right" 
+                                        [ngClass]="producto.variacion_porcentaje >= 0 ? 'text-success' : 'text-danger'">
+                                        {{ producto.variacion_porcentaje | number:'1.1-1' }}%
+                                    </td>
+                                </tr>
+                            </ng-template>
+                            
+                            <ng-template pTemplate="emptymessage">
+                                <tr>
+                                    <td colspan="10" class="text-center p-4">
+                                        <i class="fa fa-info-circle fa-2x text-muted"></i>
+                                        <p class="mt-2 text-muted">No hay productos para mostrar</p>
+                                    </td>
+                                </tr>
+                            </ng-template>
+                        </p-table>
+                    </div>
+                    
+                    <!-- Footer con información adicional -->
+                    <div class="card-footer" *ngIf="productosPreview.length > 0">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <i class="fa fa-info-circle mr-1"></i>
+                                    Mostrando {{ indicadores.registrosPreview }} de {{ indicadores.totalRegistros }} productos
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-right">
+                                <small class="text-muted">
+                                    <i class="fa fa-database mr-1"></i>
+                                    Depósito: {{ filterOptions?.cod_deposito }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Información de ayuda -->
+               <!--  <div class="alert alert-light border-left-primary mt-4" *ngIf="!loading">
+                    <h6 class="alert-heading">
+                        <i class="fa fa-lightbulb-o mr-2"></i>
+                        Información Importante
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li><strong>Filtros:</strong> Seleccione <u>exactamente un filtro</u> (Marca, Proveedor, Rubro o Tipo IVA). Solo se permite un filtro a la vez para evitar confusión.</li>
+                        <li><strong>Tipo de Precio:</strong> "Precio de Costo" modifica el costo y recalcula el precio final. "Precio Final" modifica el precio de venta y recalcula el costo.</li>
+                        <li><strong>Porcentaje:</strong> Valores positivos aumentan precios, valores negativos los disminuyen.</li>
+                        <li><strong>Preview:</strong> Presione el botón "Generar Preview" para ver una muestra de los productos que serán modificados con los nuevos precios calculados.</li>
+                        <li><strong>Sucursal:</strong> Esta operación requiere tener una sucursal activa. Si experimenta problemas, recargue la página.</li>
+                        <li><strong>Auditoría:</strong> Todos los cambios se registran automáticamente para trazabilidad.</li>
+                    </ul>
+                </div> -->
+            </div>
+        </div>
+    </div>
+</div>

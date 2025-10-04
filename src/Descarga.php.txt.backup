@@ -4640,60 +4640,24 @@ public function PriceUpdate_post()
         $porcentaje = floatval($data['porcentaje']);
         $sucursal = isset($data['sucursal']) ? intval($data['sucursal']) : 1;
         $observacion = isset($data['observacion']) ? $data['observacion'] : 'Cambio masivo desde aplicación web';
-        $usuario = isset($data['usuario']) && !empty($data['usuario']) 
-            ? $data['usuario'] 
-            : 'usuario_desconocido';
-        
-        // Construir descripción inteligente para auditoría
-        $tipo_descriptivo = "ACTUALIZACIÓN POR ";
-        
-        if (!empty($marca)) {
-            $tipo_descriptivo .= "MARCA (" . trim($marca) . ") Y ";
-        } elseif (!empty($rubro)) {
-            $tipo_descriptivo .= "RUBRO (" . trim($rubro) . ") Y ";
-        } elseif (!empty($cd_proveedor)) {
-            $tipo_descriptivo .= "PROVEEDOR (" . $cd_proveedor . ") Y ";
-        } elseif (!empty($cod_iva)) {
-            $tipo_descriptivo .= "TIPO IVA (" . $cod_iva . ") Y ";
-        } else {
-            $tipo_descriptivo .= "FILTRO MÚLTIPLE Y ";
-        }
-        
-        $tipo_descriptivo .= strtoupper($tipo_modificacion);
+        $usuario = isset($data['usuario']) ? $data['usuario'] : 'sistema';
         
         // Iniciar transacción
         $this->db->trans_begin();
         
-        // ✅ NUEVO: Detectar si usar función atómica o clásica
-        $use_atomic = isset($data['atomic']) && $data['atomic'] === true;
-        
-        if ($use_atomic) {
-            // Llamar a la función ATÓMICA que actualiza precios Y conflistas
-            $sql = "SELECT update_precios_masivo_atomico(?, ?, ?, ?, ?, ?, ?, ?) as result";
-            $params = array(
-                $marca, 
-                $cd_proveedor, 
-                $rubro, 
-                $cod_iva, 
-                $tipo_descriptivo,  // Descripción inteligente incluyendo "ATOMICO"
-                $porcentaje, 
-                $sucursal, 
-                $usuario
-            );
-        } else {
-            // Llamar a la función CLÁSICA (compatibilidad legacy)
-            $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?) as result";
-            $params = array(
-                $marca, 
-                $cd_proveedor, 
-                $rubro, 
-                $cod_iva, 
-                $tipo_descriptivo,  // Descripción inteligente en lugar de tipo_modificacion
-                $porcentaje, 
-                $sucursal, 
-                $usuario            // Sin observacion - ahora posición 8
-            );
-        }
+        // Llamar a la función PostgreSQL para aplicar cambios
+        $sql = "SELECT update_precios_masivo(?, ?, ?, ?, ?, ?, ?, ?, ?) as result";
+        $params = array(
+            $marca, 
+            $cd_proveedor, 
+            $rubro, 
+            $cod_iva, 
+            $tipo_modificacion, 
+            $porcentaje, 
+            $sucursal, 
+            $observacion, 
+            $usuario
+        );
         
         $query = $this->db->query($sql, $params);
         
@@ -4706,41 +4670,20 @@ public function PriceUpdate_post()
                 // Commit la transacción
                 $this->db->trans_commit();
                 
-                // ✅ MEJORADO: Agregar información específica de operación atómica
-                $response_data = [
+                // El resultado ya viene como JSON de PostgreSQL
+                $this->response([
                     'error' => false,
-                    'result' => $result_json,
-                    'atomic_operation' => $use_atomic,  // Indicar si fue operación atómica
-                    'function_used' => $use_atomic ? 'update_precios_masivo_atomico' : 'update_precios_masivo'
-                ];
-                
-                // Si fue operación atómica, agregar detalles adicionales
-                if ($use_atomic && isset($result['conflistas_actualizadas'])) {
-                    $response_data['conflistas_actualizadas'] = $result['conflistas_actualizadas'];
-                }
-                
-                $this->response($response_data);
+                    'result' => $result_json
+                ]);
             } else {
                 // Rollback en caso de error
                 $this->db->trans_rollback();
                 
                 $error_message = isset($result['message']) ? $result['message'] : 'Error desconocido en la actualización';
-                
-                // ✅ MEJORADO: Respuesta de error con contexto atómico
-                $error_response = [
+                $this->response([
                     'error' => true,
-                    'mensaje' => $error_message,
-                    'atomic_operation' => $use_atomic,
-                    'rollback_executed' => true
-                ];
-                
-                // Si fue error atómico, incluir información específica
-                if ($use_atomic && isset($result['rollback_completo'])) {
-                    $error_response['rollback_completo'] = $result['rollback_completo'];
-                    $error_response['sqlstate'] = $result['sqlstate'] ?? null;
-                }
-                
-                $this->response($error_response, 500);
+                    'mensaje' => $error_message
+                ], 500);
             }
         } else {
             // Rollback en caso de error
