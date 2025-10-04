@@ -27,10 +27,10 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let item of itemsConTipoPago">    
+                            <tr *ngFor="let item of itemsConTipoPago">
                                 <td>
                                     <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad"
-                                        (change)="calculoTotal()" min="1">
+                                        (ngModelChange)="actualizarCantidad(item, $event)" min="1">
                                 </td>
                                 <td><span class="producto-nombre">{{item.nomart}}</span></td>
                                 <td><span class="tipo-pago">{{item.tipoPago}}</span></td>

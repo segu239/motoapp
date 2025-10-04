@@ -313,6 +313,33 @@ export class CarritoComponent implements OnDestroy {
     }
     this.suma = parseFloat(this.suma.toFixed(4));
   }
+
+  /**
+   * Actualiza la cantidad de un item en ambos arrays y sincroniza con sessionStorage
+   * @param item - Item del carrito a actualizar
+   * @param nuevaCantidad - Nueva cantidad del producto
+   */
+  actualizarCantidad(item: any, nuevaCantidad: number) {
+    // Validar que la cantidad sea válida
+    if (nuevaCantidad < 1) {
+      nuevaCantidad = 1;
+    }
+
+    // Actualizar en itemsConTipoPago
+    item.cantidad = nuevaCantidad;
+
+    // Encontrar y actualizar el mismo item en itemsEnCarrito
+    const itemEnCarrito = this.itemsEnCarrito.find(i => i.id_articulo === item.id_articulo);
+    if (itemEnCarrito) {
+      itemEnCarrito.cantidad = nuevaCantidad;
+    }
+
+    // Guardar en sessionStorage para mantener persistencia
+    sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+
+    // Recalcular total
+    this.calculoTotal();
+  }
   async finalizar() {
     if (this.itemsEnCarrito.length > 0) {//hacer si 
       console.log(this.puntoventa);
