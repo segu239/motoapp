@@ -34,7 +34,7 @@
                                 </td>
                                 <td><span class="producto-nombre">{{item.nomart}}</span></td>
                                 <td><span class="tipo-pago">{{item.tipoPago}}</span></td>
-                                <td><span class="precio">${{item.precio * item.cantidad}}</span></td>
+                                <td><span class="precio">${{(item.precio * item.cantidad) | currencyFormat}}</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-danger" (click)="eliminarItem(item)">
                                         <i class="fa fa-trash"></i> Eliminar
@@ -46,7 +46,7 @@
                 </div>
                 
                 <div class="total-summary">
-                    <div class="total-price">Total: ${{this.suma}}</div>
+                    <div class="total-price">Total: ${{suma | currencyFormat}}</div>
                 </div>
             </div>
             

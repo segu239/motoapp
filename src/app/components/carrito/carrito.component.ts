@@ -309,9 +309,9 @@ export class CarritoComponent implements OnDestroy {
   calculoTotal() {
     this.suma = 0;
     for (let item of this.itemsEnCarrito) {
-      this.suma += parseFloat((item.precio * item.cantidad).toFixed(4));
+      this.suma += parseFloat((item.precio * item.cantidad).toFixed(2));
     }
-    this.suma = parseFloat(this.suma.toFixed(4));
+    this.suma = parseFloat(this.suma.toFixed(2));
   }
 
   /**
@@ -538,7 +538,10 @@ export class CarritoComponent implements OnDestroy {
       });
       return void 0;
     }
-    
+
+    // MODIFICACIÓN CRÍTICA: Redondear suma ANTES de calcular IVA
+    const totalRedondeado = parseFloat(this.suma.toFixed(2));
+
     let cabecera = {
       tipo: this.tipoDoc,
       numero_int: limitNumericValue(this.numerocomprobante, 999999),
@@ -552,8 +555,8 @@ export class CarritoComponent implements OnDestroy {
       emitido: fecha,
       vencimiento: fecha,
       exento: 0,
-      basico: parseFloat((this.suma / 1.21).toFixed(4)),//this.suma/1.21,
-      iva1: parseFloat((this.suma - this.suma / 1.21).toFixed(4)),
+      basico: parseFloat((totalRedondeado / 1.21).toFixed(4)),//this.suma/1.21,
+      iva1: parseFloat((totalRedondeado - totalRedondeado / 1.21).toFixed(4)),
       iva2: 0,
       iva3: 0,
       bonifica: 0,
@@ -595,10 +598,10 @@ export class CarritoComponent implements OnDestroy {
     for (let item of this.itemsEnCarrito) {
       console.log(item);
       if (item.cod_tar === 111) {
-        acumulado += parseFloat((item.precio * item.cantidad).toFixed(4)); // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
+        acumulado += parseFloat((item.precio * item.cantidad).toFixed(2)); // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
       }
     }
-    return parseFloat(acumulado.toFixed(4));
+    return parseFloat(acumulado.toFixed(2));
   }
 
   getCodVta() {
@@ -772,7 +775,7 @@ try {
     let fechaActual = new Date();
     let fechaFormateada = fechaActual.toISOString().split('T')[0];
     console.log(fechaFormateada);
-    const tableBody = items.map(item => [item.cantidad, item.nomart, item.precio, parseFloat((item.cantidad * item.precio).toFixed(4))]);
+    const tableBody = items.map(item => [item.cantidad, item.nomart, parseFloat(item.precio.toFixed(2)), parseFloat((item.cantidad * item.precio).toFixed(2))]);
     
     // Obtener configuración de empresa según sucursal
     const empresaConfig = getEmpresaConfig();
@@ -908,7 +911,7 @@ try {
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL $' + total],
+              ['TOTAL $' + parseFloat(total.toFixed(2))],
               // ... Añade más filas según sea necesario ...
             ],
             bold: true,
