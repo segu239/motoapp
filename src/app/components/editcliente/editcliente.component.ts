@@ -54,6 +54,84 @@ export class EditclienteComponent implements OnInit {
     }); */
   }
   cargarDatosForm() {
+    // ========================================
+    // NORMALIZACIÓN DE DATOS - SOLUCIÓN 1
+    // ========================================
+
+    // 1. NORMALIZAR TIPOIVA
+    // Opciones válidas del select (deben coincidir EXACTAMENTE con el HTML)
+    const opcionesIvaValidas = ["Excento", "Monotributo", "Consumidor Final", "Responsable Inscripto"];
+
+    let tipoiva = this.clienteFrompuntoVenta.tipoiva;
+
+    // Caso 1: valor nulo o indefinido -> valor por defecto
+    if (tipoiva === null || tipoiva === undefined) {
+      tipoiva = '';
+      console.warn('[EditCliente] tipoiva es null/undefined, usando valor vacío');
+    }
+    // Caso 2: valor es string -> normalizar con trim
+    else if (typeof tipoiva === 'string') {
+      tipoiva = tipoiva.trim();
+      console.log('[EditCliente] tipoiva original:', this.clienteFrompuntoVenta.tipoiva);
+      console.log('[EditCliente] tipoiva normalizado:', tipoiva);
+
+      // Validar que el valor esté en las opciones válidas
+      if (!opcionesIvaValidas.includes(tipoiva)) {
+        console.warn('[EditCliente] tipoiva no coincide con opciones válidas:', tipoiva);
+        // No modificar el valor, dejarlo como está para debug
+      }
+    }
+    // Caso 3: valor es numérico (cod_iva) -> convertir a texto
+    else if (typeof tipoiva === 'number') {
+      const ivaArray: string[] = ["", "Responsable Inscripto", "Consumidor Final", "Monotributo", "Excento"];
+      tipoiva = ivaArray[tipoiva] || '';
+      console.log('[EditCliente] tipoiva era numérico, convertido a:', tipoiva);
+    }
+    // Caso 4: tipo de dato inesperado
+    else {
+      console.error('[EditCliente] tipoiva tiene tipo inesperado:', typeof tipoiva, tipoiva);
+      tipoiva = '';
+    }
+
+    // 2. NORMALIZAR INGRESOS_BR
+    let ingresosBr = this.clienteFrompuntoVenta.ingresos_br;
+
+    console.log('[EditCliente] ingresos_br original:', ingresosBr, 'tipo:', typeof ingresosBr);
+
+    // Caso 1: valor es string -> normalizar a minúsculas
+    if (typeof ingresosBr === 'string') {
+      ingresosBr = ingresosBr.toLowerCase().trim();
+
+      // Validar valores esperados
+      if (ingresosBr !== 'si' && ingresosBr !== 'no') {
+        console.warn('[EditCliente] ingresos_br string no válido:', ingresosBr, '-> usando "no"');
+        ingresosBr = 'no';
+      }
+    }
+    // Caso 2: valor numérico -> convertir a "si"/"no"
+    else if (typeof ingresosBr === 'number') {
+      ingresosBr = (ingresosBr === 1) ? 'si' : 'no';
+      console.log('[EditCliente] ingresos_br numérico convertido a:', ingresosBr);
+    }
+    // Caso 3: valor booleano -> convertir a "si"/"no"
+    else if (typeof ingresosBr === 'boolean') {
+      ingresosBr = ingresosBr ? 'si' : 'no';
+      console.log('[EditCliente] ingresos_br booleano convertido a:', ingresosBr);
+    }
+    // Caso 4: valor nulo, indefinido o vacío -> valor por defecto "no"
+    else if (ingresosBr === null || ingresosBr === undefined || ingresosBr === '') {
+      ingresosBr = 'no';
+      console.log('[EditCliente] ingresos_br null/undefined/vacío -> usando "no"');
+    }
+    // Caso 5: tipo inesperado
+    else {
+      console.error('[EditCliente] ingresos_br tiene tipo inesperado:', typeof ingresosBr, ingresosBr);
+      ingresosBr = 'no';
+    }
+
+    console.log('[EditCliente] ingresos_br normalizado:', ingresosBr);
+
+    // 3. CREAR FORMULARIO CON VALORES NORMALIZADOS
     this.editarclienteForm = this.fb.group({
       nombre: new FormControl(this.clienteFrompuntoVenta.nombre.trim(), Validators.compose([Validators.required,
       Validators.pattern(/^([a-zA-Z0-9\sñÑ]{2,40}){1}$/)
@@ -70,9 +148,15 @@ export class EditclienteComponent implements OnInit {
       direccion: new FormControl(this.clienteFrompuntoVenta.direccion.trim(), Validators.compose([Validators.required,
       Validators.pattern(/^([a-zA-Z0-9°\.\-_\s,/ñÑªº]{2,60}){1}$/)
       ])),
-      tipoiva: new FormControl(this.clienteFrompuntoVenta.tipoiva),
-      ingresos_br: new FormControl(this.clienteFrompuntoVenta.ingresos_br),
+      tipoiva: new FormControl(tipoiva),  // ✅ Valor normalizado
+      ingresos_br: new FormControl(ingresosBr),  // ✅ Valor normalizado
     },);
+
+    // Log final para verificación
+    console.log('[EditCliente] Formulario cargado con valores:', {
+      tipoiva: tipoiva,
+      ingresos_br: ingresosBr
+    });
   }
   onSelectionChange(event: any) {
     const selectedValue = event.target.value;
