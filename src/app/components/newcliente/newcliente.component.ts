@@ -117,20 +117,55 @@ export class NewclienteComponent {
       }
       else {
         console.log(nuevoCliente);
-        this.subirdata.subirDatosClientes(nuevoCliente, sucursal).subscribe((data: any) => {
-          console.log(data);
-          Swal.fire({
-            title: 'Guardando...',
-            timer: 300,
-            didOpen: () => {
-              Swal.showLoading()
+        this.subirdata.subirDatosClientes(nuevoCliente, sucursal).subscribe({
+          next: (data: any) => {
+            console.log(data);
+            Swal.fire({
+              title: 'Guardando...',
+              timer: 300,
+              didOpen: () => {
+                Swal.showLoading()
+              }
+            }).then((result) => {
+              if (result.dismiss === Swal.DismissReason.timer) {
+                console.log('I was closed by the timer')
+                window.history.back();
+              }
+            })
+          },
+          error: (error: any) => {
+            console.error('Error al guardar cliente:', error);
+
+            // Manejo de error HTTP 409 (Cliente duplicado)
+            if (error.status === 409) {
+              Swal.fire({
+                title: 'Cliente Duplicado',
+                text: 'Ya existe un cliente con este ID en el sistema. No se puede crear un duplicado.',
+                icon: 'warning',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+              });
             }
-          }).then((result) => {
-            if (result.dismiss === Swal.DismissReason.timer) {
-              console.log('I was closed by the timer')
-              window.history.back();
+            // Manejo de otros errores HTTP
+            else if (error.status === 500) {
+              Swal.fire({
+                title: 'Error del Servidor',
+                text: 'Ocurrió un error al intentar guardar el cliente. Por favor intente nuevamente.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+              });
             }
-          })
+            else {
+              Swal.fire({
+                title: 'Error',
+                text: 'No se pudo guardar el cliente. Por favor verifique los datos e intente nuevamente.',
+                icon: 'error',
+                confirmButtonColor: '#3085d6',
+                confirmButtonText: 'OK'
+              });
+            }
+          }
         });
       }
     }
