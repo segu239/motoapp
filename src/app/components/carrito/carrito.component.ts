@@ -54,7 +54,8 @@ export class CarritoComponent implements OnDestroy {
   public cliente: any;
   public usuario: any;
   itemsConTipoPago: any[] = [];
-  
+  public subtotalesPorTipoPago: Array<{tipoPago: string, subtotal: number}> = [];
+
   private subscriptions: Subscription[] = [];
   constructor(private _cargardata: CargardataService, private bot: MotomatchBotService, private _crud: CrudService, private _subirdata: SubirdataService, private _carrito: CarritoService, private router: Router) {
     // Verificar autenticación antes de inicializar
@@ -98,6 +99,13 @@ export class CarritoComponent implements OnDestroy {
       console.log('Tarjetas obtenidas:', this.tarjetas);
      // this.agregarTipoPago();
      this.actualizarItemsConTipoPago();
+
+     // Inicializar subtotales después de cargar tarjetas
+     if (this.itemsEnCarrito.length > 0) {
+       this.subtotalesPorTipoPago = this.calcularSubtotalesPorTipoPago();
+       console.log('Subtotales inicializados:', this.subtotalesPorTipoPago);
+     }
+
       console.log('Items en carrito después de agregar tipoPago:', this.itemsEnCarrito);
     });
     this.subscriptions.push(tarjetasSubscription);
@@ -280,7 +288,18 @@ export class CarritoComponent implements OnDestroy {
     }
   }
   eliminarItem(item: any) {
-    //agregar un sweet alert para confirmar la eliminacion
+    // Validación defensiva: verificar que el item sea válido
+    if (!item || !item.id_articulo) {
+      console.error('Item inválido para eliminar:', item);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se puede eliminar este item. Datos inválidos.'
+      });
+      return;
+    }
+
+    // Confirmar eliminación
     Swal.fire({
       title: 'Estas seguro?',
       text: "Vas a eliminar un item del carrito!",
@@ -291,19 +310,58 @@ export class CarritoComponent implements OnDestroy {
       confirmButtonText: 'Si, eliminar!'
     }).then((result) => {
       if (result.isConfirmed) {
-        Swal.fire(
-          'Eliminado!',
-          'El item fue eliminado.',
-          'success'
-        )
-        let index = this.itemsEnCarrito.indexOf(item);
-        this.itemsEnCarrito.splice(index, 1);
-        sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
-        this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
-        this.calculoTotal();
-        this.actualizarItemsConTipoPago();
+        try {
+          // ✅ FIX: Usar findIndex con identificador compuesto (id_articulo + cod_tar)
+          // Esto maneja correctamente el caso de productos duplicados con diferentes tipos de pago
+          const index = this.itemsEnCarrito.findIndex(i =>
+            i.id_articulo === item.id_articulo &&
+            i.cod_tar === item.cod_tar
+          );
+
+          // Validar que el item fue encontrado
+          if (index === -1) {
+            console.error('Item no encontrado en carrito:', item);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudo encontrar el item en el carrito.'
+            });
+            return;
+          }
+
+          // Eliminar el item del array
+          this.itemsEnCarrito.splice(index, 1);
+
+          // Guardar en sessionStorage con manejo de errores
+          try {
+            sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+          } catch (storageError) {
+            console.error('Error al guardar en sessionStorage:', storageError);
+            Swal.fire({
+              icon: 'warning',
+              title: 'Advertencia',
+              text: 'El item se eliminó pero no se pudo guardar. Recargue la página.'
+            });
+          }
+
+          // Actualizar el resto del sistema
+          this._carrito.actualizarCarrito(); // Refrescar el número del carrito del header
+          this.calculoTotal();
+          this.actualizarItemsConTipoPago();
+
+          // Confirmar eliminación exitosa
+          Swal.fire('Eliminado!', 'El item fue eliminado.', 'success');
+
+        } catch (error) {
+          console.error('Error inesperado al eliminar item:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Ocurrió un error inesperado. Recargue la página.'
+          });
+        }
       }
-    })
+    });
   }
 
   calculoTotal() {
@@ -312,6 +370,11 @@ export class CarritoComponent implements OnDestroy {
       this.suma += parseFloat((item.precio * item.cantidad).toFixed(2));
     }
     this.suma = parseFloat(this.suma.toFixed(2));
+
+    // Recalcular subtotales por tipo de pago si las tarjetas ya están cargadas
+    if (this.tarjetas && this.tarjetas.length > 0) {
+      this.subtotalesPorTipoPago = this.calcularSubtotalesPorTipoPago();
+    }
   }
 
   /**
@@ -340,6 +403,62 @@ export class CarritoComponent implements OnDestroy {
     // Recalcular total
     this.calculoTotal();
   }
+
+  /**
+   * Calcula subtotales agrupados por tipo de pago
+   * @returns Array de objetos con tipoPago y subtotal ordenados alfabéticamente
+   */
+  calcularSubtotalesPorTipoPago(): Array<{tipoPago: string, subtotal: number}> {
+    // Validación defensiva: verificar que el array de tarjetas esté cargado
+    if (!this.tarjetas || this.tarjetas.length === 0) {
+      console.warn('calcularSubtotalesPorTipoPago: Array de tarjetas vacío o no cargado');
+      return [];
+    }
+
+    // Pre-computar mapa de tarjetas para optimización O(m+n) en lugar de O(n*m)
+    const tarjetaMap = new Map<string, string>();
+    this.tarjetas.forEach((t: TarjCredito) => {
+      tarjetaMap.set(t.cod_tarj.toString(), t.tarjeta);
+    });
+
+    // Acumular subtotales por tipo de pago
+    const subtotales = new Map<string, number>();
+
+    for (let item of this.itemsEnCarrito) {
+      // Resolver tipo de pago usando el mapa pre-computado
+      const tipoPago = tarjetaMap.get(item.cod_tar.toString()) || 'Indefinido';
+
+      // Calcular monto del item (precio * cantidad) con precisión de 2 decimales
+      const montoItem = parseFloat((item.precio * item.cantidad).toFixed(2));
+
+      // Acumular en el subtotal correspondiente
+      if (subtotales.has(tipoPago)) {
+        subtotales.set(tipoPago, subtotales.get(tipoPago)! + montoItem);
+      } else {
+        subtotales.set(tipoPago, montoItem);
+      }
+    }
+
+    // Convertir Map a Array y ordenar alfabéticamente (Indefinido al final)
+    const resultado = Array.from(subtotales.entries())
+      .map(([tipoPago, subtotal]) => ({
+        tipoPago,
+        subtotal: parseFloat(subtotal.toFixed(2))
+      }))
+      .sort((a, b) => {
+        if (a.tipoPago === 'Indefinido') return 1;
+        if (b.tipoPago === 'Indefinido') return -1;
+        return a.tipoPago.localeCompare(b.tipoPago);
+      });
+
+    // Advertencia de rendimiento si hay demasiados tipos de pago
+    if (resultado.length > 50) {
+      console.warn(`Advertencia: ${resultado.length} tipos de pago diferentes detectados. Esto podría afectar el rendimiento de la interfaz.`);
+    }
+
+    return resultado;
+  }
+
   async finalizar() {
     if (this.itemsEnCarrito.length > 0) {//hacer si 
       console.log(this.puntoventa);

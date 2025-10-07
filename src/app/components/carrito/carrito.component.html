@@ -48,6 +48,21 @@
                 <div class="total-summary">
                     <div class="total-price">Total: ${{suma | currencyFormat}}</div>
                 </div>
+
+                <!-- NUEVO: Subtotales por tipo de pago -->
+                <div class="subtotales-section" *ngIf="subtotalesPorTipoPago.length > 0">
+                    <div class="subtotales-header">
+                        <h5 class="subtotales-title">Subtotales por Tipo de Pago</h5>
+                    </div>
+                    <div class="subtotales-list">
+                        <div class="subtotal-item"
+                             *ngFor="let subtotal of subtotalesPorTipoPago"
+                             [ngClass]="{'indefinido': subtotal.tipoPago === 'Indefinido'}">
+                            <span class="subtotal-tipo">{{subtotal.tipoPago}}</span>
+                            <span class="subtotal-monto">${{subtotal.subtotal | currencyFormat}}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Sección de detalles de venta -->
