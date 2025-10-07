@@ -95,23 +95,43 @@ $datos=$data["clientes"];
 $id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
 $tabla='clisuc';//$tabla='clisuc'.$id_vend;//ESTA ES LA QUE USABA CON VARIAS TABLAS AHORA SE CAMBIO POR UNA SOLA
 
-//$this->db->query("DELETE FROM $tabla");//PRUEBA
+// ✅ VALIDACIÓN: Verificar si el cliente ya existe (AGREGADO FASE 4 - 2025-10-07)
+$id_cli = $datos['id_cli'];
 
+$this->db->where('id_cli', $id_cli);
+$query = $this->db->get($tabla);
 
-#$jsondata=json_decode($datos);
-$datos;
-  #foreach ($jsondata as  $valor)
-  #{
-    $this->db->insert($tabla, $datos);// valor es un objeto
+if($query->num_rows() > 0) {
+    // ❌ Cliente duplicado detectado - retornar HTTP 409 Conflict
+    $respuesta = array(
+        "error" => true,
+        "mensaje" => "Cliente duplicado: Ya existe un cliente con id_cli = " . $id_cli,
+        "codigo" => 409
+    );
+    $this->response($respuesta, REST_Controller::HTTP_CONFLICT);
+} else {
+    // ✅ Cliente no existe - proceder con INSERT
+    $this->db->insert($tabla, $datos);
+    $rows = $this->db->affected_rows();
 
-  #}
-$rows =  $this->db->affected_rows(); // va a dar 1 por que lo hace de uno por vez
-
-  $respuesta=array(
-    "error"=>false,
-    "mensaje"=>$rows
-  );
-   $this->response($respuesta);
+    if($rows > 0) {
+        // ✅ Inserción exitosa - retornar HTTP 201 Created
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Cliente creado exitosamente",
+            "registros_insertados" => $rows,
+            "id_cli" => $id_cli
+        );
+        $this->response($respuesta, REST_Controller::HTTP_CREATED);
+    } else {
+        // ❌ Error en la inserción - retornar HTTP 500
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al insertar el cliente en la base de datos"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_ERROR);
+    }
+}
 }
 else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
 {
@@ -121,9 +141,6 @@ else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
   );
    $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
 }
-
-   //$this->response($this->db->insert_id());
-  // $this->db->insert('prueba', $jsondata);
 }
 public function UpdateClisucxapp_post()//Función para modificar datos de un cliente en la tabla correspondiente SE AGREGO 10/07/23
 {
