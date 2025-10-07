@@ -156,7 +156,7 @@ export class CalculoproductoComponent {
       this.pedido.nomart = this.producto.nomart;
     }
     this.pedido.cantidad = this.cantidad;
-    this.pedido.precio = parseFloat(this.precio.toFixed(4));// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado 
+    this.pedido.precio = parseFloat(this.precio.toFixed(2));// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado 
     if (this.cliente.idcli != undefined) {
       this.pedido.idcli = parseInt(this.cliente.idcli);
     }

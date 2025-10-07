@@ -64,6 +64,7 @@ import { PedidosComponent } from './components/pedidos/pedidos.component';
 import { RecibosComponent } from './components/recibos/recibos.component';
 import { GrillaComponent } from './components/grilla/grilla.component';
 import { DateFormatPipe } from './pipes/dateformat.pipe';
+import { CurrencyFormatPipe } from './pipes/currency-format.pipe';
 import { AnalisiscajaprodComponent } from './components/analisiscajaprod/analisiscajaprod.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { MovimientoComponent } from './components/movimiento/movimiento.component';
@@ -149,6 +150,7 @@ import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios
     CarritoComponent,
     VentaComponent,
     FilterPipe,
+    CurrencyFormatPipe,
     AnalisispedidosComponent,
     CuentacorrienteComponent,
     CabecerasComponent,

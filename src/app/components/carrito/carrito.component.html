@@ -27,14 +27,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let item of itemsConTipoPago">    
+                            <tr *ngFor="let item of itemsConTipoPago">
                                 <td>
                                     <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad"
-                                        (change)="calculoTotal()" min="1">
+                                        (ngModelChange)="actualizarCantidad(item, $event)" min="1">
                                 </td>
                                 <td><span class="producto-nombre">{{item.nomart}}</span></td>
                                 <td><span class="tipo-pago">{{item.tipoPago}}</span></td>
-                                <td><span class="precio">${{item.precio * item.cantidad}}</span></td>
+                                <td><span class="precio">${{(item.precio * item.cantidad) | currencyFormat}}</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-danger" (click)="eliminarItem(item)">
                                         <i class="fa fa-trash"></i> Eliminar
@@ -46,7 +46,22 @@
                 </div>
                 
                 <div class="total-summary">
-                    <div class="total-price">Total: ${{this.suma}}</div>
+                    <div class="total-price">Total: ${{suma | currencyFormat}}</div>
+                </div>
+
+                <!-- NUEVO: Subtotales por tipo de pago -->
+                <div class="subtotales-section" *ngIf="subtotalesPorTipoPago.length > 0">
+                    <div class="subtotales-header">
+                        <h5 class="subtotales-title">Subtotales por Tipo de Pago</h5>
+                    </div>
+                    <div class="subtotales-list">
+                        <div class="subtotal-item"
+                             *ngFor="let subtotal of subtotalesPorTipoPago"
+                             [ngClass]="{'indefinido': subtotal.tipoPago === 'Indefinido'}">
+                            <span class="subtotal-tipo">{{subtotal.tipoPago}}</span>
+                            <span class="subtotal-monto">${{subtotal.subtotal | currencyFormat}}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             
