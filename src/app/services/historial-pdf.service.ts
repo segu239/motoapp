@@ -40,6 +40,7 @@ interface DatosRecibo {
   puntoventa: number;
   letraValue: string;
   sucursalNombre: string;
+  subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>; // ✅ NUEVO
 }
 
 @Injectable({
@@ -284,6 +285,39 @@ export class HistorialPdfService {
         productos = [];
       }
 
+      // ✅ NUEVO: Calcular subtotales por tipo de pago desde los productos
+      let subtotalesTipoPago: Array<{tipoPago: string, subtotal: number}> = [];
+
+      if (productos && productos.length > 0) {
+        // Agrupar por tipo de pago
+        const subtotalesMap = new Map<string, number>();
+
+        productos.forEach((item: any) => {
+          const tipoPago = item.tarjeta || item.tipoPago || 'Indefinido';
+          const montoItem = parseFloat((item.cantidad * item.precio).toFixed(2));
+
+          if (subtotalesMap.has(tipoPago)) {
+            subtotalesMap.set(tipoPago, subtotalesMap.get(tipoPago)! + montoItem);
+          } else {
+            subtotalesMap.set(tipoPago, montoItem);
+          }
+        });
+
+        // Convertir a array y ordenar
+        subtotalesTipoPago = Array.from(subtotalesMap.entries())
+          .map(([tipoPago, subtotal]) => ({
+            tipoPago,
+            subtotal: parseFloat(subtotal.toFixed(2))
+          }))
+          .sort((a, b) => {
+            if (a.tipoPago === 'Indefinido') return 1;
+            if (b.tipoPago === 'Indefinido') return -1;
+            return a.tipoPago.localeCompare(b.tipoPago);
+          });
+
+        console.log('📊 Subtotales calculados desde historial:', subtotalesTipoPago);
+      }
+
       // Preparar datos en el formato que espera generarPDFRecibo
       const datosRecibo: DatosRecibo = {
         items: productos.map((item: any) => ({
@@ -308,7 +342,8 @@ export class HistorialPdfService {
         tipoDoc: ventaData.tipo,
         puntoventa: ventaData.puntoventa,
         letraValue: ventaData.letra || 'B',
-        sucursalNombre: nombreSucursalReal // Usar el nombre obtenido desde Firebase
+        sucursalNombre: nombreSucursalReal, // Usar el nombre obtenido desde Firebase
+        subtotalesTipoPago: subtotalesTipoPago // ✅ NUEVO
       };
 
       // Generar el PDF usando el mismo método que el carrito
@@ -328,11 +363,15 @@ export class HistorialPdfService {
     const titulo = this.obtenerTituloDocumento(datos.tipoDoc);
     const fechaActual = new Date();
     const fechaFormateada = fechaActual.toISOString().split('T')[0];
-    
+
+    // ✅ NUEVO: Validar si hay subtotales por tipo de pago
+    const mostrarDesgloseTipoPago = datos.subtotalesTipoPago && datos.subtotalesTipoPago.length > 0;
+    console.log('📊 Historial PDF - Desglose por tipo de pago:', mostrarDesgloseTipoPago);
+
     const tableBody = datos.items.map(item => [
-      item.cantidad, 
-      item.nomart, 
-      item.precio, 
+      item.cantidad,
+      item.nomart,
+      item.precio,
       parseFloat((item.cantidad * item.precio).toFixed(4))
     ]);
 
@@ -462,6 +501,29 @@ export class HistorialPdfService {
             bold: true,
           },
         },
+        // ✅ NUEVO: Desglose por tipo de pago
+        ...(mostrarDesgloseTipoPago ? [{
+          text: '\nDETALLE POR MÉTODO DE PAGO:',
+          style: 'subheader',
+          margin: [0, 10, 0, 5],
+          fontSize: 10,
+          bold: true
+        }] : []),
+        ...(mostrarDesgloseTipoPago ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Método de Pago', 'Subtotal'],
+              ...datos.subtotalesTipoPago.map(item => [
+                item.tipoPago,
+                '$' + item.subtotal.toFixed(2)
+              ])
+            ],
+            bold: false,
+          },
+          margin: [0, 0, 0, 10]
+        }] : []),
         // Información Financiera Adicional - SOLO PARA RECIBOS (RC)
         ...(datos.tipoDoc === 'RC' && datos.bonifica && datos.bonifica > 0 ? [{
           style: 'tableExample',

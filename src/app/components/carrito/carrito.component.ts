@@ -426,7 +426,7 @@ export class CarritoComponent implements OnDestroy {
 
     for (let item of this.itemsEnCarrito) {
       // Resolver tipo de pago usando el mapa pre-computado
-      const tipoPago = tarjetaMap.get(item.cod_tar.toString()) || 'Indefinido';
+      const tipoPago = tarjetaMap.get(item.cod_tar?.toString() || '') || 'Indefinido';
 
       // Calcular monto del item (precio * cantidad) con precisión de 2 decimales
       const montoItem = parseFloat((item.precio * item.cantidad).toFixed(2));
@@ -749,21 +749,40 @@ export class CarritoComponent implements OnDestroy {
       month: '2-digit',
       year: 'numeric'
     });
+
+    // ✅ NUEVO: Recalcular subtotales justo antes de imprimir
+    // Esto garantiza que las tarjetas estén cargadas (mitiga race condition)
+    const subtotalesActualizados = (this.tarjetas && this.tarjetas.length > 0)
+      ? this.calcularSubtotalesPorTipoPago()
+      : [];
+
+    // Advertencia si no se pudieron calcular subtotales
+    if (subtotalesActualizados.length === 0 && this.itemsEnCarrito.length > 0) {
+      console.warn('⚠️ ADVERTENCIA: No se pudieron calcular subtotales por tipo de pago. PDF sin desglose.');
+    }
+
     let cabecera = this.cabecera(fechaFormateada, fecha);
-    
+
     // Crear objeto caja_movi basado en los datos del pedido (ahora devuelve una promesa)
     const cajaMoviPromise = this.crearCajaMovi(pedido, cabecera, fecha);
-    
+
     // Manejar la promesa para obtener el objeto caja_movi con el id_caja correcto
     if (cajaMoviPromise && cajaMoviPromise.then) {
       // Es una promesa, esperamos a que se resuelva
       cajaMoviPromise.then(caja_movi => {
         console.log('Objeto caja_movi creado:', caja_movi);
-        
+
         // Una vez tenemos el caja_movi con el id_caja correcto, continuamos
         this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, caja_movi).pipe(take(1)).subscribe((data: any) => {
           console.log(data.mensaje);
-          this.imprimir(this.itemsEnCarrito, this.numerocomprobante, fechaFormateada, this.suma);
+          // ✅ LLAMADA ACTUALIZADA (pasar subtotales recalculados):
+          this.imprimir(
+            this.itemsEnCarrito,
+            this.numerocomprobante,
+            fechaFormateada,
+            this.suma,
+            subtotalesActualizados
+          );
           //actualizar indices
           if (this.indiceTipoDoc != "") {
             this._crud.incrementarNumeroSecuencial(this.indiceTipoDoc, parseInt(this.numerocomprobante) + 1).then(() => {
@@ -845,7 +864,13 @@ export class CarritoComponent implements OnDestroy {
     // Resto del código...
   }
   //-----------------------------------
-  imprimir(items: any, numerocomprobante: string, fecha: any, total: any) {
+  imprimir(
+    items: any,
+    numerocomprobante: string,
+    fecha: any,
+    total: any,
+    subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>
+  ) {
     //let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
 let cliente: Cliente;
 
@@ -872,6 +897,11 @@ try {
     tipoiva: ''
   };
 }
+
+    // ✅ NUEVO: Validar si se proporcionaron subtotales
+    const mostrarDesgloseTipoPago = subtotalesTipoPago && subtotalesTipoPago.length > 0;
+    console.log('🎯 Desglose por tipo de pago:', mostrarDesgloseTipoPago ? 'SÍ' : 'NO', subtotalesTipoPago);
+
     let titulo: string = "";
     if (this.tipoDoc == "FC") {
       titulo = "FACTURA";
@@ -1025,6 +1055,30 @@ try {
             bold: true,
           },
         },
+        // ✅ NUEVO: Tabla de subtotales por tipo de pago
+        ...(mostrarDesgloseTipoPago ? [{
+          text: '\nDETALLE POR MÉTODO DE PAGO:',
+          style: 'subheader',
+          margin: [0, 10, 0, 5],
+          fontSize: 10,
+          bold: true
+        }] : []),
+        ...(mostrarDesgloseTipoPago ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Método de Pago', 'Subtotal'],
+              ...subtotalesTipoPago.map(item => [
+                item.tipoPago.length > 50 ? item.tipoPago.substring(0, 47) + '...' : item.tipoPago,
+                '$' + item.subtotal.toFixed(2)
+              ])
+            ],
+            bold: false,
+          },
+          margin: [0, 0, 0, 10]
+        }] : []),
+        // Tabla de TOTAL
         {
           style: 'tableExample',
           table: {
