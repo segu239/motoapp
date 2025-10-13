@@ -1988,13 +1988,14 @@ public function ProductosVentaPDF_post()
         return;
     }
     
-    $this->db->select('idart, cantidad, precio, nomart');
-    $this->db->from($tabla);
-    $this->db->where('tipodoc', $tipodoc);
-    $this->db->where('numerocomprobante', $numerocomprobante);
-    $this->db->where('puntoventa', $puntoventa);
+    $this->db->select('p.idart, p.cantidad, p.precio, p.nomart, p.cod_tar, t.tarjeta as nombre_tarjeta');
+    $this->db->from($tabla . ' p');
+    $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+    $this->db->where('p.tipodoc', $tipodoc);
+    $this->db->where('p.numerocomprobante', $numerocomprobante);
+    $this->db->where('p.puntoventa', $puntoventa);
     // Remover filtro por estado ya que los productos pueden tener diferentes estados
-    $this->db->order_by('idart', 'ASC');
+    $this->db->order_by('p.idart', 'ASC');
     
     $query = $this->db->get();
     $result = $query->result_array();

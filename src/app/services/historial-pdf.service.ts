@@ -293,7 +293,7 @@ export class HistorialPdfService {
         const subtotalesMap = new Map<string, number>();
 
         productos.forEach((item: any) => {
-          const tipoPago = item.tarjeta || item.tipoPago || 'Indefinido';
+          const tipoPago = item.nombre_tarjeta || item.tarjeta || item.tipoPago || 'Sin especificar';
           const montoItem = parseFloat((item.cantidad * item.precio).toFixed(2));
 
           if (subtotalesMap.has(tipoPago)) {
@@ -327,7 +327,11 @@ export class HistorialPdfService {
         })),
         numerocomprobante: datosCompletos.numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
         fecha: ventaData.emitido,
-        total: productos.reduce((sum: number, item: any) => sum + (item.cantidad * item.precio), 0),
+        total: parseFloat(
+          productos.reduce((sum: number, item: any) =>
+            sum + (item.cantidad * item.precio), 0
+          ).toFixed(2)
+        ),
         bonifica: ventaData.bonifica || cabecera.bonifica || 0,
         bonifica_tipo: ventaData.bonifica_tipo || cabecera.bonifica_tipo || 'P',
         interes: ventaData.interes || cabecera.interes || 0,
