@@ -823,17 +823,9 @@ export class CarritoComponent implements OnDestroy {
         console.log('📊 Cantidad de movimientos:', movimientos_caja.length);
 
         // ====================================================================
-        // ⚠️ FASE 3: CÓDIGO COMENTADO - NO SE ENVÍAN SUBTOTALES AL BACKEND
-        // ====================================================================
-        // MOTIVO: El backend ya no inserta en caja_movi_detalle
-        // Fecha: 2025-10-21
-        // Ver: eliminacion_caja_movi_detalle.md
-        // ====================================================================
-
-        console.log('✅ FASE 3: Frontend actualizado - No se envían subtotales al backend');
-
-        /*
         // ALTERNATIVA C: Formatear subtotales para enviar al backend
+        // ====================================================================
+
         // 🔍 LOGS DE DEPURACIÓN - INICIO
         console.log('🔍 ========== DEPURACIÓN SUBTOTALES ==========');
         console.log('1️⃣ Subtotales calculados:', JSON.stringify(subtotalesActualizados, null, 2));
@@ -868,10 +860,9 @@ export class CarritoComponent implements OnDestroy {
         // 🔍 LOGS DE DEPURACIÓN - FIN
 
         console.log('📊 Subtotales formateados para backend:', subtotalesParaBackend);
-        */
 
-        // Enviar array de movimientos al backend (sin subtotales)
-        this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, movimientos_caja).pipe(take(1)).subscribe((data: any) => {
+        // Enviar array de movimientos al backend
+        this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, movimientos_caja, subtotalesParaBackend).pipe(take(1)).subscribe((data: any) => {
           console.log(data.mensaje);
           // ✅ LLAMADA ACTUALIZADA (pasar subtotales recalculados):
           this.imprimir(
