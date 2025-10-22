@@ -1079,18 +1079,8 @@ public function PedidossucxappCompleto_post() {
                 }
 
                 // ====================================================================
-                // ⚠️ FASE 2: CÓDIGO COMENTADO - NO SE INSERTAN DETALLES EN caja_movi_detalle
-                // ====================================================================
-                // MOTIVO: La tabla caja_movi_detalle es redundante con la nueva implementación
-                // que crea movimientos separados por método de pago.
-                // Fecha: 2025-10-21
-                // Ver: eliminacion_caja_movi_detalle.md para más información
-                // ====================================================================
-
-                log_message('info', '✅ FASE 2: Nueva implementación activa - No se insertan detalles en caja_movi_detalle');
-
-                /*
                 // ALTERNATIVA C MEJORADA: Insertar detalles vinculados a cada movimiento
+                // ====================================================================
                 if ($subtotales_metodos_pago !== null && !empty($ids_movimientos)) {
                     try {
                         // Si hay múltiples movimientos, cada uno tiene su detalle
@@ -1150,7 +1140,6 @@ public function PedidossucxappCompleto_post() {
                         log_message('error', "❌ Error al insertar detalles de movimientos: " . $e->getMessage());
                     }
                 }
-                */
                 // ====================================================================
             }
 

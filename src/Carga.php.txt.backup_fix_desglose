@@ -1570,53 +1570,33 @@ public function CajamoviPaginado_post()
 private function obtenerDesgloseMovimiento($id_movimiento)
 {
   try {
-    // ====================================================================
-    // ⚠️ FASE 4: Función actualizada - Usa vista legacy en lugar de función eliminada
-    // ====================================================================
-    // MOTIVO: La función PostgreSQL obtener_desglose_movimiento() fue eliminada
-    // Ahora consulta directamente la vista v_caja_movi_detalle_legacy
-    // Fecha: 2025-10-21
-    // ====================================================================
-
-    // Consultar vista legacy para obtener detalles históricos
-    $sql = "
-      SELECT
-        cmd.cod_tarj,
-        tc.tarjeta AS nombre_tarjeta,
-        cmd.importe_detalle,
-        cmd.porcentaje
-      FROM v_caja_movi_detalle_legacy cmd
-      LEFT JOIN tarjcredito tc ON cmd.cod_tarj = tc.cod_tarj
-      WHERE cmd.id_movimiento = ?
-      ORDER BY cmd.importe_detalle DESC
-    ";
-
+    // Llamar a la función PostgreSQL
+    $sql = "SELECT obtener_desglose_movimiento(?) as desglose_json";
     $query = $this->db->query($sql, array($id_movimiento));
 
     if ($query && $query->num_rows() > 0) {
-      // Convertir resultado a array con el mismo formato que la función anterior
-      $desglose = array();
+      $row = $query->row();
+      $desglose_json = $row->desglose_json;
 
-      foreach ($query->result() as $row) {
-        $desglose[] = array(
-          'cod_tarj' => $row->cod_tarj,
-          'nombre_tarjeta' => $row->nombre_tarjeta,
-          'importe_detalle' => floatval($row->importe_detalle),
-          'porcentaje' => floatval($row->porcentaje)
-        );
+      // Decodificar el JSON retornado por PostgreSQL
+      $desglose = json_decode($desglose_json, true);
+
+      // Si la decodificación falló o es NULL, retornar array vacío
+      if (json_last_error() !== JSON_ERROR_NONE || $desglose === null) {
+        log_message('warning', "Movimiento {$id_movimiento}: Error al decodificar JSON del desglose");
+        return array();
       }
 
-      log_message('info', "✅ Movimiento {$id_movimiento}: Desglose obtenido (" . count($desglose) . " detalles)");
+      // Retornar el desglose (puede ser array vacío si no hay detalles)
       return $desglose;
     }
 
-    // Si no hay detalles, retornar array vacío (movimientos nuevos post-implementación)
-    log_message('info', "✅ Movimiento {$id_movimiento}: Sin detalles (nueva implementación)");
+    // Si la consulta falló, retornar array vacío
     return array();
 
   } catch (Exception $e) {
     // En caso de error, loguear y retornar array vacío (compatibilidad)
-    log_message('error', "❌ Movimiento {$id_movimiento}: Error al obtener desglose - " . $e->getMessage());
+    log_message('error', "Movimiento {$id_movimiento}: Error al obtener desglose - " . $e->getMessage());
     return array();
   }
 }
