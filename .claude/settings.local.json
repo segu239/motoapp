@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(grep:*)",
@@ -14,10 +15,12 @@
       "mcp__desktop-commander__read_file",
       "mcp__desktop-commander__search_code",
       "Bash(find:*)",
-      "mcp__Context7__get-library-docs"
+      "mcp__Context7__get-library-docs",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"cajamov\" /mnt/c/Users/Telemetria/T49E2PT/angular/motoapp/src/Descarga.php.txt)",
+      "Bash(/home/segu239/.nvm/versions/node/v22.15.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"generarReciboAutomatico\" /mnt/c/Users/Telemetria/T49E2PT/angular/motoapp/src/Descarga.php.txt -A 50)",
+      "mcp__TestSprite__testsprite_generate_code_summary"
     ],
     "deny": []
   },
-  "enableAllProjectMcpServers": false,
-  "$schema": "https://json.schemastore.org/claude-code-settings.json"
+  "enableAllProjectMcpServers": false
 }
