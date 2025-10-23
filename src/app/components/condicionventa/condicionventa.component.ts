@@ -302,10 +302,14 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     console.log('CondicionVentaComponent inicializado');
-    
+
+    // CRÍTICO: Limpiar datos de pago al iniciar
+    // Esto asegura que no persistan datos entre ventas de diferentes clientes
+    this.limpiarDatosPago();
+
     // Verificar si es sucursal mayorista
     this.verificarSucursalMayorista();
-    
+
     // NUEVO: Restaurar estado de tabla al inicializar
     this.restoreTableState();
     
@@ -344,16 +348,52 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     if (this.ref) {
       this.ref.close();
     }
-    
+
     // Limpiar todas las suscripciones
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    
+
     // Completar el subject de destrucción
     this.destroy$.next();
     this.destroy$.complete();
-    
+
     // Completar el subject de datos de cambio
     this.datosCambioListos$.complete();
+  }
+
+  /**
+   * Limpia los datos de pago (tarjeta y cheque)
+   * Se llama automáticamente en ngOnInit para asegurar un estado limpio
+   * al iniciar una nueva venta
+   */
+  private limpiarDatosPago(): void {
+    console.log('🧹 Limpiando datos de pago...');
+
+    // Limpiar objeto tarjeta
+    this.tarjeta = {
+      Titular: '',
+      Dni: '',
+      Numero: '',
+      Autorizacion: ''
+    };
+
+    // Limpiar objeto cheque
+    this.cheque = {
+      Banco: '',
+      CodigoBanco: '',
+      Ncuenta: '',
+      Ncheque: '',
+      Nombre: '',
+      Plaza: '',
+      ImporteImputar: '',
+      ImporteCheque: '',
+      FechaCheque: ''
+    };
+
+    // Limpiar flags
+    this.tarjetaFlag = false;
+    this.chequeFlag = false;
+
+    console.log('✅ Datos de pago limpiados correctamente');
   }
   
   // OBSOLETO: Configurar búsqueda con debounce (reemplazado por lazy loading)

@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Table } from 'primeng/table';
 import { CargardataService } from '../../services/cargardata.service';
+import { CarritoService } from '../../services/carrito.service';
 import { Cliente } from '../../interfaces/cliente';
 import { ActivatedRoute, Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
@@ -17,7 +18,11 @@ export class PuntoventaComponent implements OnInit {
 
   public clientes: Cliente[] = [];
   public clienteElejido: Cliente;
-  constructor(private _cargardata: CargardataService, private _router: Router) { }
+  constructor(
+    private _cargardata: CargardataService,
+    private _router: Router,
+    private _carritoService: CarritoService
+  ) { }
   ngOnInit(): void {
     let sucursal: string = sessionStorage.getItem('sucursal');
     if (!sucursal) {
@@ -42,8 +47,23 @@ export class PuntoventaComponent implements OnInit {
     });
   }
   selectCliente(cliente) {
-    console.log(cliente);
-    this._router.navigate(['components/condicionventa'], { queryParams: { cliente: JSON.stringify(cliente) } });
+    console.log('🔍 Cliente seleccionado:', cliente);
+
+    // Verificar si hay items en el carrito
+    const carritoData = sessionStorage.getItem('carrito');
+    const itemsCarrito = carritoData ? JSON.parse(carritoData) : [];
+    const cantidadItems = itemsCarrito.length;
+
+    console.log(`📊 Items en carrito: ${cantidadItems}`);
+
+    if (cantidadItems > 0) {
+      // Si hay items, mostrar confirmación
+      this.confirmarNuevaVenta(cliente, cantidadItems);
+    } else {
+      // Si no hay items, iniciar nueva venta directamente
+      console.log('✅ Carrito vacío - Iniciando venta sin confirmación');
+      this.iniciarNuevaVenta(cliente);
+    }
   }
   editCliente(cliente) {
     console.log(cliente);
@@ -69,6 +89,82 @@ export class PuntoventaComponent implements OnInit {
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
+  /**
+   * Muestra diálogo de confirmación antes de iniciar una nueva venta
+   * Solo se llama cuando hay items en el carrito
+   */
+  private confirmarNuevaVenta(cliente: any, cantidadItems: number): void {
+    Swal.fire({
+      title: '⚠️ Iniciar Nueva Venta',
+      html: `
+        <div style="text-align: left; padding: 0 20px;">
+          <p>Actualmente hay <strong style="color: #d33;">${cantidadItems} producto(s)</strong> en el carrito.</p>
+          <hr style="margin: 15px 0;">
+          <p>Al seleccionar este cliente:</p>
+          <ul style="color: #666; margin-left: 20px;">
+            <li>Se eliminará el carrito actual</li>
+            <li>Se limpiarán los datos de pago</li>
+            <li>Se iniciará una venta nueva</li>
+          </ul>
+          <hr style="margin: 15px 0;">
+          <p style="color: #d33; font-weight: bold;">¿Desea continuar e iniciar una nueva venta?</p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: '<i class="fa fa-check"></i> Sí, iniciar nueva venta',
+      cancelButtonText: '<i class="fa fa-times"></i> No, volver',
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      reverseButtons: true,
+      focusCancel: true
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.iniciarNuevaVenta(cliente);
+        Swal.fire({
+          icon: 'success',
+          title: 'Nueva venta iniciada',
+          text: 'El estado anterior ha sido limpiado',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } else {
+        console.log('❌ Usuario canceló la nueva venta');
+      }
+    });
+  }
+
+  /**
+   * Limpia completamente el estado de la aplicación e inicia una nueva venta
+   * Se ejecuta cuando el usuario selecciona un cliente desde puntoventa
+   */
+  private iniciarNuevaVenta(cliente: any): void {
+    console.log('🧹 Iniciando nueva venta - Limpiando todo el estado');
+
+    // 1. Limpiar carrito completamente
+    this._carritoService.limpiarCarrito();
+    console.log('   ✓ Carrito limpiado');
+
+    // 2. Limpiar datos de condición de venta
+    sessionStorage.removeItem('condicionVentaSeleccionada');
+    console.log('   ✓ Condición de venta limpiada');
+
+    // 3. Limpiar estado de tabla de condicionventa
+    sessionStorage.removeItem('condicionventa_table_state');
+    console.log('   ✓ Estado de tabla limpiado');
+
+    // 4. Limpiar datos del cliente anterior
+    sessionStorage.removeItem('datoscliente');
+    console.log('   ✓ Datos de cliente anterior limpiados');
+
+    console.log('✅ Estado limpiado completamente');
+
+    // Navegar a condición de venta con el nuevo cliente
+    this._router.navigate(['components/condicionventa'], {
+      queryParams: { cliente: JSON.stringify(cliente) }
+    });
+  }
+
   showNotification(message: string) {
     Swal.fire({
       icon: 'error',
