@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 //agregar importacion de router para navegacion
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -56,8 +56,32 @@ export class CarritoComponent implements OnDestroy {
   itemsConTipoPago: any[] = [];
   public subtotalesPorTipoPago: Array<{tipoPago: string, subtotal: number}> = [];
 
+  // ====================================================================
+  // RESTRICCIÓN DE PRESUPUESTOS: Solo EFECTIVO AJUSTE, TRANSFERENCIA AJUSTE y CUENTA CORRIENTE
+  // Fecha: 2025-10-22
+  // Ver: INFORME_RESTRICCION_PRESUPUESTOS_TIPOS_PAGO.md
+  // FIX 2025-10-22: Corregido 12 → 112 (EFECTIVO AJUSTE)
+  // ====================================================================
+  private readonly PRESUPUESTO_COD_TARJ_PERMITIDOS: number[] = [112, 1112, 111];
+
+  // ====================================================================
+  // RESTRICCIÓN DE FACTURAS/NC/ND: NO se permite EFECTIVO AJUSTE ni TRANSFERENCIA AJUSTE
+  // Fecha: 2025-10-22
+  // Ver: INFORME_RESTRICCION_FACTURAS_TIPOS_PAGO.md
+  // ====================================================================
+  private readonly FACTURA_COD_TARJ_NO_PERMITIDOS: number[] = [112, 1112];
+  private readonly TIPOS_DOC_VALIDAR_NO_AJUSTE: string[] = ['FC', 'NC', 'ND'];
+
   private subscriptions: Subscription[] = [];
-  constructor(private _cargardata: CargardataService, private bot: MotomatchBotService, private _crud: CrudService, private _subirdata: SubirdataService, private _carrito: CarritoService, private router: Router) {
+  constructor(
+    private _cargardata: CargardataService,
+    private bot: MotomatchBotService,
+    private _crud: CrudService,
+    private _subirdata: SubirdataService,
+    private _carrito: CarritoService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {
     // Verificar autenticación antes de inicializar
     if (!sessionStorage.getItem('usernameOp')) {
       this.router.navigate(['/login2']);
@@ -238,10 +262,56 @@ export class CarritoComponent implements OnDestroy {
     }
   }
 
-  tipoDocChange(event) {
-    console.log(event.target.value);
-    this.tipoDoc = event.target.value;
+  tipoDocChange() {
+    // ✅ Con [(ngModel)], this.tipoDoc ya tiene el nuevo valor automáticamente
+    console.log('\n🔄 ════════════════════════════════════════════════════');
+    console.log('📝 CAMBIO DE TIPO DE DOCUMENTO');
+    console.log('🔄 ════════════════════════════════════════════════════');
+    console.log('Nuevo valor de tipoDoc:', this.tipoDoc);
+    console.log('Items ACTUALES en carrito:', this.itemsEnCarrito.length);
+    this.itemsEnCarrito.forEach((item, i) => {
+      console.log(`  Item ${i + 1}: ${item.nomart} - cod_tar: ${item.cod_tar}`);
+    });
+    console.log('🔄 ════════════════════════════════════════════════════\n');
+
     if (this.tipoDoc == "FC") {
+      // ✅ VALIDACIÓN CAPA 1: Verificar que NO se use EFECTIVO/TRANSFERENCIA AJUSTE
+      console.log('🔍 DEBUG CAPA 1 - Validando cambio a FC...');
+      const validacion = this.validarMetodosPagoFactura();
+      console.log('🔍 DEBUG CAPA 1 - Items con métodos prohibidos:', validacion.items.length);
+
+      if (validacion.items.length > 0) {
+        const metodosTexto = validacion.metodosNoPermitidos.join(', ');
+        console.log('🔍 DEBUG CAPA 1 - BLOQUEANDO cambio a FC. Métodos prohibidos:', metodosTexto);
+
+        setTimeout(() => {
+          console.log('🔍 DEBUG CAPA 1 - Revirtiendo tipoDoc de "FC" a tipo anterior');
+          this.tipoDoc = "PR"; // Revertir a presupuesto por defecto
+          this.cdr.detectChanges();
+          console.log('🔍 DEBUG CAPA 1 - tipoDoc después de revertir:', this.tipoDoc);
+        }, 0);
+
+        Swal.fire({
+          icon: 'warning',
+          title: 'Restricción de Facturas',
+          html: `
+            <p>Las facturas <strong>NO pueden</strong> generarse con los siguientes métodos de pago:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+              <li><strong>EFECTIVO AJUSTE</strong></li>
+              <li><strong>TRANSFERENCIA AJUSTE</strong></li>
+            </ul>
+            <p style="margin-top: 10px;">Actualmente hay <strong>${validacion.items.length} artículo(s)</strong> con métodos prohibidos:</p>
+            <p style="color: #dc3545;"><em>${metodosTexto}</em></p>
+          `,
+          footer: 'Por favor, modifique los artículos del carrito para usar métodos de pago estándar.',
+          confirmButtonText: 'Entendido'
+        });
+
+        return; // Detener ejecución
+      }
+
+      console.log('🔍 DEBUG CAPA 1 - Validación OK, permitiendo cambio a FC');
+
       this.inputOPFlag = true;
       // se cambio esto para sacar el punto de venta y ponerle el valor de la sucursal----
       this.puntoVenta_flag = false;//this.puntoVenta_flag = true;
@@ -252,6 +322,43 @@ export class CarritoComponent implements OnDestroy {
       this.letras_flag = true;
     }
     else if (this.tipoDoc == "NC") {
+      // ✅ VALIDACIÓN CAPA 1: Verificar que NO se use EFECTIVO/TRANSFERENCIA AJUSTE
+      console.log('🔍 DEBUG CAPA 1 - Validando cambio a NC...');
+      const validacion = this.validarMetodosPagoFactura();
+      console.log('🔍 DEBUG CAPA 1 - Items con métodos prohibidos:', validacion.items.length);
+
+      if (validacion.items.length > 0) {
+        const metodosTexto = validacion.metodosNoPermitidos.join(', ');
+        console.log('🔍 DEBUG CAPA 1 - BLOQUEANDO cambio a NC. Métodos prohibidos:', metodosTexto);
+
+        setTimeout(() => {
+          console.log('🔍 DEBUG CAPA 1 - Revirtiendo tipoDoc de "NC" a tipo anterior');
+          this.tipoDoc = "PR";
+          this.cdr.detectChanges();
+          console.log('🔍 DEBUG CAPA 1 - tipoDoc después de revertir:', this.tipoDoc);
+        }, 0);
+
+        Swal.fire({
+          icon: 'warning',
+          title: 'Restricción de Notas de Crédito',
+          html: `
+            <p>Las notas de crédito <strong>NO pueden</strong> generarse con los siguientes métodos de pago:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+              <li><strong>EFECTIVO AJUSTE</strong></li>
+              <li><strong>TRANSFERENCIA AJUSTE</strong></li>
+            </ul>
+            <p style="margin-top: 10px;">Actualmente hay <strong>${validacion.items.length} artículo(s)</strong> con métodos prohibidos:</p>
+            <p style="color: #dc3545;"><em>${metodosTexto}</em></p>
+          `,
+          footer: 'Por favor, modifique los artículos del carrito para usar métodos de pago estándar.',
+          confirmButtonText: 'Entendido'
+        });
+
+        return; // Detener ejecución
+      }
+
+      console.log('🔍 DEBUG CAPA 1 - Validación OK, permitiendo cambio a NC');
+
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
       // Para notas de crédito, mantener el punto de venta de la sucursal
@@ -266,6 +373,43 @@ export class CarritoComponent implements OnDestroy {
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "ND") {
+      // ✅ VALIDACIÓN CAPA 1: Verificar que NO se use EFECTIVO/TRANSFERENCIA AJUSTE
+      console.log('🔍 DEBUG CAPA 1 - Validando cambio a ND...');
+      const validacion = this.validarMetodosPagoFactura();
+      console.log('🔍 DEBUG CAPA 1 - Items con métodos prohibidos:', validacion.items.length);
+
+      if (validacion.items.length > 0) {
+        const metodosTexto = validacion.metodosNoPermitidos.join(', ');
+        console.log('🔍 DEBUG CAPA 1 - BLOQUEANDO cambio a ND. Métodos prohibidos:', metodosTexto);
+
+        setTimeout(() => {
+          console.log('🔍 DEBUG CAPA 1 - Revirtiendo tipoDoc de "ND" a tipo anterior');
+          this.tipoDoc = "PR";
+          this.cdr.detectChanges();
+          console.log('🔍 DEBUG CAPA 1 - tipoDoc después de revertir:', this.tipoDoc);
+        }, 0);
+
+        Swal.fire({
+          icon: 'warning',
+          title: 'Restricción de Notas de Débito',
+          html: `
+            <p>Las notas de débito <strong>NO pueden</strong> generarse con los siguientes métodos de pago:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+              <li><strong>EFECTIVO AJUSTE</strong></li>
+              <li><strong>TRANSFERENCIA AJUSTE</strong></li>
+            </ul>
+            <p style="margin-top: 10px;">Actualmente hay <strong>${validacion.items.length} artículo(s)</strong> con métodos prohibidos:</p>
+            <p style="color: #dc3545;"><em>${metodosTexto}</em></p>
+          `,
+          footer: 'Por favor, modifique los artículos del carrito para usar métodos de pago estándar.',
+          confirmButtonText: 'Entendido'
+        });
+
+        return; // Detener ejecución
+      }
+
+      console.log('🔍 DEBUG CAPA 1 - Validación OK, permitiendo cambio a ND');
+
       this.inputOPFlag = true;
       this.puntoVenta_flag = false;
       // Para notas de débito, mantener el punto de venta de la sucursal
@@ -273,6 +417,50 @@ export class CarritoComponent implements OnDestroy {
       this.letras_flag = false;
     }
     else if (this.tipoDoc == "PR") {
+      // ✅ VALIDACIÓN CAPA 1: Verificar métodos de pago permitidos para presupuestos
+      console.log('🔍 DEBUG CAPA 1 - Validando cambio a PR...');
+      const validacion = this.validarMetodosPagoPresupuesto();
+      console.log('🔍 DEBUG CAPA 1 - Items no permitidos:', validacion.items.length);
+
+      if (validacion.items.length > 0) {
+        const metodosTexto = validacion.metodosNoPermitidos.join(', ');
+        console.log('🔍 DEBUG CAPA 1 - BLOQUEANDO cambio a PR. Métodos problemáticos:', metodosTexto);
+
+        // ✅ SOLUCIÓN: Usar setTimeout para revertir en el siguiente ciclo
+        // Esto previene conflictos con el ciclo de detección de cambios de ngModel
+        console.log('🔍 DEBUG CAPA 1 - BLOQUEANDO cambio a PR');
+
+        setTimeout(() => {
+          console.log('🔍 DEBUG CAPA 1 - Revirtiendo tipoDoc de "PR" a "FC"');
+          this.tipoDoc = "FC";
+          this.cdr.detectChanges();
+          console.log('🔍 DEBUG CAPA 1 - tipoDoc después de revertir:', this.tipoDoc);
+        }, 0);
+
+        // Mostrar alerta
+        Swal.fire({
+          icon: 'warning',
+          title: 'Restricción de Presupuestos',
+          html: `
+            <p>Los presupuestos <strong>SOLO</strong> pueden generarse con los siguientes métodos de pago:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+              <li><strong>EFECTIVO AJUSTE</strong></li>
+              <li><strong>TRANSFERENCIA AJUSTE</strong></li>
+              <li><strong>CUENTA CORRIENTE</strong></li>
+            </ul>
+            <p style="margin-top: 10px;">Actualmente hay <strong>${validacion.items.length} artículo(s)</strong> con otros métodos de pago:</p>
+            <p style="color: #dc3545;"><em>${metodosTexto}</em></p>
+          `,
+          footer: 'Por favor, modifique los artículos del carrito para usar solo los métodos permitidos.',
+          confirmButtonText: 'Entendido'
+        });
+
+        return; // Detener ejecución
+      }
+
+      console.log('🔍 DEBUG CAPA 1 - Validación OK, permitiendo cambio a PR');
+
+      // Si la validación pasa, configurar presupuesto normalmente
       this.inputOPFlag = false;
       this.puntoVenta_flag = false;
       // Para presupuestos, también usar el punto de venta de la sucursal
@@ -506,8 +694,203 @@ export class CarritoComponent implements OnDestroy {
     return resultado;
   }
 
+  /**
+   * Valida que todos los items del carrito tengan métodos de pago permitidos para presupuestos
+   * @returns Objeto con items no permitidos y nombres de métodos problemáticos
+   */
+  private validarMetodosPagoPresupuesto(): { items: any[], metodosNoPermitidos: string[] } {
+    // 🔍 DEBUG: Log detallado de validación
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔍 VALIDACIÓN PRESUPUESTO - INICIO');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📋 Total items en carrito:', this.itemsEnCarrito.length);
+    console.log('✅ Códigos PERMITIDOS:', this.PRESUPUESTO_COD_TARJ_PERMITIDOS);
+
+    // Log detallado de cada item
+    this.itemsEnCarrito.forEach((item, index) => {
+      console.log(`\n📦 Item ${index + 1}:`, {
+        nombre: item.nomart,
+        cod_tar_original: item.cod_tar,
+        tipo_cod_tar: typeof item.cod_tar,
+        cod_tar_convertido: typeof item.cod_tar === 'string' ? parseInt(item.cod_tar, 10) : item.cod_tar
+      });
+    });
+
+    const itemsNoPermitidos = this.itemsEnCarrito.filter(item => {
+      // ✅ FIX: Convertir cod_tar a number para comparación correcta
+      // Soluciona bug donde "12" (string) !== 12 (number) causaba falsos positivos
+      const codTarNum = typeof item.cod_tar === 'string'
+        ? parseInt(item.cod_tar, 10)
+        : item.cod_tar;
+
+      const estaPermitido = this.PRESUPUESTO_COD_TARJ_PERMITIDOS.includes(codTarNum);
+
+      console.log(`\n🔎 Validando item "${item.nomart}":`, {
+        cod_tar: item.cod_tar,
+        codTarNum: codTarNum,
+        estaPermitido: estaPermitido
+      });
+
+      return !estaPermitido;
+    });
+
+    console.log('\n═══════════════════════════════════════════════════════');
+    console.log('📊 RESULTADO DE VALIDACIÓN:');
+    console.log('❌ Items NO permitidos:', itemsNoPermitidos.length);
+
+    if (itemsNoPermitidos.length > 0) {
+      console.log('❌ Items problemáticos:', itemsNoPermitidos.map(i => i.nomart));
+    } else {
+      console.log('✅ TODOS los items están permitidos');
+    }
+    console.log('═══════════════════════════════════════════════════════\n');
+
+    const metodosProblematicos = itemsNoPermitidos
+      .map(item => {
+        // ✅ FIX: Convertir cod_tar a number para buscar en tarjetas
+        const codTarNum = typeof item.cod_tar === 'string'
+          ? parseInt(item.cod_tar, 10)
+          : item.cod_tar;
+
+        const tarjeta = this.tarjetas.find(t => t.cod_tarj === codTarNum);
+        return tarjeta ? tarjeta.tarjeta : `Código ${item.cod_tar}`;
+      })
+      .filter((v, i, a) => a.indexOf(v) === i); // Eliminar duplicados
+
+    return {
+      items: itemsNoPermitidos,
+      metodosNoPermitidos: metodosProblematicos
+    };
+  }
+
+  /**
+   * Valida que ningún item del carrito use EFECTIVO AJUSTE o TRANSFERENCIA AJUSTE para FC/NC/ND
+   * @returns Objeto con items no permitidos y nombres de métodos problemáticos
+   */
+  private validarMetodosPagoFactura(): { items: any[], metodosNoPermitidos: string[] } {
+    // 🔍 DEBUG: Log detallado de validación
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔍 VALIDACIÓN FACTURA/NC/ND - INICIO');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📋 Total items en carrito:', this.itemsEnCarrito.length);
+    console.log('❌ Códigos NO PERMITIDOS:', this.FACTURA_COD_TARJ_NO_PERMITIDOS);
+
+    // Log detallado de cada item
+    this.itemsEnCarrito.forEach((item, index) => {
+      console.log(`\n📦 Item ${index + 1}:`, {
+        nombre: item.nomart,
+        cod_tar_original: item.cod_tar,
+        tipo_cod_tar: typeof item.cod_tar,
+        cod_tar_convertido: typeof item.cod_tar === 'string' ? parseInt(item.cod_tar, 10) : item.cod_tar
+      });
+    });
+
+    const itemsNoPermitidos = this.itemsEnCarrito.filter(item => {
+      // ✅ Convertir cod_tar a number para comparación correcta
+      const codTarNum = typeof item.cod_tar === 'string'
+        ? parseInt(item.cod_tar, 10)
+        : item.cod_tar;
+
+      const estaProhibido = this.FACTURA_COD_TARJ_NO_PERMITIDOS.includes(codTarNum);
+
+      console.log(`\n🔎 Validando item "${item.nomart}":`, {
+        cod_tar: item.cod_tar,
+        codTarNum: codTarNum,
+        estaProhibido: estaProhibido
+      });
+
+      return estaProhibido;
+    });
+
+    console.log('\n═══════════════════════════════════════════════════════');
+    console.log('📊 RESULTADO DE VALIDACIÓN:');
+    console.log('❌ Items NO permitidos:', itemsNoPermitidos.length);
+
+    if (itemsNoPermitidos.length > 0) {
+      console.log('❌ Items problemáticos:', itemsNoPermitidos.map(i => i.nomart));
+    } else {
+      console.log('✅ TODOS los items están permitidos');
+    }
+    console.log('═══════════════════════════════════════════════════════\n');
+
+    const metodosProblematicos = itemsNoPermitidos
+      .map(item => {
+        // ✅ Convertir cod_tar a number para buscar en tarjetas
+        const codTarNum = typeof item.cod_tar === 'string'
+          ? parseInt(item.cod_tar, 10)
+          : item.cod_tar;
+
+        const tarjeta = this.tarjetas.find(t => t.cod_tarj === codTarNum);
+        return tarjeta ? tarjeta.tarjeta : `Código ${item.cod_tar}`;
+      })
+      .filter((v, i, a) => a.indexOf(v) === i); // Eliminar duplicados
+
+    return {
+      items: itemsNoPermitidos,
+      metodosNoPermitidos: metodosProblematicos
+    };
+  }
+
   async finalizar() {
-    if (this.itemsEnCarrito.length > 0) {//hacer si 
+    // 🔍 DEBUG LOG - Inicio de finalizar
+    console.log('🔍 DEBUG finalizar() - tipoDoc:', this.tipoDoc);
+    console.log('🔍 DEBUG finalizar() - items en carrito:', this.itemsEnCarrito.length);
+
+    if (this.itemsEnCarrito.length > 0) {//hacer si
+
+      // ✅ VALIDACIÓN CAPA 3 (FINAL): Presupuestos solo con métodos permitidos
+      console.log('🔍 DEBUG - Verificando si es PR. tipoDoc === "PR"?', this.tipoDoc === "PR");
+
+      if (this.tipoDoc === "PR") {
+        console.log('🔍 DEBUG - ES PR, ejecutando validación...');
+        const validacion = this.validarMetodosPagoPresupuesto();
+        console.log('🔍 DEBUG - Resultado validación:', validacion);
+
+        if (validacion.items.length > 0) {
+          console.error('❌ VALIDACIÓN FINAL FALLIDA: Items con métodos no permitidos en PR:', validacion.items);
+
+          Swal.fire({
+            icon: 'error',
+            title: 'No se puede generar el presupuesto',
+            text: 'Los presupuestos solo pueden tener artículos con EFECTIVO AJUSTE, TRANSFERENCIA AJUSTE o CUENTA CORRIENTE como método de pago.',
+            footer: `${validacion.items.length} artículo(s) tienen métodos de pago no permitidos.`,
+            confirmButtonText: 'Aceptar'
+          });
+          return; // Detener procesamiento
+        }
+
+        // Log de validación exitosa
+        console.log('✅ VALIDACIÓN PR: Todos los items tienen métodos de pago permitidos (cod_tar: 12, 1112 o 111)');
+      }
+
+      // ✅ VALIDACIÓN CAPA 3 (FINAL): Facturas/NC/ND NO pueden usar EFECTIVO/TRANSFERENCIA AJUSTE
+      console.log('🔍 DEBUG - Verificando si es FC/NC/ND. tipoDoc:', this.tipoDoc);
+
+      if (this.tipoDoc === "FC" || this.tipoDoc === "NC" || this.tipoDoc === "ND") {
+        console.log('🔍 DEBUG - ES FC/NC/ND, ejecutando validación...');
+        const validacion = this.validarMetodosPagoFactura();
+        console.log('🔍 DEBUG - Resultado validación:', validacion);
+
+        if (validacion.items.length > 0) {
+          console.error('❌ VALIDACIÓN FINAL FALLIDA: Items con métodos prohibidos en FC/NC/ND:', validacion.items);
+
+          const tipoDocNombre = this.tipoDoc === "FC" ? "factura" :
+                               this.tipoDoc === "NC" ? "nota de crédito" : "nota de débito";
+
+          Swal.fire({
+            icon: 'error',
+            title: `No se puede generar la ${tipoDocNombre}`,
+            text: `Las ${tipoDocNombre}s NO pueden tener artículos con EFECTIVO AJUSTE o TRANSFERENCIA AJUSTE como método de pago.`,
+            footer: `${validacion.items.length} artículo(s) tienen métodos de pago prohibidos.`,
+            confirmButtonText: 'Aceptar'
+          });
+          return; // Detener procesamiento
+        }
+
+        // Log de validación exitosa
+        console.log('✅ VALIDACIÓN FC/NC/ND: Ningún item usa EFECTIVO/TRANSFERENCIA AJUSTE');
+      }
+
       console.log(this.puntoventa);
       if (this.pendientes()) {
         Swal.fire({
@@ -933,6 +1316,31 @@ export class CarritoComponent implements OnDestroy {
       if (!this.numerocomprobante) {
         missingFields.push('Numero de Comprobante');
       }
+
+      // ✅ VALIDACIÓN CAPA 2: Verificar que NO se use EFECTIVO/TRANSFERENCIA AJUSTE
+      const validacion = this.validarMetodosPagoFactura();
+
+      if (validacion.items.length > 0) {
+        const listaArticulos = validacion.items
+          .map(item => `"${item.nomart}"`)
+          .join(', ');
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Error de Validación - Facturas',
+          html: `
+            <p>Las facturas <strong>NO pueden</strong> tener artículos con los siguientes métodos de pago:</p>
+            <ul style="text-align: left; margin: 10px 0;">
+              <li>EFECTIVO AJUSTE</li>
+              <li>TRANSFERENCIA AJUSTE</li>
+            </ul>
+            <p style="margin-top: 10px;">Artículos con métodos prohibidos:</p>
+            <p style="color: #dc3545; font-size: 12px;"><em>${listaArticulos}</em></p>
+          `,
+          footer: `Total de artículos afectados: ${validacion.items.length}`
+        });
+        return false;
+      }
     }
     else if (this.tipoDoc == "NC" || this.tipoDoc == "ND" || this.tipoDoc == "NV") {
       if (!this.numerocomprobante) {
@@ -941,10 +1349,67 @@ export class CarritoComponent implements OnDestroy {
       if (!this.vendedoresV) {
         missingFields.push('Vendedor');
       }
+
+      // ✅ VALIDACIÓN CAPA 2: Verificar que NO se use EFECTIVO/TRANSFERENCIA AJUSTE (solo para NC y ND)
+      if (this.tipoDoc == "NC" || this.tipoDoc == "ND") {
+        const validacion = this.validarMetodosPagoFactura();
+
+        if (validacion.items.length > 0) {
+          const listaArticulos = validacion.items
+            .map(item => `"${item.nomart}"`)
+            .join(', ');
+
+          const tipoDocNombre = this.tipoDoc == "NC" ? "Notas de Crédito" : "Notas de Débito";
+
+          Swal.fire({
+            icon: 'error',
+            title: `Error de Validación - ${tipoDocNombre}`,
+            html: `
+              <p>Las ${tipoDocNombre.toLowerCase()} <strong>NO pueden</strong> tener artículos con los siguientes métodos de pago:</p>
+              <ul style="text-align: left; margin: 10px 0;">
+                <li>EFECTIVO AJUSTE</li>
+                <li>TRANSFERENCIA AJUSTE</li>
+              </ul>
+              <p style="margin-top: 10px;">Artículos con métodos prohibidos:</p>
+              <p style="color: #dc3545; font-size: 12px;"><em>${listaArticulos}</em></p>
+            `,
+            footer: `Total de artículos afectados: ${validacion.items.length}`
+          });
+          return false;
+        }
+      }
     }
     else if (this.tipoDoc == "PR" || this.tipoDoc == "CS") {
       if (!this.vendedoresV) {
         missingFields.push('Vendedor');
+      }
+
+      // ✅ VALIDACIÓN CAPA 2: Verificar métodos de pago para presupuestos
+      if (this.tipoDoc == "PR") {
+        const validacion = this.validarMetodosPagoPresupuesto();
+
+        if (validacion.items.length > 0) {
+          const listaArticulos = validacion.items
+            .map(item => `"${item.nomart}"`)
+            .join(', ');
+
+          Swal.fire({
+            icon: 'error',
+            title: 'Error de Validación - Presupuestos',
+            html: `
+              <p>Los presupuestos <strong>SOLO</strong> pueden tener artículos con los siguientes métodos de pago:</p>
+              <ul style="text-align: left; margin: 10px 0;">
+                <li>EFECTIVO AJUSTE</li>
+                <li>TRANSFERENCIA AJUSTE</li>
+                <li>CUENTA CORRIENTE</li>
+              </ul>
+              <p style="margin-top: 10px;">Artículos con métodos no permitidos:</p>
+              <p style="color: #dc3545; font-size: 12px;"><em>${listaArticulos}</em></p>
+            `,
+            footer: `Total de artículos afectados: ${validacion.items.length}`
+          });
+          return false;
+        }
       }
     }
     if (missingFields.length > 0) {

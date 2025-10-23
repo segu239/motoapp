@@ -85,7 +85,7 @@
                         <div class="form-row">
                             <label>Operación:</label>
                             <div class="input-container">
-                                <select class="form-control custom-select" (change)="tipoDocChange($event)">
+                                <select class="form-control custom-select" [(ngModel)]="tipoDoc" (ngModelChange)="tipoDocChange()">
                                     <option value="FC">FACTURA</option>
                                     <option value="ND">NOTA DEBITO</option>
                                     <option value="NC">NOTA CREDITO</option>
