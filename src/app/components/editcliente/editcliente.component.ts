@@ -21,6 +21,12 @@ export class EditclienteComponent implements OnInit {
   public direccionFlag: boolean;
   public accion: string = "";
 
+  // ============================================
+  // PROTECCIÓN: Cliente especial '109' no puede ser eliminado
+  // Fecha: 2025-10-24
+  // ============================================
+  private readonly CLIENTE_NO_ELIMINABLE = '109';
+
   constructor(private subirdata: SubirdataService, private router: Router, private activatedRoute: ActivatedRoute, private fb: FormBuilder) {
 
     this.sucursal = sessionStorage.getItem('sucursal');
@@ -215,6 +221,26 @@ export class EditclienteComponent implements OnInit {
       }
       console.log(editadoCliente);
       if (this.accion == "eliminar") {
+        // PROTECCIÓN: No permitir eliminar cliente especial '109'
+        if (this.clienteFrompuntoVenta.cliente === this.CLIENTE_NO_ELIMINABLE) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Operación no permitida',
+            html: `
+              <div style="text-align: left; padding: 0 20px;">
+                <p><strong>CONSUMIDOR FINAL</strong> es un cliente genérico del sistema.</p>
+                <hr style="margin: 15px 0;">
+                <p>🚫 No se permite eliminar este cliente especial</p>
+                <p>💡 Este cliente es necesario para el funcionamiento del sistema</p>
+              </div>
+            `,
+            confirmButtonText: 'Entendido'
+          });
+          console.log('🚫 Eliminación bloqueada - Cliente 109 no puede eliminarse');
+          return;  // ← Abortar operación
+        }
+
+        // Código original de eliminación
         this.subirdata.eliminarCliente(editadoCliente, this.sucursal).subscribe((data: any) => {
           console.log(data);
           Swal.fire({
