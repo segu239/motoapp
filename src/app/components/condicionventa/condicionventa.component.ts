@@ -98,6 +98,16 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   
   // Variable para controlar si la sucursal es mayorista
   public esMayorista: boolean = false;
+
+  // ============================================
+  // RESTRICCIÓN: Cliente especial '109' (CONSUMIDOR FINAL genérico)
+  // no puede usar CUENTA CORRIENTE, editar datos ni ser eliminado
+  // Fecha: 2025-10-24
+  // Referencia: REFACTOR - usar cliente='109' en lugar de cod_iva='2'
+  // IMPORTANTE: Los valores en la BD son strings, por eso usamos strings aquí
+  // ============================================
+  private readonly COD_TARJ_CUENTA_CORRIENTE = '111';
+  private readonly CLIENTE_CONSUMIDOR_FINAL_GENERICO = '109';
   
   // NUEVO: Propiedades para lazy loading
   public first: number = 0;
@@ -112,15 +122,20 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   _selectedColumns: Column[];
 
   constructor(
-    public dialogService: DialogService, 
-    private cdr: ChangeDetectorRef, 
-    private router: Router, 
-    private activatedRoute: ActivatedRoute, 
+    public dialogService: DialogService,
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private activatedRoute: ActivatedRoute,
     private _cargardata: CargardataService,
     private articulosPaginadosService: ArticulosPaginadosService
   ) {
+    console.log('🏗️ CONSTRUCTOR EJECUTADO - Nueva instancia del componente');
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFrompuntoVenta = JSON.parse(this.clienteFrompuntoVenta);
+    console.log('📦 Cliente cargado en constructor:', {
+      nombre: this.clienteFrompuntoVenta?.nombre,
+      cod_iva: this.clienteFrompuntoVenta?.cod_iva
+    });
     this._cargardata.tarjcredito().pipe(takeUntil(this.destroy$)).subscribe((resp: any) => {
       this.tipo = resp.mensaje;//.tarjeta;
       console.log(this.tipo);
@@ -286,6 +301,15 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
 
   filterByDay() {
+    console.log('═══════════════════════════════════════════════');
+    console.log('🔍 filterByDay() INICIADO');
+    console.log('Cliente actual:', {
+      nombre: this.clienteFrompuntoVenta?.nombre,
+      cod_iva: this.clienteFrompuntoVenta?.cod_iva,
+      tipo_cod_iva: typeof this.clienteFrompuntoVenta?.cod_iva
+    });
+    console.log('Total condiciones en this.tipo:', this.tipo?.length);
+
     const dayOfWeek = new Date().getDay(); // Domingo - 0, Lunes - 1, ..., Sábado - 6
     const dayFieldMap = {
       0: 'd1', // Domingo
@@ -297,11 +321,102 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
       6: 'd7'  // Sábado
     };
     const dayField = dayFieldMap[dayOfWeek];
-    this.filteredTipo = this.tipo.filter(item => item[dayField] === '1');
+
+    // Filtrar por día de semana
+    let condicionesFiltradas = this.tipo.filter(item => item[dayField] === '1');
+    console.log(`📅 Condiciones filtradas por día (${dayField}): ${condicionesFiltradas.length}`);
+
+    // Verificar si CUENTA CORRIENTE está en las condiciones antes de filtrar
+    const cuentaCorrienteAntes = condicionesFiltradas.find(item => item.cod_tarj === this.COD_TARJ_CUENTA_CORRIENTE);
+    console.log('🔎 ¿CUENTA CORRIENTE está antes del filtro?', cuentaCorrienteAntes ? 'SÍ' : 'NO');
+    if (cuentaCorrienteAntes) {
+      console.log('   Datos CUENTA CORRIENTE:', cuentaCorrienteAntes);
+    }
+
+    // REFACTOR: Si el cliente es el CONSUMIDOR FINAL genérico (109), excluir CUENTA CORRIENTE
+    // Fecha: 2025-10-24 - Referencia: cambio de cod_iva='2' a cliente='109'
+    if (this.esClienteEspecial109()) {
+      const antesDeExcluir = condicionesFiltradas.length;
+      condicionesFiltradas = condicionesFiltradas.filter(
+        item => item.cod_tarj !== this.COD_TARJ_CUENTA_CORRIENTE
+      );
+      const despuesDeExcluir = condicionesFiltradas.length;
+      console.log(`🚫 CLIENTE ESPECIAL 109 detectado - CUENTA CORRIENTE excluida`);
+      console.log(`   Antes: ${antesDeExcluir} condiciones, Después: ${despuesDeExcluir} condiciones`);
+      console.log(`   Condiciones excluidas: ${antesDeExcluir - despuesDeExcluir}`);
+    } else {
+      console.log('✅ Cliente NO es cliente especial 109 - CUENTA CORRIENTE permitida');
+    }
+
+    // Verificar si CUENTA CORRIENTE está después de filtrar
+    const cuentaCorrienteDespues = condicionesFiltradas.find(item => item.cod_tarj === this.COD_TARJ_CUENTA_CORRIENTE);
+    console.log('🔎 ¿CUENTA CORRIENTE está después del filtro?', cuentaCorrienteDespues ? 'SÍ' : 'NO');
+
+    this.filteredTipo = condicionesFiltradas;
+    console.log(`📋 Condiciones disponibles finales: ${this.filteredTipo.length}`);
+    console.log('📋 Lista completa de condiciones:', this.filteredTipo.map(c => `${c.tarjeta} (cod_tarj: ${c.cod_tarj})`));
+    console.log('═══════════════════════════════════════════════');
+  }
+
+/**
+   * Verifica si el cliente actual es el CONSUMIDOR FINAL genérico (cliente='109')
+   * IMPORTANTE: Solo este cliente específico tiene restricciones, NO todos los cod_iva='2'
+   * Fecha: 2025-10-24
+   * Referencia: REFACTOR - cambio de cod_iva='2' a cliente='109'
+   * @returns true si cliente == '109'
+   */
+  private esClienteEspecial109(): boolean {
+    if (!this.clienteFrompuntoVenta) {
+      console.warn('⚠️ clienteFrompuntoVenta no está definido');
+      return false;
+    }
+
+    const codigoCliente = this.clienteFrompuntoVenta.cliente;
+    const esClienteEspecial = codigoCliente === this.CLIENTE_CONSUMIDOR_FINAL_GENERICO;
+
+    console.log('🔍 Verificando si es cliente especial 109:', {
+      nombre: this.clienteFrompuntoVenta.nombre || 'N/A',
+      cliente: codigoCliente,
+      cliente_tipo: typeof codigoCliente,
+      esClienteEspecial: esClienteEspecial,
+      cod_iva: this.clienteFrompuntoVenta.cod_iva
+    });
+
+    if (esClienteEspecial) {
+      console.log('🚫 Cliente identificado como CONSUMIDOR FINAL GENÉRICO (109) - Se excluirá CUENTA CORRIENTE');
+    }
+
+    return esClienteEspecial;
   }
 
   ngOnInit() {
     console.log('CondicionVentaComponent inicializado');
+
+    // CRÍTICO: Suscribirse a cambios en queryParams para actualizar el cliente
+    // Esto soluciona el problema de que el cliente no se actualiza al volver atrás
+    this.subscriptions.push(
+      this.activatedRoute.queryParams.subscribe(params => {
+        if (params['cliente']) {
+          const nuevoCliente = JSON.parse(params['cliente']);
+          const clienteAnterior = this.clienteFrompuntoVenta;
+
+          console.log('🔄 QueryParams cambiaron - Actualizando cliente:', {
+            anterior: clienteAnterior?.nombre,
+            nuevo: nuevoCliente?.nombre,
+            cod_iva_anterior: clienteAnterior?.cod_iva,
+            cod_iva_nuevo: nuevoCliente?.cod_iva
+          });
+
+          this.clienteFrompuntoVenta = nuevoCliente;
+
+          // IMPORTANTE: Re-filtrar las condiciones de venta con el nuevo cliente
+          if (this.tipo && this.tipo.length > 0) {
+            console.log('🔄 Re-aplicando filtros para nuevo cliente...');
+            this.filterByDay();
+          }
+        }
+      })
+    );
 
     // CRÍTICO: Limpiar datos de pago al iniciar
     // Esto asegura que no persistan datos entre ventas de diferentes clientes
@@ -344,6 +459,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
   
   ngOnDestroy() {
+    console.log('🔥 COMPONENTE DESTRUIDO - ngOnDestroy ejecutado');
+
     // Limpiar el ref de diálogo si existe
     if (this.ref) {
       this.ref.close();
