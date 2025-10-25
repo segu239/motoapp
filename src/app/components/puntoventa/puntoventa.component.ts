@@ -18,6 +18,13 @@ export class PuntoventaComponent implements OnInit {
 
   public clientes: Cliente[] = [];
   public clienteElejido: Cliente;
+
+  // ============================================
+  // PROTECCIÓN: Cliente especial '109' no puede ser editado
+  // Fecha: 2025-10-24
+  // ============================================
+  private readonly CLIENTE_NO_EDITABLE = '109';
+
   constructor(
     private _cargardata: CargardataService,
     private _router: Router,
@@ -66,7 +73,27 @@ export class PuntoventaComponent implements OnInit {
     }
   }
   editCliente(cliente) {
-    console.log(cliente);
+    console.log('🔧 Intentando editar cliente:', cliente);
+
+    // PROTECCIÓN: No permitir editar cliente especial '109'
+    if (cliente.cliente === this.CLIENTE_NO_EDITABLE) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Operación no permitida',
+        html: `
+          <div style="text-align: left; padding: 0 20px;">
+            <p><strong>CONSUMIDOR FINAL</strong> es un cliente genérico del sistema.</p>
+            <hr style="margin: 15px 0;">
+            <p>🚫 No se permite editar este cliente especial</p>
+            <p>💡 Este cliente se usa como placeholder para ventas sin cliente específico</p>
+          </div>
+        `,
+        confirmButtonText: 'Entendido'
+      });
+      console.log('🚫 Edición bloqueada - Cliente 109 no puede modificarse');
+      return;  // ← Abortar navegación
+    }
+
     this._router.navigate(['components/editcliente'], { queryParams: { cliente: JSON.stringify(cliente) } });
   }
   verHistorialVentas(cliente) {
