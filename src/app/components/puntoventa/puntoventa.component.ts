@@ -64,8 +64,8 @@ export class PuntoventaComponent implements OnInit {
     console.log(`📊 Items en carrito: ${cantidadItems}`);
 
     if (cantidadItems > 0) {
-      // Si hay items, mostrar confirmación
-      this.confirmarNuevaVenta(cliente, cantidadItems);
+      // Si hay items, mostrar confirmación con opción de continuar
+      this.confirmarNuevaVentaOContinuar(cliente, cantidadItems);
     } else {
       // Si no hay items, iniciar nueva venta directamente
       console.log('✅ Carrito vacío - Iniciando venta sin confirmación');
@@ -117,46 +117,84 @@ export class PuntoventaComponent implements OnInit {
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
   }
   /**
-   * Muestra diálogo de confirmación antes de iniciar una nueva venta
-   * Solo se llama cuando hay items en el carrito
+   * Muestra diálogo con 3 opciones cuando hay items en el carrito
+   * - Continuar compra actual
+   * - Iniciar nueva venta
+   * - Cancelar
    */
-  private confirmarNuevaVenta(cliente: any, cantidadItems: number): void {
+  private confirmarNuevaVentaOContinuar(cliente: any, cantidadItems: number): void {
     Swal.fire({
-      title: '⚠️ Iniciar Nueva Venta',
+      title: '🛒 Carrito con Productos',
       html: `
         <div style="text-align: left; padding: 0 20px;">
-          <p>Actualmente hay <strong style="color: #d33;">${cantidadItems} producto(s)</strong> en el carrito.</p>
+          <p>Actualmente hay <strong style="color: #3085d6;">${cantidadItems} producto(s)</strong> en el carrito.</p>
           <hr style="margin: 15px 0;">
-          <p>Al seleccionar este cliente:</p>
-          <ul style="color: #666; margin-left: 20px;">
-            <li>Se eliminará el carrito actual</li>
-            <li>Se limpiarán los datos de pago</li>
-            <li>Se iniciará una venta nueva</li>
-          </ul>
-          <hr style="margin: 15px 0;">
-          <p style="color: #d33; font-weight: bold;">¿Desea continuar e iniciar una nueva venta?</p>
+          <p style="font-weight: bold; margin-bottom: 15px;">¿Qué desea hacer?</p>
+
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+            <p style="margin: 0; color: #1976d2;">
+              <i class="fa fa-shopping-cart"></i> <strong>Continuar Compra Actual</strong>
+            </p>
+            <small style="color: #666;">Ir a Condición de Venta para completar la compra en curso</small>
+          </div>
+
+          <div style="background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+            <p style="margin: 0; color: #f57c00;">
+              <i class="fa fa-plus-circle"></i> <strong>Iniciar Nueva Venta</strong>
+            </p>
+            <small style="color: #666;">Limpiar el carrito y comenzar una venta nueva con el cliente seleccionado</small>
+          </div>
+
+          <div style="background: #f5f5f5; padding: 12px; border-radius: 8px;">
+            <p style="margin: 0; color: #666;">
+              <i class="fa fa-times-circle"></i> <strong>Cancelar</strong>
+            </p>
+            <small style="color: #666;">Permanecer en la página actual sin hacer cambios</small>
+          </div>
         </div>
       `,
-      icon: 'warning',
+      icon: 'question',
+      showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: '<i class="fa fa-check"></i> Sí, iniciar nueva venta',
-      cancelButtonText: '<i class="fa fa-times"></i> No, volver',
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
+      confirmButtonText: '<i class="fa fa-shopping-cart"></i> Continuar Compra',
+      denyButtonText: '<i class="fa fa-plus-circle"></i> Nueva Venta',
+      cancelButtonText: '<i class="fa fa-times"></i> Cancelar',
+      confirmButtonColor: '#3085d6',
+      denyButtonColor: '#f57c00',
+      cancelButtonColor: '#999',
       reverseButtons: true,
-      focusCancel: true
+      focusConfirm: true
     }).then((result) => {
       if (result.isConfirmed) {
+        // Usuario eligió continuar compra actual
+        console.log('✅ Usuario eligió continuar compra actual');
+
+        // ✅ CORRECCIÓN CP-006: SIEMPRE guardar el cliente seleccionado en sessionStorage
+        // Esto garantiza consistencia con/sin contexto previo
+        sessionStorage.setItem('datoscliente', JSON.stringify(cliente));
+        console.log('   ✓ Cliente guardado en sessionStorage:', cliente.nombre);
+
+        // Navegar a condicionventa SIEMPRE con queryParams
+        this._router.navigate(['components/condicionventa'], {
+          queryParams: { cliente: JSON.stringify(cliente) }
+        });
+        console.log('   ✓ Navegando a condicionventa con queryParams');
+
+      } else if (result.isDenied) {
+        // Usuario eligió iniciar nueva venta
+        console.log('🆕 Usuario eligió iniciar nueva venta');
         this.iniciarNuevaVenta(cliente);
         Swal.fire({
           icon: 'success',
           title: 'Nueva venta iniciada',
-          text: 'El estado anterior ha sido limpiado',
+          text: 'El carrito anterior ha sido limpiado',
           timer: 1500,
           showConfirmButton: false
         });
+
       } else {
-        console.log('❌ Usuario canceló la nueva venta');
+        // Usuario canceló
+        console.log('❌ Usuario canceló - Permanece en la página actual');
       }
     });
   }

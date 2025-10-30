@@ -950,11 +950,14 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     }
     
     // Guardar la condición de venta seleccionada en sessionStorage
+    // ✅ NUEVO v4.0: Se agregan activadatos y nombreTarjeta para el selector de tipo de pago en carrito
     sessionStorage.setItem('condicionVentaSeleccionada', JSON.stringify({
       tarjeta: this.tipoVal,
       cod_tarj: this.codTarj,
       listaprecio: this.listaPrecio,
-      esMayorista: this.esMayorista
+      esMayorista: this.esMayorista,
+      activadatos: this.activaDatos,      // ← NUEVO v4.0
+      nombreTarjeta: this.tipoVal         // ← NUEVO v4.0
     }));
     
     this.listaPrecioF(); // aca se llama a la funcion que muestra los prefijos
