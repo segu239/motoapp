@@ -67,7 +67,6 @@ import { DateFormatPipe } from './pipes/dateformat.pipe';
 import { CurrencyFormatPipe } from './pipes/currency-format.pipe';
 import { AnalisiscajaprodComponent } from './components/analisiscajaprod/analisiscajaprod.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
-import { MovimientoComponent } from './components/movimiento/movimiento.component';
 import { StockpedidoComponent } from './components/stockpedido/stockpedido.component';
 import { StockreciboComponent } from './components/stockrecibo/stockrecibo.component';
 import { PedirStockComponent } from './components/pedir-stock/pedir-stock.component';
@@ -162,7 +161,6 @@ import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios
     DateFormatPipe,
     AnalisiscajaprodComponent,
     DashboardComponent,
-    MovimientoComponent,
     StockpedidoComponent,
     StockreciboComponent,
     PedirStockComponent,
