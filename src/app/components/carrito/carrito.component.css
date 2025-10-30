@@ -349,3 +349,209 @@
         min-width: 80px;
     }
 }
+
+/* ════════════════════════════════════════════════════════════
+   ✅ NUEVO v4.0: Estilos para Modo Consulta
+   ════════════════════════════════════════════════════════════ */
+
+/* Item en modo consulta - fondo amarillo suave */
+tr.item-solo-consulta {
+  background-color: #fff3cd !important;
+  border-left: 4px solid #ffc107;
+  transition: background-color 0.3s ease;
+}
+
+tr.item-solo-consulta:hover {
+  background-color: #ffe69c !important;
+}
+
+/* Badge de solo consulta */
+.badge-warning {
+  background-color: #ffc107;
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* Info de precio original */
+.precio-original-info {
+  margin-top: 4px;
+}
+
+.precio-original-info small {
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Alert de items en consulta */
+.alert-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 4px;
+  color: #856404;
+}
+
+.alert-warning hr {
+  border-color: #ffc107;
+}
+
+.alert-warning .pi-exclamation-triangle {
+  color: #ff9800;
+}
+
+/* Botón revertir */
+.btn-warning:hover {
+  background-color: #ff9800;
+  border-color: #ff9800;
+}
+
+/* Dropdown de tipo de pago */
+::ng-deep .p-dropdown {
+  min-width: 200px;
+}
+
+/* Panel del dropdown - FIX para visualización */
+::ng-deep .p-dropdown-panel {
+  z-index: 9999 !important;
+  background-color: #ffffff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Items del dropdown */
+::ng-deep .p-dropdown-panel .p-dropdown-items {
+  padding: 0;
+  margin: 0;
+  list-style-type: none;
+}
+
+::ng-deep .p-dropdown-panel .p-dropdown-items .p-dropdown-item {
+  padding: 8px 12px;
+  color: #495057;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+/* Hover en items */
+::ng-deep .p-dropdown-panel .p-dropdown-items .p-dropdown-item:hover {
+  background-color: #e9ecef;
+}
+
+/* Item seleccionado */
+::ng-deep .p-dropdown-panel .p-dropdown-items .p-dropdown-item.p-highlight {
+  background-color: #007bff;
+  color: #ffffff;
+}
+
+/* Estilos para botón deshabilitado */
+.btn-info:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.btn-info:disabled:hover {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOTALES TEMPORALES - SIMULACIÓN
+   ════════════════════════════════════════════════════════════ */
+
+/* Sección de Total Temporal */
+.total-summary-temporal {
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+  border: 2px solid #ffc107;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-top: 15px;
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+}
+
+.total-temporal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #856404;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.total-temporal-header i {
+  font-size: 1.1rem;
+  color: #ff9800;
+}
+
+.total-price-temporal {
+  font-size: 1.5rem;
+  color: #f57c00;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* Badge REAL en total */
+.total-price .badge-info {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  vertical-align: super;
+}
+
+/* Subtotales Temporales */
+.subtotales-temporales {
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+  border: 2px solid #ffb300;
+  margin-top: 20px;
+}
+
+.subtotales-temporales .temporal-header {
+  border-bottom: 2px solid #ff9800;
+}
+
+.subtotales-temporales .subtotales-title {
+  color: #e65100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtotales-temporales .subtotales-title i {
+  color: #ff9800;
+}
+
+.subtotal-temporal {
+  background-color: #fffde7;
+  border-left-color: #ff9800;
+}
+
+.subtotal-temporal:hover {
+  background-color: #fff9c4;
+}
+
+.badge-xs {
+  font-size: 0.65rem;
+  padding: 2px 4px;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .total-price-temporal {
+    font-size: 1.2rem;
+  }
+
+  .total-temporal-header {
+    font-size: 0.8rem;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   FIN DE ESTILOS PARA MODO CONSULTA
+   ════════════════════════════════════════════════════════════ */

@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 //agregar importacion de router para navegacion
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subject } from 'rxjs';
 import { CarritoService } from 'src/app/services/carrito.service';
 import { SubirdataService } from 'src/app/services/subirdata.service';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import Swal from 'sweetalert2';
-import { first, take } from 'rxjs/operators';
+import { first, take, takeUntil } from 'rxjs/operators';
 import { CrudService } from '../../services/crud.service';
 import { set } from '@angular/fire/database';
 import { MotomatchBotService } from 'src/app/services/motomatch-bot.service';
@@ -56,6 +56,13 @@ export class CarritoComponent implements OnDestroy {
   itemsConTipoPago: any[] = [];
   public subtotalesPorTipoPago: Array<{tipoPago: string, subtotal: number}> = [];
 
+  // ════════════════════════════════════════════════════════════
+  // Totales Temporales para Modo Consulta
+  // ════════════════════════════════════════════════════════════
+  public sumaTemporalSimulacion: number = 0;
+  public subtotalesTemporalesSimulacion: Array<{tipoPago: string, subtotal: number}> = [];
+  public hayItemsEnConsulta: boolean = false;
+
   // ====================================================================
   // RESTRICCIÓN DE PRESUPUESTOS: Solo EFECTIVO AJUSTE, TRANSFERENCIA AJUSTE y CUENTA CORRIENTE
   // Fecha: 2025-10-22
@@ -72,7 +79,19 @@ export class CarritoComponent implements OnDestroy {
   private readonly FACTURA_COD_TARJ_NO_PERMITIDOS: number[] = [112, 1112];
   private readonly TIPOS_DOC_VALIDAR_NO_AJUSTE: string[] = ['FC', 'NC', 'ND'];
 
-  private subscriptions: Subscription[] = [];
+  // ════════════════════════════════════════════════════════════
+  // GESTIÓN DE SUBSCRIPTIONS - Patrón takeUntil
+  // ════════════════════════════════════════════════════════════
+  // Fecha implementación: 29/10/2025
+  // Patrón: takeUntil con Subject destroy$
+  // Beneficios:
+  // - Auto-unsubscribe en ngOnDestroy
+  // - Prevención de memory leaks
+  // - Código más limpio y mantenible
+  // Documentación: plan_memory_leaks.md
+  // ════════════════════════════════════════════════════════════
+  private destroy$ = new Subject<void>();
+
   constructor(
     private _cargardata: CargardataService,
     private bot: MotomatchBotService,
@@ -118,21 +137,29 @@ export class CarritoComponent implements OnDestroy {
     this.cargarTarjetas();
   }
   cargarTarjetas() {
-    const tarjetasSubscription = this._cargardata.tarjcredito().subscribe((data: any) => {
-      this.tarjetas = data.mensaje;
-      console.log('Tarjetas obtenidas:', this.tarjetas);
-     // this.agregarTipoPago();
-     this.actualizarItemsConTipoPago();
+    this._cargardata.tarjcredito()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data: any) => {
+        this.tarjetas = data.mensaje;
+        console.log('✅ Tarjetas obtenidas:', this.tarjetas);
 
-     // Inicializar subtotales después de cargar tarjetas
-     if (this.itemsEnCarrito.length > 0) {
-       this.subtotalesPorTipoPago = this.calcularSubtotalesPorTipoPago();
-       console.log('Subtotales inicializados:', this.subtotalesPorTipoPago);
-     }
+        // 🔍 DEBUG: Verificar tipos de datos
+        if (this.tarjetas && this.tarjetas.length > 0) {
+          console.log('🔍 Primera tarjeta:', this.tarjetas[0]);
+          console.log('🔍 cod_tarj:', this.tarjetas[0].cod_tarj, 'tipo:', typeof this.tarjetas[0].cod_tarj);
+        }
 
-      console.log('Items en carrito después de agregar tipoPago:', this.itemsEnCarrito);
-    });
-    this.subscriptions.push(tarjetasSubscription);
+       // this.agregarTipoPago();
+       this.actualizarItemsConTipoPago();
+
+       // Inicializar subtotales después de cargar tarjetas
+       if (this.itemsEnCarrito.length > 0) {
+         this.subtotalesPorTipoPago = this.calcularSubtotalesPorTipoPago();
+         console.log('Subtotales inicializados:', this.subtotalesPorTipoPago);
+       }
+
+        console.log('Items en carrito después de agregar tipoPago:', this.itemsEnCarrito);
+      });
   }
  /*  agregarTipoPago() {
     const tarjetaMap = new Map();
@@ -175,6 +202,23 @@ export class CarritoComponent implements OnDestroy {
         if (!Array.isArray(this.itemsEnCarrito)) {
           this.itemsEnCarrito = [];
         }
+
+        // ✅ FIX: Normalizar cod_tar a string para que coincida con cod_tarj de tarjetas
+        // PrimeNG dropdown requiere que el tipo de ngModel coincida exactamente con optionValue
+        this.itemsEnCarrito = this.itemsEnCarrito.map(item => {
+          if (item.cod_tar !== undefined && item.cod_tar !== null) {
+            item.cod_tar = String(item.cod_tar);
+          }
+          return item;
+        });
+
+        // 🔍 DEBUG: Verificar tipos de datos de los items
+        if (this.itemsEnCarrito.length > 0) {
+          console.log('✅ Items cargados del carrito:', this.itemsEnCarrito.length);
+          console.log('🔍 Primer item:', this.itemsEnCarrito[0]);
+          console.log('🔍 cod_tar del item:', this.itemsEnCarrito[0].cod_tar, 'tipo:', typeof this.itemsEnCarrito[0].cod_tar);
+        }
+
       } catch (error) {
         console.error('Error al parsear items del carrito:', error);
         this.itemsEnCarrito = [];
@@ -185,45 +229,47 @@ export class CarritoComponent implements OnDestroy {
     }
   }
   getVendedores() {
-    const vendedoresSubscription = this._cargardata.vendedores().subscribe((res: any) => {
-      this.vendedores = res.mensaje;
-      console.log(this.vendedores);
-    });
-    this.subscriptions.push(vendedoresSubscription);
+    this._cargardata.vendedores()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((res: any) => {
+        this.vendedores = res.mensaje;
+        console.log(this.vendedores);
+      });
   }
   getNombreSucursal() {
     this.sucursal = sessionStorage.getItem('sucursal');
     console.log(this.sucursal);
 
-    const sucursalesSubscription = this._crud.getListSnap('sucursales').subscribe(
-      data => {
-        const sucursales = data.map(item => {
-          const payload = item.payload.val() as any;
-          return {
-            nombre: payload.nombre,
-            value: payload.value
-          };
-        });
-        
-        // Buscar la sucursal correspondiente en los datos cargados
-        const sucursalEncontrada = sucursales.find(suc => suc.value.toString() === this.sucursal);
-        if (sucursalEncontrada) {
-          this.sucursalNombre = sucursalEncontrada.nombre;
-        } else {
-          // Guardar ID de sucursal para debugging
-          console.warn('No se encontró la sucursal con ID:', this.sucursal);
+    this._crud.getListSnap('sucursales')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(
+        data => {
+          const sucursales = data.map(item => {
+            const payload = item.payload.val() as any;
+            return {
+              nombre: payload.nombre,
+              value: payload.value
+            };
+          });
+
+          // Buscar la sucursal correspondiente en los datos cargados
+          const sucursalEncontrada = sucursales.find(suc => suc.value.toString() === this.sucursal);
+          if (sucursalEncontrada) {
+            this.sucursalNombre = sucursalEncontrada.nombre;
+          } else {
+            // Guardar ID de sucursal para debugging
+            console.warn('No se encontró la sucursal con ID:', this.sucursal);
+            this.sucursalNombre = 'Sucursal ' + this.sucursal;
+          }
+        },
+        error => {
+          console.error('Error al cargar sucursales:', error);
+          this.showNotification('Error al cargar las sucursales');
+
+          // En caso de error, usamos un valor genérico como fallback
           this.sucursalNombre = 'Sucursal ' + this.sucursal;
         }
-      },
-      error => {
-        console.error('Error al cargar sucursales:', error);
-        this.showNotification('Error al cargar las sucursales');
-        
-        // En caso de error, usamos un valor genérico como fallback
-        this.sucursalNombre = 'Sucursal ' + this.sucursal;
-      }
-    );
-    this.subscriptions.push(sucursalesSubscription);
+      );
   }
 
   initLetraValue() {
@@ -535,6 +581,7 @@ export class CarritoComponent implements OnDestroy {
           // Actualizar el resto del sistema
           this._carrito.actualizarCarrito(); // Refrescar el número del carrito del header
           this.calculoTotal();
+          this.calcularTotalesTemporales();  // ← NUEVO: Calcular totales temporales
           this.actualizarItemsConTipoPago();
 
           // Confirmar eliminación exitosa
@@ -555,7 +602,9 @@ export class CarritoComponent implements OnDestroy {
   calculoTotal() {
     this.suma = 0;
     for (let item of this.itemsEnCarrito) {
-      this.suma += parseFloat((item.precio * item.cantidad).toFixed(2));
+      // ✅ FIX: Si está en consulta, usar precio ORIGINAL para el total REAL
+      const precioAUsar = item._soloConsulta ? item._precioOriginal : item.precio;
+      this.suma += parseFloat((precioAUsar * item.cantidad).toFixed(2));
     }
     this.suma = parseFloat(this.suma.toFixed(2));
 
@@ -579,10 +628,14 @@ export class CarritoComponent implements OnDestroy {
     // Actualizar en itemsConTipoPago
     item.cantidad = nuevaCantidad;
 
-    // Encontrar y actualizar el mismo item en itemsEnCarrito
-    const itemEnCarrito = this.itemsEnCarrito.find(i => i.id_articulo === item.id_articulo);
+    // ✅ FIX: Usar ÍNDICE para garantizar unicidad con items duplicados
+    const itemIndex = this.itemsConTipoPago.indexOf(item);
+    const itemEnCarrito = this.itemsEnCarrito[itemIndex];
+
     if (itemEnCarrito) {
       itemEnCarrito.cantidad = nuevaCantidad;
+    } else {
+      console.error('❌ ERROR: No se encontró item en itemsEnCarrito con índice:', itemIndex);
     }
 
     // Guardar en sessionStorage para mantener persistencia
@@ -590,6 +643,7 @@ export class CarritoComponent implements OnDestroy {
 
     // Recalcular total
     this.calculoTotal();
+    this.calcularTotalesTemporales();  // ← NUEVO: Calcular totales temporales
   }
 
   /**
@@ -660,11 +714,15 @@ export class CarritoComponent implements OnDestroy {
     const subtotales = new Map<string, number>();
 
     for (let item of this.itemsEnCarrito) {
+      // ✅ FIX: Si está en consulta, usar cod_tar y precio ORIGINALES
+      const codTarAUsar = item._soloConsulta ? item._tipoPagoOriginal : item.cod_tar;
+      const precioAUsar = item._soloConsulta ? item._precioOriginal : item.precio;
+
       // Resolver tipo de pago usando el mapa pre-computado
-      const tipoPago = tarjetaMap.get(item.cod_tar?.toString() || '') || 'Indefinido';
+      const tipoPago = tarjetaMap.get(codTarAUsar?.toString() || '') || 'Indefinido';
 
       // Calcular monto del item (precio * cantidad) con precisión de 2 decimales
-      const montoItem = parseFloat((item.precio * item.cantidad).toFixed(2));
+      const montoItem = parseFloat((precioAUsar * item.cantidad).toFixed(2));
 
       // Acumular en el subtotal correspondiente
       if (subtotales.has(tipoPago)) {
@@ -692,6 +750,112 @@ export class CarritoComponent implements OnDestroy {
     }
 
     return resultado;
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // TOTALES TEMPORALES PARA MODO CONSULTA
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula totales y subtotales temporales basados en itemsConTipoPago
+   * Se muestran solo cuando hay items en modo consulta
+   */
+  calcularTotalesTemporales(): void {
+    // Solo calcular si hay items en consulta
+    this.hayItemsEnConsulta = this.hayItemsSoloConsulta();
+
+    if (!this.hayItemsEnConsulta) {
+      // Si no hay items en consulta, usar valores reales
+      this.sumaTemporalSimulacion = this.suma;
+      this.subtotalesTemporalesSimulacion = [...this.subtotalesPorTipoPago];
+      return;
+    }
+
+    // Calcular total temporal basado en itemsConTipoPago (incluye valores temporales)
+    this.sumaTemporalSimulacion = 0;
+    for (let item of this.itemsConTipoPago) {
+      this.sumaTemporalSimulacion += parseFloat((item.precio * item.cantidad).toFixed(2));
+    }
+    this.sumaTemporalSimulacion = parseFloat(this.sumaTemporalSimulacion.toFixed(2));
+
+    // Calcular subtotales temporales
+    this.subtotalesTemporalesSimulacion = this.calcularSubtotalesTemporales();
+  }
+
+  /**
+   * Calcula subtotales por tipo de pago usando itemsConTipoPago (valores temporales)
+   * Similar a calcularSubtotalesPorTipoPago() pero usa itemsConTipoPago en lugar de itemsEnCarrito
+   */
+  calcularSubtotalesTemporales(): Array<{tipoPago: string, subtotal: number}> {
+    if (!this.tarjetas || this.tarjetas.length === 0) {
+      console.warn('calcularSubtotalesTemporales: Array de tarjetas vacío o no cargado');
+      return [];
+    }
+
+    // Pre-computar mapa de tarjetas
+    const tarjetaMap = new Map<string, string>();
+    this.tarjetas.forEach((t: TarjCredito) => {
+      tarjetaMap.set(t.cod_tarj.toString(), t.tarjeta);
+    });
+
+    // Acumular subtotales por tipo de pago
+    const subtotales = new Map<string, number>();
+
+    for (let item of this.itemsConTipoPago) {  // ← USA itemsConTipoPago
+      // Resolver tipo de pago usando el mapa pre-computado
+      const tipoPago = tarjetaMap.get(item.cod_tar?.toString() || '') || 'Indefinido';
+
+      // Calcular monto del item (precio * cantidad)
+      const montoItem = parseFloat((item.precio * item.cantidad).toFixed(2));
+
+      // Acumular en el subtotal correspondiente
+      if (subtotales.has(tipoPago)) {
+        subtotales.set(tipoPago, subtotales.get(tipoPago)! + montoItem);
+      } else {
+        subtotales.set(tipoPago, montoItem);
+      }
+    }
+
+    // Convertir Map a Array y ordenar
+    return Array.from(subtotales.entries())
+      .map(([tipoPago, subtotal]) => ({
+        tipoPago,
+        subtotal: parseFloat(subtotal.toFixed(2))
+      }))
+      .sort((a, b) => {
+        if (a.tipoPago === 'Indefinido') return 1;
+        if (b.tipoPago === 'Indefinido') return -1;
+        return a.tipoPago.localeCompare(b.tipoPago);
+      });
+  }
+
+  /**
+   * Verifica si un tipo de pago en simulación es diferente del real
+   * Se usa para marcar con badge los tipos de pago que cambiaron
+   */
+  esDiferenteDelReal(tipoPagoTemporal: string): boolean {
+    // Buscar si existe en subtotales reales
+    const existeEnReal = this.subtotalesPorTipoPago.some(
+      st => st.tipoPago === tipoPagoTemporal
+    );
+
+    if (!existeEnReal) {
+      return true;  // Es nuevo, no existía en real
+    }
+
+    // Verificar si el monto es diferente
+    const subtotalReal = this.subtotalesPorTipoPago.find(
+      st => st.tipoPago === tipoPagoTemporal
+    );
+    const subtotalTemporal = this.subtotalesTemporalesSimulacion.find(
+      st => st.tipoPago === tipoPagoTemporal
+    );
+
+    if (subtotalReal && subtotalTemporal) {
+      return subtotalReal.subtotal !== subtotalTemporal.subtotal;
+    }
+
+    return false;
   }
 
   /**
@@ -747,12 +911,8 @@ export class CarritoComponent implements OnDestroy {
 
     const metodosProblematicos = itemsNoPermitidos
       .map(item => {
-        // ✅ FIX: Convertir cod_tar a number para buscar en tarjetas
-        const codTarNum = typeof item.cod_tar === 'string'
-          ? parseInt(item.cod_tar, 10)
-          : item.cod_tar;
-
-        const tarjeta = this.tarjetas.find(t => t.cod_tarj === codTarNum);
+        // ✅ FIX: Comparar ambos como string ya que cod_tarj y cod_tar están normalizados
+        const tarjeta = this.tarjetas.find(t => String(t.cod_tarj) === String(item.cod_tar));
         return tarjeta ? tarjeta.tarjeta : `Código ${item.cod_tar}`;
       })
       .filter((v, i, a) => a.indexOf(v) === i); // Eliminar duplicados
@@ -815,12 +975,8 @@ export class CarritoComponent implements OnDestroy {
 
     const metodosProblematicos = itemsNoPermitidos
       .map(item => {
-        // ✅ Convertir cod_tar a number para buscar en tarjetas
-        const codTarNum = typeof item.cod_tar === 'string'
-          ? parseInt(item.cod_tar, 10)
-          : item.cod_tar;
-
-        const tarjeta = this.tarjetas.find(t => t.cod_tarj === codTarNum);
+        // ✅ FIX: Comparar ambos como string ya que cod_tarj y cod_tar están normalizados
+        const tarjeta = this.tarjetas.find(t => String(t.cod_tarj) === String(item.cod_tar));
         return tarjeta ? tarjeta.tarjeta : `Código ${item.cod_tar}`;
       })
       .filter((v, i, a) => a.indexOf(v) === i); // Eliminar duplicados
@@ -837,6 +993,45 @@ export class CarritoComponent implements OnDestroy {
     console.log('🔍 DEBUG finalizar() - items en carrito:', this.itemsEnCarrito.length);
 
     if (this.itemsEnCarrito.length > 0) {//hacer si
+
+      // ════════════════════════════════════════════════════════════
+      // ✅ NUEVA VALIDACIÓN v4.0: Bloquear si hay items en consulta
+      // ════════════════════════════════════════════════════════════
+      const validacionConsulta = this.validarItemsSoloConsulta();
+
+      if (!validacionConsulta.valido) {
+        const itemsList = validacionConsulta.items
+          .map(i => `<li><strong>${i.nomart}</strong> - ${i.tipoPago} - $${i.precio?.toFixed(2)}</li>`)
+          .join('');
+
+        Swal.fire({
+          icon: 'error',
+          title: 'Items en modo consulta',
+          html: `
+            <div style="text-align: left; padding: 0 20px;">
+              <p>⚠️ No se puede finalizar la venta porque hay <strong>${validacionConsulta.items.length} item(s)</strong>
+              marcado(s) como <strong>"SOLO CONSULTA"</strong>:</p>
+              <hr>
+              <ul style="text-align: left; max-height: 200px; overflow-y: auto;">
+                ${itemsList}
+              </ul>
+              <hr>
+              <p><strong>Acciones disponibles:</strong></p>
+              <ol>
+                <li><strong>Revertir:</strong> Haga clic en el botón "Revertir" de cada item para volver al método original</li>
+                <li><strong>Eliminar y re-agregar:</strong> Elimine el item y agréguelo nuevamente con el método de pago correcto</li>
+              </ol>
+            </div>
+          `,
+          confirmButtonText: 'Entendido',
+          width: 700
+        });
+
+        return; // BLOQUEAR finalización
+      }
+
+      console.log('✅ Validación de items en consulta: OK');
+      // ════════════════════════════════════════════════════════════
 
       // ✅ VALIDACIÓN CAPA 3 (FINAL): Presupuestos solo con métodos permitidos
       console.log('🔍 DEBUG - Verificando si es PR. tipoDoc === "PR"?', this.tipoDoc === "PR");
@@ -957,20 +1152,41 @@ export class CarritoComponent implements OnDestroy {
             };
           });
 
-          // Crear datos para guardar en psucursal (sin id_articulo)
-          let result = this.itemsEnCarrito.map(obj => {
-            const { id_articulo, ...objSinIdArticulo } = obj;
-            return {
-              ...objSinIdArticulo,
-              emailop: emailOp,
-              tipodoc: this.tipoDoc,
-              puntoventa: this.puntoventa,
-              numerocomprobante: this.numerocomprobante,
-              estado: "NP",
-              idven: this.vendedoresV,
-              idart: obj.id_articulo || 0 // Usar id_articulo en el campo idart para psucursal
-            };
-          });
+          // ✅ FIX v4.0: Whitelist de campos para psucursal
+            let result = this.itemsEnCarrito.map(obj => {
+              return {
+                idart: obj.id_articulo || 0,
+                cantidad: obj.cantidad,
+                precio: obj.precio,
+                nomart: obj.nomart,
+                tipoprecio: obj.tipoprecio || '',
+                cod_tar: obj.cod_tar,
+                titulartar: obj.titulartar || null,
+                numerotar: obj.numerotar || null,
+                nautotar: obj.nautotar || null,
+                dni_tar: obj.dni_tar || null,
+                banco: obj.banco || null,
+                ncuenta: obj.ncuenta || null,
+                ncheque: obj.ncheque || null,
+                nombre: obj.nombre || '',
+                plaza: obj.plaza || '',
+                importeimputar: obj.importeimputar || null,
+                importecheque: obj.importecheque || null,
+                fechacheque: obj.fechacheque || null,
+                idcli: obj.idcli,
+                idven: this.vendedoresV,
+                fecha: obj.fecha || new Date().toISOString().split('T')[0],
+                hora: obj.hora || new Date().toLocaleTimeString('es-ES'),
+                cod_mov: obj.cod_mov || 0,
+                suc_destino: obj.suc_destino || 0,
+                emailop: emailOp,
+                tipodoc: this.tipoDoc,
+                puntoventa: this.puntoventa,
+                numerocomprobante: this.numerocomprobante,
+                estado: "NP",
+                id_num: obj.id_num || null
+              };
+            });
           this.numerocomprobanteImpresion = this.numerocomprobante;
           sessionStorage.setItem('carrito', JSON.stringify(result));
           console.log(result);
@@ -1146,7 +1362,8 @@ export class CarritoComponent implements OnDestroy {
     let acumulado = 0;
     for (let item of this.itemsEnCarrito) {
       console.log(item);
-      if (item.cod_tar === 111) {
+      // ✅ FIX: Comparar como string ya que cod_tar está normalizado a string
+      if (String(item.cod_tar) === '111') {
         acumulado += parseFloat((item.precio * item.cantidad).toFixed(2)); // Asumiendo que cada item tiene un campo 'valor' que queremos sumar
       }
     }
@@ -1166,8 +1383,34 @@ export class CarritoComponent implements OnDestroy {
     return firstCodTar;
   }
 
+  /**
+   * Navega de forma inteligente para agregar más productos
+   * - Si hay cliente y condición de venta: va a condicionventa
+   * - Si no hay contexto de compra: va a puntoventa para seleccionar cliente
+   */
   agregarProductos() {
-    window.history.back();
+    console.log('🛒 Intentando agregar más productos...');
+
+    // Verificar si hay contexto de compra en sessionStorage
+    const datoscliente = sessionStorage.getItem('datoscliente');
+    const condicionVenta = sessionStorage.getItem('condicionVentaSeleccionada');
+
+    console.log('📊 Estado del contexto:');
+    console.log('  - datoscliente:', datoscliente ? '✓ existe' : '✗ no existe');
+    console.log('  - condicionVenta:', condicionVenta ? '✓ existe' : '✗ no existe');
+
+    if (datoscliente && condicionVenta) {
+      // ✅ CORRECTO: Pasar cliente en queryParams
+      const cliente = JSON.parse(datoscliente);
+      console.log('✅ Hay contexto de compra - Navegando a condicionventa con cliente:', cliente);
+      this.router.navigate(['/components/condicionventa'], {
+        queryParams: { cliente: JSON.stringify(cliente) }
+      });
+    } else {
+      // No hay contexto completo → ir a seleccionar cliente primero
+      console.log('⚠️  No hay contexto completo - Navegando a puntoventa');
+      this.router.navigate(['/components/puntoventa']);
+    }
   }
   validateValue(value: string): boolean {
     return this.myRegex.test(value);
@@ -1894,8 +2137,547 @@ try {
     });
   }
 
+  // ════════════════════════════════════════════════════════════
+  // ✅ NUEVO v4.0: MÉTODOS PARA MODO CONSULTA
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Maneja el cambio de tipo de pago en el carrito
+   * Implementa lógica de "Modo Consulta" para cambios entre activadatos diferentes
+   */
+  onTipoPagoChange(item: any, event: any): void {
+    const nuevoCodTar = event.value;
+    const itemKey = this.generarKeyUnica(item);
+
+    // ✅ FIX v3: Usar ÍNDICE en lugar de búsqueda por id_articulo
+    // Esto garantiza unicidad incluso con múltiples items del mismo producto
+    // itemsConTipoPago e itemsEnCarrito tienen el mismo orden (generado con spread)
+    const itemIndex = this.itemsConTipoPago.indexOf(item);
+    const itemOriginal = this.itemsEnCarrito[itemIndex];
+
+    if (!itemOriginal) {
+      console.error('❌ ERROR: No se encontró item en itemsEnCarrito con índice:', itemIndex);
+      return;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ✅ FIX v4.1: Determinar tipo de referencia correcto
+    // Si el item YA está en consulta, debemos comparar con el ORIGINAL
+    // Si NO está en consulta, comparamos con el ACTUAL (comportamiento normal)
+    // Fecha: 2025-10-28
+    // Razón: Bug reportado - botón Revertir pierde tipo original
+    // ════════════════════════════════════════════════════════════
+    const codTarParaComparar = item._soloConsulta
+      ? item._tipoPagoOriginal
+      : itemOriginal.cod_tar;
+
+    const tipoPagoParaComparar = item._soloConsulta
+      ? item._nombreTipoPagoOriginal
+      : itemOriginal.tipoPago;
+
+    const precioParaComparar = item._soloConsulta
+      ? item._precioOriginal
+      : itemOriginal.precio;
+
+    console.log('\n🔄 ════════════════════════════════════════════════════');
+    console.log('📝 CAMBIO DE TIPO DE PAGO EN CARRITO');
+    console.log('🔄 ════════════════════════════════════════════════════');
+    console.log('Item:', item.nomart);
+    console.log(`🔍 Comparando con tipo de pago: ${item._soloConsulta ? 'ORIGINAL' : 'ANTERIOR'}`);
+    console.log(`   Tipo: ${tipoPagoParaComparar} (cod_tar: ${codTarParaComparar})`);
+    console.log(`   Precio: $${precioParaComparar}`);
+    console.log('cod_tar nuevo:', nuevoCodTar);
+
+    // Validar que el item no esté bloqueado
+    if (item._locked) {
+      this.mostrarAlertaItemBloqueado(item);
+      this.revertirCambio(item, itemKey);
+      return;
+    }
+
+    // Buscar información de la tarjeta nueva
+    const tarjetaSeleccionada = this.tarjetas.find(t => t.cod_tarj == nuevoCodTar);
+    if (!tarjetaSeleccionada) {
+      console.error('❌ Tarjeta no encontrada:', nuevoCodTar);
+      this.revertirCambio(item, itemKey);
+      return;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ✅ VALIDACIÓN: Detectar cambio entre tipos de pago diferentes
+    // Fecha: 2025-10-28
+    // Fix: Detectar por lista de precios, no solo por activadatos
+    // Razón: EFECTIVO y CUENTA CORRIENTE tienen activadatos=0 pero
+    //        diferentes listas (0 vs 1), causando cambio de precio
+    //        sin alerta al usuario
+    // Mejoras aplicadas:
+    //   - Mejora #2: Lógica de "razon" completa (muestra ambas razones)
+    //   - Mejora #3: Validación de tarjetaAnterior con warning
+    // ════════════════════════════════════════════════════════════
+
+    // ✅ FIX v4.1: Buscar tarjeta usando el cod_tar correcto (original o anterior)
+    const tarjetaParaComparar = this.tarjetas.find(t =>
+      t.cod_tarj.toString() === codTarParaComparar.toString()
+    );
+
+    // ✅ Validar si la tarjeta de referencia existe
+    if (!tarjetaParaComparar) {
+      console.warn(`⚠️ Tarjeta para comparar no encontrada: ${codTarParaComparar}`);
+      console.warn(`   Item en consulta: ${item._soloConsulta ? 'SÍ' : 'NO'}`);
+      console.warn('   Usando valores por defecto para comparación');
+    }
+
+    // Obtener lista de precios de referencia y nueva
+    const listaPrecioParaComparar = tarjetaParaComparar
+      ? Number(tarjetaParaComparar.listaprecio)
+      : 0;
+    const listaPrecioNueva = Number(tarjetaSeleccionada.listaprecio) || 0;
+
+    // Obtener activadatos de referencia y nuevo
+    const activadatosParaComparar = tarjetaParaComparar
+      ? (tarjetaParaComparar.activadatos || 0)
+      : 0;
+    const activadatosNuevo = tarjetaSeleccionada.activadatos || 0;
+
+    console.log(`🔍 Comparación de cambio:`);
+    console.log(`   Comparando con: ${item._soloConsulta ? 'ORIGINAL' : 'ANTERIOR'}`);
+    console.log(`   Lista precio: ${listaPrecioParaComparar} → ${listaPrecioNueva}`);
+    console.log(`   Activadatos: ${activadatosParaComparar} → ${activadatosNuevo}`);
+    console.log(`   cod_tar: ${codTarParaComparar} → ${nuevoCodTar}`);
+
+    // ✅ FIX v4.1: CRITERIO 1 - Cambio de activadatos (comparar con referencia correcta)
+    const cambioActivadatos = activadatosParaComparar !== activadatosNuevo;
+
+    // ✅ FIX v4.1: CRITERIO 2 - Cambio de lista de precios (comparar con referencia correcta)
+    const cambioListaPrecios = listaPrecioParaComparar !== listaPrecioNueva;
+
+    // ════════════════════════════════════════════════════════════
+    // ✅ FIX v4.2: CRITERIO 3 - Cambio de código de tarjeta
+    // Fecha: 2025-10-29
+    // Razón: Detectar cambios entre tipos de pago con mismo listaprecio/activadatos
+    //        Ejemplos problemáticos sin este criterio:
+    //        - NARANJA 1 PAGO (cod_tar=2) vs ELECTRON (cod_tar=1)
+    //          Ambos: listaprecio=2, activadatos=1
+    //        - EFECTIVO (cod_tar=11) vs EFECTIVO AJUSTE (cod_tar=112)
+    //          Ambos: listaprecio=0, activadatos=0
+    //        - CUENTA CORRIENTE (111) vs TRANSFERENCIA EFECTIVO (1111)
+    //          Ambos: listaprecio=1, activadatos=0
+    //        Total: 29 tipos de pago que pueden cambiar sin ser detectados
+    //               23 tarjetas + 3 efectivo/transferencias + 3 cuenta corriente
+    // Solución: Comparar directamente el código de tarjeta (cod_tar)
+    // ════════════════════════════════════════════════════════════
+    const cambioCodigoTarjeta = codTarParaComparar.toString() !== nuevoCodTar.toString();
+
+    // ════════════════════════════════════════════════════════════
+    // ✅ FIX v4.2: Lógica mejorada de marcado/desmarcado
+    // Ahora detecta CUALQUIER cambio de tipo de pago, no solo por lista/activadatos
+    // Distinguir entre marcar por primera vez vs mantener estado
+    // ════════════════════════════════════════════════════════════
+    if (cambioActivadatos || cambioListaPrecios || cambioCodigoTarjeta) {
+      // Hay diferencia entre el tipo de referencia y el nuevo tipo
+
+      if (item._soloConsulta) {
+        // Ya está marcado como consulta
+        // Solo mantenemos el estado, NO sobrescribimos los datos originales
+        const razones = [];
+        if (cambioActivadatos) razones.push('cambio de activadatos');
+        if (cambioListaPrecios) razones.push('cambio de lista de precios');
+        if (cambioCodigoTarjeta && !cambioActivadatos && !cambioListaPrecios) {
+          razones.push('cambio de tipo de pago (mismo listaprecio/activadatos)');
+        }
+        const razon = razones.join(' y ');
+
+        console.log(`⚠️ Item ya en consulta, manteniendo datos originales`);
+        console.log(`   Razón del cambio: ${razon}`);
+        console.log(`   Original: ${tipoPagoParaComparar} (${codTarParaComparar}) - $${precioParaComparar}`);
+        console.log(`   Nuevo: ${tarjetaSeleccionada.tarjeta} (${nuevoCodTar})`);
+
+        // NO llamar a marcarComoSoloConsulta porque NO queremos sobrescribir
+        // El item._soloConsulta ya es true y los datos originales están guardados
+
+      } else {
+        // Primera vez que se marca como consulta
+        const razones = [];
+        if (cambioActivadatos) razones.push('cambio de activadatos');
+        if (cambioListaPrecios) razones.push('cambio de lista de precios');
+        if (cambioCodigoTarjeta && !cambioActivadatos && !cambioListaPrecios) {
+          razones.push('cambio de tipo de pago (mismo listaprecio/activadatos)');
+        }
+        const razon = razones.join(' y ');
+
+        console.log(`⚠️ Marcando como consulta por primera vez`);
+        console.log(`   Razón: ${razon}`);
+        if (cambioListaPrecios) {
+          console.log(`   Precio cambiará de lista ${listaPrecioParaComparar} → ${listaPrecioNueva}`);
+        }
+
+        // Guardar el tipo ACTUAL REAL (antes de este cambio) como original
+        const codTarActualReal = itemOriginal.cod_tar;
+        const tipoPagoActualReal = itemOriginal.tipoPago;
+        const precioActualReal = itemOriginal.precio;
+
+        console.log(`💾 Guardando como original: ${tipoPagoActualReal} (${codTarActualReal}) - $${precioActualReal}`);
+
+        this.marcarComoSoloConsulta(
+          item,
+          tarjetaSeleccionada,
+          codTarActualReal,
+          tipoPagoActualReal,
+          precioActualReal
+        );
+      }
+
+    } else {
+      // NO hay diferencia → el usuario volvió al tipo de referencia
+      console.log(`✅ Sin diferencias detectadas → ${item._soloConsulta ? 'Volvió al tipo ORIGINAL' : 'Sin cambios'}`);
+      console.log(`   Quitando marca de consulta`);
+      this.quitarMarcaSoloConsulta(item);
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // CÁLCULO DE PRECIO NUEVO
+    // ════════════════════════════════════════════════════════════
+
+    const tipoMonedaItem = item.tipo_moneda || 3; // Default ARS
+    // Nota: listaPrecioNueva ya fue declarada arriba en la sección de validación
+
+    let precioNuevo: number;
+
+    // Seleccionar precio según lista
+    switch (listaPrecioNueva) {
+      case 0: precioNuevo = item.precon || 0; break;
+      case 1: precioNuevo = item.prefi1 || 0; break;
+      case 2: precioNuevo = item.prefi2 || 0; break;
+      case 3: precioNuevo = item.prefi3 || 0; break;
+      case 4: precioNuevo = item.prefi4 || 0; break;
+      default:
+        console.warn(`⚠️ listaprecio desconocido: ${listaPrecioNueva}, usando precio actual`);
+        precioNuevo = item.precio;
+    }
+
+    console.log(`💰 Precio base seleccionado (lista ${listaPrecioNueva}): $${precioNuevo}`);
+
+    // Convertir moneda si es necesario
+    if (tipoMonedaItem === 2) { // USD
+      precioNuevo = this.convertirUsdAMonedaVenta(precioNuevo);
+      console.log(`💱 Precio convertido USD→ARS: $${precioNuevo}`);
+    }
+
+    // Aplicar descuento si existe
+    if (item.descuento && item.descuento > 0) {
+      const precioConDescuento = precioNuevo - (precioNuevo * item.descuento / 100);
+      console.log(`🎯 Aplicando descuento ${item.descuento}%: $${precioNuevo} → $${precioConDescuento}`);
+      precioNuevo = precioConDescuento;
+    }
+
+    // ════════════════════════════════════════════════════════════
+    // ACTUALIZAR ITEM
+    // ════════════════════════════════════════════════════════════
+
+    // ✅ FIX: Asegurar que cod_tar siempre sea string para mantener consistencia
+    item.cod_tar = String(nuevoCodTar);
+    item.tipoPago = tarjetaSeleccionada.tarjeta;
+    item.precio = parseFloat(precioNuevo.toFixed(2));
+
+    console.log('✅ Item actualizado:', {
+      nomart: item.nomart,
+      cod_tar: item.cod_tar,
+      tipoPago: item.tipoPago,
+      precio: item.precio,
+      soloConsulta: item._soloConsulta || false
+    });
+
+    // ✅ FIX v3: Usar itemOriginal que ya tenemos (mismo índice)
+    // No necesitamos buscar nuevamente, ya lo tenemos desde línea 2090
+    itemOriginal.cod_tar = item.cod_tar;
+    itemOriginal.tipoPago = item.tipoPago;
+    itemOriginal.precio = item.precio;
+    itemOriginal._soloConsulta = item._soloConsulta;
+    itemOriginal._tipoPagoOriginal = item._tipoPagoOriginal;
+    itemOriginal._precioOriginal = item._precioOriginal;
+    itemOriginal._activadatosOriginal = item._activadatosOriginal;
+    itemOriginal._nombreTipoPagoOriginal = item._nombreTipoPagoOriginal;
+
+    console.log('✅ itemsEnCarrito actualizado correctamente (índice:', itemIndex, '):', {
+      _soloConsulta: itemOriginal._soloConsulta,
+      cod_tar: itemOriginal.cod_tar,
+      precio: itemOriginal.precio
+    });
+
+    // Recalcular totales y actualizar sessionStorage
+    this.calculoTotal();
+    this.calcularTotalesTemporales();  // ← NUEVO: Calcular totales temporales
+    this.actualizarSessionStorage();
+
+    console.log('🔄 ════════════════════════════════════════════════════\n');
+  }
+
+  /**
+   * Marca un item como "solo consulta" y guarda sus datos originales
+   */
+  private marcarComoSoloConsulta(item: any, tarjetaNueva: any, codTarOriginal: any, tipoPagoOriginal: string, precioOriginal: number): void {
+    console.log('⚠️ Marcando item como SOLO CONSULTA:', item.nomart);
+
+    // Si ya estaba marcado, no guardar datos originales nuevamente
+    if (!item._soloConsulta) {
+      // ✅ Usar los valores pasados como parámetros (capturados ANTES del cambio)
+      item._tipoPagoOriginal = codTarOriginal;
+      item._precioOriginal = precioOriginal;
+      item._activadatosOriginal = this.obtenerActivadatosDelItem(item);
+      item._nombreTipoPagoOriginal = tipoPagoOriginal;
+      console.log('💾 Datos originales guardados:', {
+        cod_tar_original: item._tipoPagoOriginal,
+        tipo: item._nombreTipoPagoOriginal,
+        precio: item._precioOriginal,
+        activadatos: item._activadatosOriginal
+      });
+    }
+
+    item._soloConsulta = true;
+
+    // Mostrar alerta informativa
+    Swal.fire({
+      icon: 'info',
+      title: 'Precio de consulta',
+      html: `
+        <div style="text-align: left; padding: 0 20px;">
+          <p>✅ El precio se ha actualizado a <strong>modo consulta</strong>.</p>
+          <hr>
+          <p><strong>Artículo:</strong> ${item.nomart}</p>
+          <p><strong>Método original:</strong> ${item._nombreTipoPagoOriginal} - $${item._precioOriginal?.toFixed(2)}</p>
+          <p><strong>Método de consulta:</strong> ${tarjetaNueva.tarjeta} - $${item.precio?.toFixed(2)}</p>
+          <hr>
+          <p>⚠️ <strong>Importante:</strong></p>
+          <ul>
+            <li>Este precio es <strong>solo para mostrar al cliente</strong></li>
+            <li><strong>NO podrá finalizar la venta</strong> con este item en consulta</li>
+          </ul>
+          <hr>
+          <p><strong>Para realizar la venta:</strong></p>
+          <ol>
+            <li>Haga clic en "Revertir" para volver al método original, o</li>
+            <li>Elimine el item y vuelva a agregarlo con el método de pago correcto</li>
+          </ol>
+        </div>
+      `,
+      confirmButtonText: 'Entendido',
+      width: 650,
+      timer: 10000,
+      timerProgressBar: true
+    });
+  }
+
+  /**
+   * Quita la marca de "solo consulta" si el cambio es dentro del mismo activadatos
+   */
+  private quitarMarcaSoloConsulta(item: any): void {
+    if (item._soloConsulta) {
+      console.log('✅ Quitando marca de consulta de:', item.nomart);
+
+      // Limpiar flags
+      delete item._soloConsulta;
+      delete item._tipoPagoOriginal;
+      delete item._precioOriginal;
+      delete item._activadatosOriginal;
+      delete item._nombreTipoPagoOriginal;
+    }
+  }
+
+  /**
+   * Revierte un item a su estado original (antes de marcar como consulta)
+   */
+  revertirItemAOriginal(item: any): void {
+    if (!item._soloConsulta) {
+      Swal.fire({
+        icon: 'info',
+        title: 'Item normal',
+        text: 'Este item no está en modo consulta.'
+      });
+      return;
+    }
+
+    Swal.fire({
+      icon: 'question',
+      title: '¿Revertir a método original?',
+      html: `
+        <p>¿Desea volver al método de pago original?</p>
+        <hr>
+        <p><strong>Método original:</strong> ${item._nombreTipoPagoOriginal} - $${item._precioOriginal?.toFixed(2)}</p>
+        <p><strong>Método actual:</strong> ${item.tipoPago} - $${item.precio?.toFixed(2)}</p>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, revertir',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33'
+    }).then(result => {
+      if (result.isConfirmed) {
+        console.log('🔄 Revirtiendo item a estado original:', item.nomart);
+
+        // Restaurar valores originales
+        const codTarOriginal = item._tipoPagoOriginal;
+        const tipoPagoOriginal = item._nombreTipoPagoOriginal;
+        const precioOriginal = item._precioOriginal;
+
+        console.log('📝 Restaurando valores:', {
+          cod_tar: codTarOriginal,
+          tipoPago: tipoPagoOriginal,
+          precio: precioOriginal
+        });
+
+        // ✅ FIX: Usar ÍNDICE para garantizar unicidad
+        const itemIndex = this.itemsConTipoPago.indexOf(item);
+        const itemEnCarrito = this.itemsEnCarrito[itemIndex];
+
+        if (itemEnCarrito) {
+          // ✅ FIX: Convertir a string para mantener consistencia con normalización
+          itemEnCarrito.cod_tar = String(codTarOriginal);
+          itemEnCarrito.tipoPago = tipoPagoOriginal;
+          itemEnCarrito.precio = precioOriginal;
+
+          // Limpiar flags en itemsEnCarrito
+          delete itemEnCarrito._soloConsulta;
+          delete itemEnCarrito._tipoPagoOriginal;
+          delete itemEnCarrito._precioOriginal;
+          delete itemEnCarrito._activadatosOriginal;
+          delete itemEnCarrito._nombreTipoPagoOriginal;
+        } else {
+          console.error('❌ ERROR: No se encontró item en itemsEnCarrito con índice:', itemIndex);
+        }
+
+        // ✅ FIX: Regenerar itemsConTipoPago para que Angular detecte los cambios
+        // Esto fuerza la actualización del dropdown
+        this.actualizarItemsConTipoPago();
+
+        // Recalcular totales y actualizar sessionStorage
+        this.calculoTotal();
+        this.calcularTotalesTemporales();  // ← NUEVO: Calcular totales temporales
+        this.actualizarSessionStorage();
+
+        // ✅ IMPORTANTE: Forzar detección de cambios en Angular
+        this.cdr.detectChanges();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Revertido',
+          text: 'Item restaurado al método de pago original.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
+    });
+  }
+
+  /**
+   * Obtiene el activadatos del tipo de pago ACTUAL del item
+   * ✅ FIX: SIEMPRE busca en tarjetas usando cod_tar actual
+   * NO usa item.activadatos porque ese valor es estático y no cambia con cod_tar
+   */
+  private obtenerActivadatosDelItem(item: any): number {
+    // ✅ SIEMPRE buscar en la lista de tarjetas usando el cod_tar ACTUAL
+    const tarjetaActual = this.tarjetas.find(t =>
+      t.cod_tarj.toString() === item.cod_tar.toString()
+    );
+
+    const activadatos = tarjetaActual ? (tarjetaActual.activadatos || 0) : 0;
+
+    console.log(`🔍 obtenerActivadatosDelItem para ${item.nomart}:`, {
+      cod_tar: item.cod_tar,
+      tarjeta_encontrada: tarjetaActual?.tarjeta || 'NO ENCONTRADA',
+      activadatos: activadatos
+    });
+
+    return activadatos;
+  }
+
+  /**
+   * Convierte un precio de USD a la moneda de venta (probablemente ARS)
+   */
+  private convertirUsdAMonedaVenta(precioUsd: number): number {
+    // Buscar en sessionStorage o en alguna variable global
+    const tasaCambio = parseFloat(sessionStorage.getItem('tasaCambioUsd') || '0');
+
+    if (tasaCambio > 0) {
+      return precioUsd * tasaCambio;
+    }
+
+    // Si no hay tasa, retornar el mismo precio (fallback)
+    console.warn('⚠️ No se encontró tasa de cambio USD, usando precio sin convertir');
+    return precioUsd;
+  }
+
+  /**
+   * Actualiza sessionStorage con el estado actual del carrito
+   */
+  private actualizarSessionStorage(): void {
+    try {
+      sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
+      console.log('💾 SessionStorage actualizado');
+    } catch (error) {
+      console.error('❌ Error al actualizar sessionStorage:', error);
+    }
+  }
+
+  /**
+   * Genera una clave única para identificar un item
+   */
+  private generarKeyUnica(item: any): string {
+    return `${item.id_articulo}_${item.cod_tar}`;
+  }
+
+  /**
+   * Revierte un cambio no permitido en el dropdown
+   */
+  private revertirCambio(item: any, itemKey: string): void {
+    console.log('⏪ Revertiendo cambio no permitido');
+  }
+
+  /**
+   * Muestra alerta cuando se intenta modificar un item bloqueado
+   */
+  private mostrarAlertaItemBloqueado(item: any): void {
+    Swal.fire({
+      icon: 'error',
+      title: 'Item bloqueado',
+      text: 'Este item no puede modificar su tipo de pago.',
+      footer: 'Si necesita cambiar el tipo de pago, elimine el item y vuelva a agregarlo.'
+    });
+  }
+
+  /**
+   * Verifica si hay items en modo consulta
+   */
+  hayItemsSoloConsulta(): boolean {
+    return this.itemsEnCarrito.some(item => item._soloConsulta === true);
+  }
+
+  /**
+   * Cuenta cuántos items están en modo consulta
+   */
+  contarItemsSoloConsulta(): number {
+    return this.itemsEnCarrito.filter(item => item._soloConsulta === true).length;
+  }
+
+  /**
+   * Valida que no haya items en modo consulta antes de finalizar
+   */
+  private validarItemsSoloConsulta(): { valido: boolean; items: any[] } {
+    const itemsConsulta = this.itemsEnCarrito.filter(item => item._soloConsulta === true);
+
+    return {
+      valido: itemsConsulta.length === 0,
+      items: itemsConsulta
+    };
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // FIN DE MÉTODOS PARA MODO CONSULTA
+  // ════════════════════════════════════════════════════════════
+
   ngOnDestroy(): void {
-    this.subscriptions.forEach(subscription => subscription.unsubscribe());
-    this.subscriptions = [];
+    // ✅ Completar el Subject destroy$ para liberar automáticamente todas las subscriptions
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 }
+//

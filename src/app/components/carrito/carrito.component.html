@@ -27,15 +27,53 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr *ngFor="let item of itemsConTipoPago">
+                            <tr *ngFor="let item of itemsConTipoPago"
+                                [ngClass]="{'item-solo-consulta': item._soloConsulta}">
                                 <td>
                                     <input class="sin-bordes" type="number" [(ngModel)]="item.cantidad"
                                         (ngModelChange)="actualizarCantidad(item, $event)" min="1">
                                 </td>
-                                <td><span class="producto-nombre">{{item.nomart}}</span></td>
-                                <td><span class="tipo-pago">{{item.tipoPago}}</span></td>
-                                <td><span class="precio">${{(item.precio * item.cantidad) | currencyFormat}}</span></td>
                                 <td>
+                                    <span class="producto-nombre">{{item.nomart}}</span>
+                                    <!-- ✅ NUEVO v4.0: Badge de Solo Consulta -->
+                                    <span *ngIf="item._soloConsulta" class="badge badge-warning ml-2">
+                                        <i class="pi pi-eye"></i> SOLO CONSULTA
+                                    </span>
+                                    <!-- ✅ NUEVO v4.0: Mostrar precio original si está en consulta -->
+                                    <div *ngIf="item._soloConsulta" class="precio-original-info">
+                                        <small class="text-muted">
+                                            <i class="pi pi-info-circle"></i>
+                                            Original: {{item._nombreTipoPagoOriginal}} - ${{item._precioOriginal | number:'1.2-2'}}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <!-- ✅ NUEVO v4.0: Selector de tipo de pago -->
+                                    <p-dropdown
+                                        [options]="tarjetas"
+                                        [(ngModel)]="item.cod_tar"
+                                        optionLabel="tarjeta"
+                                        optionValue="cod_tarj"
+                                        (onChange)="onTipoPagoChange(item, $event)"
+                                        placeholder="Seleccione tipo de pago"
+                                        [style]="{'width': '100%', 'min-width': '200px'}"
+                                        [disabled]="item._locked"
+                                        appendTo="body"
+                                        [showClear]="false">
+                                    </p-dropdown>
+                                </td>
+                                <td>
+                                    <span class="precio">${{(item.precio * item.cantidad) | currencyFormat}}</span>
+                                </td>
+                                <td>
+                                    <!-- ✅ NUEVO v4.0: Botón Revertir si está en consulta -->
+                                    <button *ngIf="item._soloConsulta"
+                                            class="btn btn-sm btn-warning mr-2"
+                                            (click)="revertirItemAOriginal(item)"
+                                            pTooltip="Volver al método de pago original">
+                                        <i class="pi pi-undo"></i> Revertir
+                                    </button>
+
                                     <button class="btn btn-sm btn-danger" (click)="eliminarItem(item)">
                                         <i class="fa fa-trash"></i> Eliminar
                                     </button>
@@ -46,7 +84,27 @@
                 </div>
                 
                 <div class="total-summary">
-                    <div class="total-price">Total: ${{suma | currencyFormat}}</div>
+                    <div class="total-price">
+                        Total: ${{suma | currencyFormat}}
+                        <span *ngIf="hayItemsEnConsulta" class="badge badge-info ml-2"
+                              pTooltip="Total basado en métodos de pago originales">
+                            REAL
+                        </span>
+                    </div>
+                </div>
+
+                <!-- NUEVO: Total Temporal cuando hay items en consulta -->
+                <div class="total-summary-temporal" *ngIf="hayItemsEnConsulta">
+                    <div class="total-temporal-header">
+                        <i class="pi pi-calculator"></i>
+                        <span>Total Temporal (Simulación)</span>
+                    </div>
+                    <div class="total-price-temporal">
+                        ${{sumaTemporalSimulacion | currencyFormat}}
+                        <small class="text-muted d-block" style="font-size: 0.7rem; font-weight: 400;">
+                            Incluye precios de consulta
+                        </small>
+                    </div>
                 </div>
 
                 <!-- NUEVO: Subtotales por tipo de pago -->
@@ -63,8 +121,53 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NUEVO: Subtotales Temporales cuando hay items en consulta -->
+                <div class="subtotales-section subtotales-temporales" *ngIf="hayItemsEnConsulta && subtotalesTemporalesSimulacion.length > 0">
+                    <div class="subtotales-header temporal-header">
+                        <h5 class="subtotales-title">
+                            <i class="pi pi-calculator"></i>
+                            Subtotales Temporales (Simulación)
+                        </h5>
+                        <small class="text-muted">Incluye items en modo consulta</small>
+                    </div>
+                    <div class="subtotales-list">
+                        <div class="subtotal-item subtotal-temporal"
+                             *ngFor="let subtotal of subtotalesTemporalesSimulacion"
+                             [ngClass]="{'indefinido': subtotal.tipoPago === 'Indefinido'}">
+                            <span class="subtotal-tipo">
+                                {{subtotal.tipoPago}}
+                                <!-- Marcar si es diferente del real -->
+                                <span *ngIf="esDiferenteDelReal(subtotal.tipoPago)"
+                                      class="badge badge-warning badge-xs ml-1">
+                                    SIMULADO
+                                </span>
+                            </span>
+                            <span class="subtotal-monto">${{subtotal.subtotal | currencyFormat}}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ✅ NUEVO v4.0: Warning global si hay items en consulta -->
+                <div *ngIf="hayItemsSoloConsulta()" class="alert alert-warning mt-3 p-3">
+                    <div class="d-flex align-items-start">
+                        <i class="pi pi-exclamation-triangle mr-3" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <strong>Atención:</strong> Hay <strong>{{contarItemsSoloConsulta()}}</strong> artículo(s) en modo consulta.
+                            <hr style="margin: 8px 0;">
+                            <p class="mb-2">
+                                Estos precios son <strong>solo para mostrar al cliente</strong>.
+                                No podrá finalizar la venta con items en modo consulta.
+                            </p>
+                            <p class="mb-0">
+                                <strong>Para realizar la venta:</strong> Haga clic en "Revertir" para volver al método original,
+                                o elimine el item y vuelva a agregarlo con el método de pago correcto.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
-            
+
             <!-- Sección de detalles de venta -->
             <div class="detalle-section">
                 <div class="carrito-header">
@@ -131,7 +234,10 @@
                 </div>
                 
                 <div class="action-buttons">
-                    <button class="btn btn-info" (click)="finalizar()">
+                    <button class="btn btn-info"
+                            (click)="finalizar()"
+                            [disabled]="hayItemsSoloConsulta()"
+                            [pTooltip]="hayItemsSoloConsulta() ? 'No puede finalizar con items en modo consulta' : 'Finalizar venta'">
                         <i class="fa fa-check-circle"></i> Finalizar Venta
                     </button>
                 </div>
