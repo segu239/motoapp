@@ -581,8 +581,8 @@ export class CarritoComponent implements OnDestroy {
           // Actualizar el resto del sistema
           this._carrito.actualizarCarrito(); // Refrescar el número del carrito del header
           this.calculoTotal();
-          this.calcularTotalesTemporales();  // ← NUEVO: Calcular totales temporales
-          this.actualizarItemsConTipoPago();
+          this.actualizarItemsConTipoPago();  // ✅ FIX: Sincronizar ANTES de calcular totales temporales
+          this.calcularTotalesTemporales();   // ← Ahora usa itemsConTipoPago actualizado
 
           // Confirmar eliminación exitosa
           Swal.fire('Eliminado!', 'El item fue eliminado.', 'success');
@@ -771,7 +771,7 @@ export class CarritoComponent implements OnDestroy {
       return;
     }
 
-    // Calcular total temporal basado en itemsConTipoPago (incluye valores temporales)
+    // ✅ FIX: Calcular total temporal con TODOS los items (muestra el total final si se confirman los cambios)
     this.sumaTemporalSimulacion = 0;
     for (let item of this.itemsConTipoPago) {
       this.sumaTemporalSimulacion += parseFloat((item.precio * item.cantidad).toFixed(2));
@@ -801,7 +801,12 @@ export class CarritoComponent implements OnDestroy {
     // Acumular subtotales por tipo de pago
     const subtotales = new Map<string, number>();
 
-    for (let item of this.itemsConTipoPago) {  // ← USA itemsConTipoPago
+    for (let item of this.itemsConTipoPago) {
+      // ✅ FIX: Solo incluir items en modo consulta
+      if (!item._soloConsulta) {
+        continue;  // Saltar items normales
+      }
+
       // Resolver tipo de pago usando el mapa pre-computado
       const tipoPago = tarjetaMap.get(item.cod_tar?.toString() || '') || 'Indefinido';
 
