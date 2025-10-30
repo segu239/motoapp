@@ -45,3 +45,13 @@ Thumbs.db
 .firebase
 *-debug.log
 .runtimeconfig.json
+
+# Archivos de backup y temporales
+*.backup
+*.backup-*
+*.bak
+temp_*.txt
+fix_temp.txt
+
+# Configuración local de Claude
+.claude/settings.local.json
