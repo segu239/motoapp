@@ -1574,6 +1574,20 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede crear el pedido. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
             // Insertar en la tabla pedidoitem y obtener el ID
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1584,7 +1598,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                 $pedidoItem['estado']
             ]);
             $result = $query->row_array();
@@ -1599,7 +1613,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items
             ]);
@@ -1647,6 +1661,20 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede recibir el pedido. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
             // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1657,7 +1685,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                   $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
             ]);
             $result = $query->row_array();
@@ -1672,7 +1700,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items_nuevo // Asociar con el nuevo id_items
             ]);
@@ -1682,15 +1710,59 @@ public function PedidoItemyCab_post() {
             // Actualizar id_num en el nuevo pedidoitem
                 $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
 
-            // Actualizar estado a "Solicitado-R" solo en el pedidoitem existente si se proporciona id_num
+            // Actualizar estado a "Recibido" solo en el pedidoitem existente si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
              }
-             
-              // Actualizar estado a "Solicitado-R" solo en pedidoscb existentes si se proporciona id_num
+
+              // Actualizar estado a "Recibido" solo en pedidoscb existentes si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
              }
+
+            // ============================================================================
+            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN RECEPCIÓN
+            // ============================================================================
+            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
+            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
+            // directamente al número del campo exi. Este mapeo traduce correctamente:
+            $mapeo_sucursal_exi = [
+                1 => 'exi2', // Casa Central
+                2 => 'exi3', // Valle Viejo
+                3 => 'exi4', // Güemes
+                4 => 'exi1', // Deposito
+                5 => 'exi5'  // Mayorista
+            ];
+
+            // Actualizar stock en sucursal DESTINO (la que recibe - SUMA stock)
+            $sucursal_destino = $pedidoscb['sucursald'];
+            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
+                ? $mapeo_sucursal_exi[$sucursal_destino]
+                : 'exi' . $sucursal_destino; // Fallback por seguridad
+
+            $sql_update_destino = "UPDATE artsucursal
+                                   SET $campo_stock_destino = $campo_stock_destino + ?
+                                   WHERE id_articulo = ?";
+            $this->db->query($sql_update_destino, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            // Actualizar stock en sucursal ORIGEN (la que envía - RESTA stock)
+            $sucursal_origen = $pedidoscb['sucursalh'];
+            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
+                ? $mapeo_sucursal_exi[$sucursal_origen]
+                : 'exi' . $sucursal_origen; // Fallback por seguridad
+
+            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
+            $sql_update_origen = "UPDATE artsucursal
+                                  SET $campo_stock_origen = $campo_stock_origen - ?
+                                  WHERE id_articulo = ?";
+            $this->db->query($sql_update_origen, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+            // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
 
@@ -1732,6 +1804,80 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede procesar el envío. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            // ============================================================================
+            // VALIDACIÓN DE STOCK DISPONIBLE ANTES DE ENVIAR
+            // ============================================================================
+            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
+            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
+            // directamente al número del campo exi. Este mapeo traduce correctamente:
+            // value 1 (Casa Central) → exi2
+            // value 2 (Valle Viejo)  → exi3
+            // value 3 (Güemes)       → exi4
+            // value 4 (Deposito)     → exi1
+            // value 5 (Mayorista)    → exi5
+            $mapeo_sucursal_exi = [
+                1 => 'exi2', // Casa Central
+                2 => 'exi3', // Valle Viejo
+                3 => 'exi4', // Güemes
+                4 => 'exi1', // Deposito
+                5 => 'exi5'  // Mayorista
+            ];
+
+            $sucursal_origen = $pedidoscb['sucursald']; // Sucursal que envía (ORIGEN en esta función)
+            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
+                ? $mapeo_sucursal_exi[$sucursal_origen]
+                : 'exi' . $sucursal_origen; // Fallback por seguridad
+
+            // Consultar stock actual de la sucursal que envía
+            $sql_check_stock = "SELECT $campo_stock_origen as stock_actual
+                                FROM artsucursal
+                                WHERE id_articulo = ?";
+            $query_stock = $this->db->query($sql_check_stock, [$pedidoItem['id_art']]);
+
+            if ($query_stock->num_rows() === 0) {
+                // El artículo no existe en artsucursal
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: El artículo no existe en el catálogo."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            $row_stock = $query_stock->row_array();
+            $stock_actual = $row_stock['stock_actual'];
+
+            // NOTA: Se permite enviar stock incluso con valores negativos
+            // El sistema debe permitir stocks negativos para reflejar deudas de stock
+            // Por ejemplo: Si sucursal tiene -80 y envía 1, quedará -81
+            /* VALIDACIÓN DESHABILITADA - Se permite stock negativo
+            if ($stock_actual < $pedidoItem['cantidad']) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: Stock insuficiente en sucursal origen. Disponible: " . $stock_actual . ", Solicitado: " . $pedidoItem['cantidad']
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+            */
+            // ============================================================================
+
             // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1742,7 +1888,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                   $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
             ]);
             $result = $query->row_array();
@@ -1757,7 +1903,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items_nuevo // Asociar con el nuevo id_items
             ]);
@@ -1776,6 +1922,39 @@ public function PedidoItemyCab_post() {
             if ($id_num_parametro) {
                  $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
              }
+
+            // ============================================================================
+            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN ENVÍO DIRECTO
+            // ============================================================================
+            // IMPORTANTE: En esta función, la semántica es DIFERENTE a PedidoItemyCabId_post:
+            // - sucursald = ORIGEN (quien envía)
+            // - sucursalh = DESTINO (quien recibe)
+
+            // Actualizar stock en sucursal DESTINO (la que recibe - SUMA stock)
+            $sucursal_destino = $pedidoscb['sucursalh']; // DESTINO en esta función
+            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
+                ? $mapeo_sucursal_exi[$sucursal_destino]
+                : 'exi' . $sucursal_destino; // Fallback por seguridad
+
+            $sql_update_destino = "UPDATE artsucursal
+                                   SET $campo_stock_destino = $campo_stock_destino + ?
+                                   WHERE id_articulo = ?";
+            $this->db->query($sql_update_destino, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            // Actualizar stock en sucursal ORIGEN (la que envía - RESTA stock)
+            // Nota: $sucursal_origen y $campo_stock_origen ya definidos en líneas 1853-1856
+            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
+            $sql_update_origen = "UPDATE artsucursal
+                                  SET $campo_stock_origen = $campo_stock_origen - ?
+                                  WHERE id_articulo = ?";
+            $this->db->query($sql_update_origen, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+            // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
 
