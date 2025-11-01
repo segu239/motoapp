@@ -82,7 +82,7 @@ selectedSucursal: number;
         id_items: 1,  //es autogenerado
         tipo: "PE",
         cantidad: this.cantidad,
-        id_art: this.producto.idart,
+        id_art: this.producto.id_articulo,
         descripcion: this.producto.nomart,
         precio: this.producto.precon,
         fecha_resuelto: fechaFormateada,
