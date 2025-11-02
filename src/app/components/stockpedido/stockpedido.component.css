@@ -1,0 +1,41 @@
+/* Estilos para estados de pedidos */
+
+/* Pedido rechazado por la sucursal destinataria */
+.pedido-rechazado {
+    background-color: #ffebee !important; /* Rojo claro */
+    border-left: 4px solid #d32f2f;
+}
+
+.pedido-rechazado:hover {
+    background-color: #ffcdd2 !important;
+}
+
+/* Pedido cancelado por la sucursal solicitante */
+.pedido-cancelado {
+    background-color: #fff3e0 !important; /* Naranja claro */
+    border-left: 4px solid #f57c00;
+}
+
+.pedido-cancelado:hover {
+    background-color: #ffe0b2 !important;
+}
+
+/* Pedido con problema reportado */
+.pedido-problema {
+    background-color: #fff9c4 !important; /* Amarillo claro */
+    border-left: 4px solid #f9a825;
+}
+
+.pedido-problema:hover {
+    background-color: #fff59d !important;
+}
+
+/* Pedido enviado (en tránsito) */
+.pedido-enviado {
+    background-color: #e3f2fd !important; /* Azul claro */
+    border-left: 4px solid #1976d2;
+}
+
+.pedido-enviado:hover {
+    background-color: #bbdefb !important;
+}
