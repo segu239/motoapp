@@ -57,8 +57,21 @@
                         <label for="comentario" style="margin-right: 5px;">Comentario:</label>
                         <input id="comentario" type="text" [(ngModel)]="comentario" min="1" style="width: 300px;" />
                     </div>
-                    <div style="display: flex; align-items: center;">
-                        <p-button label="Enviar" (click)="enviar()" styleClass="p-button-sm p-button-primary mr-2"></p-button>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <!-- Botón Enviar - Disponible para todos los roles -->
+                        <p-button label="Enviar"
+                                  (click)="enviar()"
+                                  styleClass="p-button-sm p-button-success"
+                                  icon="pi pi-send"
+                                  pTooltip="Enviar stock a la sucursal solicitante"></p-button>
+
+                        <!-- Botón Rechazar - Solo para SUPER/ADMIN -->
+                        <p-button *ngIf="puedeRechazar"
+                                  label="Rechazar"
+                                  (click)="rechazarSolicitud()"
+                                  styleClass="p-button-sm p-button-danger"
+                                  icon="pi pi-times"
+                                  pTooltip="Rechazar esta solicitud de stock"></p-button>
                     </div>
                 </div>
             </div>
