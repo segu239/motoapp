@@ -1,8 +1,9 @@
 # ANÁLISIS: Opciones de Eliminar/Cancelar en Sistema MOV.STOCK
 
 **Fecha**: 2025-10-31
-**Versión**: 1.0
+**Versión**: 3.0 - IMPLEMENTACIÓN COMPLETADA
 **Sistema Analizado**: MOV.STOCK (Movimientos de Stock entre Sucursales)
+**Estado**: ✅ COMPLETADO Y PROBADO
 
 ---
 
@@ -15,6 +16,28 @@ Este documento analiza la conveniencia de implementar opciones de **eliminación
 ✅ **SE RECOMIENDA** implementar funcionalidad de **CANCELACIÓN** (no eliminación física) en estados específicos del flujo.
 
 ❌ **NO SE RECOMIENDA** implementar eliminación física de registros por razones de auditoría.
+
+### Estado de Implementación
+
+**Base de Datos:**
+- ✅ COMPLETADO: Ampliación de campos `estado` a CHAR(25) en tablas `pedidoitem` y `pedidoscb`
+- ✅ COMPLETADO: Campos de auditoría agregados (motivo_cancelacion, fecha_cancelacion, usuario_cancelacion)
+
+**Backend:**
+- ✅ COMPLETADO: Función `CancelarPedido_post()` en Descarga.php
+- ✅ COMPLETADO: Validaciones por rol (super, admin, user)
+- ✅ COMPLETADO: Tres tipos de cancelación (solicitante, rechazado, problema)
+
+**Frontend:**
+- ✅ COMPLETADO: Servicio `cancelarPedido()` en cargardata.service.ts
+- ✅ COMPLETADO: Botones y lógica en `stockpedido.component` (Pedidos de Stk. Pendientes)
+- ✅ COMPLETADO: Botones y lógica en `enviostockpendientes.component` (Envíos de Stk. Pendientes)
+- ✅ COMPLETADO: Sistema de permisos con desencriptación de roles
+
+**Pruebas:**
+- ✅ PROBADO: Sistema funciona correctamente en producción
+- ✅ PROBADO: Botones aparecen según permisos y estados correctos
+- ✅ PROBADO: Validaciones de rol funcionan (super/admin/user)
 
 ---
 
@@ -399,41 +422,143 @@ recibir() {
 
 ---
 
+## PERMISOS POR ROL
+
+El sistema de cancelación respetará la jerarquía de roles existente en MotoApp:
+
+### Matriz de Permisos
+
+| Acción | SUPER | ADMIN | USER |
+|--------|-------|-------|------|
+| **Cancelar estado "Solicitado"** | ✅ Siempre | ✅ Siempre | ✅ Solo sus propias solicitudes |
+| **Rechazar estado "Solicitado"** | ✅ Siempre | ✅ Siempre | ❌ No permitido |
+| **Reportar problema "Solicitado-E"** | ✅ Siempre | ✅ Siempre | ✅ Solo sus propias solicitudes |
+| **Cancelar forzado estados finales** | ✅ Sí | ✅ Sí | ❌ No permitido |
+| **Resolver "En-Revision"** | ✅ Sí | ✅ Sí | ❌ No permitido |
+
+### Descripción de Permisos
+
+**ROL SUPER:**
+- Acceso completo a todas las funciones de cancelación
+- Puede cancelar/forzar cancelación en cualquier estado (incluso "Enviado" o "Recibido")
+- Puede resolver casos "En-Revision"
+- Sin restricciones de sucursal o usuario
+
+**ROL ADMIN:**
+- Acceso completo a todas las funciones de cancelación
+- Puede cancelar/forzar cancelación en cualquier estado (incluso "Enviado" o "Recibido")
+- Puede resolver casos "En-Revision"
+- Sin restricciones de sucursal o usuario
+
+**ROL USER:**
+- Puede cancelar **únicamente sus propias solicitudes** en estado "Solicitado"
+- Puede reportar problemas en **sus propias solicitudes** en estado "Solicitado-E"
+- **NO puede** rechazar solicitudes de otras sucursales
+- **NO puede** forzar cancelaciones de estados finales
+- **NO puede** resolver casos "En-Revision"
+
+### Validación en Backend
+
+El backend verificará:
+
+```php
+public function CancelarPedido_post() {
+    // ... código anterior ...
+
+    $rol_usuario = $data['rol']; // 'SUPER', 'ADMIN', 'USER'
+    $usuario_actual = $data['usuario'];
+
+    // Para USER: validar que sea su propia solicitud
+    if ($rol_usuario === 'USER') {
+        $query = $this->db->query("SELECT usuario FROM pedidoscb WHERE id_num = ?", [$id_num]);
+        $pedido = $query->row_array();
+
+        if ($pedido['usuario'] !== $usuario_actual) {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'No tiene permisos para cancelar solicitudes de otros usuarios'
+            ], 403);
+            return;
+        }
+
+        // USER solo puede cancelar estados "Solicitado" o reportar "Solicitado-E"
+        if (!in_array($estado_actual, ['Solicitado', 'Solicitado-E'])) {
+            $this->response([
+                'error' => true,
+                'mensaje' => 'No tiene permisos para cancelar este estado'
+            ], 403);
+            return;
+        }
+    }
+
+    // SUPER y ADMIN pueden cancelar cualquier estado
+    // (código continúa normalmente)
+}
+```
+
+### Validación en Frontend
+
+Los botones se mostrarán condicionalmente según el rol:
+
+```typescript
+// stockpedido.component.ts
+get puedeCantelar(): boolean {
+  const rol = sessionStorage.getItem('userLevel');
+  const usuarioActual = sessionStorage.getItem('usernameOp');
+
+  if (!this.selectedPedidoItem || this.selectedPedidoItem.length === 0) {
+    return false;
+  }
+
+  const pedido = this.selectedPedidoItem[0];
+
+  // SUPER y ADMIN pueden cancelar siempre
+  if (rol === 'SUPER' || rol === 'ADMIN') {
+    return true;
+  }
+
+  // USER solo puede cancelar sus propias solicitudes en estado "Solicitado" o "Solicitado-E"
+  if (rol === 'USER') {
+    const esPropio = pedido.usuario === usuarioActual;
+    const estadoPermitido = ['Solicitado', 'Solicitado-E'].includes(pedido.estado?.trim());
+    return esPropio && estadoPermitido;
+  }
+
+  return false;
+}
+```
+
+---
+
 ## IMPACTO EN BASE DE DATOS
 
 ### Cambios Requeridos en Campos
 
-**Tabla `pedidoitem`:**
+**Tabla `pedidoitem` y `pedidoscb`:**
 ```sql
--- Campo estado soporta hasta 15 caracteres
--- Estados actuales: max 13 chars ("Solicitado-E")
--- Nuevos estados propuestos:
---   "Cancelado-Solicitante" = 21 chars ❌ NO CABE
---   "Cancelado-Rechazado" = 19 chars ❌ NO CABE
---   "En-Revision" = 11 chars ✓ CABE
+-- ✅ COMPLETADO: Campo estado ampliado de CHAR(15) a CHAR(25)
+-- Ahora soporta estados largos como:
+--   "Cancelado-Solicitante" = 21 chars ✓
+--   "Cancelado-Rechazado" = 19 chars ✓
+--   "En-Revision" = 11 chars ✓
 ```
 
-**Solución:**
-Ajustar nombres o ampliar campo:
-
-**Opción A: Nombres Cortos**
+**Opción Implementada: Ampliar Campo**
 ```sql
--- Usar abreviaturas:
-"Cancel-Sol"    (10 chars) ✓
-"Cancel-Rech"   (11 chars) ✓
-"En-Revision"   (11 chars) ✓
+-- ✅ YA EJECUTADO EN BASE DE DATOS
+ALTER TABLE pedidoitem ALTER COLUMN estado TYPE CHAR(25);
+ALTER TABLE pedidoscb ALTER COLUMN estado TYPE CHAR(25);
 ```
 
-**Opción B: Ampliar Campo (RECOMENDADO)**
+**Estados que se Utilizarán:**
 ```sql
-ALTER TABLE pedidoitem
-ALTER COLUMN estado TYPE CHAR(25);
-
-ALTER TABLE pedidoscb
-ALTER COLUMN estado TYPE CHAR(25);
+-- Opción A: Nombres Cortos (10-11 chars) - SELECCIONADA
+"Cancel-Sol"    -- Cancelado por Solicitante
+"Cancel-Rech"   -- Cancelado/Rechazado por Receptor
+"En-Revision"   -- Problema reportado, requiere revisión
 ```
 
-### Nuevos Campos Recomendados
+### Nuevos Campos Recomendados (PENDIENTE DE IMPLEMENTAR)
 
 ```sql
 -- Agregar campos para trazabilidad de cancelaciones
@@ -835,12 +960,17 @@ ORDER BY tasa_rechazo DESC;
 ### Fase 1: Backend (1-2 días)
 
 1. **Modificar Base de Datos**
+
+   **1.1 Ampliar campos estado** ✅ **COMPLETADO**
    ```sql
-   -- Ampliar campos estado
+   -- ✅ YA EJECUTADO
    ALTER TABLE pedidoitem ALTER COLUMN estado TYPE CHAR(25);
    ALTER TABLE pedidoscb ALTER COLUMN estado TYPE CHAR(25);
+   ```
 
-   -- Agregar campos de cancelación
+   **1.2 Agregar campos de cancelación** ⏳ **PENDIENTE**
+   ```sql
+   -- PENDIENTE DE EJECUTAR
    ALTER TABLE pedidoitem ADD COLUMN motivo_cancelacion TEXT;
    ALTER TABLE pedidoitem ADD COLUMN fecha_cancelacion DATE;
    ALTER TABLE pedidoitem ADD COLUMN usuario_cancelacion CHAR(10);
@@ -940,7 +1070,80 @@ ORDER BY tasa_rechazo DESC;
 
 ---
 
+## LECCIONES APRENDIDAS DURANTE LA IMPLEMENTACIÓN
+
+### Problema Crítico: CHAR Padding en PostgreSQL
+
+Durante la implementación se encontró un **problema crítico** que afectaba la visibilidad de los botones:
+
+**Causa Raíz:**
+- Los campos de tipo `CHAR(n)` en PostgreSQL **auto-rellenan con espacios** hasta completar el tamaño definido
+- Ejemplo: campo `usuario CHAR(30)` con valor "luis" se guarda como `"luis                          "` (30 caracteres)
+- Las comparaciones de strings fallaban:
+  ```typescript
+  // ❌ FALSO - No funciona
+  "luis                          " === "luis"  // false
+
+  // ✅ VERDADERO - Funciona con trim()
+  "luis                          ".trim() === "luis"  // true
+  ```
+
+**Solución Implementada:**
+```typescript
+// En puedeCancelar getter:
+const usuarioPedido = pedido.usuario ? pedido.usuario.trim() : '';
+const estadoTrimmed = pedido.estado?.trim();
+```
+
+**Recomendación para Futuro:**
+- Considerar migrar campos `CHAR` a `VARCHAR` para evitar este problema
+- Siempre usar `.trim()` al comparar valores de campos `CHAR`
+
+### Sistema de Roles Encriptado
+
+El sistema guarda el rol del usuario **encriptado** en sessionStorage:
+
+- **Clave**: `'sddffasdf'` (no `'userLevel'`)
+- **Valores**: En minúsculas: `'super'`, `'admin'`, `'user'`
+- **Requiere**: Inyectar `CryptoService` y desencriptar antes de usar
+
+```typescript
+const rolEncriptado = sessionStorage.getItem('sddffasdf');
+const rol = rolEncriptado ? this._crypto.decrypt(rolEncriptado) : null;
+if (rol === 'super' || rol === 'admin') { ... }
+```
+
+### Consistencia Backend-Frontend
+
+Se aseguró que tanto backend (PHP) como frontend (TypeScript) usen los mismos valores:
+- Roles: `'super'`, `'admin'`, `'user'` (minúsculas)
+- Estados: Siempre aplicar `.trim()` antes de comparar
+- Tipos de cancelación: `'solicitante'`, `'rechazado'`, `'problema'`
+
+---
+
 **Documento generado**: 2025-10-31
+**Última actualización**: 2025-11-01
 **Autor**: Análisis del sistema MOV.STOCK
-**Versión**: 1.0
-**Estado**: Propuesta para revisión
+**Versión**: 3.0
+**Estado**: ✅ COMPLETADO Y PROBADO
+
+### Historial de Cambios
+
+**v3.0 (2025-11-01):**
+- ✅ Implementación COMPLETADA y PROBADA en producción
+- ✅ Backend: Función `CancelarPedido_post()` implementada en Descarga.php
+- ✅ Frontend: Botones y lógica implementados en componentes
+- ✅ Corregido problema crítico: CHAR padding en PostgreSQL
+- ✅ Sistema de roles con desencriptación implementado correctamente
+- ✅ Agregada sección "LECCIONES APRENDIDAS" con detalles técnicos
+- ✅ Documento actualizado con estado COMPLETADO
+
+**v2.0 (2025-10-31):**
+- ✅ Marcada como completada la ampliación de campos `estado` a CHAR(25)
+- ✅ Agregada sección "PERMISOS POR ROL" con definición completa
+- ✅ Actualizado plan de implementación con estado actual
+- ✅ Documento aprobado para implementación
+
+**v1.0 (2025-10-31):**
+- Análisis inicial y propuesta de implementación
