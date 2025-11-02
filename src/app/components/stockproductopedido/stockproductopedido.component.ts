@@ -8,6 +8,7 @@ import { CargardataService } from 'src/app/services/cargardata.service';
 import { CrudService } from 'src/app/services/crud.service';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-stockproductopedido',
@@ -127,11 +128,29 @@ selectedSucursal: number;
       this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe(
         response => {
           console.log('Pedido creado exitosamente', response);
-          
-          this.ref.close();
+
+          // Mostrar mensaje de éxito
+          Swal.fire({
+            title: '¡Éxito!',
+            text: 'Solicitud de stock realizada correctamente',
+            icon: 'success',
+            confirmButtonText: 'Aceptar',
+            timer: 3000,
+            timerProgressBar: true
+          }).then(() => {
+            this.ref.close();
+          });
         },
         error => {
           console.error('Error al crear el pedido', error);
+
+          // Mostrar mensaje de error
+          Swal.fire({
+            title: 'Error',
+            text: 'No se pudo realizar la solicitud de stock. Por favor, intente nuevamente.',
+            icon: 'error',
+            confirmButtonText: 'Aceptar'
+          });
         }
       );
     }
