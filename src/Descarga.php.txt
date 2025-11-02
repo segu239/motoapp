@@ -5515,5 +5515,214 @@ private function notificarDiscrepancia($id_movimiento, $comparacion) {
 //                     FIN ALTERNATIVA C - GRANULARIDAD CAJAMOVI
 // ============================================================================
 
+// ============================================================================
+//                     SISTEMA DE CANCELACIÓN MOV.STOCK
+// ============================================================================
+
+/**
+ * FUNCIÓN: CancelarPedido_post()
+ *
+ * Cancela o rechaza pedidos de stock según el tipo de cancelación y estado actual.
+ * Implementa validaciones de permisos por rol y mantiene auditoría completa.
+ *
+ * TIPOS DE CANCELACIÓN:
+ * - 'solicitante': Cancelado por quien solicitó (estado "Solicitado")
+ * - 'rechazado': Rechazado por quien debe enviar (estado "Solicitado")
+ * - 'problema': Problema reportado en tránsito (estado "Solicitado-E")
+ *
+ * ESTADOS NUEVOS:
+ * - 'Cancel-Sol': Cancelado por Solicitante
+ * - 'Cancel-Rech': Rechazado por Receptor
+ * - 'En-Revision': Problema reportado, requiere revisión
+ *
+ * PERMISOS:
+ * - SUPER/ADMIN: Pueden cancelar cualquier estado
+ * - USER: Solo puede cancelar sus propias solicitudes en estado "Solicitado" o "Solicitado-E"
+ *
+ * @date 2025-10-31
+ */
+public function CancelarPedido_post() {
+    $data = $this->post();
+
+    // Validar datos requeridos
+    if(!isset($data['id_num']) || !isset($data['motivo']) || !isset($data['tipo_cancelacion'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos requeridos: id_num, motivo, tipo_cancelacion"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $motivo = trim($data['motivo']);
+    $tipo_cancelacion = $data['tipo_cancelacion']; // 'solicitante', 'rechazado', 'problema'
+    $usuario = isset($data['usuario']) ? $data['usuario'] : '';
+    $rol = isset($data['rol']) ? $data['rol'] : 'USER'; // SUPER, ADMIN, USER
+
+    // Validar que el motivo no esté vacío
+    if(empty($motivo)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El motivo de cancelación es obligatorio"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Iniciar transacción
+    $this->db->trans_start();
+
+    // Determinar nuevo estado según tipo de cancelación
+    switch($tipo_cancelacion) {
+        case 'solicitante':
+            $nuevo_estado = 'Cancel-Sol';
+            break;
+        case 'rechazado':
+            $nuevo_estado = 'Cancel-Rech';
+            break;
+        case 'problema':
+            $nuevo_estado = 'En-Revision';
+            break;
+        default:
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Tipo de cancelación inválido: " . $tipo_cancelacion
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+    }
+
+    // Obtener pedido actual
+    $query = $this->db->query("SELECT estado, usuario FROM pedidoscb WHERE id_num = ?", [$id_num]);
+
+    if ($query->num_rows() === 0) {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Pedido no encontrado con id_num: " . $id_num
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    $pedido = $query->row_array();
+    $estado_actual = trim($pedido['estado']);
+    $usuario_pedido = trim($pedido['usuario']);
+
+    // VALIDACIÓN DE PERMISOS POR ROL
+    if ($rol === 'user') {
+        // USER solo puede cancelar sus propias solicitudes
+        if ($usuario_pedido !== $usuario) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para cancelar solicitudes de otros usuarios"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
+        // USER solo puede cancelar estados "Solicitado" o reportar problema "Solicitado-E"
+        if (!in_array($estado_actual, ['Solicitado', 'Solicitado-E'])) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para cancelar pedidos en estado: " . $estado_actual
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
+        // USER no puede rechazar solicitudes (solo SUPER/ADMIN)
+        if ($tipo_cancelacion === 'rechazado') {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para rechazar solicitudes. Solo puede cancelar sus propias solicitudes."
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+    }
+
+    // SUPER y ADMIN pueden cancelar cualquier estado (sin validaciones adicionales)
+
+    // Validar que el estado permita cancelación (solo para USER)
+    if ($rol === 'user') {
+        $estados_cancelables = ['Solicitado', 'Solicitado-E'];
+        if (!in_array($estado_actual, $estados_cancelables)) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se puede cancelar un pedido en estado: " . $estado_actual
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+    }
+
+    // Validar tipo de cancelación según estado
+    if ($estado_actual === 'Solicitado' && $tipo_cancelacion === 'problema') {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se puede reportar problema en estado Solicitado. Use cancelación normal."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Actualizar pedidoscb
+    $sql_update_cab = "
+        UPDATE pedidoscb
+        SET estado = ?,
+            motivo_cancelacion = ?,
+            fecha_cancelacion = CURRENT_DATE,
+            usuario_cancelacion = ?
+        WHERE id_num = ?
+    ";
+    $this->db->query($sql_update_cab, [$nuevo_estado, $motivo, $usuario, $id_num]);
+
+    // Actualizar pedidoitem - agregar motivo a observación
+    $sql_update_item = "
+        UPDATE pedidoitem
+        SET estado = ?,
+            observacion = CONCAT(COALESCE(observacion, ''), ' | CANCELADO: ', ?)
+        WHERE id_num = ?
+    ";
+    $this->db->query($sql_update_item, [$nuevo_estado, $motivo, $id_num]);
+
+    // Completar transacción
+    $this->db->trans_complete();
+
+    if ($this->db->trans_status() === FALSE) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al cancelar el pedido. La transacción ha sido revertida."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    } else {
+        // Log de auditoría
+        log_message('info', "✅ Pedido cancelado - ID: {$id_num}, Estado anterior: {$estado_actual}, Nuevo estado: {$nuevo_estado}, Usuario: {$usuario}, Tipo: {$tipo_cancelacion}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Pedido cancelado exitosamente",
+            "nuevo_estado" => $nuevo_estado,
+            "estado_anterior" => $estado_actual
+        );
+        $this->response($respuesta);
+    }
+
+    // Nota: Si el estado era "Solicitado-E" y se reporta problema,
+    // NO revertir stocks automáticamente (requiere revisión manual por ADMIN/SUPER)
+}
+
+// ============================================================================
+//                     FIN SISTEMA DE CANCELACIÓN MOV.STOCK
+// ============================================================================
+
 }
 
