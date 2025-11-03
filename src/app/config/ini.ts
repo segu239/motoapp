@@ -241,3 +241,6 @@ export const UrlPriceFilterOptions = "https://motoapp.loclx.io/APIAND/index.php/
 export const UrlPricePreview = "https://motoapp.loclx.io/APIAND/index.php/Carga/PricePreview";
 export const UrlPriceUpdate = "https://motoapp.loclx.io/APIAND/index.php/Descarga/PriceUpdate";
 export const UrlPriceChangeHistory = "https://motoapp.loclx.io/APIAND/index.php/Carga/PriceChangeHistory";
+
+// URL para cancelación de pedidos de stock
+export const UrlCancelarPedidoStock = "https://motoapp.loclx.io/APIAND/index.php/Descarga/CancelarPedidoStock";

@@ -1761,6 +1761,100 @@ public function PedidoItemyCab_post() {
         }
     }
 
+/**
+ * Cancela un pedido de stock en estado Solicitado o Solicitado-E
+ *
+ * @param int id_num - ID del pedido a cancelar
+ * @param string usuario - Usuario que cancela
+ * @param string motivo_cancelacion - Motivo de la cancelación
+ * @param date fecha_cancelacion - Fecha de cancelación (opcional, default: hoy)
+ *
+ * @return array Respuesta con resultado de la operación
+ */
+public function CancelarPedidoStock_post() {
+    $data = $this->post();
+
+    // Validar que los datos necesarios estén presentes
+    if(!isset($data['id_num'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el campo id_num"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    if(!isset($data['usuario']) || !isset($data['motivo_cancelacion'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos requeridos (usuario, motivo_cancelacion)"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+    $motivo_cancelacion = $data['motivo_cancelacion'];
+    $fecha_cancelacion = isset($data['fecha_cancelacion']) ? $data['fecha_cancelacion'] : date('Y-m-d');
+
+    $this->db->trans_start(); // Iniciar transacción
+
+    // Actualizar estado en pedidoitem
+    // Solo permitir cancelar si estado es "Solicitado" o "Solicitado-E"
+    $this->db->query(
+        "UPDATE pedidoitem
+         SET estado = 'Cancelado',
+             motivo_cancelacion = ?,
+             fecha_cancelacion = ?,
+             usuario_cancelacion = ?
+         WHERE id_num = ?
+         AND estado IN ('Solicitado', 'Solicitado-E')",
+        [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
+    );
+
+    $affected_rows_item = $this->db->affected_rows();
+
+    // Actualizar estado en pedidoscb
+    $this->db->query(
+        "UPDATE pedidoscb
+         SET estado = 'Cancelado',
+             motivo_cancelacion = ?,
+             fecha_cancelacion = ?,
+             usuario_cancelacion = ?
+         WHERE id_num = ?
+         AND estado IN ('Solicitado', 'Solicitado-E')",
+        [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
+    );
+
+    $affected_rows_cb = $this->db->affected_rows();
+
+    $this->db->trans_complete();
+
+    if ($this->db->trans_status() === FALSE) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al cancelar el pedido"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    } else {
+        if($affected_rows_item === 0) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontró el pedido o ya fue procesado (solo se pueden cancelar pedidos en estado 'Solicitado' o 'Solicitado-E')"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => "Pedido cancelado exitosamente",
+                "registros_actualizados" => $affected_rows_item
+            );
+            $this->response($respuesta, REST_Controller::HTTP_OK);
+        }
+    }
+}
+
 public function SubirDatosRubroPrincipal_post()
 {
     $data = $this->post();

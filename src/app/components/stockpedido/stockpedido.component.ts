@@ -342,4 +342,102 @@ refrescarDatos() {
     this.cargarPedidos();
   }
 
+  /**
+   * Cancela una solicitud de stock propia
+   * Solo permite cancelar solicitudes en estado "Solicitado"
+   */
+  cancelarPedido() {
+    // Validar que se haya seleccionado un pedido
+    if (this.selectedPedidoItem.length === 0) {
+      Swal.fire('Error', 'Debe seleccionar un pedido para cancelar', 'error');
+      return;
+    }
+
+    const selectedPedido = this.selectedPedidoItem[0];
+
+    // Validar que el estado sea "Solicitado"
+    if (selectedPedido.estado.trim() !== "Solicitado") {
+      Swal.fire(
+        'Error',
+        'Solo se pueden cancelar solicitudes en estado "Solicitado"',
+        'error'
+      );
+      return;
+    }
+
+    // Solicitar motivo de cancelación al usuario
+    Swal.fire({
+      title: '¿Está seguro?',
+      text: '¿Desea cancelar esta solicitud de stock?',
+      input: 'textarea',
+      inputLabel: 'Motivo de cancelación',
+      inputPlaceholder: 'Ingrese el motivo de la cancelación...',
+      inputAttributes: {
+        'aria-label': 'Ingrese el motivo de la cancelación'
+      },
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, cancelar',
+      cancelButtonText: 'No',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debe ingresar un motivo de cancelación';
+        }
+        return null;
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const id_num = selectedPedido.id_num;
+        const usuario = sessionStorage.getItem('usernameOp') || '';
+        const motivo_cancelacion = result.value;
+        const fecha = new Date();
+
+        // Mostrar indicador de carga
+        Swal.fire({
+          title: 'Cancelando solicitud...',
+          text: 'Por favor espere',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Llamar al servicio para cancelar
+        this._cargardata.cancelarPedidoStock(
+          id_num,
+          usuario,
+          motivo_cancelacion,
+          fecha
+        ).subscribe({
+          next: (response: any) => {
+            console.log('Respuesta de cancelación:', response);
+
+            if (response.error) {
+              Swal.fire('Error', response.mensaje, 'error');
+            } else {
+              Swal.fire({
+                title: 'Éxito',
+                text: 'Solicitud cancelada exitosamente',
+                icon: 'success',
+                timer: 2000,
+                showConfirmButton: false
+              });
+              this.refrescarDatos();
+            }
+          },
+          error: (err) => {
+            console.error('Error al cancelar solicitud:', err);
+            Swal.fire(
+              'Error',
+              'Error al cancelar la solicitud. Por favor intente nuevamente.',
+              'error'
+            );
+          }
+        });
+      }
+    });
+  }
+
 }

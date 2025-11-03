@@ -137,6 +137,7 @@
                     </div>
                     <div style="display: flex; align-items: center;">
                         <p-button label="Recibir" (click)="recibir()" styleClass="p-button-sm p-button-primary mr-2"></p-button>
+                        <p-button label="Cancelar" icon="pi pi-times" (click)="cancelarPedido()" styleClass="p-button-sm p-button-danger mr-2" [disabled]="selectedPedidoItem.length === 0"></p-button>
                     </div>
                 </div>
             </div>
