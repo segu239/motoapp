@@ -35,7 +35,7 @@ export class CajamoviComponent implements OnInit, AfterViewInit, OnDestroy {
   private isNavigatingAway: boolean = false; // Flag para controlar limpieza de sessionStorage
   private filterTimeout: any = null; // Para manejar timeouts de filtros
   private exportTimeout: any = null; // Para manejar timeout de exportación
-  
+
   // Propiedades para paginación
   public paginaActual = 1;
   public totalPaginas = 0;

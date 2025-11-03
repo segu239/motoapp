@@ -18,6 +18,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { PedidosComponent } from '../pedidos/pedidos.component';
 import { RecibosComponent } from '../recibos/recibos.component';
 import { CalendarModule } from 'primeng/calendar';
+import { CryptoService } from '../../services/crypto.service';
 interface Column {
   field: string;
   header: string;
@@ -50,7 +51,7 @@ export class StockpedidoComponent implements OnInit{
   public cantidad:number;
   public comentario: string ='sin comentario';
 
-  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private _crypto: CryptoService) {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
@@ -114,7 +115,9 @@ export class StockpedidoComponent implements OnInit{
   cargarPedidos() {
     this._cargardata.obtenerPedidoItemPorSucursal(this.sucursal).subscribe((data: any) => {
       console.log(data);
-      this.pedidoItem = data.mensaje.filter((item: any) => item.estado.trim() === 'Solicitado' || item.estado.trim() === 'Solicitado-E');//this.pedidoItem = data.mensaje.filter((item: any) => item.estado.trim() === 'Solicitado');
+      // Mostrar pedidos pendientes y también los cancelados/rechazados para que la sucursal solicitante pueda verlos
+      const estadosVisibles = ['Solicitado', 'Solicitado-E', 'Cancel-Sol', 'Cancel-Rech', 'En-Revision'];
+      this.pedidoItem = data.mensaje.filter((item: any) => estadosVisibles.includes(item.estado.trim()));
       console.log(this.pedidoItem);
     });
   }
@@ -340,6 +343,151 @@ refrescarDatos() {
     // Implementa la lógica para refrescar los datos aquí
     // Por ejemplo, puedes volver a cargar los pedidos desde el servidor
     this.cargarPedidos();
+  }
+
+  /**
+   * Cancela una solicitud propia en estado "Solicitado"
+   * Solo USER puede cancelar sus propias solicitudes
+   * SUPER/ADMIN pueden cancelar cualquier solicitud
+   */
+  cancelarSolicitud() {
+    if (this.selectedPedidoItem.length === 0) {
+      Swal.fire('Error', 'Debe seleccionar un pedido', 'error');
+      return;
+    }
+
+    const selectedPedido = this.selectedPedidoItem[0];
+
+    if (selectedPedido.estado.trim() !== "Solicitado") {
+      Swal.fire('Error', 'Solo se pueden cancelar pedidos en estado "Solicitado"', 'error');
+      return;
+    }
+
+    // Solicitar motivo de cancelación
+    Swal.fire({
+      title: '¿Cancelar solicitud?',
+      input: 'textarea',
+      inputLabel: 'Motivo de cancelación (opcional)',
+      inputPlaceholder: 'Ingrese el motivo de la cancelación...',
+      inputAttributes: {
+        'aria-label': 'Motivo de cancelación'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Cancelar Solicitud',
+      cancelButtonText: 'Volver',
+      confirmButtonColor: '#f39c12'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const motivo = result.value || 'Sin motivo especificado';
+
+        this._cargardata.cancelarPedido(selectedPedido.id_num, motivo, 'solicitante').subscribe({
+          next: (response: any) => {
+            console.log(response);
+            Swal.fire('Éxito', 'Solicitud cancelada correctamente', 'success');
+            this.refrescarDatos();
+          },
+          error: (err) => {
+            console.error(err);
+            const mensaje = err.error?.mensaje || 'Error al cancelar la solicitud';
+            Swal.fire('Error', mensaje, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Reporta un problema con un pedido en estado "Solicitado-E"
+   * La mercadería no llegó o llegó con problemas
+   */
+  reportarProblema() {
+    if (this.selectedPedidoItem.length === 0) {
+      Swal.fire('Error', 'Debe seleccionar un pedido', 'error');
+      return;
+    }
+
+    const selectedPedido = this.selectedPedidoItem[0];
+
+    if (selectedPedido.estado.trim() !== "Solicitado-E") {
+      Swal.fire('Error', 'Solo se pueden reportar problemas en pedidos en estado "Solicitado-E"', 'error');
+      return;
+    }
+
+    // Solicitar descripción del problema (OBLIGATORIO)
+    Swal.fire({
+      title: '¿Reportar problema?',
+      text: 'Esta acción marcará el pedido como "En Revisión" y requerirá intervención de un administrador',
+      input: 'textarea',
+      inputLabel: 'Descripción del problema (obligatorio)',
+      inputPlaceholder: 'Ej: Mercadería no recibida, llegó dañada, cantidad incorrecta, etc.',
+      inputAttributes: {
+        'aria-label': 'Descripción del problema'
+      },
+      showCancelButton: true,
+      confirmButtonText: 'Reportar Problema',
+      cancelButtonText: 'Volver',
+      confirmButtonColor: '#e74c3c',
+      inputValidator: (value) => {
+        if (!value || value.trim() === '') {
+          return 'Debe ingresar una descripción del problema';
+        }
+        return null;
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const motivo = result.value;
+
+        this._cargardata.cancelarPedido(selectedPedido.id_num, motivo, 'problema').subscribe({
+          next: (response: any) => {
+            console.log(response);
+            Swal.fire({
+              icon: 'success',
+              title: 'Problema reportado',
+              text: 'El pedido ha sido marcado como "En Revisión". Un administrador revisará el caso.',
+              confirmButtonText: 'Entendido'
+            });
+            this.refrescarDatos();
+          },
+          error: (err) => {
+            console.error(err);
+            const mensaje = err.error?.mensaje || 'Error al reportar el problema';
+            Swal.fire('Error', mensaje, 'error');
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Verifica si el usuario puede cancelar el pedido seleccionado
+   * Usado para mostrar/ocultar botones según permisos
+   */
+  get puedeCancelar(): boolean {
+    // Obtener y desencriptar el rol del usuario
+    const rolEncriptado = sessionStorage.getItem('sddffasdf');
+    const rol = rolEncriptado ? this._crypto.decrypt(rolEncriptado) : null;
+    const usuarioActual = sessionStorage.getItem('usernameOp');
+
+    if (!this.selectedPedidoItem || this.selectedPedidoItem.length === 0) {
+      return false;
+    }
+
+    const pedido = this.selectedPedidoItem[0];
+
+    // SUPER y ADMIN pueden cancelar siempre
+    if (rol === 'super' || rol === 'admin') {
+      return true;
+    }
+
+    // USER solo puede cancelar sus propias solicitudes en estado "Solicitado" o "Solicitado-E"
+    if (rol === 'user') {
+      const usuarioPedido = pedido.usuario ? pedido.usuario.trim() : '';
+      const esPropio = usuarioPedido === usuarioActual;
+      const estadoPermitido = ['Solicitado', 'Solicitado-E'].includes(pedido.estado?.trim());
+      return esPropio && estadoPermitido;
+    }
+
+    return false;
   }
 
 }

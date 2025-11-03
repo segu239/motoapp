@@ -156,7 +156,43 @@ export class CalculoproductoComponent {
       this.pedido.nomart = this.producto.nomart;
     }
     this.pedido.cantidad = this.cantidad;
-    this.pedido.precio = parseFloat(this.precio.toFixed(2));// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado 
+    this.pedido.precio = parseFloat(this.precio.toFixed(2));// ACA PUSE PRECIO Y NO precioTOTAL por el motivo de que en el carrito me va sumado
+
+    // ════════════════════════════════════════════════════════════
+    // ✅ NUEVO v4.0: Guardar TODOS los precios y metadatos
+    // ════════════════════════════════════════════════════════════
+    this.pedido.precon = this.producto.precon || 0;
+    this.pedido.prefi1 = this.producto.prefi1 || 0;
+    this.pedido.prefi2 = this.producto.prefi2 || 0;
+    this.pedido.prefi3 = this.producto.prefi3 || 0;
+    this.pedido.prefi4 = this.producto.prefi4 || 0;
+    this.pedido.tipo_moneda = this.producto.tipo_moneda || 3; // Default ARS
+
+    // Buscar activadatos de la tarjeta seleccionada
+    // Nota: this.config.data.tarjeta puede contener info de la tarjeta
+    const activadatos = this.obtenerActivadatosDeCondicionVenta();
+    this.pedido.activadatos = activadatos;
+
+    // Guardar nombre del tipo de pago para referencia
+    this.pedido.tipoPago = this.obtenerNombreTipoPago();
+
+    console.log('✅ Item agregado con metadatos completos:', {
+      id_articulo: this.pedido.id_articulo,
+      precio_seleccionado: this.pedido.precio,
+      precios_disponibles: {
+        precon: this.pedido.precon,
+        prefi1: this.pedido.prefi1,
+        prefi2: this.pedido.prefi2,
+        prefi3: this.pedido.prefi3,
+        prefi4: this.pedido.prefi4
+      },
+      tipo_moneda: this.pedido.tipo_moneda,
+      activadatos: this.pedido.activadatos,
+      cod_tar: this.pedido.cod_tar,
+      tipoPago: this.pedido.tipoPago
+    });
+    // ════════════════════════════════════════════════════════════
+
     if (this.cliente.idcli != undefined) {
       this.pedido.idcli = parseInt(this.cliente.idcli);
     }
@@ -216,4 +252,63 @@ export class CalculoproductoComponent {
       this.pedido.fechacheque = "1900-01-01";
     }
   }
+
+  // ════════════════════════════════════════════════════════════
+  // ✅ NUEVO v4.0: MÉTODOS AUXILIARES PARA METADATOS
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Obtiene el activadatos del tipo de pago seleccionado
+   * Intentamos obtenerlo de sessionStorage donde se guarda la condición de venta
+   */
+  private obtenerActivadatosDeCondicionVenta(): number {
+    try {
+      const condicionVentaStr = sessionStorage.getItem('condicionVentaSeleccionada');
+      if (condicionVentaStr) {
+        const condicionVenta = JSON.parse(condicionVentaStr);
+        // La condición de venta puede tener activadatos guardado
+        if (condicionVenta.activadatos !== undefined && condicionVenta.activadatos !== null) {
+          return condicionVenta.activadatos;
+        }
+      }
+    } catch (error) {
+      console.warn('No se pudo leer activadatos de sessionStorage:', error);
+    }
+
+    // Fallback: intentar inferir de los datos disponibles
+    // Si tiene datos de tarjeta, probablemente es activadatos=1
+    if (this.tarjeta && this.tarjeta.Titular) {
+      return 1;
+    }
+    // Si tiene datos de cheque, probablemente es activadatos=2
+    if (this.cheque && this.cheque.Banco) {
+      return 2;
+    }
+    // Por defecto, sin datos adicionales
+    return 0;
+  }
+
+  /**
+   * Obtiene el nombre del tipo de pago actual
+   */
+  private obtenerNombreTipoPago(): string {
+    try {
+      const condicionVentaStr = sessionStorage.getItem('condicionVentaSeleccionada');
+      if (condicionVentaStr) {
+        const condicionVenta = JSON.parse(condicionVentaStr);
+        if (condicionVenta.nombreTarjeta) {
+          return condicionVenta.nombreTarjeta;
+        }
+      }
+    } catch (error) {
+      console.warn('No se pudo leer nombre de tipo de pago:', error);
+    }
+
+    // Fallback genérico
+    return 'Sin especificar';
+  }
+
+  // ════════════════════════════════════════════════════════════
+  // FIN DE MÉTODOS AUXILIARES
+  // ════════════════════════════════════════════════════════════
 }

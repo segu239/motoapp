@@ -1308,7 +1308,17 @@ public function Cajamovi_get()
   $query = $this->db->get();
   $resp=$query->result_array();
 
-  if (isset($resp)){
+  if (isset($resp) && count($resp) > 0){
+    // ====================================================================
+    // ALTERNATIVA C: Agregar desglose de métodos de pago a cada movimiento
+    // ====================================================================
+    foreach ($resp as &$movimiento) {
+      $id_movimiento = $movimiento['id_movimiento'];
+      $desglose = $this->obtenerDesgloseMovimiento($id_movimiento);
+      $movimiento['desglose_metodos_pago'] = $desglose;
+    }
+    unset($movimiento); // Romper la referencia después del bucle
+
     $respuesta=array
     ("error"=>false,
       "mensaje"=>$resp
@@ -1345,6 +1355,16 @@ public function CajamoviPorSucursal_post()
   $resp = $query->result_array();
 
   if (isset($resp) && count($resp) > 0){
+    // ====================================================================
+    // ALTERNATIVA C: Agregar desglose de métodos de pago a cada movimiento
+    // ====================================================================
+    foreach ($resp as &$movimiento) {
+      $id_movimiento = $movimiento['id_movimiento'];
+      $desglose = $this->obtenerDesgloseMovimiento($id_movimiento);
+      $movimiento['desglose_metodos_pago'] = $desglose;
+    }
+    unset($movimiento); // Romper la referencia después del bucle
+
     $respuesta = array(
       "error" => false,
       "mensaje" => $resp
@@ -1399,8 +1419,18 @@ public function CajamoviPorIds_post()
   
   $query = $this->db->get();
   $resp = $query->result_array();
-  
+
   if (isset($resp) && count($resp) > 0) {
+    // ====================================================================
+    // ALTERNATIVA C: Agregar desglose de métodos de pago a cada movimiento
+    // ====================================================================
+    foreach ($resp as &$movimiento) {
+      $id_movimiento = $movimiento['id_movimiento'];
+      $desglose = $this->obtenerDesgloseMovimiento($id_movimiento);
+      $movimiento['desglose_metodos_pago'] = $desglose;
+    }
+    unset($movimiento); // Romper la referencia después del bucle
+
     $respuesta = array(
       "error" => false,
       "mensaje" => $resp,
@@ -1482,8 +1512,23 @@ public function CajamoviPaginado_post()
   
   $query = $this->db->get();
   $resp = $query->result_array();
-  
+
   if (isset($resp) && count($resp) > 0){
+    // ====================================================================
+    // ALTERNATIVA C: Agregar desglose de métodos de pago a cada movimiento
+    // ====================================================================
+    foreach ($resp as &$movimiento) {
+      $id_movimiento = $movimiento['id_movimiento'];
+
+      // Llamar a la función PostgreSQL obtener_desglose_movimiento()
+      $desglose = $this->obtenerDesgloseMovimiento($id_movimiento);
+
+      // Agregar el desglose al movimiento
+      // Si no hay desglose, será un array vacío (compatibilidad hacia atrás)
+      $movimiento['desglose_metodos_pago'] = $desglose;
+    }
+    unset($movimiento); // Romper la referencia después del bucle
+
     $respuesta = array(
       "error" => false,
       "mensaje" => $resp,
@@ -1509,6 +1554,70 @@ public function CajamoviPaginado_post()
       )
     );
     $this->response($respuesta);
+  }
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN AUXILIAR: Obtener desglose de métodos de pago (Alternativa C)
+ * ============================================================================
+ * Llama a la función PostgreSQL obtener_desglose_movimiento() para obtener
+ * el desglose de métodos de pago de un movimiento de caja específico.
+ *
+ * @param int $id_movimiento ID del movimiento de caja
+ * @return array Desglose de métodos de pago (vacío si no hay detalles)
+ */
+private function obtenerDesgloseMovimiento($id_movimiento)
+{
+  try {
+    // ====================================================================
+    // ⚠️ FASE 4: Función actualizada - Usa vista legacy en lugar de función eliminada
+    // ====================================================================
+    // MOTIVO: La función PostgreSQL obtener_desglose_movimiento() fue eliminada
+    // Ahora consulta directamente la vista v_caja_movi_detalle_legacy
+    // Fecha: 2025-10-21
+    // ====================================================================
+
+    // Consultar vista legacy para obtener detalles históricos
+    $sql = "
+      SELECT
+        cmd.cod_tarj,
+        tc.tarjeta AS nombre_tarjeta,
+        cmd.importe_detalle,
+        cmd.porcentaje
+      FROM v_caja_movi_detalle_legacy cmd
+      LEFT JOIN tarjcredito tc ON cmd.cod_tarj = tc.cod_tarj
+      WHERE cmd.id_movimiento = ?
+      ORDER BY cmd.importe_detalle DESC
+    ";
+
+    $query = $this->db->query($sql, array($id_movimiento));
+
+    if ($query && $query->num_rows() > 0) {
+      // Convertir resultado a array con el mismo formato que la función anterior
+      $desglose = array();
+
+      foreach ($query->result() as $row) {
+        $desglose[] = array(
+          'cod_tarj' => $row->cod_tarj,
+          'nombre_tarjeta' => $row->nombre_tarjeta,
+          'importe_detalle' => floatval($row->importe_detalle),
+          'porcentaje' => floatval($row->porcentaje)
+        );
+      }
+
+      log_message('info', "✅ Movimiento {$id_movimiento}: Desglose obtenido (" . count($desglose) . " detalles)");
+      return $desglose;
+    }
+
+    // Si no hay detalles, retornar array vacío (movimientos nuevos post-implementación)
+    log_message('info', "✅ Movimiento {$id_movimiento}: Sin detalles (nueva implementación)");
+    return array();
+
+  } catch (Exception $e) {
+    // En caso de error, loguear y retornar array vacío (compatibilidad)
+    log_message('error', "❌ Movimiento {$id_movimiento}: Error al obtener desglose - " . $e->getMessage());
+    return array();
   }
 }
 
@@ -1823,8 +1932,18 @@ public function getAllCajamoviByIds_post()
   
   $query = $this->db->get();
   $resp = $query->result_array();
-  
+
   if (isset($resp) && count($resp) > 0) {
+    // ====================================================================
+    // ALTERNATIVA C: Agregar desglose de métodos de pago a cada movimiento
+    // ====================================================================
+    foreach ($resp as &$movimiento) {
+      $id_movimiento = $movimiento['id_movimiento'];
+      $desglose = $this->obtenerDesgloseMovimiento($id_movimiento);
+      $movimiento['desglose_metodos_pago'] = $desglose;
+    }
+    unset($movimiento); // Romper la referencia después del bucle
+
     $respuesta = array(
       "error" => false,
       "mensaje" => $resp,
@@ -1843,7 +1962,7 @@ public function getAllCajamoviByIds_post()
       )
     );
   }
-  
+
   $this->response($respuesta);
 }
 
@@ -1988,13 +2107,14 @@ public function ProductosVentaPDF_post()
         return;
     }
     
-    $this->db->select('idart, cantidad, precio, nomart');
-    $this->db->from($tabla);
-    $this->db->where('tipodoc', $tipodoc);
-    $this->db->where('numerocomprobante', $numerocomprobante);
-    $this->db->where('puntoventa', $puntoventa);
+    $this->db->select('p.idart, p.cantidad, p.precio, p.nomart, p.cod_tar, t.tarjeta as nombre_tarjeta');
+    $this->db->from($tabla . ' p');
+    $this->db->join('tarjcredito t', 'p.cod_tar = t.cod_tarj', 'left');
+    $this->db->where('p.tipodoc', $tipodoc);
+    $this->db->where('p.numerocomprobante', $numerocomprobante);
+    $this->db->where('p.puntoventa', $puntoventa);
     // Remover filtro por estado ya que los productos pueden tener diferentes estados
-    $this->db->order_by('idart', 'ASC');
+    $this->db->order_by('p.idart', 'ASC');
     
     $query = $this->db->get();
     $result = $query->result_array();

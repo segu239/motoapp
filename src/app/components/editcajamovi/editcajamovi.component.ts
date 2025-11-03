@@ -475,13 +475,50 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
               this.router.navigate(['components/cajamovi']);
             });
           } else {
-            this.showErrorMessage('No se pudo actualizar el movimiento');
+            // Verificar si es un error específico de movimiento con desglose
+            if (response.codigo === 'MOVIMIENTO_CON_DESGLOSE_NO_EDITABLE') {
+              Swal.fire({
+                title: 'Movimiento No Editable',
+                html: `
+                  <div style="text-align: left;">
+                    <p><strong>Este movimiento no puede ser editado</strong></p>
+                    <p>El movimiento tiene un desglose de métodos de pago registrado, lo que significa que fue creado con el sistema de granularidad de pagos.</p>
+                    <p><strong>Razón:</strong> Para mantener la integridad de los datos históricos, los movimientos con desglose de métodos de pago son de <strong>solo lectura</strong>.</p>
+                    <p><i class="pi pi-info-circle"></i> <em>Si necesita corregir este movimiento, deberá eliminarlo y crear uno nuevo.</em></p>
+                  </div>
+                `,
+                icon: 'warning',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#3085d6'
+              });
+            } else {
+              this.showErrorMessage(response.mensaje || 'No se pudo actualizar el movimiento');
+            }
             console.error('Error en la respuesta del servidor:', response.mensaje);
           }
         },
         error: (error) => {
           this.loading = false;
-          this.showErrorMessage('No se pudo actualizar el movimiento');
+
+          // Verificar si el error HTTP es 403 (Forbidden) con código específico
+          if (error.status === 403 && error.error && error.error.codigo === 'MOVIMIENTO_CON_DESGLOSE_NO_EDITABLE') {
+            Swal.fire({
+              title: 'Movimiento No Editable',
+              html: `
+                <div style="text-align: left;">
+                  <p><strong>Este movimiento no puede ser editado</strong></p>
+                  <p>El movimiento tiene un desglose de métodos de pago registrado, lo que significa que fue creado con el sistema de granularidad de pagos.</p>
+                  <p><strong>Razón:</strong> Para mantener la integridad de los datos históricos, los movimientos con desglose de métodos de pago son de <strong>solo lectura</strong>.</p>
+                  <p><i class="pi pi-info-circle"></i> <em>Si necesita corregir este movimiento, deberá eliminarlo y crear uno nuevo.</em></p>
+                </div>
+              `,
+              icon: 'warning',
+              confirmButtonText: 'Entendido',
+              confirmButtonColor: '#3085d6'
+            });
+          } else {
+            this.showErrorMessage(error.error?.mensaje || 'No se pudo actualizar el movimiento');
+          }
           console.error('Error en la llamada al API:', error);
         }
       });

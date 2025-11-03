@@ -420,6 +420,7 @@ export class CabecerasComponent implements OnDestroy {
         // ✅ CAPTURAR TODAS LAS VARIABLES AL INICIO ANTES DE CUALQUIER PROCESAMIENTO
         const importeOriginal = this.importe;
         const codTarjOriginal = this.codTarj;
+        const tipoValOriginal = this.tipoVal; // ✅ NUEVO: Capturar nombre del método de pago
         const usuarioEmail = sessionStorage.getItem('emailOp') || this.usuario;
 
         // ✅ VALIDAR ANTES DE CONTINUAR
@@ -456,7 +457,8 @@ export class CabecerasComponent implements OnDestroy {
           psucursal: psucursal, // aca tengo el objeto psucursal
           cabecera: cabecera, // aca tengo el objeto cabecera
           recibo: recibo, // aca tengo el objeto recibo
-          caja_movi: caja_movi  // ✅ NUEVO: Incluir caja_movi
+          caja_movi: caja_movi,  // ✅ NUEVO: Incluir caja_movi
+          tipoPago: tipoValOriginal  // ✅ NUEVO: Incluir método de pago utilizado
         };
         this.envioDatos(pagoCC);
       } catch (error) {
@@ -1497,13 +1499,26 @@ export class CabecerasComponent implements OnDestroy {
   generarReciboImpreso(pagoCC: any) {
     // Calcular la suma de los importes de todos los recibos
     const totalImporte = pagoCC.recibo.reduce((sum, recibo) => sum + recibo.importe, 0);
-    
+
     // Obtener bonificación e interés del primer recibo (todos deberían tener los mismos valores)
     const primerRecibo = pagoCC.recibo[0];
     const bonificacionRecibo = primerRecibo.bonifica || 0;
     const bonificacionTipo = primerRecibo.bonifica_tipo || 'P';
     const interesRecibo = primerRecibo.interes || 0;
     const interesTipo = primerRecibo.interes_tipo || 'P';
+
+    // ✅ NUEVO: Crear estructura de subtotales por tipo de pago
+    const tipoPago = pagoCC.tipoPago || 'Método de Pago';
+    const subtotalesTipoPago = [{
+      tipoPago: tipoPago,
+      subtotal: totalImporte
+    }];
+
+    // ✅ NUEVO: Validar si hay subtotales para mostrar desglose
+    const mostrarDesgloseTipoPago = subtotalesTipoPago && subtotalesTipoPago.length > 0;
+    console.log('📄 PDF Recibo - Desglose por tipo de pago:', mostrarDesgloseTipoPago);
+    console.log('📄 PDF Recibo - Método de pago:', tipoPago);
+    console.log('📄 PDF Recibo - Total importe:', totalImporte);
     const clienteDataRec = sessionStorage.getItem('datoscliente');
     let cliente = null;
     if (clienteDataRec) {
@@ -1735,6 +1750,29 @@ export class CabecerasComponent implements OnDestroy {
             fontSize: 10,
           },
           margin: [0, 5, 0, 0]
+        }] : []),
+        // ✅ NUEVO: Tabla de subtotales por tipo de pago
+        ...(mostrarDesgloseTipoPago ? [{
+          text: '\nDETALLE POR MÉTODO DE PAGO:',
+          style: 'subheader',
+          margin: [0, 10, 0, 5],
+          fontSize: 10,
+          bold: true
+        }] : []),
+        ...(mostrarDesgloseTipoPago ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Método de Pago', 'Subtotal'],
+              ...subtotalesTipoPago.map(item => [
+                item.tipoPago,
+                '$' + item.subtotal.toFixed(2)
+              ])
+            ],
+            bold: false,
+          },
+          margin: [0, 0, 0, 10]
         }] : []),
         {
           style: 'tableExample',

@@ -18,6 +18,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { PedidosComponent } from '../pedidos/pedidos.component';
 import { RecibosComponent } from '../recibos/recibos.component';
 import { CalendarModule } from 'primeng/calendar';
+import { CryptoService } from '../../services/crypto.service';
 interface Column {
   field: string;
   header: string;
@@ -51,7 +52,7 @@ export class EnviostockpendientesComponent {
   public cantidad:number;
   public comentario: string ='sin comentario';
 
-  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private _crypto: CryptoService) {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
@@ -305,6 +306,74 @@ refrescarDatos() {
   // Por ejemplo, puedes volver a cargar los pedidos desde el servidor
   this.cargarPedidos();
 
+}
+
+/**
+ * Rechaza una solicitud de stock en estado "Solicitado"
+ * Solo SUPER/ADMIN pueden rechazar solicitudes
+ * USER NO puede rechazar (solo puede enviar)
+ */
+rechazarSolicitud() {
+  if (this.selectedPedidoItem.length === 0) {
+    Swal.fire('Error', 'Debe seleccionar un pedido', 'error');
+    return;
+  }
+
+  const selectedPedido = this.selectedPedidoItem[0];
+
+  if (selectedPedido.estado.trim() !== "Solicitado") {
+    Swal.fire('Error', 'Solo se pueden rechazar pedidos en estado "Solicitado"', 'error');
+    return;
+  }
+
+  // Solicitar motivo del rechazo (OBLIGATORIO)
+  Swal.fire({
+    title: '¿Rechazar solicitud?',
+    text: 'Esta acción notificará a la sucursal solicitante',
+    input: 'textarea',
+    inputLabel: 'Motivo del rechazo (obligatorio)',
+    inputPlaceholder: 'Ej: Stock insuficiente, artículo descontinuado, etc.',
+    inputAttributes: {
+      'aria-label': 'Motivo del rechazo'
+    },
+    showCancelButton: true,
+    confirmButtonText: 'Rechazar',
+    cancelButtonText: 'Volver',
+    confirmButtonColor: '#e74c3c',
+    inputValidator: (value) => {
+      if (!value || value.trim() === '') {
+        return 'Debe ingresar el motivo del rechazo';
+      }
+      return null;
+    }
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const motivo = result.value;
+
+      this._cargardata.cancelarPedido(selectedPedido.id_num, motivo, 'rechazado').subscribe({
+        next: (response: any) => {
+          console.log(response);
+          Swal.fire('Éxito', 'Solicitud rechazada exitosamente', 'success');
+          this.refrescarDatos();
+        },
+        error: (err) => {
+          console.error(err);
+          const mensaje = err.error?.mensaje || 'Error al rechazar la solicitud';
+          Swal.fire('Error', mensaje, 'error');
+        }
+      });
+    }
+  });
+}
+
+/**
+ * Verifica si el usuario puede rechazar solicitudes
+ * Solo SUPER/ADMIN pueden rechazar
+ */
+get puedeRechazar(): boolean {
+  const rolEncriptado = sessionStorage.getItem('sddffasdf');
+  const rol = rolEncriptado ? this._crypto.decrypt(rolEncriptado) : null;
+  return rol === 'super' || rol === 'admin';
 }
 
 }

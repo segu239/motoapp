@@ -145,6 +145,7 @@ export const UrlPagoCabecera= "https://motoapp.loclx.io/APIAND/index.php/Descarg
 export const UrlPedidoItemyCab= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCab";
 export const UrlPedidoItemyCabId= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCabId";
 export const UrlPedidoItemyCabIdEnvio= "https://motoapp.loclx.io/APIAND/index.php/Descarga/PedidoItemyCabIdEnvio";
+export const UrlCancelarPedido= "https://motoapp.loclx.io/APIAND/index.php/Descarga/CancelarPedido";
 
 export const UrlStockPorSucursal= "https://motoapp.loclx.io/APIAND/index.php/Carga/Stockpedido";
 

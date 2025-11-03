@@ -109,9 +109,19 @@ export class StockreciboComponent {
   }
 
   cargarPedidos() {
-    this._cargardata.obtenerPedidoItemPorSucursal(this.sucursal).subscribe((data: any) => {
+    // CAMBIO: Usar obtenerPedidoItemPorSucursalh en lugar de obtenerPedidoItemPorSucursal
+    // para filtrar correctamente por sucursalh (quien recibe) en lugar de sucursald (quien solicita)
+    this._cargardata.obtenerPedidoItemPorSucursalh(this.sucursal).subscribe((data: any) => {
       console.log(data);
-      this.pedidoItem = data.mensaje.filter((item: any) => item.estado.trim() === 'Recibido');
+      // CAMBIO: Filtrar por múltiples estados y validar que data.mensaje es array
+      if (Array.isArray(data.mensaje)) {
+        this.pedidoItem = data.mensaje.filter((item: any) => {
+          const estado = item.estado.trim();
+          return estado === 'Enviado' || estado === 'Recibido';
+        });
+      } else {
+        this.pedidoItem = [];
+      }
       console.log(this.pedidoItem);
     });
   }

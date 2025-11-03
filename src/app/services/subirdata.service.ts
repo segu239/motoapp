@@ -42,13 +42,35 @@ export class SubirdataService {
   subirDatosPedidos(data: any, cabecera: any, id: any, caja_movi?: any) {
     console.log(data);
     console.log(id);
-    return this.http.post(UrlpedidossucxappCompleto,
-      {
-        "pedidos": data,
-        "cabecera": cabecera,
-        "id_vend": id,
-        "caja_movi": caja_movi
-      });
+
+    // Preparar payload
+    const payload: any = {
+      "pedidos": data,
+      "cabecera": cabecera,
+      "id_vend": id,
+      "caja_movi": caja_movi
+    };
+
+    // ====================================================================
+    // ⚠️ FASE 3: Parámetro subtotales_metodos_pago eliminado
+    // ====================================================================
+    // MOTIVO: El backend ya no inserta en caja_movi_detalle
+    // Fecha: 2025-10-21
+    // Ver: eliminacion_caja_movi_detalle.md
+    // ====================================================================
+
+    console.log('✅ FASE 3: Servicio actualizado - No se envían subtotales');
+
+    /*
+    // Código anterior - COMENTADO
+    // Agregar subtotales_metodos_pago solo si están presentes (Alternativa C)
+    if (subtotales_metodos_pago && subtotales_metodos_pago.length > 0) {
+      payload.subtotales_metodos_pago = subtotales_metodos_pago;
+      console.log('📊 Enviando subtotales por método de pago:', subtotales_metodos_pago);
+    }
+    */
+
+    return this.http.post(UrlpedidossucxappCompleto, payload);
   }
 
   subirDatosArticulos(data: any, id: any) {

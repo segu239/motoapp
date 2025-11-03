@@ -1366,25 +1366,29 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       
       // Obtener datos expandidos para calcular saldo
       const ventaExpandida = this.getExpandedData(venta);
-      const saldoPendiente = ventaExpandida ? this.calcularSaldoDespuesPago(pago, venta, ventaExpandida) : venta.importe;
+      let saldoPendiente = venta.saldo || 0;
 
-      // Identificar si es deuda original
-      // La deuda original tiene importe = saldo (no reduce la deuda)
-      const esDeudaOriginal = pago.importe === pago.recibo_saldo;
-      
+      if (ventaExpandida && ventaExpandida.historialPagos && ventaExpandida.historialPagos.length > 0) {
+        saldoPendiente = this.calcularSaldoDespuesPago(pago, venta, ventaExpandida);
+      } else {
+        // Calcular saldo simple: importe original - importe de este pago
+        saldoPendiente = venta.importe - parseFloat(pago.importe);
+      }
+
       // Debug para verificar la lógica
       console.log('Debug recibo:', {
         recibo: pago.recibo,
         importe: pago.importe,
         recibo_saldo: pago.recibo_saldo,
-        esDeudaOriginal: esDeudaOriginal
+        saldoPendiente: saldoPendiente,
+        importeOriginal: venta.importe
       });
 
       // Preparar datos para el recibo
       const datosRecibo = {
         numeroRecibo: pago.recibo,
         fecha: pago.fecha,
-        importe: esDeudaOriginal ? 0 : pago.importe, // Si es deuda original, importe pagado = 0
+        importe: parseFloat(pago.importe) || 0,
         cliente: cliente,
         sucursalNombre: sucursalNombre,
         usuario: pago.usuario,

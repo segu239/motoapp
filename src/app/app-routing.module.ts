@@ -25,7 +25,6 @@ import { CabecerasComponent } from './components/cabeceras/cabeceras.component';
 import { AnalisiscajaComponent } from './components/analisiscaja/analisiscaja.component';
 import { AnalisiscajaprodComponent } from './components/analisiscajaprod/analisiscajaprod.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
-import { MovimientoComponent } from './components/movimiento/movimiento.component';
 import { StockpedidoComponent } from './components/stockpedido/stockpedido.component';
 import { StockreciboComponent } from './components/stockrecibo/stockrecibo.component';
 import { PedirStockComponent } from './components/pedir-stock/pedir-stock.component';
@@ -103,7 +102,6 @@ children:[
     {path: 'analisiscaja', component: AnalisiscajaComponent, data: {titulo: "Analisis Caja"} },
     {path: 'analisiscajaprod', component: AnalisiscajaprodComponent, data: {titulo: "Analisis Caja Prod"} },
     {path: 'dashboard', component: DashboardComponent, data: {titulo: "Dashboard"} },
-    {path: 'movimiento', component: MovimientoComponent, data: {titulo: "Movimiento"} },
     {path: 'stockpedido', component: StockpedidoComponent, data: {titulo: "Stock Pedido"} },
     {path: 'stockrecibo', component: StockreciboComponent, data: {titulo: "Stock Recibo"} },
     {path: 'pedir-stock', component: PedirStockComponent, data: {titulo: "Pedir Stock"} },

@@ -927,6 +927,7 @@ public function PedidossucxappCompleto_post() {
         $cabecera = isset($data["cabecera"]) ? $data["cabecera"] : null;
         $id_vend = isset($data["id_vend"]) ? $data["id_vend"] : null;
         $caja_movi = isset($data["caja_movi"]) ? $data["caja_movi"] : null;
+        $subtotales_metodos_pago = isset($data["subtotales_metodos_pago"]) ? $data["subtotales_metodos_pago"] : null;
 
         // Verificar que los datos necesarios no sean nulos
         if ($pedidos && $cabecera && $id_vend) {
@@ -991,66 +992,166 @@ public function PedidossucxappCompleto_post() {
             // Generar recibo automáticamente para todas las operaciones
             $this->generarReciboAutomatico($cabecera, $id_num, $id_vend);
             
-            // Insertar caja_movi si está presente
+            // ====================================================================
+            // SOLUCIÓN MÚLTIPLES CAJAS: Insertar caja_movi (soporta array o único)
+            // ====================================================================
             if ($caja_movi) {
-                // Asignar el id_num de la cabecera al movimiento de caja
-                $caja_movi['num_operacion'] = $id_num;
-                
-                // Limpiar campos de fecha nulos o vacíos
-                foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
-                    if (isset($caja_movi[$dateField]) && empty($caja_movi[$dateField])) {
-                        $caja_movi[$dateField] = null;
-                    }
+                // Detectar si es array de movimientos o movimiento único
+                $movimientos_caja = [];
+
+                // Verificar si es array asociativo (movimiento único) o array indexado (múltiples)
+                if (isset($caja_movi[0]) && is_array($caja_movi[0])) {
+                    // Es un array de movimientos
+                    $movimientos_caja = $caja_movi;
+                    log_message('info', '✅ Múltiples movimientos detectados: ' . count($movimientos_caja));
+                } else {
+                    // Es un movimiento único (compatibilidad hacia atrás)
+                    $movimientos_caja = [$caja_movi];
+                    log_message('info', '✅ Movimiento único detectado (compatibilidad)');
                 }
-                
-                // Validar campos numéricos para prevenir desbordamientos
-                $numeric_limit_fields = [
-                    'sucursal' => 999999,
-                    'codigo_mov' => 9999999999,
-                    'num_operacion' => 9999999999,
-                    'banco' => 9999999999,
-                    'num_cheque' => 9999999999,
-                    'cuenta_mov' => 999999,
-                    'cliente' => 9999999999,
-                    'proveedor' => 9999999999,
-                    'codigo_mbco' => 9999999999,
-                    'punto_venta' => 9999,
-                    'numero_comprobante' => 99999999
-                ];
-                
-                foreach ($numeric_limit_fields as $field => $limit) {
-                    if (isset($caja_movi[$field]) && !empty($caja_movi[$field])) {
-                        if (is_numeric($caja_movi[$field]) && $caja_movi[$field] > $limit) {
-                            $caja_movi[$field] = $limit;
+
+                // Array para almacenar los IDs de movimientos creados
+                $ids_movimientos = [];
+
+                // Procesar cada movimiento de caja
+                foreach ($movimientos_caja as $index => $movimiento) {
+                    // Asignar el id_num de la cabecera al movimiento de caja
+                    $movimiento['num_operacion'] = $id_num;
+
+                    // Limpiar campos de fecha nulos o vacíos
+                    foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
+                        if (isset($movimiento[$dateField]) && empty($movimiento[$dateField])) {
+                            $movimiento[$dateField] = null;
                         }
-                    } else {
-                        $caja_movi[$field] = null;
+                    }
+
+                    // Validar campos numéricos para prevenir desbordamientos
+                    $numeric_limit_fields = [
+                        'sucursal' => 999999,
+                        'codigo_mov' => 9999999999,
+                        'num_operacion' => 9999999999,
+                        'banco' => 9999999999,
+                        'num_cheque' => 9999999999,
+                        'cuenta_mov' => 999999,
+                        'cliente' => 9999999999,
+                        'proveedor' => 9999999999,
+                        'codigo_mbco' => 9999999999,
+                        'punto_venta' => 9999,
+                        'numero_comprobante' => 99999999
+                    ];
+
+                    foreach ($numeric_limit_fields as $field => $limit) {
+                        if (isset($movimiento[$field]) && !empty($movimiento[$field])) {
+                            if (is_numeric($movimiento[$field]) && $movimiento[$field] > $limit) {
+                                $movimiento[$field] = $limit;
+                            }
+                        } else {
+                            $movimiento[$field] = null;
+                        }
+                    }
+
+                    // Limpiar campos de texto nulos o vacíos
+                    foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
+                        if (isset($movimiento[$strField]) && $movimiento[$strField] === '') {
+                            $movimiento[$strField] = null;
+                        }
+                    }
+
+                    // Generar descripción automática si tipo_movi es 'A'
+                    if (isset($movimiento['tipo_movi']) && $movimiento['tipo_movi'] === 'A') {
+                        $movimiento['descripcion_mov'] = $this->generarDescripcionAutomatica($movimiento);
+                    }
+
+                    try {
+                        $this->db->insert('caja_movi', $movimiento);
+                        if ($this->db->affected_rows() > 0) {
+                            $contador_exitosas += $this->db->affected_rows();
+                            $id_movimiento = $this->db->insert_id();
+                            $ids_movimientos[] = $id_movimiento;
+
+                            log_message('info', "✅ Movimiento #{$index} insertado con ID: {$id_movimiento}, Caja: {$movimiento['caja']}, Importe: {$movimiento['importe_mov']}");
+                        } else {
+                            log_message('error', '❌ Error al insertar movimiento #' . $index . ': ' . json_encode($movimiento));
+                        }
+                    } catch (Exception $e) {
+                        log_message('error', '❌ Excepción al insertar movimiento #' . $index . ': ' . $e->getMessage());
                     }
                 }
-                
-                // Limpiar campos de texto nulos o vacíos
-                foreach(['plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante'] as $strField) {
-                    if (isset($caja_movi[$strField]) && $caja_movi[$strField] === '') {
-                        $caja_movi[$strField] = null;
+
+                // ====================================================================
+                // ⚠️ FASE 2: CÓDIGO COMENTADO - NO SE INSERTAN DETALLES EN caja_movi_detalle
+                // ====================================================================
+                // MOTIVO: La tabla caja_movi_detalle es redundante con la nueva implementación
+                // que crea movimientos separados por método de pago.
+                // Fecha: 2025-10-21
+                // Ver: eliminacion_caja_movi_detalle.md para más información
+                // ====================================================================
+
+                log_message('info', '✅ FASE 2: Nueva implementación activa - No se insertan detalles en caja_movi_detalle');
+
+                /*
+                // ALTERNATIVA C MEJORADA: Insertar detalles vinculados a cada movimiento
+                if ($subtotales_metodos_pago !== null && !empty($ids_movimientos)) {
+                    try {
+                        // Si hay múltiples movimientos, cada uno tiene su detalle
+                        if (count($ids_movimientos) > 1) {
+                            log_message('info', '📊 Insertando detalles para ' . count($ids_movimientos) . ' movimientos');
+
+                            // Procesar subtotales para obtener array [cod_tarj => importe]
+                            $subtotales_finales = $this->procesarSubtotalesHibrido(
+                                $subtotales_metodos_pago,
+                                $pedidos,
+                                array_sum(array_column($movimientos_caja, 'importe_mov')), // Total general
+                                $ids_movimientos[0] // ID del primer movimiento (para logs)
+                            );
+
+                            // Cada movimiento corresponde a un método de pago
+                            $index_detalle = 0;
+                            foreach ($subtotales_finales as $cod_tarj => $importe_detalle) {
+                                if (isset($ids_movimientos[$index_detalle])) {
+                                    $id_mov = $ids_movimientos[$index_detalle];
+
+                                    // Insertar detalle con porcentaje = 100 (cada movimiento es 100% de ese método)
+                                    $this->insertarDetallesMetodosPago(
+                                        $id_mov,
+                                        [$cod_tarj => $importe_detalle],
+                                        $importe_detalle // El total del movimiento es el importe del detalle
+                                    );
+
+                                    log_message('info', "✅ Detalle insertado: Movimiento {$id_mov} → cod_tarj={$cod_tarj}, importe={$importe_detalle}");
+                                }
+                                $index_detalle++;
+                            }
+                        } else {
+                            // Movimiento único: comportamiento original
+                            $id_movimiento = $ids_movimientos[0];
+                            $total_movimiento = isset($movimientos_caja[0]['importe_mov']) ? floatval($movimientos_caja[0]['importe_mov']) : 0;
+
+                            $subtotales_finales = $this->procesarSubtotalesHibrido(
+                                $subtotales_metodos_pago,
+                                $pedidos,
+                                $total_movimiento,
+                                $id_movimiento
+                            );
+
+                            if (!empty($subtotales_finales)) {
+                                $this->insertarDetallesMetodosPago(
+                                    $id_movimiento,
+                                    $subtotales_finales,
+                                    $total_movimiento
+                                );
+
+                                log_message('info', "Movimiento {$id_movimiento}: Detalles de métodos de pago insertados correctamente");
+                            } else {
+                                log_message('warning', "Movimiento {$id_movimiento}: No se pudieron procesar los subtotales");
+                            }
+                        }
+                    } catch (Exception $e) {
+                        log_message('error', "❌ Error al insertar detalles de movimientos: " . $e->getMessage());
                     }
                 }
-                
-                // Generar descripción automática si tipo_movi es 'A'
-                if (isset($caja_movi['tipo_movi']) && $caja_movi['tipo_movi'] === 'A') {
-                    $caja_movi['descripcion_mov'] = $this->generarDescripcionAutomatica($caja_movi);
-                }
-                
-                try {
-                    $this->db->insert('caja_movi', $caja_movi);
-                    if ($this->db->affected_rows() > 0) {
-                        $contador_exitosas += $this->db->affected_rows();
-                    } else {
-                        log_message('error', 'Error al insertar en la tabla caja_movi: ' . json_encode($caja_movi));
-                    }
-                } catch (Exception $e) {
-                    log_message('error', 'Excepción al insertar en caja_movi: ' . $e->getMessage());
-                    // No hacemos rollback aquí, porque permitimos que continúe incluso si falla el insert de caja_movi
-                }
+                */
+                // ====================================================================
             }
 
             $this->db->trans_complete(); // Completar transacción
@@ -1473,6 +1574,20 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede crear el pedido. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
             // Insertar en la tabla pedidoitem y obtener el ID
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1483,7 +1598,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                 $pedidoItem['estado']
             ]);
             $result = $query->row_array();
@@ -1498,7 +1613,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items
             ]);
@@ -1546,6 +1661,20 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede recibir el pedido. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
             // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1556,7 +1685,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                   $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
             ]);
             $result = $query->row_array();
@@ -1571,7 +1700,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items_nuevo // Asociar con el nuevo id_items
             ]);
@@ -1581,15 +1710,59 @@ public function PedidoItemyCab_post() {
             // Actualizar id_num en el nuevo pedidoitem
                 $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
 
-            // Actualizar estado a "Solicitado-R" solo en el pedidoitem existente si se proporciona id_num
+            // Actualizar estado a "Recibido" solo en el pedidoitem existente si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
              }
-             
-              // Actualizar estado a "Solicitado-R" solo en pedidoscb existentes si se proporciona id_num
+
+              // Actualizar estado a "Recibido" solo en pedidoscb existentes si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Solicitado-R", $id_num_parametro]);
+                 $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
              }
+
+            // ============================================================================
+            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN RECEPCIÓN
+            // ============================================================================
+            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
+            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
+            // directamente al número del campo exi. Este mapeo traduce correctamente:
+            $mapeo_sucursal_exi = [
+                1 => 'exi2', // Casa Central
+                2 => 'exi3', // Valle Viejo
+                3 => 'exi4', // Güemes
+                4 => 'exi1', // Deposito
+                5 => 'exi5'  // Mayorista
+            ];
+
+            // Actualizar stock en sucursal DESTINO (la que recibe - SUMA stock)
+            $sucursal_destino = $pedidoscb['sucursald'];
+            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
+                ? $mapeo_sucursal_exi[$sucursal_destino]
+                : 'exi' . $sucursal_destino; // Fallback por seguridad
+
+            $sql_update_destino = "UPDATE artsucursal
+                                   SET $campo_stock_destino = $campo_stock_destino + ?
+                                   WHERE id_articulo = ?";
+            $this->db->query($sql_update_destino, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            // Actualizar stock en sucursal ORIGEN (la que envía - RESTA stock)
+            $sucursal_origen = $pedidoscb['sucursalh'];
+            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
+                ? $mapeo_sucursal_exi[$sucursal_origen]
+                : 'exi' . $sucursal_origen; // Fallback por seguridad
+
+            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
+            $sql_update_origen = "UPDATE artsucursal
+                                  SET $campo_stock_origen = $campo_stock_origen - ?
+                                  WHERE id_articulo = ?";
+            $this->db->query($sql_update_origen, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+            // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
 
@@ -1631,6 +1804,80 @@ public function PedidoItemyCab_post() {
 
             $this->db->trans_start(); // Iniciar transacción
 
+            // ============================================================================
+            // VALIDACIÓN DE ID_ART VÁLIDO
+            // ============================================================================
+            // Verificar que el id_art no sea 0 (artículo inválido)
+            if ($pedidoItem['id_art'] == 0 || $pedidoItem['id_art'] === '0' || empty($pedidoItem['id_art'])) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: ID de artículo inválido (id_art = 0 o vacío). No se puede procesar el envío. Contacte al administrador del sistema."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            // ============================================================================
+            // VALIDACIÓN DE STOCK DISPONIBLE ANTES DE ENVIAR
+            // ============================================================================
+            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
+            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
+            // directamente al número del campo exi. Este mapeo traduce correctamente:
+            // value 1 (Casa Central) → exi2
+            // value 2 (Valle Viejo)  → exi3
+            // value 3 (Güemes)       → exi4
+            // value 4 (Deposito)     → exi1
+            // value 5 (Mayorista)    → exi5
+            $mapeo_sucursal_exi = [
+                1 => 'exi2', // Casa Central
+                2 => 'exi3', // Valle Viejo
+                3 => 'exi4', // Güemes
+                4 => 'exi1', // Deposito
+                5 => 'exi5'  // Mayorista
+            ];
+
+            $sucursal_origen = $pedidoscb['sucursald']; // Sucursal que envía (ORIGEN en esta función)
+            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
+                ? $mapeo_sucursal_exi[$sucursal_origen]
+                : 'exi' . $sucursal_origen; // Fallback por seguridad
+
+            // Consultar stock actual de la sucursal que envía
+            $sql_check_stock = "SELECT $campo_stock_origen as stock_actual
+                                FROM artsucursal
+                                WHERE id_articulo = ?";
+            $query_stock = $this->db->query($sql_check_stock, [$pedidoItem['id_art']]);
+
+            if ($query_stock->num_rows() === 0) {
+                // El artículo no existe en artsucursal
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: El artículo no existe en el catálogo."
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+
+            $row_stock = $query_stock->row_array();
+            $stock_actual = $row_stock['stock_actual'];
+
+            // NOTA: Se permite enviar stock incluso con valores negativos
+            // El sistema debe permitir stocks negativos para reflejar deudas de stock
+            // Por ejemplo: Si sucursal tiene -80 y envía 1, quedará -81
+            /* VALIDACIÓN DESHABILITADA - Se permite stock negativo
+            if ($stock_actual < $pedidoItem['cantidad']) {
+                $this->db->trans_rollback();
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "Error: Stock insuficiente en sucursal origen. Disponible: " . $stock_actual . ", Solicitado: " . $pedidoItem['cantidad']
+                );
+                $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                return;
+            }
+            */
+            // ============================================================================
+
             // Insertar en la tabla pedidoitem y obtener el ID (sin modificar el estado por ahora)
             $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
@@ -1641,7 +1888,7 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['precio'],
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
-                $pedidoItem['observacion'],
+                isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
                   $pedidoItem['estado'] // Establecer el estado inicial del nuevo pedidoItem
             ]);
             $result = $query->row_array();
@@ -1656,7 +1903,7 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['sucursalh'],
                 $pedidoscb['fecha'],
                 $pedidoscb['usuario'],
-                $pedidoscb['observacion'],
+                isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
                 $id_items_nuevo // Asociar con el nuevo id_items
             ]);
@@ -1675,6 +1922,39 @@ public function PedidoItemyCab_post() {
             if ($id_num_parametro) {
                  $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
              }
+
+            // ============================================================================
+            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN ENVÍO DIRECTO
+            // ============================================================================
+            // IMPORTANTE: En esta función, la semántica es DIFERENTE a PedidoItemyCabId_post:
+            // - sucursald = ORIGEN (quien envía)
+            // - sucursalh = DESTINO (quien recibe)
+
+            // Actualizar stock en sucursal DESTINO (la que recibe - SUMA stock)
+            $sucursal_destino = $pedidoscb['sucursalh']; // DESTINO en esta función
+            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
+                ? $mapeo_sucursal_exi[$sucursal_destino]
+                : 'exi' . $sucursal_destino; // Fallback por seguridad
+
+            $sql_update_destino = "UPDATE artsucursal
+                                   SET $campo_stock_destino = $campo_stock_destino + ?
+                                   WHERE id_articulo = ?";
+            $this->db->query($sql_update_destino, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            // Actualizar stock en sucursal ORIGEN (la que envía - RESTA stock)
+            // Nota: $sucursal_origen y $campo_stock_origen ya definidos en líneas 1853-1856
+            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
+            $sql_update_origen = "UPDATE artsucursal
+                                  SET $campo_stock_origen = $campo_stock_origen - ?
+                                  WHERE id_articulo = ?";
+            $this->db->query($sql_update_origen, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+            // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
 
@@ -2894,6 +3174,29 @@ public function UpdateCajamovi_post()
 
         $id = $data['id_movimiento'];
         unset($data['id_movimiento']); // No se actualiza el ID
+
+        // ===========================================================================
+        // FASE 7: POLÍTICA DE EDICIÓN - Verificar si el movimiento tiene desglose
+        // Si tiene desglose de métodos de pago, denegar la edición para mantener
+        // la integridad de los datos históricos
+        // ===========================================================================
+        $sql_verificar = "SELECT COUNT(*) as tiene_desglose FROM caja_movi_detalle WHERE id_movimiento = ?";
+        $query_verificar = $this->db->query($sql_verificar, array($id));
+
+        if ($query_verificar && $query_verificar->num_rows() > 0) {
+            $resultado = $query_verificar->row();
+            if ($resultado->tiene_desglose > 0) {
+                // El movimiento tiene desglose, denegar edición
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "No se puede editar este movimiento porque tiene desglose de métodos de pago registrado. Los movimientos con desglose son de solo lectura para mantener la integridad de los datos históricos.",
+                    "codigo" => "MOVIMIENTO_CON_DESGLOSE_NO_EDITABLE"
+                );
+                $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+                return;
+            }
+        }
+        // ===========================================================================
 
        // Limpiar datos (similar a la inserción)
        foreach(['fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso'] as $dateField) {
@@ -4779,6 +5082,647 @@ public function PriceUpdate_post()
         ], 500);
     }
 }
+
+// ============================================================================
+// ============================================================================
+//
+//        ALTERNATIVA C - GRANULARIDAD CAJAMOVI (HÍBRIDA)
+//        Implementación: 14 de Octubre de 2025
+//
+//        Estas funciones implementan el enfoque híbrido donde:
+//        1. Frontend calcula y envía subtotales por método de pago
+//        2. Backend valida recalculando desde productos
+//        3. Si coinciden → usa frontend (eficiente)
+//        4. Si difieren → usa recalculados (seguro) + log warning
+//
+// ============================================================================
+// ============================================================================
+
+/**
+ * ============================================================================
+ * FUNCIÓN PRINCIPAL: procesarSubtotalesHibrido()
+ * ============================================================================
+ *
+ * Núcleo de la Alternativa C - Validación Híbrida
+ *
+ * Procesa subtotales usando enfoque híbrido: valida frontend con recálculo backend
+ *
+ * @param array|null $subtotales_frontend Subtotales recibidos del frontend
+ *        Formato: [{cod_tarj: 11, importe_detalle: 10000}, {cod_tarj: 1, importe_detalle: 5000}]
+ *
+ * @param array $productos Array de productos insertados con cod_tar
+ *        Formato: [{cod_tar: 11, precio: 100, cantidad: 100}, ...]
+ *
+ * @param float $total_movimiento Total del movimiento para validación
+ *
+ * @param int $id_movimiento ID del movimiento (para logs)
+ *
+ * @return array Subtotales validados listos para insertar
+ *         Formato: [cod_tarj => importe_detalle]
+ *         Ejemplo: [11 => 10000.00, 1 => 5000.00]
+ *
+ * FLUJO DE DECISIÓN:
+ *
+ *   ┌─────────────────────────────────────┐
+ *   │ ¿Frontend envió subtotales válidos? │
+ *   └────────────┬────────────────────────┘
+ *                │
+ *       ┌────────┴────────┐
+ *       │ NO              │ SÍ
+ *       v                 v
+ *   ┌───────────┐    ┌──────────────────┐
+ *   │ Recalcular│    │ Recalcular para  │
+ *   │ desde     │    │ validar          │
+ *   │ productos │    └────────┬─────────┘
+ *   └─────┬─────┘             │
+ *         │            ┌──────┴──────┐
+ *         │            │ ¿Coinciden? │
+ *         │            └──────┬──────┘
+ *         │                   │
+ *         │          ┌────────┴────────┐
+ *         │          │ SÍ              │ NO
+ *         │          v                 v
+ *         │     ┌────────┐      ┌──────────┐
+ *         │     │ Usar   │      │ Usar     │
+ *         │     │Frontend│      │Recalc +  │
+ *         │     │        │      │Warning   │
+ *         │     └────┬───┘      └────┬─────┘
+ *         │          │               │
+ *         └──────────┴───────────────┘
+ *                    │
+ *                    v
+ *         ┌────────────────────┐
+ *         │ Subtotales listos  │
+ *         │ para insertar en   │
+ *         │ caja_movi_detalle  │
+ *         └────────────────────┘
+ */
+private function procesarSubtotalesHibrido(
+    $subtotales_frontend,
+    $productos,
+    $total_movimiento,
+    $id_movimiento
+) {
+    // 🔍 LOG: Entrada de la función
+    log_message('info', "🔍 procesarSubtotalesHibrido - Movimiento {$id_movimiento}, Total: {$total_movimiento}");
+    log_message('info', '🔍 procesarSubtotalesHibrido - Subtotales frontend: ' . json_encode($subtotales_frontend));
+    log_message('info', '🔍 procesarSubtotalesHibrido - Cantidad productos: ' . count($productos));
+
+    // ========================================================================
+    // 1️⃣ VALIDACIÓN: ¿Vienen subtotales del frontend?
+    // ========================================================================
+    $frontend_valido = is_array($subtotales_frontend) && !empty($subtotales_frontend);
+    log_message('info', "🔍 procesarSubtotalesHibrido - Frontend válido: " . ($frontend_valido ? 'SÍ' : 'NO'));
+
+    // ========================================================================
+    // 2️⃣ RECALCULAR desde productos (para validación)
+    // ========================================================================
+    $subtotales_recalculados = $this->calcularSubtotalesPorMetodoPago(
+        $productos,
+        $total_movimiento
+    );
+    log_message('info', '🔍 procesarSubtotalesHibrido - Subtotales recalculados: ' . json_encode($subtotales_recalculados));
+
+    // ========================================================================
+    // 3️⃣ DECISIÓN HÍBRIDA
+    // ========================================================================
+
+    // CASO A: Frontend NO envió subtotales → Usar recalculados
+    if (!$frontend_valido) {
+        log_message('info', "🔍 CASO A - Movimiento {$id_movimiento}: Usando subtotales recalculados (frontend no envió datos)");
+        return $subtotales_recalculados;
+    }
+
+    // CASO B: No se pudo recalcular → Usar frontend (confiamos)
+    if (empty($subtotales_recalculados)) {
+        log_message('warning', "🔍 CASO B - Movimiento {$id_movimiento}: No se pudo recalcular. Usando subtotales de frontend sin validación");
+        $resultado_frontend = $this->formatearSubtotalesFrontend($subtotales_frontend);
+        log_message('info', '🔍 CASO B - Resultado frontend formateado: ' . json_encode($resultado_frontend));
+        return $resultado_frontend;
+    }
+
+    // CASO C: Comparar frontend vs recalculados
+    $comparacion = $this->compararSubtotales(
+        $subtotales_frontend,
+        $subtotales_recalculados
+    );
+    log_message('info', '🔍 procesarSubtotalesHibrido - Comparación: ' . json_encode($comparacion));
+
+    if ($comparacion['coinciden']) {
+        // ✅ COINCIDEN → Usar frontend (más eficiente)
+        log_message('info', "🔍 CASO C (COINCIDEN) - Movimiento {$id_movimiento}: Subtotales frontend validados ✓ " .
+                    "Coinciden con recálculo backend (diff máx: {$comparacion['diferencia_max']})");
+        $resultado_frontend = $this->formatearSubtotalesFrontend($subtotales_frontend);
+        log_message('info', '🔍 CASO C (COINCIDEN) - Resultado frontend formateado: ' . json_encode($resultado_frontend));
+        return $resultado_frontend;
+    } else {
+        // ⚠️ DISCREPANCIA → Usar recalculados (más seguro)
+        log_message('warning', "🔍 CASO C (DISCREPANCIA) - Movimiento {$id_movimiento}: DISCREPANCIA detectada. " .
+                    "Diferencia máxima: {$comparacion['diferencia_max']}. " .
+                    "Usando subtotales recalculados por seguridad");
+
+        // Notificar discrepancia al administrador (opcional)
+        $this->notificarDiscrepancia($id_movimiento, $comparacion);
+
+        log_message('info', '🔍 CASO C (DISCREPANCIA) - Retornando subtotales recalculados: ' . json_encode($subtotales_recalculados));
+        return $subtotales_recalculados;
+    }
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN: calcularSubtotalesPorMetodoPago()
+ * ============================================================================
+ *
+ * Recalcula subtotales por método de pago desde array de productos
+ * Usado para validación en el enfoque híbrido
+ *
+ * @param array $productos Array de productos con cod_tar, precio, cantidad
+ * @param float $total_movimiento Total del movimiento para validación
+ *
+ * @return array Subtotales por método de pago
+ *         Formato: [cod_tarj => importe_total]
+ *         Ejemplo: [11 => 10000.00, 1 => 5000.00]
+ */
+private function calcularSubtotalesPorMetodoPago($productos, $total_movimiento) {
+    // 🔍 LOG: Entrada
+    log_message('info', '🔍 calcularSubtotalesPorMetodoPago - Total movimiento: ' . $total_movimiento);
+    log_message('info', '🔍 calcularSubtotalesPorMetodoPago - Cantidad productos: ' . count($productos));
+
+    $subtotales_map = array();
+
+    if (empty($productos)) {
+        log_message('error', '🔍 calcularSubtotalesPorMetodoPago: Array de productos vacío');
+        return $subtotales_map;
+    }
+
+    // Agrupar productos por cod_tar y sumar importes
+    foreach ($productos as $index => $producto) {
+        $cod_tar = isset($producto['cod_tar']) ? intval($producto['cod_tar']) : null;
+
+        // 🔍 LOG: Cada producto
+        log_message('info', "🔍 calcularSubtotalesPorMetodoPago - Producto #{$index}: " . json_encode($producto));
+
+        if ($cod_tar === null || $cod_tar === 0) {
+            log_message('warning', '🔍 calcularSubtotalesPorMetodoPago - Producto sin cod_tar: ' .
+                        json_encode($producto));
+            continue;
+        }
+
+        $cantidad = isset($producto['cantidad']) ? floatval($producto['cantidad']) : 0;
+        $precio = isset($producto['precio']) ? floatval($producto['precio']) : 0;
+        $importe_producto = round($cantidad * $precio, 2);
+
+        // 🔍 LOG: Cálculo
+        log_message('info', "🔍 calcularSubtotalesPorMetodoPago - cod_tar={$cod_tar}, cant={$cantidad}, precio={$precio}, importe={$importe_producto}");
+
+        if (!isset($subtotales_map[$cod_tar])) {
+            $subtotales_map[$cod_tar] = 0;
+        }
+        $subtotales_map[$cod_tar] += $importe_producto;
+    }
+
+    // 🔍 LOG: Mapa antes de validar
+    log_message('info', '🔍 calcularSubtotalesPorMetodoPago - Mapa acumulado: ' . json_encode($subtotales_map));
+
+    // Validar que la suma de subtotales = total del movimiento
+    $suma_subtotales = array_sum($subtotales_map);
+    $diferencia = abs($suma_subtotales - $total_movimiento);
+
+    // 🔍 LOG: Validación
+    log_message('info', "🔍 calcularSubtotalesPorMetodoPago - Suma subtotales: {$suma_subtotales}, Total: {$total_movimiento}, Diferencia: {$diferencia}");
+
+    if ($diferencia > 0.01) {
+        log_message('error', "🔍 calcularSubtotalesPorMetodoPago - ERROR: Diferencia > 0.01. " .
+                    "Suma: {$suma_subtotales}, Total: {$total_movimiento}, Dif: {$diferencia}");
+        return array();
+    }
+
+    // Redondear todos los importes a 2 decimales
+    foreach ($subtotales_map as $cod_tar => $importe) {
+        $subtotales_map[$cod_tar] = round($importe, 2);
+    }
+
+    // 🔍 LOG: Resultado final
+    log_message('info', '🔍 calcularSubtotalesPorMetodoPago - Resultado final: ' . json_encode($subtotales_map));
+
+    return $subtotales_map;
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN: compararSubtotales()
+ * ============================================================================
+ *
+ * Compara subtotales del frontend con los recalculados por el backend
+ *
+ * @param array $subtotales_frontend [{cod_tarj: 11, importe_detalle: 10000}, ...]
+ * @param array $subtotales_recalc [11 => 10000, 1 => 5000, ...]
+ *
+ * @return array Resultado de la comparación
+ *         [
+ *           'coinciden' => bool,           // TRUE si diferencia <= tolerancia
+ *           'diferencia_max' => float,     // Diferencia máxima encontrada
+ *           'diferencias' => array         // Detalles de cada diferencia
+ *         ]
+ */
+private function compararSubtotales($subtotales_frontend, $subtotales_recalc) {
+    $tolerancia = 0.01; // 1 centavo de tolerancia por redondeos
+    $diferencia_max = 0;
+    $diferencias = array();
+
+    // Convertir arrays a mapas por cod_tarj para comparación fácil
+    $map_frontend = array();
+    foreach ($subtotales_frontend as $sub) {
+        $cod_tarj = intval($sub['cod_tarj']);
+        $importe = floatval($sub['importe_detalle']);
+        $map_frontend[$cod_tarj] = $importe;
+    }
+
+    // $subtotales_recalc ya viene como [cod_tar => importe]
+    $map_backend = $subtotales_recalc;
+
+    // Obtener todos los códigos de tarjeta únicos de ambos arrays
+    $cod_tarj_todos = array_unique(
+        array_merge(
+            array_keys($map_frontend),
+            array_keys($map_backend)
+        )
+    );
+
+    // Comparar cada método de pago
+    foreach ($cod_tarj_todos as $cod_tarj) {
+        $importe_frontend = isset($map_frontend[$cod_tarj]) ? $map_frontend[$cod_tarj] : 0;
+        $importe_backend = isset($map_backend[$cod_tarj]) ? $map_backend[$cod_tarj] : 0;
+        $diferencia = abs($importe_frontend - $importe_backend);
+
+        // Actualizar diferencia máxima
+        if ($diferencia > $diferencia_max) {
+            $diferencia_max = $diferencia;
+        }
+
+        // Registrar diferencias significativas
+        if ($diferencia > $tolerancia) {
+            $diferencias[] = array(
+                'cod_tarj' => $cod_tarj,
+                'frontend' => $importe_frontend,
+                'backend' => $importe_backend,
+                'diferencia' => $diferencia
+            );
+        }
+    }
+
+    return array(
+        'coinciden' => ($diferencia_max <= $tolerancia),
+        'diferencia_max' => round($diferencia_max, 2),
+        'diferencias' => $diferencias
+    );
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN: formatearSubtotalesFrontend()
+ * ============================================================================
+ *
+ * Formatea subtotales del frontend a array asociativo [cod_tarj => importe]
+ *
+ * @param array $subtotales_frontend [{cod_tarj: 11, importe_detalle: 10000}, ...]
+ *
+ * @return array [cod_tarj => importe_detalle]
+ */
+private function formatearSubtotalesFrontend($subtotales_frontend) {
+    // 🔍 LOG: Entrada de la función
+    log_message('info', '🔍 formatearSubtotalesFrontend - Entrada: ' . json_encode($subtotales_frontend));
+
+    $resultado = array();
+
+    foreach ($subtotales_frontend as $item) {
+        $cod_tarj = intval($item['cod_tarj']);
+        $importe = round(floatval($item['importe_detalle']), 2);
+        $resultado[$cod_tarj] = $importe;
+
+        // 🔍 LOG: Cada elemento procesado
+        log_message('info', "🔍 formatearSubtotalesFrontend - Procesado: cod_tarj={$cod_tarj}, importe={$importe}");
+    }
+
+    // 🔍 LOG: Resultado final
+    log_message('info', '🔍 formatearSubtotalesFrontend - Resultado: ' . json_encode($resultado));
+
+    return $resultado;
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN: insertarDetallesMetodosPago()
+ * ============================================================================
+ *
+ * Inserta detalles de métodos de pago en caja_movi_detalle
+ *
+ * @param int $id_movimiento ID del movimiento padre
+ * @param array $subtotales Array asociativo [cod_tarj => importe]
+ * @param float $total_movimiento Total para calcular porcentaje
+ *
+ * @throws Exception Si falla alguna inserción
+ */
+private function insertarDetallesMetodosPago($id_movimiento, $subtotales, $total_movimiento) {
+    // 🔍 LOG: Entrada de la función
+    log_message('info', "🔍 insertarDetallesMetodosPago - ID Movimiento: {$id_movimiento}, Total: {$total_movimiento}");
+    log_message('info', '🔍 insertarDetallesMetodosPago - Subtotales recibidos: ' . json_encode($subtotales));
+    log_message('info', '🔍 insertarDetallesMetodosPago - Cantidad de subtotales: ' . count($subtotales));
+
+    if (empty($subtotales)) {
+        log_message('warning', "insertarDetallesMetodosPago: Array de subtotales vacío para movimiento {$id_movimiento}");
+        return;
+    }
+
+    $contador = 0;
+    foreach ($subtotales as $cod_tarj => $importe_detalle) {
+        $contador++;
+
+        // 🔍 LOG: Cada iteración
+        log_message('info', "🔍 insertarDetallesMetodosPago - Iteración #{$contador}: cod_tarj={$cod_tarj}, importe={$importe_detalle}");
+
+        // Calcular porcentaje
+        $porcentaje = ($total_movimiento > 0)
+            ? round(($importe_detalle / $total_movimiento) * 100, 2)
+            : 0;
+
+        $detalle = array(
+            'id_movimiento' => $id_movimiento,
+            'cod_tarj' => $cod_tarj,
+            'importe_detalle' => round($importe_detalle, 2),
+            'porcentaje' => $porcentaje
+        );
+
+        // 🔍 LOG: Datos a insertar
+        log_message('info', '🔍 insertarDetallesMetodosPago - Datos a insertar: ' . json_encode($detalle));
+
+        $this->db->insert('caja_movi_detalle', $detalle);
+
+        // 🔍 LOG: Resultado de inserción
+        $affected = $this->db->affected_rows();
+        log_message('info', "🔍 insertarDetallesMetodosPago - Filas afectadas: {$affected}");
+
+        if ($affected === 0) {
+            log_message('error', "🔍 insertarDetallesMetodosPago - ERROR: No se insertó el registro para cod_tarj {$cod_tarj}");
+            throw new Exception("Error al insertar detalle para cod_tarj {$cod_tarj} en movimiento {$id_movimiento}");
+        }
+    }
+
+    log_message('info', "🔍 insertarDetallesMetodosPago - COMPLETADO: {$contador} de " . count($subtotales) . " detalles insertados en caja_movi_detalle");
+}
+
+/**
+ * ============================================================================
+ * FUNCIÓN: notificarDiscrepancia() (OPCIONAL)
+ * ============================================================================
+ *
+ * Notifica discrepancia al administrador cuando hay diferencias entre
+ * los subtotales del frontend y los recalculados por el backend
+ *
+ * Implementar según necesidades:
+ * - Email al administrador
+ * - Log en tabla de auditoría
+ * - Alerta en dashboard
+ *
+ * @param int $id_movimiento ID del movimiento con discrepancia
+ * @param array $comparacion Resultado de compararSubtotales()
+ */
+private function notificarDiscrepancia($id_movimiento, $comparacion) {
+    // Por ahora, solo log detallado
+    // TODO: Implementar notificación por email/dashboard según requerimientos
+
+    log_message('error', "AUDITORÍA: Discrepancia en movimiento {$id_movimiento}. " .
+                "Diferencia máxima: {$comparacion['diferencia_max']}. " .
+                "Detalles: " . json_encode($comparacion['diferencias']));
+
+    // Ejemplo de implementación futura:
+    // $this->enviarEmailAdministrador(
+    //     'Discrepancia en Cajamovi',
+    //     "Se detectó una discrepancia en el movimiento {$id_movimiento}..."
+    // );
+
+    // O insertar en tabla de auditoría:
+    // $this->db->insert('auditoria_discrepancias', [
+    //     'id_movimiento' => $id_movimiento,
+    //     'diferencia_max' => $comparacion['diferencia_max'],
+    //     'detalles_json' => json_encode($comparacion['diferencias']),
+    //     'fecha_deteccion' => date('Y-m-d H:i:s')
+    // ]);
+}
+
+// ============================================================================
+//                     FIN ALTERNATIVA C - GRANULARIDAD CAJAMOVI
+// ============================================================================
+
+// ============================================================================
+//                     SISTEMA DE CANCELACIÓN MOV.STOCK
+// ============================================================================
+
+/**
+ * FUNCIÓN: CancelarPedido_post()
+ *
+ * Cancela o rechaza pedidos de stock según el tipo de cancelación y estado actual.
+ * Implementa validaciones de permisos por rol y mantiene auditoría completa.
+ *
+ * TIPOS DE CANCELACIÓN:
+ * - 'solicitante': Cancelado por quien solicitó (estado "Solicitado")
+ * - 'rechazado': Rechazado por quien debe enviar (estado "Solicitado")
+ * - 'problema': Problema reportado en tránsito (estado "Solicitado-E")
+ *
+ * ESTADOS NUEVOS:
+ * - 'Cancel-Sol': Cancelado por Solicitante
+ * - 'Cancel-Rech': Rechazado por Receptor
+ * - 'En-Revision': Problema reportado, requiere revisión
+ *
+ * PERMISOS:
+ * - SUPER/ADMIN: Pueden cancelar cualquier estado
+ * - USER: Solo puede cancelar sus propias solicitudes en estado "Solicitado" o "Solicitado-E"
+ *
+ * @date 2025-10-31
+ */
+public function CancelarPedido_post() {
+    $data = $this->post();
+
+    // Validar datos requeridos
+    if(!isset($data['id_num']) || !isset($data['motivo']) || !isset($data['tipo_cancelacion'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos requeridos: id_num, motivo, tipo_cancelacion"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $motivo = trim($data['motivo']);
+    $tipo_cancelacion = $data['tipo_cancelacion']; // 'solicitante', 'rechazado', 'problema'
+    $usuario = isset($data['usuario']) ? $data['usuario'] : '';
+    $rol = isset($data['rol']) ? $data['rol'] : 'USER'; // SUPER, ADMIN, USER
+
+    // Validar que el motivo no esté vacío
+    if(empty($motivo)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El motivo de cancelación es obligatorio"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Iniciar transacción
+    $this->db->trans_start();
+
+    // Determinar nuevo estado según tipo de cancelación
+    switch($tipo_cancelacion) {
+        case 'solicitante':
+            $nuevo_estado = 'Cancel-Sol';
+            break;
+        case 'rechazado':
+            $nuevo_estado = 'Cancel-Rech';
+            break;
+        case 'problema':
+            $nuevo_estado = 'En-Revision';
+            break;
+        default:
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "Tipo de cancelación inválido: " . $tipo_cancelacion
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+    }
+
+    // Obtener pedido actual
+    $query = $this->db->query("SELECT estado, usuario FROM pedidoscb WHERE id_num = ?", [$id_num]);
+
+    if ($query->num_rows() === 0) {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Pedido no encontrado con id_num: " . $id_num
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    $pedido = $query->row_array();
+    $estado_actual = trim($pedido['estado']);
+    $usuario_pedido = trim($pedido['usuario']);
+
+    // VALIDACIÓN DE PERMISOS POR ROL
+    if ($rol === 'user') {
+        // USER solo puede cancelar sus propias solicitudes
+        if ($usuario_pedido !== $usuario) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para cancelar solicitudes de otros usuarios"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
+        // USER solo puede cancelar estados "Solicitado" o reportar problema "Solicitado-E"
+        if (!in_array($estado_actual, ['Solicitado', 'Solicitado-E'])) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para cancelar pedidos en estado: " . $estado_actual
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
+        // USER no puede rechazar solicitudes (solo SUPER/ADMIN)
+        if ($tipo_cancelacion === 'rechazado') {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No tiene permisos para rechazar solicitudes. Solo puede cancelar sus propias solicitudes."
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+    }
+
+    // SUPER y ADMIN pueden cancelar cualquier estado (sin validaciones adicionales)
+
+    // Validar que el estado permita cancelación (solo para USER)
+    if ($rol === 'user') {
+        $estados_cancelables = ['Solicitado', 'Solicitado-E'];
+        if (!in_array($estado_actual, $estados_cancelables)) {
+            $this->db->trans_rollback();
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se puede cancelar un pedido en estado: " . $estado_actual
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+    }
+
+    // Validar tipo de cancelación según estado
+    if ($estado_actual === 'Solicitado' && $tipo_cancelacion === 'problema') {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se puede reportar problema en estado Solicitado. Use cancelación normal."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Actualizar pedidoscb
+    $sql_update_cab = "
+        UPDATE pedidoscb
+        SET estado = ?,
+            motivo_cancelacion = ?,
+            fecha_cancelacion = CURRENT_DATE,
+            usuario_cancelacion = ?
+        WHERE id_num = ?
+    ";
+    $this->db->query($sql_update_cab, [$nuevo_estado, $motivo, $usuario, $id_num]);
+
+    // Actualizar pedidoitem - agregar motivo a observación
+    $sql_update_item = "
+        UPDATE pedidoitem
+        SET estado = ?,
+            observacion = CONCAT(COALESCE(observacion, ''), ' | CANCELADO: ', ?)
+        WHERE id_num = ?
+    ";
+    $this->db->query($sql_update_item, [$nuevo_estado, $motivo, $id_num]);
+
+    // Completar transacción
+    $this->db->trans_complete();
+
+    if ($this->db->trans_status() === FALSE) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al cancelar el pedido. La transacción ha sido revertida."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    } else {
+        // Log de auditoría
+        log_message('info', "✅ Pedido cancelado - ID: {$id_num}, Estado anterior: {$estado_actual}, Nuevo estado: {$nuevo_estado}, Usuario: {$usuario}, Tipo: {$tipo_cancelacion}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Pedido cancelado exitosamente",
+            "nuevo_estado" => $nuevo_estado,
+            "estado_anterior" => $estado_actual
+        );
+        $this->response($respuesta);
+    }
+
+    // Nota: Si el estado era "Solicitado-E" y se reporta problema,
+    // NO revertir stocks automáticamente (requiere revisión manual por ADMIN/SUPER)
+}
+
+// ============================================================================
+//                     FIN SISTEMA DE CANCELACIÓN MOV.STOCK
+// ============================================================================
 
 }
 

@@ -32,6 +32,7 @@ interface DatosRecibo {
   puntoventa: number;
   letraValue: string;
   sucursalNombre: string;
+  subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>; // ✅ NUEVO
 }
 
 @Injectable({
@@ -48,7 +49,11 @@ export class PdfGeneratorService {
     const titulo = this.obtenerTituloDocumento(datos.tipoDoc);
     const fechaActual = new Date();
     const fechaFormateada = fechaActual.toISOString().split('T')[0];
-    
+
+    // ✅ NUEVO: Validar si hay subtotales por tipo de pago
+    const mostrarDesgloseTipoPago = datos.subtotalesTipoPago && datos.subtotalesTipoPago.length > 0;
+    console.log('📄 PDF Generator - Desglose por tipo de pago:', mostrarDesgloseTipoPago);
+
     const tableBody = datos.items.map(item => [
       item.cantidad, 
       item.nomart, 
@@ -182,6 +187,29 @@ export class PdfGeneratorService {
             bold: true,
           },
         },
+        // ✅ NUEVO: Tabla de subtotales por tipo de pago
+        ...(mostrarDesgloseTipoPago ? [{
+          text: '\nDETALLE POR MÉTODO DE PAGO:',
+          style: 'subheader',
+          margin: [0, 10, 0, 5],
+          fontSize: 10,
+          bold: true
+        }] : []),
+        ...(mostrarDesgloseTipoPago ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Método de Pago', 'Subtotal'],
+              ...datos.subtotalesTipoPago.map(item => [
+                item.tipoPago,
+                '$' + item.subtotal.toFixed(2)
+              ])
+            ],
+            bold: false,
+          },
+          margin: [0, 0, 0, 10]
+        }] : []),
         {
           style: 'tableExample',
           table: {
