@@ -51,3 +51,9 @@ Thumbs.db
 *.bak
 *_temp.txt
 temp_*.txt
+
+# Archivos backup adicionales
+*.backup_*
+*.backup-*
+*.bak
+*_backup.*
