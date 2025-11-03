@@ -115,7 +115,12 @@
                                     {{pedido[col.field] | dateFormat:'yyyy-MM-dd'}}
                                 </ng-container>
                                 <ng-template #otherField>
-                                    {{pedido[col.field]}}
+                                    <ng-container *ngIf="col.field === 'sucursald' || col.field === 'sucursalh'; else normalField">
+                                        {{pedido[col.field] | sucursalNombre}}
+                                    </ng-container>
+                                    <ng-template #normalField>
+                                        {{pedido[col.field]}}
+                                    </ng-template>
                                 </ng-template>
                             </td>
                         </tr>
