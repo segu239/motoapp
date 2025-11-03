@@ -6,6 +6,7 @@ import { PedidoItem } from 'src/app/interfaces/pedidoItem';
 import { Pedidoscb } from 'src/app/interfaces/pedidoscb';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import { CrudService } from 'src/app/services/crud.service';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-stockproductoenvio',
@@ -116,15 +117,40 @@ selectedSucursal: number;
       this.cantidad = 0;
       this.ref.close(); */
 
-      this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe(
-        response => {
+      this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe({
+        next: (response) => {
           console.log('Pedido creado exitosamente', response);
-          
-          this.ref.close();
+          // Cerrar el modal pasando datos de éxito
+          this.ref.close({ success: true, cantidad: this.cantidad, sucursal: this.selectedSucursal });
+          // Mostrar el mensaje después de cerrar el modal
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Envío exitoso',
+              text: `Se enviaron ${this.cantidad} unidades a ${this.getSucursalNombre(this.selectedSucursal)}`,
+              confirmButtonText: 'Aceptar'
+            });
+          }, 200);
         },
-        error => {
-          console.error('Error al crear el pedido', error);
+        error: (err) => {
+          console.error('Error al crear el pedido', err);
+          // Cerrar el modal pasando datos de error
+          this.ref.close({ success: false });
+          // Mostrar el mensaje de error después de cerrar el modal
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al enviar',
+              text: err.error?.mensaje || 'No se pudo completar el envío de stock',
+              confirmButtonText: 'Aceptar'
+            });
+          }, 200);
         }
-      );
+      });
+    }
+
+    getSucursalNombre(value: number): string {
+      const sucursal = this.sucursales.find((s: any) => s.value === value);
+      return sucursal ? sucursal.label : 'Sucursal desconocida';
     }
 }

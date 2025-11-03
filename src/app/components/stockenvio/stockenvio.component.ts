@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { CargardataService } from '../../services/cargardata.service';
 import { StockPaginadosService } from '../../services/stock-paginados.service';
 import { Producto } from '../../interfaces/producto';
@@ -14,6 +14,7 @@ import { StockproductoenvioComponent } from '../stockproductoenvio/stockproducto
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ChangeDetectorRef } from '@angular/core';
 import { LazyLoadEvent } from 'primeng/api';
+import { Table } from 'primeng/table';
 
 // Definir la interfaz Column para la selección de columnas
 interface Column {
@@ -27,7 +28,9 @@ interface Column {
   styleUrls: ['./stockenvio.component.css']
 })
 export class StockenvioComponent implements OnInit, OnDestroy{
-  
+
+  @ViewChild('dtable') dtable: Table;
+
   public tipoVal: string = 'Condicion de Venta';
   public codTarj: string = '';
   public listaPrecio: string = '';
@@ -572,8 +575,8 @@ export class StockenvioComponent implements OnInit, OnDestroy{
     this.ref = this.dialogService.open(StockproductoenvioComponent, {
       header: 'Envío de Stock - ' + producto.nomart,
       width: '80%',
-      style: { 
-        'max-width': '900px' 
+      style: {
+        'max-width': '900px'
       },
       data: {
         producto: producto,
@@ -584,7 +587,7 @@ export class StockenvioComponent implements OnInit, OnDestroy{
         //codTarj: this.codTarj,
         //listaPrecio: this.listaPrecio,
       },
-      contentStyle: { 
+      contentStyle: {
         overflow: 'auto',
         padding: '0',
         borderRadius: '8px'
@@ -593,6 +596,17 @@ export class StockenvioComponent implements OnInit, OnDestroy{
       maximizable: true,
       closeOnEscape: true,
       dismissableMask: true
+    });
+
+    // Escuchar el cierre del modal para recargar datos
+    this.ref.onClose.subscribe((result: any) => {
+      if (result && result.success) {
+        console.log('Envío exitoso, recargando datos de la tabla...');
+        // Recargar los datos de la tabla
+        if (this.dtable) {
+          this.dtable.reset();
+        }
+      }
     });
   }
   // NUEVO: Métodos para lazy loading (patrón de artículos)
