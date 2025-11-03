@@ -1,17 +1,16 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera,UrlCancelarPedido} from '../config/ini'
+import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera, UrlCancelarPedidoStock} from '../config/ini'
 import { map } from "rxjs/operators";
 import { TarjCredito } from '../interfaces/tarjcredito';
-import { CryptoService } from './crypto.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CargardataService {
 
-  constructor(private http:HttpClient, private _crypto: CryptoService) { }
+  constructor(private http:HttpClient) { }
 
   arconmov()
   {
@@ -252,25 +251,32 @@ export class CargardataService {
 
   /**
    * Cancela un pedido de stock
-   *
    * @param id_num ID del pedido a cancelar
-   * @param motivo Motivo de la cancelación (obligatorio)
-   * @param tipo Tipo de cancelación: 'solicitante', 'rechazado', 'problema'
+   * @param usuario Usuario que cancela
+   * @param motivo_cancelacion Motivo de la cancelación
+   * @param fecha_cancelacion Fecha de cancelación (opcional)
    * @returns Observable con la respuesta del backend
-   *
-   * @date 2025-10-31
    */
-  cancelarPedido(id_num: number, motivo: string, tipo: 'solicitante' | 'rechazado' | 'problema') {
-    const usuario = sessionStorage.getItem('usernameOp');
-    const rolEncriptado = sessionStorage.getItem('sddffasdf');
-    const rol = rolEncriptado ? this._crypto.decrypt(rolEncriptado) : null;
-
-    return this.http.post(UrlCancelarPedido, {
+  cancelarPedidoStock(
+    id_num: number,
+    usuario: string,
+    motivo_cancelacion: string,
+    fecha_cancelacion?: Date
+  ) {
+    const payload: any = {
       id_num: id_num,
-      motivo: motivo,
-      tipo_cancelacion: tipo,
       usuario: usuario,
-      rol: rol
-    });
+      motivo_cancelacion: motivo_cancelacion
+    };
+
+    if (fecha_cancelacion) {
+      // Formatear fecha como YYYY-MM-DD
+      const year = fecha_cancelacion.getFullYear();
+      const month = String(fecha_cancelacion.getMonth() + 1).padStart(2, '0');
+      const day = String(fecha_cancelacion.getDate()).padStart(2, '0');
+      payload.fecha_cancelacion = `${year}-${month}-${day}`;
+    }
+
+    return this.http.post(UrlCancelarPedidoStock, payload);
   }
 }

@@ -1623,6 +1623,62 @@ public function PedidoItemyCab_post() {
             // Actualizar id_num en pedidoitem
             $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num, $id_items]);
 
+            // ============================================================================
+            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN ENVÍO DIRECTO
+            // ============================================================================
+            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
+            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
+            // directamente al número del campo exi. Este mapeo traduce correctamente:
+            $mapeo_sucursal_exi = [
+                1 => 'exi2', // Casa Central
+                2 => 'exi3', // Valle Viejo
+                3 => 'exi4', // Güemes
+                4 => 'exi1', // Deposito
+                5 => 'exi5'  // Mayorista
+            ];
+
+            // En este flujo (envío directo):
+            // - sucursald = ORIGEN (quien envía)
+            // - sucursalh = DESTINO (quien recibe)
+
+            // SUMA stock en sucursal DESTINO (la que recibe)
+            $sucursal_destino = $pedidoscb['sucursalh'];
+            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
+                ? $mapeo_sucursal_exi[$sucursal_destino]
+                : 'exi' . $sucursal_destino; // Fallback por seguridad
+
+            error_log("ENVIO DIRECTO - Actualizando stock DESTINO: Sucursal=$sucursal_destino, Campo=$campo_stock_destino, Cantidad=+" . $pedidoItem['cantidad'] . ", Artículo=" . $pedidoItem['id_art']);
+
+            $sql_update_destino = "UPDATE artsucursal
+                                   SET $campo_stock_destino = $campo_stock_destino + ?
+                                   WHERE id_articulo = ?";
+            $this->db->query($sql_update_destino, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            error_log("ENVIO DIRECTO - Stock DESTINO actualizado. Rows affected: " . $this->db->affected_rows());
+
+            // RESTA stock en sucursal ORIGEN (la que envía)
+            $sucursal_origen = $pedidoscb['sucursald'];
+            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
+                ? $mapeo_sucursal_exi[$sucursal_origen]
+                : 'exi' . $sucursal_origen; // Fallback por seguridad
+
+            error_log("ENVIO DIRECTO - Actualizando stock ORIGEN: Sucursal=$sucursal_origen, Campo=$campo_stock_origen, Cantidad=-" . $pedidoItem['cantidad'] . ", Artículo=" . $pedidoItem['id_art']);
+
+            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
+            $sql_update_origen = "UPDATE artsucursal
+                                  SET $campo_stock_origen = $campo_stock_origen - ?
+                                  WHERE id_articulo = ?";
+            $this->db->query($sql_update_origen, [
+                $pedidoItem['cantidad'],
+                $pedidoItem['id_art']
+            ]);
+
+            error_log("ENVIO DIRECTO - Stock ORIGEN actualizado. Rows affected: " . $this->db->affected_rows());
+            // ============================================================================
+
             $this->db->trans_complete(); // Completar transacción
 
             if ($this->db->trans_status() === FALSE) {
@@ -1984,6 +2040,100 @@ public function PedidoItemyCab_post() {
             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
         }
     }
+
+/**
+ * Cancela un pedido de stock en estado Solicitado o Solicitado-E
+ *
+ * @param int id_num - ID del pedido a cancelar
+ * @param string usuario - Usuario que cancela
+ * @param string motivo_cancelacion - Motivo de la cancelación
+ * @param date fecha_cancelacion - Fecha de cancelación (opcional, default: hoy)
+ *
+ * @return array Respuesta con resultado de la operación
+ */
+public function CancelarPedidoStock_post() {
+    $data = $this->post();
+
+    // Validar que los datos necesarios estén presentes
+    if(!isset($data['id_num'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Falta el campo id_num"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    if(!isset($data['usuario']) || !isset($data['motivo_cancelacion'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Faltan datos requeridos (usuario, motivo_cancelacion)"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+    $motivo_cancelacion = $data['motivo_cancelacion'];
+    $fecha_cancelacion = isset($data['fecha_cancelacion']) ? $data['fecha_cancelacion'] : date('Y-m-d');
+
+    $this->db->trans_start(); // Iniciar transacción
+
+    // Actualizar estado en pedidoitem
+    // Solo permitir cancelar si estado es "Solicitado" o "Solicitado-E"
+    $this->db->query(
+        "UPDATE pedidoitem
+         SET estado = 'Cancelado',
+             motivo_cancelacion = ?,
+             fecha_cancelacion = ?,
+             usuario_cancelacion = ?
+         WHERE id_num = ?
+         AND estado IN ('Solicitado', 'Solicitado-E')",
+        [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
+    );
+
+    $affected_rows_item = $this->db->affected_rows();
+
+    // Actualizar estado en pedidoscb
+    $this->db->query(
+        "UPDATE pedidoscb
+         SET estado = 'Cancelado',
+             motivo_cancelacion = ?,
+             fecha_cancelacion = ?,
+             usuario_cancelacion = ?
+         WHERE id_num = ?
+         AND estado IN ('Solicitado', 'Solicitado-E')",
+        [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
+    );
+
+    $affected_rows_cb = $this->db->affected_rows();
+
+    $this->db->trans_complete();
+
+    if ($this->db->trans_status() === FALSE) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al cancelar el pedido"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    } else {
+        if($affected_rows_item === 0) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => "No se encontró el pedido o ya fue procesado (solo se pueden cancelar pedidos en estado 'Solicitado' o 'Solicitado-E')"
+            );
+            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => "Pedido cancelado exitosamente",
+                "registros_actualizados" => $affected_rows_item
+            );
+            $this->response($respuesta, REST_Controller::HTTP_OK);
+        }
+    }
+}
 
 public function SubirDatosRubroPrincipal_post()
 {

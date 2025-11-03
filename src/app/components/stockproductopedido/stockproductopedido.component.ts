@@ -125,33 +125,40 @@ selectedSucursal: number;
       this.cantidad = 0;
       this.ref.close(); */
 
-      this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe(
-        response => {
+      this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe({
+        next: (response) => {
           console.log('Pedido creado exitosamente', response);
-
-          // Mostrar mensaje de éxito
-          Swal.fire({
-            title: '¡Éxito!',
-            text: 'Solicitud de stock realizada correctamente',
-            icon: 'success',
-            confirmButtonText: 'Aceptar',
-            timer: 3000,
-            timerProgressBar: true
-          }).then(() => {
-            this.ref.close();
-          });
+          // Cerrar el modal pasando datos de éxito
+          this.ref.close({ success: true, cantidad: this.cantidad, sucursal: this.selectedSucursal });
+          // Mostrar el mensaje después de cerrar el modal
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'success',
+              title: 'Solicitud exitosa',
+              text: `Se solicitaron ${this.cantidad} unidades a ${this.getSucursalNombre(this.selectedSucursal)}`,
+              confirmButtonText: 'Aceptar'
+            });
+          }, 200);
         },
-        error => {
-          console.error('Error al crear el pedido', error);
-
-          // Mostrar mensaje de error
-          Swal.fire({
-            title: 'Error',
-            text: 'No se pudo realizar la solicitud de stock. Por favor, intente nuevamente.',
-            icon: 'error',
-            confirmButtonText: 'Aceptar'
-          });
+        error: (err) => {
+          console.error('Error al crear el pedido', err);
+          // Cerrar el modal pasando datos de error
+          this.ref.close({ success: false });
+          // Mostrar el mensaje de error después de cerrar el modal
+          setTimeout(() => {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error al solicitar',
+              text: err.error?.mensaje || 'No se pudo completar la solicitud de stock',
+              confirmButtonText: 'Aceptar'
+            });
+          }, 200);
         }
-      );
+      });
+    }
+
+    getSucursalNombre(value: number): string {
+      const sucursal = this.sucursales.find((s: any) => s.value === value);
+      return sucursal ? sucursal.label : 'Sucursal desconocida';
     }
 }

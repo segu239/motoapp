@@ -108,45 +108,24 @@
                         </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-pedido let-columns="columns">
-                        <tr [ngClass]="{
-                            'pedido-rechazado': pedido.estado?.trim() === 'Cancel-Rech',
-                            'pedido-cancelado': pedido.estado?.trim() === 'Cancel-Sol',
-                            'pedido-problema': pedido.estado?.trim() === 'En-Revision',
-                            'pedido-enviado': pedido.estado?.trim() === 'Solicitado-E'
-                        }">
+                        <tr>
                             <p-tableCheckbox [value]="pedido"></p-tableCheckbox>
                             <td *ngFor="let col of columns">
                                 <ng-container *ngIf="col.field === 'fecha'; else otherField">
                                     {{pedido[col.field] | dateFormat:'yyyy-MM-dd'}}
                                 </ng-container>
                                 <ng-template #otherField>
-                                    {{pedido[col.field]}}
+                                    <ng-container *ngIf="col.field === 'sucursald' || col.field === 'sucursalh'; else normalField">
+                                        {{pedido[col.field] | sucursalNombre}}
+                                    </ng-container>
+                                    <ng-template #normalField>
+                                        {{pedido[col.field]}}
+                                    </ng-template>
                                 </ng-template>
                             </td>
                         </tr>
                     </ng-template>
                 </p-table>
-
-                <!-- Leyenda de colores -->
-                <div style="display: flex; gap: 20px; margin: 10px 0; padding: 10px; background-color: #f5f5f5; border-radius: 5px; font-size: 12px;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #ffebee; border-left: 4px solid #d32f2f;"></div>
-                        <span>Rechazado</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #fff3e0; border-left: 4px solid #f57c00;"></div>
-                        <span>Cancelado</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #fff9c4; border-left: 4px solid #f9a825;"></div>
-                        <span>En Revisión</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background-color: #e3f2fd; border-left: 4px solid #1976d2;"></div>
-                        <span>Enviado</span>
-                    </div>
-                </div>
-
                 <div style="display: flex; align-items: center;">
                     <!-- <div style="display: flex; align-items: center; margin-right: 10px;">
                         <label for="cantidad" style="margin-right: 5px;">Cantidad:</label>
@@ -156,31 +135,9 @@
                         <label for="comentario" style="margin-right: 5px;">Comentario:</label>
                         <input id="comentario" type="text" [(ngModel)]="comentario" min="1" style="width: 300px;" />
                     </div>
-
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <!-- Botón Cancelar Solicitud - Solo para estado "Solicitado" -->
-                        <p-button *ngIf="selectedPedidoItem.length > 0 && selectedPedidoItem[0]?.estado?.trim() === 'Solicitado' && puedeCancelar"
-                                  label="Cancelar Solicitud"
-                                  (click)="cancelarSolicitud()"
-                                  styleClass="p-button-sm p-button-warning"
-                                  icon="pi pi-times"
-                                  pTooltip="Cancelar esta solicitud de stock"></p-button>
-
-                        <!-- Botón Recibir - Solo para estado "Solicitado-E" -->
-                        <p-button *ngIf="selectedPedidoItem.length > 0 && selectedPedidoItem[0]?.estado?.trim() === 'Solicitado-E'"
-                                  label="Recibir"
-                                  (click)="recibir()"
-                                  styleClass="p-button-sm p-button-success"
-                                  icon="pi pi-check"
-                                  pTooltip="Confirmar recepción del stock"></p-button>
-
-                        <!-- Botón Reportar Problema - Solo para estado "Solicitado-E" -->
-                        <p-button *ngIf="selectedPedidoItem.length > 0 && selectedPedidoItem[0]?.estado?.trim() === 'Solicitado-E' && puedeCancelar"
-                                  label="Reportar Problema"
-                                  (click)="reportarProblema()"
-                                  styleClass="p-button-sm p-button-danger"
-                                  icon="pi pi-exclamation-triangle"
-                                  pTooltip="Reportar problema con el envío"></p-button>
+                    <div style="display: flex; align-items: center;">
+                        <p-button label="Recibir" (click)="recibir()" styleClass="p-button-sm p-button-primary mr-2"></p-button>
+                        <p-button label="Cancelar" icon="pi pi-times" (click)="cancelarPedido()" styleClass="p-button-sm p-button-danger mr-2" [disabled]="selectedPedidoItem.length === 0"></p-button>
                     </div>
                 </div>
             </div>

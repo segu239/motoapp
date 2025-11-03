@@ -18,7 +18,6 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { PedidosComponent } from '../pedidos/pedidos.component';
 import { RecibosComponent } from '../recibos/recibos.component';
 import { CalendarModule } from 'primeng/calendar';
-import { CryptoService } from '../../services/crypto.service';
 interface Column {
   field: string;
   header: string;
@@ -52,7 +51,7 @@ export class EnviostockpendientesComponent {
   public cantidad:number;
   public comentario: string ='sin comentario';
 
-  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router, private _crypto: CryptoService) {
+  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
@@ -309,71 +308,101 @@ refrescarDatos() {
 }
 
 /**
- * Rechaza una solicitud de stock en estado "Solicitado"
- * Solo SUPER/ADMIN pueden rechazar solicitudes
- * USER NO puede rechazar (solo puede enviar)
+ * Cancela un pedido pendiente de envío
+ * Solo permite cancelar pedidos en estado "Solicitado"
  */
-rechazarSolicitud() {
+cancelarEnvio() {
+  // Validar que se haya seleccionado un pedido
   if (this.selectedPedidoItem.length === 0) {
-    Swal.fire('Error', 'Debe seleccionar un pedido', 'error');
+    Swal.fire('Error', 'Debe seleccionar un pedido para cancelar', 'error');
     return;
   }
 
   const selectedPedido = this.selectedPedidoItem[0];
 
+  // Validar que el estado sea "Solicitado"
   if (selectedPedido.estado.trim() !== "Solicitado") {
-    Swal.fire('Error', 'Solo se pueden rechazar pedidos en estado "Solicitado"', 'error');
+    Swal.fire(
+      'Error',
+      'Solo se pueden cancelar pedidos en estado "Solicitado"',
+      'error'
+    );
     return;
   }
 
-  // Solicitar motivo del rechazo (OBLIGATORIO)
+  // Solicitar motivo de cancelación al usuario
   Swal.fire({
-    title: '¿Rechazar solicitud?',
-    text: 'Esta acción notificará a la sucursal solicitante',
+    title: '¿Está seguro?',
+    text: '¿Desea cancelar este pedido de stock?',
     input: 'textarea',
-    inputLabel: 'Motivo del rechazo (obligatorio)',
-    inputPlaceholder: 'Ej: Stock insuficiente, artículo descontinuado, etc.',
+    inputLabel: 'Motivo de cancelación',
+    inputPlaceholder: 'Ingrese el motivo de la cancelación...',
     inputAttributes: {
-      'aria-label': 'Motivo del rechazo'
+      'aria-label': 'Ingrese el motivo de la cancelación'
     },
+    icon: 'warning',
     showCancelButton: true,
-    confirmButtonText: 'Rechazar',
-    cancelButtonText: 'Volver',
-    confirmButtonColor: '#e74c3c',
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Sí, cancelar',
+    cancelButtonText: 'No',
     inputValidator: (value) => {
-      if (!value || value.trim() === '') {
-        return 'Debe ingresar el motivo del rechazo';
+      if (!value) {
+        return 'Debe ingresar un motivo de cancelación';
       }
       return null;
     }
   }).then((result) => {
-    if (result.isConfirmed) {
-      const motivo = result.value;
+    if (result.isConfirmed && result.value) {
+      const id_num = selectedPedido.id_num;
+      const usuario = sessionStorage.getItem('usernameOp') || '';
+      const motivo_cancelacion = result.value;
+      const fecha = new Date();
 
-      this._cargardata.cancelarPedido(selectedPedido.id_num, motivo, 'rechazado').subscribe({
+      // Mostrar indicador de carga
+      Swal.fire({
+        title: 'Cancelando pedido...',
+        text: 'Por favor espere',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Llamar al servicio para cancelar
+      this._cargardata.cancelarPedidoStock(
+        id_num,
+        usuario,
+        motivo_cancelacion,
+        fecha
+      ).subscribe({
         next: (response: any) => {
-          console.log(response);
-          Swal.fire('Éxito', 'Solicitud rechazada exitosamente', 'success');
-          this.refrescarDatos();
+          console.log('Respuesta de cancelación:', response);
+
+          if (response.error) {
+            Swal.fire('Error', response.mensaje, 'error');
+          } else {
+            Swal.fire({
+              title: 'Éxito',
+              text: 'Pedido cancelado exitosamente',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false
+            });
+            this.refrescarDatos();
+          }
         },
         error: (err) => {
-          console.error(err);
-          const mensaje = err.error?.mensaje || 'Error al rechazar la solicitud';
-          Swal.fire('Error', mensaje, 'error');
+          console.error('Error al cancelar pedido:', err);
+          Swal.fire(
+            'Error',
+            'Error al cancelar el pedido. Por favor intente nuevamente.',
+            'error'
+          );
         }
       });
     }
   });
-}
-
-/**
- * Verifica si el usuario puede rechazar solicitudes
- * Solo SUPER/ADMIN pueden rechazar
- */
-get puedeRechazar(): boolean {
-  const rolEncriptado = sessionStorage.getItem('sddffasdf');
-  const rol = rolEncriptado ? this._crypto.decrypt(rolEncriptado) : null;
-  return rol === 'super' || rol === 'admin';
 }
 
 }

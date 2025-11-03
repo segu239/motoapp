@@ -38,7 +38,12 @@
                                     {{cabecera[col.field] | dateFormat:'yyyy-MM-dd'}}
                                 </ng-container>
                                 <ng-template #otherField>
-                                    {{cabecera[col.field]}}
+                                    <ng-container *ngIf="col.field === 'sucursald' || col.field === 'sucursalh'; else normalField">
+                                        {{cabecera[col.field] | sucursalNombre}}
+                                    </ng-container>
+                                    <ng-template #normalField>
+                                        {{cabecera[col.field]}}
+                                    </ng-template>
                                 </ng-template>
                             </td>
                         </tr>

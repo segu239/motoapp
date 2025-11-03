@@ -46,12 +46,8 @@ Thumbs.db
 *-debug.log
 .runtimeconfig.json
 
-# Archivos de backup y temporales
+# Archivos temporales y backups
 *.backup
-*.backup-*
 *.bak
+*_temp.txt
 temp_*.txt
-fix_temp.txt
-
-# Configuración local de Claude
-.claude/settings.local.json
