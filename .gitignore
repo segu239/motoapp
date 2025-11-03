@@ -45,3 +45,9 @@ Thumbs.db
 .firebase
 *-debug.log
 .runtimeconfig.json
+
+# Archivos temporales y backups
+*.backup
+*.bak
+*_temp.txt
+temp_*.txt
