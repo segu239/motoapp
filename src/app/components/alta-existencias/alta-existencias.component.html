@@ -1,0 +1,242 @@
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">Alta de Existencias</h4>
+        <p class="text-muted">Agregue stock directamente a una sucursal sin necesidad de transferencia</p>
+
+        <!-- Formulario de alta (se muestra cuando hay producto seleccionado) -->
+        <div *ngIf="productoSeleccionado" class="alta-form-container mb-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Registrar Alta de Existencias</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <h6><strong>Producto Seleccionado:</strong></h6>
+                            <p class="mb-1"><strong>Nombre:</strong> {{ productoSeleccionado.nomart }}</p>
+                            <p class="mb-1"><strong>Marca:</strong> {{ productoSeleccionado.marca }}</p>
+                            <p class="mb-1"><strong>Código:</strong> {{ productoSeleccionado.cd_articulo }}</p>
+                            <p class="mb-1"><strong>Stock Actual:</strong></p>
+                            <ul class="mb-2">
+                                <li>Depósito: {{ productoSeleccionado.exi1 }}</li>
+                                <li>Casa Central: {{ productoSeleccionado.exi2 }}</li>
+                                <li>Valle Viejo: {{ productoSeleccionado.exi3 }}</li>
+                                <li>Güemes: {{ productoSeleccionado.exi4 }}</li>
+                                <li>Mayorista: {{ productoSeleccionado.exi5 }}</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="cantidad" class="form-label">
+                                <strong>Cantidad a Agregar: <span class="text-danger">*</span></strong>
+                            </label>
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="cantidad"
+                                [(ngModel)]="cantidad"
+                                min="1"
+                                placeholder="Ingrese la cantidad"
+                                [disabled]="guardando">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="sucursal" class="form-label">
+                                <strong>Sucursal de Destino: <span class="text-danger">*</span></strong>
+                            </label>
+                            <select
+                                class="form-control"
+                                id="sucursal"
+                                [(ngModel)]="sucursalSeleccionada"
+                                [disabled]="guardando">
+                                <option *ngFor="let sucursal of sucursales" [value]="sucursal.id">
+                                    {{ sucursal.nombre }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="observacion" class="form-label">
+                                <strong>Observación / Motivo del Alta: <span class="text-danger">*</span></strong>
+                                <small class="text-muted">(mínimo 10 caracteres)</small>
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="observacion"
+                                rows="3"
+                                [(ngModel)]="observacion"
+                                placeholder="Explique detalladamente el motivo del alta de existencias..."
+                                [disabled]="guardando"></textarea>
+                            <small class="text-muted">
+                                {{ observacion.length }} / 10 caracteres mínimos
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="d-flex gap-2">
+                                <button
+                                    type="button"
+                                    class="btn btn-primary"
+                                    (click)="confirmarAlta()"
+                                    [disabled]="guardando">
+                                    <i class="fa fa-check mr-2"></i>
+                                    {{ guardando ? 'Guardando...' : 'Confirmar Alta' }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-secondary"
+                                    (click)="cancelarSeleccion()"
+                                    [disabled]="guardando">
+                                    <i class="fa fa-times mr-2"></i>
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mensaje cuando no hay producto seleccionado -->
+        <div *ngIf="!productoSeleccionado" class="alert alert-info mb-3">
+            <i class="fa fa-info-circle mr-2"></i>
+            Seleccione un producto de la tabla para dar de alta existencias
+        </div>
+
+        <!-- Loading indicator -->
+        <div class="alert alert-warning mb-3" *ngIf="loading">
+            <i class="fa fa-spinner fa-spin mr-2"></i>
+            Cargando datos, por favor espere...
+        </div>
+
+        <!-- Tabla de productos -->
+        <p-table
+            #dtable
+            [value]="productos"
+            [tableStyle]="{ 'min-width': '50rem' }"
+            [paginator]="true"
+            [rows]="rows"
+            [first]="first"
+            [rowsPerPageOptions]="[25,50,100]"
+            [totalRecords]="totalRegistros"
+            [showCurrentPageReport]="true"
+            [loading]="loading"
+            [lazy]="true"
+            (onLazyLoad)="loadDataLazy($event)"
+            [lazyLoadOnInit]="true"
+            [filterDelay]="300"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} productos"
+            [globalFilterFields]="['nomart', 'marca', 'cd_articulo', 'cd_barra']">
+
+            <ng-template pTemplate="caption">
+                <div class="d-flex flex-row align-items-center justify-content-between">
+                    <div class="columnas-container">
+                        <p-multiSelect
+                            [options]="cols"
+                            [(ngModel)]="selectedColumns"
+                            optionLabel="header"
+                            selectedItemsLabel="{0} Columnas Seleccionadas"
+                            placeholder="Elija Columnas"
+                            (onChange)="onColumnSelectionChange()">
+                        </p-multiSelect>
+                    </div>
+                    <div>
+                        <span class="text-muted">Total de productos: {{ totalRegistros }}</span>
+                    </div>
+                </div>
+            </ng-template>
+
+            <ng-template pTemplate="header">
+                <tr>
+                    <th *ngIf="isColumnVisible('nomart')" pSortableColumn="nomart">
+                        Nombre
+                        <p-sortIcon field="nomart"></p-sortIcon>
+                        <p-columnFilter type="text" field="nomart" display="menu" matchMode="contains"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('marca')" pSortableColumn="marca">
+                        Marca
+                        <p-sortIcon field="marca"></p-sortIcon>
+                        <p-columnFilter type="text" field="marca" display="menu" matchMode="contains"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('cd_articulo')" pSortableColumn="cd_articulo">
+                        Código
+                        <p-sortIcon field="cd_articulo"></p-sortIcon>
+                        <p-columnFilter type="text" field="cd_articulo" display="menu" matchMode="contains"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('cd_barra')" pSortableColumn="cd_barra">
+                        Código Barra
+                        <p-sortIcon field="cd_barra"></p-sortIcon>
+                        <p-columnFilter type="text" field="cd_barra" display="menu" matchMode="contains"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('exi1')" pSortableColumn="exi1">
+                        Stock Dep
+                        <p-sortIcon field="exi1"></p-sortIcon>
+                        <p-columnFilter type="numeric" field="exi1" display="menu"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('exi2')" pSortableColumn="exi2">
+                        Stock CC
+                        <p-sortIcon field="exi2"></p-sortIcon>
+                        <p-columnFilter type="numeric" field="exi2" display="menu"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('exi3')" pSortableColumn="exi3">
+                        Stock VV
+                        <p-sortIcon field="exi3"></p-sortIcon>
+                        <p-columnFilter type="numeric" field="exi3" display="menu"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('exi4')" pSortableColumn="exi4">
+                        Stock GM
+                        <p-sortIcon field="exi4"></p-sortIcon>
+                        <p-columnFilter type="numeric" field="exi4" display="menu"></p-columnFilter>
+                    </th>
+                    <th *ngIf="isColumnVisible('exi5')" pSortableColumn="exi5">
+                        Stock MAY
+                        <p-sortIcon field="exi5"></p-sortIcon>
+                        <p-columnFilter type="numeric" field="exi5" display="menu"></p-columnFilter>
+                    </th>
+                    <th>Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-producto>
+                <tr [class.table-primary]="productoSeleccionado?.idart === producto.idart">
+                    <td *ngIf="isColumnVisible('nomart')">{{ producto.nomart }}</td>
+                    <td *ngIf="isColumnVisible('marca')">{{ producto.marca }}</td>
+                    <td *ngIf="isColumnVisible('cd_articulo')">{{ producto.cd_articulo }}</td>
+                    <td *ngIf="isColumnVisible('cd_barra')">{{ producto.cd_barra }}</td>
+                    <td *ngIf="isColumnVisible('exi1')">{{ producto.exi1 }}</td>
+                    <td *ngIf="isColumnVisible('exi2')">{{ producto.exi2 }}</td>
+                    <td *ngIf="isColumnVisible('exi3')">{{ producto.exi3 }}</td>
+                    <td *ngIf="isColumnVisible('exi4')">{{ producto.exi4 }}</td>
+                    <td *ngIf="isColumnVisible('exi5')">{{ producto.exi5 }}</td>
+                    <td>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-primary"
+                            (click)="seleccionarProducto(producto)"
+                            [disabled]="guardando">
+                            <i class="fa fa-plus mr-1"></i>
+                            Seleccionar
+                        </button>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td [attr.colspan]="getColumnCount()" style="text-align: center;">
+                        <div class="alert alert-info">
+                            <i class="fa fa-info-circle mr-2"></i>
+                            No se encontraron productos
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+    </div>
+</div>
