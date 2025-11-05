@@ -1,0 +1,147 @@
+.table-success {
+  background-color: #d1e7dd !important;
+}
+
+.table-danger {
+  background-color: #f8d7da !important;
+}
+
+.badge {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.badge-success {
+  background-color: #198754;
+  color: white;
+}
+
+.badge-danger {
+  background-color: #dc3545;
+  color: white;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+.me-2 {
+  margin-right: 0.5rem;
+}
+
+.ms-3 {
+  margin-left: 1rem;
+}
+
+/* ============================================================================
+   ESTILOS PARA FUNCIONALIDAD V2.0 - COSTOS Y SELECCIÓN MÚLTIPLE
+   ============================================================================ */
+
+/* Checkbox column styling */
+.checkbox-column {
+  width: 40px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.checkbox-column input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+/* Row selection highlight */
+.row-selected {
+  background-color: #fff3cd !important;
+  border-left: 3px solid #ffc107;
+}
+
+.row-selected:hover {
+  background-color: #ffe69c !important;
+}
+
+/* Badge styles for calculation type */
+.badge-calculo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-dinamico {
+  background-color: #0dcaf0;
+  color: #000;
+  border: 1px solid #0aa8cc;
+}
+
+.badge-dinamico i {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.badge-fijo {
+  background-color: #6c757d;
+  color: white;
+  border: 1px solid #5c636a;
+}
+
+/* Cost columns alignment */
+.text-end {
+  text-align: right;
+}
+
+/* Multiple cancellation button */
+.btn-danger {
+  font-weight: 500;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Table responsiveness improvements */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  min-width: 1400px; /* Asegurar que la tabla tenga espacio para todas las columnas */
+}
+
+/* Tooltip helper */
+[title] {
+  cursor: help;
+}
+
+/* Loading state */
+.alert-warning i.fa-spinner {
+  margin-right: 8px;
+}
+
+/* Cost cell styling */
+td.text-end span {
+  font-weight: 500;
+  font-family: 'Courier New', monospace;
+}
