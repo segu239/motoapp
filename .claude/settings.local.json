@@ -29,7 +29,8 @@
       "Bash(cp:*)",
       "Bash(git commit:*)",
       "Bash(git add:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(test:*)"
     ],
     "deny": []
   },
