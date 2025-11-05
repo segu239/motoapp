@@ -5874,5 +5874,718 @@ public function CancelarPedido_post() {
 //                     FIN SISTEMA DE CANCELACIÓN MOV.STOCK
 // ============================================================================
 
+// ============================================================================
+//                  SISTEMA DE ALTA DE EXISTENCIAS
+// ============================================================================
+// Creación de alta de existencias en sucursal
+// Autor: Sistema MotoApp
+// Fecha: 2025-01-04
+// Descripción: Permite dar de alta existencias directamente en una sucursal
+//              sin necesidad de transferencia entre sucursales.
+// ============================================================================
+
+/**
+ * Crear Alta de Existencias
+ *
+ * Registra un alta de existencias en pedidoitem/pedidoscb y actualiza
+ * automáticamente el stock en artsucursal.
+ *
+ * @method POST
+ * @param array pedidoitem - Datos del item (cantidad, id_art, etc.)
+ * @param array pedidoscb - Datos de cabecera (sucursal, usuario, etc.)
+ * @return JSON - Respuesta con resultado de la operación
+ */
+public function AltaExistencias_post() {
+    $data = $this->post();
+
+    // Validar que llegaron los datos necesarios
+    if(!isset($data['pedidoitem']) || !isset($data['pedidoscb'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requieren pedidoitem y pedidoscb."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $pedidoItem = $data['pedidoitem'];
+    $pedidoscb = $data['pedidoscb'];
+
+    // ============================================================================
+    // VALIDACIONES DE DATOS
+    // ============================================================================
+
+    // Validar cantidad > 0
+    if (!isset($pedidoItem['cantidad']) || $pedidoItem['cantidad'] <= 0) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La cantidad debe ser mayor a 0"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar que id_art sea válido
+    if (!isset($pedidoItem['id_art']) || $pedidoItem['id_art'] == 0 || empty($pedidoItem['id_art'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "ID de artículo inválido. No se puede crear el alta."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar que sucursald === sucursalh (sin transferencia)
+    if (!isset($pedidoscb['sucursald']) || !isset($pedidoscb['sucursalh']) ||
+        $pedidoscb['sucursald'] != $pedidoscb['sucursalh']) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Para altas de existencias, ambas sucursales deben ser iguales (sin transferencia)"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar observación (mínimo 10 caracteres)
+    if (!isset($pedidoItem['observacion']) || strlen(trim($pedidoItem['observacion'])) < 10) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "La observación debe tener al menos 10 caracteres explicando el motivo del alta"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar que el producto exista
+    $query_producto = $this->db->query(
+        "SELECT id_articulo, nomart FROM artsucursal WHERE id_articulo = ?",
+        [$pedidoItem['id_art']]
+    );
+
+    if ($query_producto->num_rows() == 0) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El producto con ID " . $pedidoItem['id_art'] . " no existe"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    // ============================================================================
+    // INICIAR TRANSACCIÓN
+    // ============================================================================
+
+    $this->db->trans_start();
+
+    try {
+        // ============================================================================
+        // 1. INSERTAR EN PEDIDOITEM
+        // ============================================================================
+
+        $sql_pedidoitem = "INSERT INTO pedidoitem
+            (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado)
+            VALUES (?, ?, ?, ?, ?, CURRENT_DATE, ?, ?, 'ALTA')
+            RETURNING id_items";
+
+        $query = $this->db->query($sql_pedidoitem, [
+            'PE', // Tipo fijo: Pedido
+            $pedidoItem['cantidad'],
+            $pedidoItem['id_art'],
+            $pedidoItem['descripcion'],
+            isset($pedidoItem['precio']) ? $pedidoItem['precio'] : 0,
+            $pedidoItem['usuario_res'],
+            $pedidoItem['observacion']
+        ]);
+
+        $result = $query->row_array();
+        $id_items = $result['id_items'];
+
+        log_message('info', "✅ Alta Existencias - Pedidoitem insertado. ID: {$id_items}");
+
+        // ============================================================================
+        // 2. INSERTAR EN PEDIDOSCB
+        // ============================================================================
+
+        $sql_pedidoscb = "INSERT INTO pedidoscb
+            (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso)
+            VALUES (?, ?, ?, CURRENT_DATE, ?, ?, 'ALTA', ?)
+            RETURNING id_num";
+
+        $query = $this->db->query($sql_pedidoscb, [
+            'PE', // Tipo fijo: Pedido
+            $pedidoscb['sucursald'],
+            $pedidoscb['sucursalh'],
+            $pedidoscb['usuario'],
+            isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : $pedidoItem['observacion'],
+            $id_items
+        ]);
+
+        $result = $query->row_array();
+        $id_num = $result['id_num'];
+
+        log_message('info', "✅ Alta Existencias - Pedidoscb insertado. ID: {$id_num}");
+
+        // ============================================================================
+        // 3. ACTUALIZAR ID_NUM EN PEDIDOITEM
+        // ============================================================================
+
+        $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num, $id_items]);
+
+        // ============================================================================
+        // 4. ACTUALIZAR STOCK EN ARTSUCURSAL
+        // ============================================================================
+
+        // Mapeo de sucursales a campos exi
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Deposito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        $sucursal = $pedidoscb['sucursald'];
+        $campo_stock = isset($mapeo_sucursal_exi[$sucursal])
+            ? $mapeo_sucursal_exi[$sucursal]
+            : 'exi' . $sucursal;
+
+        log_message('info', "Alta Existencias - Actualizando stock: Sucursal={$sucursal}, Campo={$campo_stock}, Cantidad=+{$pedidoItem['cantidad']}, Artículo={$pedidoItem['id_art']}");
+
+        $sql_update_stock = "UPDATE artsucursal
+                            SET $campo_stock = $campo_stock + ?
+                            WHERE id_articulo = ?";
+
+        $this->db->query($sql_update_stock, [
+            $pedidoItem['cantidad'],
+            $pedidoItem['id_art']
+        ]);
+
+        $rows_affected = $this->db->affected_rows();
+        log_message('info', "✅ Alta Existencias - Stock actualizado. Rows affected: {$rows_affected}");
+
+        if ($rows_affected == 0) {
+            throw new Exception("No se pudo actualizar el stock del artículo");
+        }
+
+        // ============================================================================
+        // COMPLETAR TRANSACCIÓN
+        // ============================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        // Respuesta exitosa
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Alta de existencias registrada correctamente",
+            "id_num" => $id_num,
+            "id_items" => $id_items,
+            "cantidad" => $pedidoItem['cantidad'],
+            "sucursal" => $sucursal
+        );
+
+        log_message('info', "✅✅✅ Alta Existencias EXITOSA - ID_NUM: {$id_num}, Cantidad: {$pedidoItem['cantidad']}, Sucursal: {$sucursal}, Usuario: {$pedidoItem['usuario_res']}");
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        // Rollback en caso de error
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error en Alta Existencias: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al registrar alta de existencias: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Obtener Altas de Existencias con Costos Calculados
+ *
+ * Obtiene listado de altas de existencias con costos calculados.
+ * Implementa lógica dual:
+ * - Estado 'ALTA': Calcula costos dinámicamente con valores actuales de tipo de cambio
+ * - Estado 'Cancel-Alta': Usa valores fijos guardados al momento de cancelación
+ *
+ * @method GET
+ * @param int sucursal (opcional) - Filtrar por sucursal
+ * @param string estado (opcional) - Filtrar por estado ('ALTA', 'Cancel-Alta', 'Todas')
+ * @return JSON - Array de altas con costos calculados
+ */
+public function ObtenerAltasConCostos_get() {
+    // Obtener parámetros de filtro
+    $sucursal = $this->get('sucursal');
+    $estado_filtro = $this->get('estado');
+
+    // ============================================================================
+    // CONSTRUIR QUERY CON LÓGICA DUAL Y LATERAL JOIN
+    // ============================================================================
+
+    $sql = "
+        SELECT
+            pi.id_num,
+            pi.id_items,
+            pi.id_art,
+            pi.descripcion,
+            pi.cantidad,
+            pc.fecha,
+            pi.fecha_resuelto,
+            pi.usuario_res,
+            pi.observacion,
+            TRIM(pi.estado) AS estado,
+            pi.motivo_cancelacion,
+            pi.fecha_cancelacion,
+            pi.usuario_cancelacion,
+            pc.sucursald,
+            pc.sucursalh,
+            pc.usuario,
+            pc.tipo,
+
+            -- LÓGICA DUAL: Costos dinámicos vs fijos
+            CASE
+                WHEN TRIM(pi.estado) = 'ALTA' THEN costos.costo_total_1_calculado
+                WHEN TRIM(pi.estado) = 'Cancel-Alta' THEN pi.costo_total_1_fijo
+                ELSE NULL
+            END AS costo_total_1,
+
+            CASE
+                WHEN TRIM(pi.estado) = 'ALTA' THEN costos.costo_total_2_calculado
+                WHEN TRIM(pi.estado) = 'Cancel-Alta' THEN pi.costo_total_2_fijo
+                ELSE NULL
+            END AS costo_total_2,
+
+            CASE
+                WHEN TRIM(pi.estado) = 'ALTA' THEN costos.vcambio_actual
+                WHEN TRIM(pi.estado) = 'Cancel-Alta' THEN pi.vcambio_fijo
+                ELSE NULL
+            END AS vcambio,
+
+            -- Indicador de tipo de cálculo
+            CASE
+                WHEN TRIM(pi.estado) = 'ALTA' THEN 'dinamico'
+                WHEN TRIM(pi.estado) = 'Cancel-Alta' THEN 'fijo'
+                ELSE 'desconocido'
+            END AS tipo_calculo,
+
+            -- Símbolo de moneda: Siempre $ (PESOS) porque los costos ya están pesificados
+            '$' AS simbolo_moneda
+
+        FROM pedidoitem pi
+        INNER JOIN pedidoscb pc ON pi.id_num = pc.id_num
+
+        -- LATERAL JOIN: Calcular costos dinámicos solo cuando es necesario
+        LEFT JOIN LATERAL (
+            SELECT
+                -- Obtener valor de cambio actual (más reciente) FILTRANDO POR TIPO DE MONEDA
+                (SELECT COALESCE(vcambio, 1)
+                 FROM valorcambio
+                 WHERE codmone = art.tipo_moneda
+                 ORDER BY fecdesde DESC
+                 LIMIT 1) AS vcambio_actual,
+
+                -- Cálculo de costo_total_1 = precostosi * cantidad * vcambio
+                (art.precostosi * pi.cantidad *
+                 (SELECT COALESCE(vcambio, 1) FROM valorcambio WHERE codmone = art.tipo_moneda ORDER BY fecdesde DESC LIMIT 1)
+                ) AS costo_total_1_calculado,
+
+                -- Cálculo de costo_total_2 = precon * cantidad * vcambio
+                (art.precon * pi.cantidad *
+                 (SELECT COALESCE(vcambio, 1) FROM valorcambio WHERE codmone = art.tipo_moneda ORDER BY fecdesde DESC LIMIT 1)
+                ) AS costo_total_2_calculado
+
+            FROM artsucursal art
+            WHERE art.id_articulo = pi.id_art
+        ) AS costos ON TRIM(pi.estado) = 'ALTA'
+
+        WHERE TRIM(pi.estado) IN ('ALTA', 'Cancel-Alta')
+    ";
+
+    // ============================================================================
+    // APLICAR FILTROS OPCIONALES
+    // ============================================================================
+
+    // Filtro por sucursal
+    if ($sucursal && $sucursal != 0) {
+        $sql .= " AND pc.sucursald = " . intval($sucursal);
+    }
+
+    // Filtro por estado
+    if ($estado_filtro && $estado_filtro !== 'Todas') {
+        $sql .= " AND TRIM(pi.estado) = " . $this->db->escape($estado_filtro);
+    }
+
+    // Ordenar por fecha (más recientes primero)
+    $sql .= " ORDER BY pc.fecha DESC, pi.id_num DESC";
+
+    // ============================================================================
+    // EJECUTAR QUERY
+    // ============================================================================
+
+    try {
+        $query = $this->db->query($sql);
+
+        if ($query->num_rows() > 0) {
+            $altas = $query->result_array();
+
+            // Formatear valores numéricos
+            foreach ($altas as &$alta) {
+                $alta['costo_total_1'] = $alta['costo_total_1'] !== null
+                    ? number_format((float)$alta['costo_total_1'], 2, '.', '')
+                    : null;
+
+                $alta['costo_total_2'] = $alta['costo_total_2'] !== null
+                    ? number_format((float)$alta['costo_total_2'], 2, '.', '')
+                    : null;
+
+                $alta['vcambio'] = $alta['vcambio'] !== null
+                    ? number_format((float)$alta['vcambio'], 4, '.', '')
+                    : null;
+            }
+
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => $altas,
+                "total" => count($altas)
+            );
+
+            log_message('info', "✅ Altas consultadas: " . count($altas) . " registros");
+        } else {
+            $respuesta = array(
+                "error" => false,
+                "mensaje" => [],
+                "total" => 0
+            );
+        }
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        log_message('error', "❌ Error al obtener altas con costos: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al obtener altas de existencias: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Cancelar Alta de Existencias (V2.0 - Con fijación de valores)
+ *
+ * Cancela una o múltiples altas de existencias previamente registradas,
+ * revierte automáticamente el stock en artsucursal y FIJA los valores
+ * de costos al momento de la cancelación.
+ *
+ * @method POST
+ * @param int id_num (opcional) - ID único de la cabecera del alta a cancelar
+ * @param array id_nums (opcional) - Array de IDs para cancelación múltiple
+ * @param string motivo - Motivo de la cancelación
+ * @param string usuario - Usuario que cancela
+ * @return JSON - Respuesta con resultado de la operación
+ */
+public function CancelarAltaExistencias_post() {
+    $data = $this->post();
+
+    // ============================================================================
+    // VALIDAR DATOS DE ENTRADA
+    // ============================================================================
+
+    // Validar que exista id_num o id_nums
+    if (!isset($data['id_num']) && !isset($data['id_nums'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requiere id_num o id_nums."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Validar motivo y usuario
+    if (!isset($data['motivo']) || !isset($data['usuario'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requieren motivo y usuario."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $motivo = $data['motivo'];
+    $usuario = $data['usuario'];
+
+    // Validar motivo (mínimo 10 caracteres)
+    if (strlen(trim($motivo)) < 10) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El motivo de cancelación debe tener al menos 10 caracteres"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // Convertir id_num a array para unificar lógica (backward compatibility)
+    if (isset($data['id_nums']) && is_array($data['id_nums'])) {
+        $ids_a_cancelar = $data['id_nums'];
+    } else {
+        $ids_a_cancelar = [$data['id_num']];
+    }
+
+    // Validar que el array no esté vacío
+    if (empty($ids_a_cancelar)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se especificaron IDs para cancelar"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // ============================================================================
+    // OBTENER Y VALIDAR DATOS DE ALTAS A CANCELAR (incluye tipo_moneda)
+    // ============================================================================
+
+    $placeholders = implode(',', array_fill(0, count($ids_a_cancelar), '?'));
+
+    $query_altas = $this->db->query(
+        "SELECT
+            pi.id_num,
+            pi.id_items,
+            pi.id_art,
+            pi.descripcion,
+            pi.cantidad,
+            TRIM(pi.estado) AS estado,
+            pc.sucursald,
+            art.precostosi,
+            art.precon,
+            art.tipo_moneda
+         FROM pedidoitem pi
+         JOIN pedidoscb pc ON pi.id_num = pc.id_num
+         JOIN artsucursal art ON pi.id_art = art.id_articulo
+         WHERE pi.id_num IN ({$placeholders})",
+        $ids_a_cancelar
+    );
+
+    if ($query_altas->num_rows() == 0) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se encontraron registros de alta con los IDs especificados"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    $registros_altas = $query_altas->result();
+
+    // Validar que todos los registros tengan estado 'ALTA'
+    $errores_validacion = [];
+    foreach ($registros_altas as $registro) {
+        if ($registro->estado !== 'ALTA') {
+            $errores_validacion[] = "ID {$registro->id_num}: Estado actual '{$registro->estado}' (se requiere 'ALTA')";
+        }
+    }
+
+    if (!empty($errores_validacion)) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Algunos registros no pueden cancelarse",
+            "errores" => $errores_validacion
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // ============================================================================
+    // CALCULAR COSTOS FIJOS PARA CADA REGISTRO
+    // ============================================================================
+
+    $datos_cancelacion = [];
+    foreach ($registros_altas as $registro) {
+        // Obtener valor de cambio específico para el tipo_moneda del artículo
+        $query_vcambio = $this->db->query(
+            "SELECT COALESCE(vcambio, 1) AS vcambio_actual
+             FROM valorcambio
+             WHERE codmone = ?
+             ORDER BY fecdesde DESC
+             LIMIT 1",
+            array($registro->tipo_moneda)
+        );
+
+        $vcambio_fijo = 1; // Valor por defecto
+        if ($query_vcambio->num_rows() > 0) {
+            $vcambio_fijo = $query_vcambio->row()->vcambio_actual;
+        }
+
+        // Calcular costos fijos: costo * cantidad * vcambio (según tipo_moneda del artículo)
+        $costo_total_1_fijo = $registro->precostosi * $registro->cantidad * $vcambio_fijo;
+        $costo_total_2_fijo = $registro->precon * $registro->cantidad * $vcambio_fijo;
+
+        $datos_cancelacion[] = [
+            'id_num' => $registro->id_num,
+            'id_art' => $registro->id_art,
+            'cantidad' => $registro->cantidad,
+            'sucursal' => $registro->sucursald,
+            'costo_total_1_fijo' => $costo_total_1_fijo,
+            'costo_total_2_fijo' => $costo_total_2_fijo,
+            'vcambio_fijo' => $vcambio_fijo
+        ];
+
+        log_message('info', "📊 Costos calculados para ID {$registro->id_num} (tipo_moneda={$registro->tipo_moneda}): C1={$costo_total_1_fijo}, C2={$costo_total_2_fijo}, VC={$vcambio_fijo}");
+    }
+
+    // ============================================================================
+    // INICIAR TRANSACCIÓN ÚNICA
+    // ============================================================================
+
+    $this->db->trans_start();
+
+    try {
+        // Mapeo de sucursales a campos exi
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Deposito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        $resultados = [];
+        $total_revertido = 0;
+
+        // Procesar cada cancelación
+        foreach ($datos_cancelacion as $dato) {
+            // ========================================================================
+            // 1. ACTUALIZAR ESTADO Y FIJAR VALORES EN PEDIDOITEM
+            // ========================================================================
+
+            $sql_update_item = "UPDATE pedidoitem
+                               SET estado = 'Cancel-Alta',
+                                   motivo_cancelacion = ?,
+                                   fecha_cancelacion = CURRENT_DATE,
+                                   usuario_cancelacion = ?,
+                                   costo_total_1_fijo = ?,
+                                   costo_total_2_fijo = ?,
+                                   vcambio_fijo = ?
+                               WHERE id_num = ?";
+
+            $this->db->query($sql_update_item, [
+                $motivo,
+                $usuario,
+                $dato['costo_total_1_fijo'],
+                $dato['costo_total_2_fijo'],
+                $dato['vcambio_fijo'],
+                $dato['id_num']
+            ]);
+
+            log_message('info', "✅ Pedidoitem actualizado con valores fijos. ID: {$dato['id_num']}");
+
+            // ========================================================================
+            // 2. ACTUALIZAR ESTADO EN PEDIDOSCB
+            // ========================================================================
+
+            $sql_update_cab = "UPDATE pedidoscb
+                              SET estado = 'Cancel-Alta',
+                                  motivo_cancelacion = ?,
+                                  fecha_cancelacion = CURRENT_DATE,
+                                  usuario_cancelacion = ?
+                              WHERE id_num = ?";
+
+            $this->db->query($sql_update_cab, [$motivo, $usuario, $dato['id_num']]);
+
+            log_message('info', "✅ Pedidoscb actualizado. ID: {$dato['id_num']}");
+
+            // ========================================================================
+            // 3. REVERTIR STOCK EN ARTSUCURSAL
+            // ========================================================================
+
+            $sucursal = $dato['sucursal'];
+            $campo_stock = isset($mapeo_sucursal_exi[$sucursal])
+                ? $mapeo_sucursal_exi[$sucursal]
+                : 'exi' . $sucursal;
+
+            log_message('info', "🔄 Revirtiendo stock: Sucursal={$sucursal}, Campo={$campo_stock}, Cantidad=-{$dato['cantidad']}, Artículo={$dato['id_art']}");
+
+            $sql_revertir_stock = "UPDATE artsucursal
+                                  SET $campo_stock = $campo_stock - ?
+                                  WHERE id_articulo = ?";
+
+            $this->db->query($sql_revertir_stock, [
+                $dato['cantidad'],
+                $dato['id_art']
+            ]);
+
+            $rows_affected = $this->db->affected_rows();
+
+            if ($rows_affected == 0) {
+                throw new Exception("No se pudo revertir el stock del artículo ID: {$dato['id_art']}");
+            }
+
+            log_message('info', "✅ Stock revertido. ID: {$dato['id_num']}, Rows affected: {$rows_affected}");
+
+            // Agregar a resultados
+            $resultados[] = [
+                'id_num' => $dato['id_num'],
+                'cantidad_revertida' => $dato['cantidad'],
+                'sucursal' => $sucursal,
+                'costo_total_1_fijo' => number_format($dato['costo_total_1_fijo'], 2, '.', ''),
+                'costo_total_2_fijo' => number_format($dato['costo_total_2_fijo'], 2, '.', ''),
+                'vcambio_fijo' => number_format($dato['vcambio_fijo'], 4, '.', '')
+            ];
+
+            $total_revertido += $dato['cantidad'];
+        }
+
+        // ============================================================================
+        // COMPLETAR TRANSACCIÓN
+        // ============================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        // Respuesta exitosa
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => count($resultados) === 1
+                ? "Alta de existencias cancelada correctamente. Stock revertido y valores fijados."
+                : count($resultados) . " altas de existencias canceladas correctamente. Stock revertido y valores fijados.",
+            "resultados" => $resultados,
+            "total_registros" => count($resultados),
+            "total_cantidad_revertida" => $total_revertido
+        );
+
+        log_message('info', "✅✅✅ Cancelación(es) EXITOSA(S) - Total: " . count($resultados) . ", Cantidad total revertida: {$total_revertido}, Usuario: {$usuario}");
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        // Rollback en caso de error
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error al cancelar Alta Existencias: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al cancelar alta(s) de existencias: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+// ============================================================================
+//                  FIN SISTEMA DE ALTA DE EXISTENCIAS
+// ============================================================================
+
 }
 
