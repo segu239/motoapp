@@ -245,3 +245,8 @@ export const UrlPriceChangeHistory = "https://motoapp.loclx.io/APIAND/index.php/
 
 // URL para cancelación de pedidos de stock
 export const UrlCancelarPedidoStock = "https://motoapp.loclx.io/APIAND/index.php/Descarga/CancelarPedidoStock";
+
+// URLs para alta de existencias
+export const UrlAltaExistencias = "https://motoapp.loclx.io/APIAND/index.php/Descarga/AltaExistencias";
+export const UrlObtenerAltasConCostos = "https://motoapp.loclx.io/APIAND/index.php/Descarga/ObtenerAltasConCostos";
+export const UrlCancelarAltaExistencias = "https://motoapp.loclx.io/APIAND/index.php/Descarga/CancelarAltaExistencias";

@@ -72,6 +72,8 @@ import { ReporteComponent } from './components/reporte/reporte.component';
 import { HistorialventasComponent } from './components/historialventas/historialventas.component';
 import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
 import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios.component';
+import { AltaExistenciasComponent } from './components/alta-existencias/alta-existencias.component';
+import { ListaAltasComponent } from './components/lista-altas/lista-altas.component';
 
 
 //nuevouser role
@@ -108,6 +110,8 @@ children:[
     {path: 'stockenvio', component: StockenvioComponent, data: {titulo: "Enviar Stock"} },
     {path: 'enviostockpendientes', component: EnviostockpendientesComponent, data: {titulo: "Envios Pendientes"} },
     { path: 'enviodestockrealizados', component: EnviodestockrealizadosComponent, data: { titulo: "Envios Realizados" } },
+    { path: 'alta-existencias', component: AltaExistenciasComponent, data: { titulo: "Alta de Existencias" } },
+    { path: 'lista-altas', component: ListaAltasComponent, data: { titulo: "Lista de Altas" } },
     { path: 'rubroprincipal', component: RubroprincipalComponent, data: { titulo: "Rubro Principal" } },
     { path: 'newrubroprincipal', component: NewrubroprincipalComponent, data: { titulo: "Nuevo Rubro Principal" } },
     {path: 'editrubroprincipal', component: EditrubroprincipalComponent, data: { titulo: "Editar Rubro Principal" } },

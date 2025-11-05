@@ -131,6 +131,8 @@ import { HistorialventasComponent } from './components/historialventas/historial
 import { Historialventas2Component } from './components/historialventas2/historialventas2.component';
 import { TotalizadorModalComponent } from './components/historialventas2/totalizador-modal.component';
 import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios.component';
+import { AltaExistenciasComponent } from './components/alta-existencias/alta-existencias.component';
+import { ListaAltasComponent } from './components/lista-altas/lista-altas.component';
 
 @NgModule({
   declarations: [
@@ -217,6 +219,8 @@ import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios
     Historialventas2Component,
     TotalizadorModalComponent,
     CambioPreciosComponent,
+    AltaExistenciasComponent,
+    ListaAltasComponent,
   ],
   imports: [
     ButtonModule,
