@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera, UrlCancelarPedidoStock} from '../config/ini'
+import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera, UrlCancelarPedidoStock, UrlAltaExistencias, UrlObtenerAltasConCostos, UrlCancelarAltaExistencias} from '../config/ini'
 import { map } from "rxjs/operators";
 import { TarjCredito } from '../interfaces/tarjcredito';
 
@@ -278,5 +278,93 @@ export class CargardataService {
     }
 
     return this.http.post(UrlCancelarPedidoStock, payload);
+  }
+
+  // ============================================================================
+  // MÉTODOS PARA ALTA DE EXISTENCIAS
+  // ============================================================================
+
+  /**
+   * Crear Alta de Existencias
+   * Registra un alta de existencias en una sucursal específica
+   *
+   * @param pedidoitem - Datos del item (cantidad, id_art, descripcion, etc.)
+   * @param pedidoscb - Datos de cabecera (sucursal, usuario, observacion)
+   * @returns Observable con la respuesta del backend
+   */
+  crearAltaExistencias(pedidoitem: any, pedidoscb: any): Observable<any> {
+    const payload = {
+      pedidoitem: pedidoitem,
+      pedidoscb: pedidoscb
+    };
+    return this.http.post(UrlAltaExistencias, payload);
+  }
+
+  /**
+   * Cancelar Alta de Existencias (V2.0 - Con fijación de valores y selección múltiple)
+   * Cancela una o múltiples altas previamente registradas y revierte el stock automáticamente
+   *
+   * @param id_num - ID único de la cabecera del alta a cancelar (opcional si se proporciona id_nums)
+   * @param id_nums - Array de IDs para cancelación múltiple (opcional si se proporciona id_num)
+   * @param motivo - Motivo de la cancelación (mínimo 10 caracteres)
+   * @param usuario - Usuario que cancela
+   * @returns Observable con la respuesta del backend
+   */
+  cancelarAltaExistencias(id_num: number | null, motivo: string, usuario: string, id_nums?: number[]): Observable<any> {
+    // Si se proporciona id_nums, usarlo; si no, usar id_num
+    const payload: any = {
+      motivo: motivo,
+      usuario: usuario
+    };
+
+    if (id_nums && id_nums.length > 0) {
+      payload.id_nums = id_nums;
+    } else {
+      payload.id_num = id_num;
+    }
+
+    return this.http.post(UrlCancelarAltaExistencias, payload);
+  }
+
+  /**
+   * Obtener Altas de Existencias con Costos Calculados (V2.0)
+   * Obtiene altas de existencias con costos calculados dinámicamente o fijos según estado
+   *
+   * Lógica dual:
+   * - Estado 'ALTA': Costos dinámicos (recalculados con valores actuales)
+   * - Estado 'Cancel-Alta': Costos fijos (valores guardados al momento de cancelación)
+   *
+   * @param sucursal - Número de sucursal (opcional, 0 para todas)
+   * @param estado - Estado a filtrar: 'ALTA', 'Cancel-Alta' o 'Todas' (opcional)
+   * @returns Observable con las altas y sus costos calculados
+   */
+  obtenerAltasConCostos(sucursal?: number, estado?: string): Observable<any> {
+    let url = UrlObtenerAltasConCostos;
+    const params: string[] = [];
+
+    if (sucursal !== undefined && sucursal !== null && sucursal !== 0) {
+      params.push(`sucursal=${sucursal}`);
+    }
+
+    if (estado && estado !== 'Todas') {
+      params.push(`estado=${encodeURIComponent(estado)}`);
+    }
+
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    return this.http.get(url);
+  }
+
+  /**
+   * Obtener Altas por Sucursal (Método legacy - ahora usa obtenerAltasConCostos)
+   * Mantiene compatibilidad con componentes existentes
+   *
+   * @param sucursal - Número de sucursal
+   * @returns Observable con las altas de la sucursal
+   */
+  obtenerAltasPorSucursal(sucursal: number): Observable<any> {
+    return this.obtenerAltasConCostos(sucursal, 'ALTA');
   }
 }

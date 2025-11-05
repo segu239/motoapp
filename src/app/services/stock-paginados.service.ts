@@ -166,7 +166,7 @@ export class StockPaginadosService {
     if (!productos || !Array.isArray(productos)) {
       return [];
     }
-    
+
     return productos.map(item => ({
       ...item,
       // Normalizar campos de nombres
@@ -175,21 +175,24 @@ export class StockPaginadosService {
       cd_barra: item.cd_barra || item.codigobarra || '',
       marca: item.marca || '',
       rubro: item.rubro || '',
-      
+
+      // CRITICAL: Mapear id_articulo de la BD al campo idart esperado por el componente
+      idart: item.id_articulo || item.idart || 0,
+
       // Normalizar precios como números
       precon: parseFloat(this.parseFloat(item.precon).toFixed(4)),
       prefi1: parseFloat(this.parseFloat(item.prefi1).toFixed(4)),
       prefi2: parseFloat(this.parseFloat(item.prefi2).toFixed(4)),
       prefi3: parseFloat(this.parseFloat(item.prefi3).toFixed(4)),
       prefi4: parseFloat(this.parseFloat(item.prefi4).toFixed(4)),
-      
+
       // Normalizar existencias como números
       exi1: this.parseFloat(item.exi1),
       exi2: this.parseFloat(item.exi2),
       exi3: this.parseFloat(item.exi3),
       exi4: this.parseFloat(item.exi4),
       exi5: this.parseFloat(item.exi5),
-      
+
       estado: item.estado || ''
     }));
   }

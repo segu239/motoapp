@@ -340,6 +340,11 @@ refrescarDatos() {
     // Implementa la lógica para refrescar los datos aquí
     // Por ejemplo, puedes volver a cargar los pedidos desde el servidor
     this.cargarPedidos();
+
+    // Resetear la tabla PrimeNG para forzar actualización de la vista
+    if (this.dtable) {
+      this.dtable.reset();
+    }
   }
 
   /**
