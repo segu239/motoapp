@@ -6119,14 +6119,47 @@ public function AltaExistencias_post() {
  * @param string estado (opcional) - Filtrar por estado ('ALTA', 'Cancel-Alta', 'Todas')
  * @return JSON - Array de altas con costos calculados
  */
+/**
+ * Obtiene listado de altas de existencias con costos calculados
+ *
+ * VERSIÓN 2.0: Con soporte para paginación, ordenamiento y filtros dinámicos
+ *
+ * @method GET
+ * @param int sucursal (opcional) - Filtrar por sucursal
+ * @param string estado (opcional) - Filtrar por estado ('ALTA', 'Cancel-Alta', 'Todas')
+ * @param int page (opcional, default: 1) - Número de página
+ * @param int limit (opcional, default: 50) - Registros por página
+ * @param string sortField (opcional) - Campo para ordenar
+ * @param string sortOrder (opcional, default: ASC) - Dirección de ordenamiento (ASC/DESC)
+ * @param array filter_* (opcional) - Filtros dinámicos por columna
+ * @param array matchMode_* (opcional) - Modo de matching para filtros
+ * @return JSON
+ */
 public function ObtenerAltasConCostos_get() {
-    // Obtener parámetros de filtro
+    // ========================================================================
+    // PARÁMETROS
+    // ========================================================================
+
+    // Filtros básicos
     $sucursal = $this->get('sucursal');
     $estado_filtro = $this->get('estado');
 
-    // ============================================================================
-    // CONSTRUIR QUERY CON LÓGICA DUAL Y LATERAL JOIN
-    // ============================================================================
+    // Paginación
+    $page = $this->get('page');
+    $limit = $this->get('limit');
+
+    // Ordenamiento
+    $sortField = $this->get('sortField');
+    $sortOrder = $this->get('sortOrder');
+
+    // Validación y valores por defecto
+    $page = $page ? max(1, intval($page)) : 1;
+    $limit = $limit ? max(1, min(500, intval($limit))) : 50;
+    $sortOrder = strtoupper($sortOrder) === 'DESC' ? 'DESC' : 'ASC';
+
+    // ========================================================================
+    // QUERY BASE
+    // ========================================================================
 
     $sql = "
         SELECT
@@ -6174,7 +6207,7 @@ public function ObtenerAltasConCostos_get() {
                 ELSE 'desconocido'
             END AS tipo_calculo,
 
-            -- Símbolo de moneda: Siempre $ (PESOS) porque los costos ya están pesificados
+            -- Símbolo de moneda: Siempre $ (PESOS)
             '$' AS simbolo_moneda
 
         FROM pedidoitem pi
@@ -6207,62 +6240,156 @@ public function ObtenerAltasConCostos_get() {
         WHERE TRIM(pi.estado) IN ('ALTA', 'Cancel-Alta')
     ";
 
-    // ============================================================================
-    // APLICAR FILTROS OPCIONALES
-    // ============================================================================
+    // ========================================================================
+    // FILTROS BÁSICOS
+    // ========================================================================
 
-    // Filtro por sucursal
     if ($sucursal && $sucursal != 0) {
         $sql .= " AND pc.sucursald = " . intval($sucursal);
     }
 
-    // Filtro por estado
     if ($estado_filtro && $estado_filtro !== 'Todas') {
         $sql .= " AND TRIM(pi.estado) = " . $this->db->escape($estado_filtro);
     }
 
-    // Ordenar por fecha (más recientes primero)
-    $sql .= " ORDER BY pc.fecha DESC, pi.id_num DESC";
+    // ========================================================================
+    // FILTROS DINÁMICOS
+    // ========================================================================
 
-    // ============================================================================
+    $validColumns = array(
+        'id_num' => 'pi.id_num',
+        'id_art' => 'pi.id_art',
+        'descripcion' => 'pi.descripcion',
+        'cantidad' => 'pi.cantidad',
+        'estado' => 'pi.estado',
+        'sucursald' => 'pc.sucursald',
+        'usuario_res' => 'pi.usuario_res',
+        'observacion' => 'pi.observacion'
+    );
+
+    foreach ($_GET as $key => $value) {
+        if (strpos($key, 'filter_') === 0 && $value !== '' && $value !== null) {
+            $field = substr($key, 7);
+
+            if (!isset($validColumns[$field])) {
+                continue;
+            }
+
+            $dbField = $validColumns[$field];
+            $matchModeKey = 'matchMode_' . $field;
+            $matchMode = $this->get($matchModeKey);
+            if (!$matchMode) $matchMode = 'contains';
+
+            switch ($matchMode) {
+                case 'equals':
+                    $sql .= " AND " . $dbField . " = " . $this->db->escape($value);
+                    break;
+                case 'contains':
+                    $sql .= " AND " . $dbField . " ILIKE " . $this->db->escape('%' . $value . '%');
+                    break;
+                case 'startsWith':
+                    $sql .= " AND " . $dbField . " ILIKE " . $this->db->escape($value . '%');
+                    break;
+                case 'endsWith':
+                    $sql .= " AND " . $dbField . " ILIKE " . $this->db->escape('%' . $value);
+                    break;
+                default:
+                    $sql .= " AND " . $dbField . " ILIKE " . $this->db->escape('%' . $value . '%');
+            }
+        }
+    }
+
+    // ========================================================================
+    // CONTAR TOTAL (antes de paginación)
+    // ========================================================================
+
+    $countSql = "SELECT COUNT(*) as total FROM (" . $sql . ") AS count_query";
+
+    try {
+        $countQuery = $this->db->query($countSql);
+        $totalRegistros = $countQuery->row()->total;
+    } catch (Exception $e) {
+        log_message('error', "❌ Error al contar registros: " . $e->getMessage());
+        $totalRegistros = 0;
+    }
+
+    // ========================================================================
+    // ORDENAMIENTO
+    // ========================================================================
+
+    $sortFieldMap = array(
+        'id_num' => 'pi.id_num',
+        'id_art' => 'pi.id_art',
+        'descripcion' => 'pi.descripcion',
+        'cantidad' => 'pi.cantidad',
+        'estado' => 'pi.estado',
+        'fecha' => 'pc.fecha',
+        'fecha_resuelto' => 'pi.fecha_resuelto',
+        'sucursald' => 'pc.sucursald',
+        'usuario_res' => 'pi.usuario_res',
+        'observacion' => 'pi.observacion',
+        'tipo_calculo' => 'tipo_calculo',
+        'costo_total_1' => 'costo_total_1',
+        'costo_total_2' => 'costo_total_2',
+        'vcambio' => 'vcambio'
+    );
+
+    if ($sortField && isset($sortFieldMap[$sortField])) {
+        $sql .= " ORDER BY " . $sortFieldMap[$sortField] . " " . $sortOrder;
+    } else {
+        $sql .= " ORDER BY pi.id_num DESC";
+    }
+
+    // ========================================================================
+    // PAGINACIÓN
+    // ========================================================================
+
+    $offset = ($page - 1) * $limit;
+    $sql .= " LIMIT " . intval($limit) . " OFFSET " . intval($offset);
+
+    // ========================================================================
     // EJECUTAR QUERY
-    // ============================================================================
+    // ========================================================================
 
     try {
         $query = $this->db->query($sql);
 
-        if ($query->num_rows() > 0) {
-            $altas = $query->result_array();
-
-            // Formatear valores numéricos
-            foreach ($altas as &$alta) {
-                $alta['costo_total_1'] = $alta['costo_total_1'] !== null
-                    ? number_format((float)$alta['costo_total_1'], 2, '.', '')
-                    : null;
-
-                $alta['costo_total_2'] = $alta['costo_total_2'] !== null
-                    ? number_format((float)$alta['costo_total_2'], 2, '.', '')
-                    : null;
-
-                $alta['vcambio'] = $alta['vcambio'] !== null
-                    ? number_format((float)$alta['vcambio'], 4, '.', '')
-                    : null;
-            }
-
-            $respuesta = array(
-                "error" => false,
-                "mensaje" => $altas,
-                "total" => count($altas)
-            );
-
-            log_message('info', "✅ Altas consultadas: " . count($altas) . " registros");
-        } else {
-            $respuesta = array(
-                "error" => false,
-                "mensaje" => [],
-                "total" => 0
-            );
+        if (!$query) {
+            $error = $this->db->error();
+            throw new Exception("Error en consulta SQL: " . $error['message']);
         }
+
+        $altas = $query->result_array();
+
+        // Formatear valores numéricos
+        foreach ($altas as &$alta) {
+            $alta['costo_total_1'] = $alta['costo_total_1'] !== null
+                ? number_format((float)$alta['costo_total_1'], 2, '.', '')
+                : null;
+
+            $alta['costo_total_2'] = $alta['costo_total_2'] !== null
+                ? number_format((float)$alta['costo_total_2'], 2, '.', '')
+                : null;
+
+            $alta['vcambio'] = $alta['vcambio'] !== null
+                ? number_format((float)$alta['vcambio'], 4, '.', '')
+                : null;
+        }
+
+        // ========================================================================
+        // RESPUESTA CON PAGINACIÓN
+        // ========================================================================
+
+        $respuesta = array(
+            "error" => false,
+            "data" => $altas,
+            "total" => $totalRegistros,
+            "page" => $page,
+            "limit" => $limit,
+            "total_pages" => ceil($totalRegistros / $limit)
+        );
+
+        log_message('info', "✅ Altas consultadas: " . count($altas) . " de " . $totalRegistros . " (página " . $page . ")");
 
         $this->response($respuesta, REST_Controller::HTTP_OK);
 
