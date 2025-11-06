@@ -112,9 +112,15 @@ export class AltaExistenciasComponent implements OnInit, OnDestroy {
   ngOnInit() {
     console.log('AltaExistenciasComponent inicializado');
 
-    // Obtener usuario de sessionStorage
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-    this.usuario = user.email || '';
+    // Obtener usuario de sessionStorage (usando emailOp como otros componentes)
+    this.usuario = sessionStorage.getItem('emailOp') || '';
+
+    // Si no hay usuario, mostrar advertencia
+    if (!this.usuario || this.usuario.trim() === '') {
+      console.error('⚠️ ADVERTENCIA: No hay usuario en sessionStorage.emailOp');
+    } else {
+      console.log('✅ Usuario obtenido:', this.usuario);
+    }
 
     this.restoreTableState();
     this.setupSubscriptions();
@@ -425,7 +431,7 @@ export class AltaExistenciasComponent implements OnInit, OnDestroy {
       id_art: idArticulo, // Asegurar que sea número
       descripcion: this.productoSeleccionado!.nomart,
       precio: 0,
-      usuario_res: this.usuario,
+      usuario_res: this.usuario, // Email completo (BD ampliada a 50 caracteres)
       observacion: this.observacion.trim(),
       estado: 'ALTA'
     };
@@ -435,7 +441,7 @@ export class AltaExistenciasComponent implements OnInit, OnDestroy {
       tipo: 'PE',
       sucursald: Number(this.sucursalSeleccionada), // Asegurar que sea número
       sucursalh: Number(this.sucursalSeleccionada), // Misma sucursal (sin transferencia)
-      usuario: this.usuario,
+      usuario: this.usuario, // Email completo (BD ampliada a 50 caracteres)
       observacion: this.observacion.trim(),
       estado: 'ALTA'
     };
