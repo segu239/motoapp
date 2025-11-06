@@ -57,3 +57,7 @@ temp_*.txt
 *.backup-*
 *.bak
 *_backup.*
+.backups/
+
+# Herramientas de desarrollo
+.crush/
