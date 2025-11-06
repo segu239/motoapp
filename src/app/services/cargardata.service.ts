@@ -367,4 +367,86 @@ export class CargardataService {
   obtenerAltasPorSucursal(sucursal: number): Observable<any> {
     return this.obtenerAltasConCostos(sucursal, 'ALTA');
   }
+
+  /**
+   * Obtener Altas de Existencias con Paginación, Filtros y Ordenamiento (V3.0)
+   *
+   * Método mejorado con lazy loading, paginación del lado del servidor,
+   * filtros dinámicos y ordenamiento por cualquier columna.
+   *
+   * Nueva respuesta del backend:
+   * {
+   *   error: false,
+   *   data: [...],              // Array de altas
+   *   total: 1500,              // Total de registros (con filtros aplicados, sin paginación)
+   *   page: 1,                  // Página actual
+   *   limit: 50,                // Registros por página
+   *   total_pages: 30           // Total de páginas
+   * }
+   *
+   * @param sucursal - Número de sucursal (opcional)
+   * @param estado - Estado a filtrar: 'ALTA', 'Cancel-Alta' o 'Todas' (opcional)
+   * @param page - Número de página (default: 1)
+   * @param limit - Registros por página (default: 50)
+   * @param sortField - Campo por el cual ordenar (ej: 'id_num', 'descripcion', 'fecha')
+   * @param sortOrder - Orden: 'ASC' o 'DESC' (default: 'DESC')
+   * @param filters - Objeto con filtros dinámicos { field: value, ... }
+   * @param matchModes - Objeto con match modes { field: 'contains'|'equals'|'startsWith'|... }
+   * @returns Observable con la respuesta paginada del backend
+   */
+  obtenerAltasConCostosPaginadas(
+    sucursal?: number,
+    estado?: string,
+    page: number = 1,
+    limit: number = 50,
+    sortField: string = 'id_num',
+    sortOrder: string = 'DESC',
+    filters?: { [key: string]: any },
+    matchModes?: { [key: string]: string }
+  ): Observable<any> {
+    let url = UrlObtenerAltasConCostos;
+    const params: string[] = [];
+
+    // Parámetros de sucursal y estado (compatibilidad con método anterior)
+    if (sucursal !== undefined && sucursal !== null && sucursal !== 0) {
+      params.push(`sucursal=${sucursal}`);
+    }
+
+    if (estado && estado !== 'Todas') {
+      params.push(`estado=${encodeURIComponent(estado)}`);
+    }
+
+    // Parámetros de paginación
+    params.push(`page=${page}`);
+    params.push(`limit=${limit}`);
+
+    // Parámetros de ordenamiento
+    if (sortField) {
+      params.push(`sortField=${encodeURIComponent(sortField)}`);
+    }
+    if (sortOrder) {
+      params.push(`sortOrder=${sortOrder.toUpperCase()}`);
+    }
+
+    // Parámetros de filtros dinámicos
+    if (filters) {
+      for (const [field, value] of Object.entries(filters)) {
+        if (value !== null && value !== undefined && value !== '') {
+          params.push(`filter_${field}=${encodeURIComponent(value)}`);
+
+          // Match mode para este filtro
+          if (matchModes && matchModes[field]) {
+            params.push(`matchMode_${field}=${matchModes[field]}`);
+          }
+        }
+      }
+    }
+
+    // Construir URL final
+    if (params.length > 0) {
+      url += '?' + params.join('&');
+    }
+
+    return this.http.get(url);
+  }
 }
