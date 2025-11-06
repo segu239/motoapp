@@ -1766,15 +1766,91 @@ public function PedidoItemyCab_post() {
             // Actualizar id_num en el nuevo pedidoitem
                 $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
 
+            // ============================================================================
+            // VALIDACIÓN DE ESTADO Y BLOQUEO PESIMISTA (Prevención de duplicados)
+            // ============================================================================
             // Actualizar estado a "Recibido" solo en el pedidoitem existente si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
+                // SELECT FOR UPDATE NOWAIT para prevenir race conditions
+                $sql_check = "SELECT id_num, estado, cantidad, id_art
+                              FROM pedidoitem
+                              WHERE id_num = ?
+                              FOR UPDATE NOWAIT";
+
+                try {
+                    $query_check = $this->db->query($sql_check, [$id_num_parametro]);
+
+                    if ($query_check->num_rows() === 0) {
+                        $this->db->trans_rollback();
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "Pedido no encontrado",
+                            "codigo" => "NOT_FOUND"
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+                        return;
+                    }
+
+                    $pedido_actual = $query_check->row();
+                    $estado_actual = trim($pedido_actual->estado);
+
+                    // Validar que el estado sea el esperado
+                    if ($estado_actual !== 'Solicitado-E') {
+                        if ($estado_actual === 'Recibido') {
+                            // Ya fue recibido - operación duplicada
+                            $this->db->trans_rollback();
+                            $respuesta = array(
+                                "error" => true,
+                                "mensaje" => "Este pedido ya fue recibido anteriormente",
+                                "codigo" => "DUPLICATE_OPERATION",
+                                "estado_actual" => $estado_actual
+                            );
+                            $this->response($respuesta, REST_Controller::HTTP_CONFLICT); // 409
+                            return;
+                        } else {
+                            // Estado inesperado
+                            $this->db->trans_rollback();
+                            $respuesta = array(
+                                "error" => true,
+                                "mensaje" => "El pedido no está en estado 'Solicitado-E'. Estado actual: " . $estado_actual,
+                                "codigo" => "INVALID_STATE",
+                                "estado_actual" => $estado_actual
+                            );
+                            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                            return;
+                        }
+                    }
+
+                    // Estado válido - proceder con la actualización
+                    $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
+
+                } catch (Exception $e) {
+                    $this->db->trans_rollback();
+
+                    // Verificar si es error de bloqueo
+                    if (strpos($e->getMessage(), 'could not obtain lock') !== false) {
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "El pedido está siendo procesado por otro usuario. Por favor espere e intente nuevamente.",
+                            "codigo" => "LOCK_TIMEOUT"
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_CONFLICT); // 409
+                    } else {
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "Error al validar el pedido: " . $e->getMessage()
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+                    }
+                    return;
+                }
              }
 
               // Actualizar estado a "Recibido" solo en pedidoscb existentes si se proporciona id_num
             if ($id_num_parametro) {
                  $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado-E'", ["Recibido", $id_num_parametro]);
              }
+            // ============================================================================
 
             // ============================================================================
             // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN RECEPCIÓN
@@ -1969,15 +2045,91 @@ public function PedidoItemyCab_post() {
             // Actualizar id_num en el nuevo pedidoitem
                 $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num_generado, $id_items_nuevo]);
 
+            // ============================================================================
+            // VALIDACIÓN DE ESTADO Y BLOQUEO PESIMISTA (Prevención de duplicados)
+            // ============================================================================
             // Actualizar estado a "Solicitado-E" solo en el pedidoitem existente si se proporciona id_num
             if ($id_num_parametro) {
-                 $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
+                // SELECT FOR UPDATE NOWAIT para prevenir race conditions
+                $sql_check = "SELECT id_num, estado, cantidad, id_art
+                              FROM pedidoitem
+                              WHERE id_num = ?
+                              FOR UPDATE NOWAIT";
+
+                try {
+                    $query_check = $this->db->query($sql_check, [$id_num_parametro]);
+
+                    if ($query_check->num_rows() === 0) {
+                        $this->db->trans_rollback();
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "Pedido no encontrado",
+                            "codigo" => "NOT_FOUND"
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+                        return;
+                    }
+
+                    $pedido_actual = $query_check->row();
+                    $estado_actual = trim($pedido_actual->estado);
+
+                    // Validar que el estado sea el esperado
+                    if ($estado_actual !== 'Solicitado') {
+                        if ($estado_actual === 'Solicitado-E' || $estado_actual === 'Enviado') {
+                            // Ya fue enviado - operación duplicada
+                            $this->db->trans_rollback();
+                            $respuesta = array(
+                                "error" => true,
+                                "mensaje" => "Este pedido ya fue enviado anteriormente",
+                                "codigo" => "DUPLICATE_OPERATION",
+                                "estado_actual" => $estado_actual
+                            );
+                            $this->response($respuesta, REST_Controller::HTTP_CONFLICT); // 409
+                            return;
+                        } else {
+                            // Estado inesperado
+                            $this->db->trans_rollback();
+                            $respuesta = array(
+                                "error" => true,
+                                "mensaje" => "El pedido no está en estado 'Solicitado'. Estado actual: " . $estado_actual,
+                                "codigo" => "INVALID_STATE",
+                                "estado_actual" => $estado_actual
+                            );
+                            $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+                            return;
+                        }
+                    }
+
+                    // Estado válido - proceder con la actualización
+                    $this->db->query("UPDATE pedidoitem SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
+
+                } catch (Exception $e) {
+                    $this->db->trans_rollback();
+
+                    // Verificar si es error de bloqueo
+                    if (strpos($e->getMessage(), 'could not obtain lock') !== false) {
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "El pedido está siendo procesado por otro usuario. Por favor espere e intente nuevamente.",
+                            "codigo" => "LOCK_TIMEOUT"
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_CONFLICT); // 409
+                    } else {
+                        $respuesta = array(
+                            "error" => true,
+                            "mensaje" => "Error al validar el pedido: " . $e->getMessage()
+                        );
+                        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+                    }
+                    return;
+                }
              }
-             
+
               // Actualizar estado a "Solicitado-E" solo en pedidoscb existentes si se proporciona id_num
             if ($id_num_parametro) {
                  $this->db->query("UPDATE pedidoscb SET estado = ? WHERE id_num = ? AND estado = 'Solicitado'", ["Solicitado-E", $id_num_parametro]);
              }
+            // ============================================================================
 
             // ============================================================================
             // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN ENVÍO DIRECTO

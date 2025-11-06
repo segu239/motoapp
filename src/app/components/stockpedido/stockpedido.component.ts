@@ -33,7 +33,7 @@ export class StockpedidoComponent implements OnInit{
   cols: Column[];
   _selectedColumns: Column[];
   public pedidoItemElejido: any;//public pedidoItemElejido: PedidoItem;
-  public selectedPedidoItem: any[] = [];//public selectedPedidoItem: PedidoItem[] = [];
+  public selectedPedidoItem: any | null = null; // CAMBIO: De any[] a any | null para selección única
   //sucursal: SelectItem[];
   sucursal: any;
   option2: SelectItem[];
@@ -49,6 +49,11 @@ export class StockpedidoComponent implements OnInit{
 
   public cantidad:number;
   public comentario: string ='sin comentario';
+
+  // NUEVAS PROPIEDADES: Protección contra duplicados
+  private operacionEnProceso: boolean = false;
+  private ultimaOperacionTimestamp: number = 0;
+  private readonly TIEMPO_MINIMO_ENTRE_OPERACIONES = 2000; // 2 segundos
 
   constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
     this.cols = [
@@ -143,10 +148,9 @@ export class StockpedidoComponent implements OnInit{
     this._selectedColumns = this.cols.filter((col) => val.includes(col));
   }
   onSelectionChange(event: any) {
-    console.log(event);
-    console.log(this.selectedPedidoItem);
-    this.calcularTotalSaldosSeleccionados();
-    this.calcularTotalesSeleccionados();
+    console.log('Selección cambiada:', event);
+    console.log('Pedido seleccionado:', this.selectedPedidoItem);
+    // Ya no se necesitan cálculos de totales en selección única
   }
   // onSucursalChange(event: any) {
   //   this.selectedSucursal = event.value;
@@ -284,21 +288,62 @@ refrescarDatos() {
 } */
 
   recibir() {
-    if (this.selectedPedidoItem.length === 0) {
-      Swal.fire('Error', 'Debe seleccionar un pedido y especificar la cantidad', 'error');
+    // VALIDACIÓN 1: Verificar que hay un pedido seleccionado
+    if (!this.selectedPedidoItem) {
+      Swal.fire({
+        title: 'Error',
+        text: 'Debe seleccionar un pedido para recibir',
+        icon: 'error'
+      });
       return;
     }
-  
-    const selectedPedido = this.selectedPedidoItem[0];
-  
+
+    // VALIDACIÓN 2: Verificar que no hay otra operación en proceso
+    if (this.operacionEnProceso) {
+      Swal.fire({
+        title: 'Operación en proceso',
+        text: 'Ya hay una recepción en curso. Por favor espere.',
+        icon: 'warning'
+      });
+      return;
+    }
+
+    // VALIDACIÓN 3: Throttling - Verificar tiempo mínimo entre operaciones
+    const ahora = Date.now();
+    if (this.ultimaOperacionTimestamp &&
+        (ahora - this.ultimaOperacionTimestamp) < this.TIEMPO_MINIMO_ENTRE_OPERACIONES) {
+      const tiempoRestante = Math.ceil(
+        (this.TIEMPO_MINIMO_ENTRE_OPERACIONES - (ahora - this.ultimaOperacionTimestamp)) / 1000
+      );
+      Swal.fire({
+        title: 'Demasiado rápido',
+        text: `Por favor espere ${tiempoRestante} segundo(s) antes de realizar otra operación`,
+        icon: 'warning',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      return;
+    }
+
+    const selectedPedido = this.selectedPedidoItem;
+
+    // VALIDACIÓN 4: Verificar estado correcto
     if (selectedPedido.estado.trim() !== "Solicitado-E") {
-      Swal.fire('Error', 'El pedido debe estar en estado "Solicitado-E" para poder recibirlo', 'error');
+      Swal.fire({
+        title: 'Error',
+        text: 'El pedido debe estar en estado "Solicitado-E" para poder recibirlo',
+        icon: 'error'
+      });
       return;
     }
-  
+
+    // Marcar operación en proceso
+    this.operacionEnProceso = true;
+    this.ultimaOperacionTimestamp = ahora;
+
     const fecha = new Date();
     const fechaFormateada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
-  
+
     const id_num = selectedPedido.id_num;
     const pedidoItem: any = {
       tipo: "PE",
@@ -311,10 +356,9 @@ refrescarDatos() {
       observacion: this.comentario,
       estado: "Recibido",
     };
-  
+
     const pedidoscb = {
       tipo: "PE",
-      //numero: 1,
       sucursald: Number(this.sucursal),
       sucursalh: selectedPedido.sucursalh,
       fecha: fechaFormateada,
@@ -323,16 +367,77 @@ refrescarDatos() {
       estado: "Recibido",
       id_aso: 222
     };
-  
+
+    // Mostrar indicador de carga
+    Swal.fire({
+      title: 'Procesando recepción...',
+      text: 'Por favor espere',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     this._cargardata.crearPedidoStockId(id_num, pedidoItem, pedidoscb).subscribe({
       next: (response) => {
-        console.log(response);
-        Swal.fire('Éxito', 'Pedido registrado exitosamente', 'success');
-        this.refrescarDatos(); // Llama a la función para refrescar los datos
+        console.log('Respuesta exitosa:', response);
+        this.operacionEnProceso = false;
+
+        Swal.fire({
+          title: 'Éxito',
+          text: 'Pedido recibido exitosamente',
+          icon: 'success',
+          timer: 2000,
+          showConfirmButton: false
+        });
+
+        // Limpiar selección
+        this.selectedPedidoItem = null;
+        this.comentario = 'sin comentario';
+
+        // Refrescar datos
+        this.refrescarDatos();
       },
       error: (err) => {
-        console.log(err);
-        Swal.fire('Error', 'Error al registrar el pedido', 'error');
+        console.error('Error al recibir pedido:', err);
+        this.operacionEnProceso = false;
+
+        // MANEJO MEJORADO DE ERRORES
+        if (err.status === 409) {
+          // Error de conflicto - operación duplicada
+          Swal.fire({
+            title: 'Pedido ya procesado',
+            text: err.error?.mensaje || 'Este pedido ya fue recibido anteriormente',
+            icon: 'info'
+          });
+
+          // Refrescar para mostrar el estado actualizado
+          this.selectedPedidoItem = null;
+          this.refrescarDatos();
+        } else if (err.status === 400) {
+          // Error de validación
+          Swal.fire({
+            title: 'Error de validación',
+            text: err.error?.mensaje || 'Los datos del pedido no son válidos',
+            icon: 'error'
+          });
+        } else if (err.status === 404) {
+          // Pedido no encontrado
+          Swal.fire({
+            title: 'Pedido no encontrado',
+            text: 'El pedido seleccionado no existe o fue eliminado',
+            icon: 'error'
+          });
+          this.selectedPedidoItem = null;
+          this.refrescarDatos();
+        } else {
+          // Error genérico
+          Swal.fire({
+            title: 'Error',
+            text: 'Error al registrar la recepción. Por favor intente nuevamente.',
+            icon: 'error'
+          });
+        }
       }
     });
   }
@@ -353,12 +458,12 @@ refrescarDatos() {
    */
   cancelarPedido() {
     // Validar que se haya seleccionado un pedido
-    if (this.selectedPedidoItem.length === 0) {
+    if (!this.selectedPedidoItem) {
       Swal.fire('Error', 'Debe seleccionar un pedido para cancelar', 'error');
       return;
     }
 
-    const selectedPedido = this.selectedPedidoItem[0];
+    const selectedPedido = this.selectedPedidoItem;
 
     // Validar que el estado sea "Solicitado"
     if (selectedPedido.estado.trim() !== "Solicitado") {
@@ -429,6 +534,8 @@ refrescarDatos() {
                 timer: 2000,
                 showConfirmButton: false
               });
+              // Limpiar selección
+              this.selectedPedidoItem = null;
               this.refrescarDatos();
             }
           },
