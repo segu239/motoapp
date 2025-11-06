@@ -3,6 +3,8 @@ import { CargardataService } from '../../services/cargardata.service';
 import Swal from 'sweetalert2';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { LazyLoadEvent } from 'primeng/api';
+import { SucursalNombrePipe } from '../../pipes/sucursal-nombre.pipe';
 
 // Interfaz para alta de existencias (V2.0 - Con costos)
 interface AltaExistencia {
@@ -44,13 +46,39 @@ interface Sucursal {
   styleUrls: ['./lista-altas.component.css']
 })
 export class ListaAltasComponent implements OnInit, OnDestroy {
-  // Datos
+  // ============================================================================
+  // PIPES
+  // ============================================================================
+  private sucursalPipe = new SucursalNombrePipe();
+
+  // ============================================================================
+  // DATOS (V3.0 - Con Lazy Loading)
+  // ============================================================================
   public altas: AltaExistencia[] = [];
-  public altasFiltradas: AltaExistencia[] = [];
+  public altasFiltradas: AltaExistencia[] = []; // Mantiene compatibilidad con métodos legacy
   public cargando: boolean = false;
   public cancelando: boolean = false;
 
-  // Filtros
+  // ============================================================================
+  // LAZY LOADING (V3.0 - PrimeNG DataTable)
+  // ============================================================================
+  public loading: boolean = false;          // Indicador de carga para PrimeNG
+  public totalRecords: number = 0;          // Total de registros (con filtros aplicados)
+  public first: number = 0;                 // Índice del primer registro de la página actual
+  public rows: number = 50;                 // Registros por página
+  public currentPage: number = 1;           // Página actual (1-based)
+
+  // Ordenamiento
+  public sortField: string = 'id_num';      // Campo de ordenamiento por defecto
+  public sortOrder: number = -1;            // -1 = DESC, 1 = ASC
+
+  // Filtros dinámicos (del DataTable de PrimeNG)
+  public filters: { [key: string]: any } = {};
+  public matchModes: { [key: string]: string } = {};
+
+  // ============================================================================
+  // FILTROS GLOBALES (Mantiene compatibilidad con filtros de encabezado)
+  // ============================================================================
   public sucursalFiltro: number | null = null;
   public estadoFiltro: string = 'ALTA'; // Por defecto mostrar solo ALTA
   public sucursales: Sucursal[] = [
@@ -64,6 +92,29 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
 
   public estados: string[] = ['ALTA', 'Cancel-Alta', 'Todas'];
 
+  // ============================================================================
+  // STATE MANAGEMENT (V3.0)
+  // ============================================================================
+  private readonly STATE_KEY = 'lista-altas-state';
+  private lastLazyLoadEvent: LazyLoadEvent | null = null;
+
+  // ============================================================================
+  // CONFIGURACIÓN DE COLUMNAS (V3.0)
+  // ============================================================================
+  public columnasVisibles: { [key: string]: boolean } = {
+    id_num: true,
+    estado: true,
+    fecha: true,
+    descripcion: true,
+    cantidad: true,
+    sucursald: true,
+    usuario_res: true,
+    costo_total_1: true,
+    costo_total_2: true,
+    tipo_calculo: true,
+    acciones: true
+  };
+
   // Usuario actual
   public usuario: string = '';
 
@@ -72,7 +123,7 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
   constructor(private _cargardata: CargardataService) {}
 
   ngOnInit() {
-    console.log('ListaAltasComponent inicializado');
+    console.log('ListaAltasComponent inicializado (V3.0 - Lazy Loading)');
 
     // Obtener usuario de sessionStorage
     const user = JSON.parse(sessionStorage.getItem('user') || '{}');
@@ -86,7 +137,11 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
       this.sucursalFiltro = sucursalUsuario;
     }
 
-    this.cargarAltas();
+    // Restaurar estado de sessionStorage (si existe)
+    this.restoreState();
+
+    // Nota: No se llama a cargarAltas() aquí porque será llamado automáticamente
+    // por el evento onLazyLoad del p-table cuando se inicialice
   }
 
   ngOnDestroy() {
@@ -94,17 +149,168 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  cargarAltas(): void {
-    this.cargando = true;
+  // ============================================================================
+  // STATE MANAGEMENT (V3.0)
+  // ============================================================================
 
-    const sucursal = this.sucursalFiltro || 1; // Si no hay filtro, usar Casa Central por defecto
+  /**
+   * Restaurar estado guardado en sessionStorage
+   */
+  private restoreState(): void {
+    try {
+      const stateStr = sessionStorage.getItem(this.STATE_KEY);
+      if (stateStr) {
+        const state = JSON.parse(stateStr);
 
-    // Usar el nuevo método con costos calculados
-    this._cargardata.obtenerAltasConCostos(sucursal, undefined)
+        // Restaurar paginación
+        this.first = state.first || 0;
+        this.rows = state.rows || 50;
+        this.currentPage = state.currentPage || 1;
+
+        // Restaurar ordenamiento
+        this.sortField = state.sortField || 'id_num';
+        this.sortOrder = state.sortOrder || -1;
+
+        // Restaurar filtros dinámicos
+        this.filters = state.filters || {};
+        this.matchModes = state.matchModes || {};
+
+        // Restaurar filtros globales
+        if (state.sucursalFiltro !== undefined && state.sucursalFiltro !== null) {
+          this.sucursalFiltro = state.sucursalFiltro;
+        }
+        if (state.estadoFiltro) {
+          this.estadoFiltro = state.estadoFiltro;
+        }
+
+        // Restaurar visibilidad de columnas
+        if (state.columnasVisibles) {
+          this.columnasVisibles = state.columnasVisibles;
+        }
+
+        console.log('Estado restaurado:', state);
+      }
+    } catch (error) {
+      console.error('Error al restaurar estado:', error);
+    }
+  }
+
+  /**
+   * Guardar estado actual en sessionStorage
+   */
+  private saveState(): void {
+    try {
+      const state = {
+        first: this.first,
+        rows: this.rows,
+        currentPage: this.currentPage,
+        sortField: this.sortField,
+        sortOrder: this.sortOrder,
+        filters: this.filters,
+        matchModes: this.matchModes,
+        sucursalFiltro: this.sucursalFiltro,
+        estadoFiltro: this.estadoFiltro,
+        columnasVisibles: this.columnasVisibles
+      };
+
+      sessionStorage.setItem(this.STATE_KEY, JSON.stringify(state));
+      console.log('Estado guardado:', state);
+    } catch (error) {
+      console.error('Error al guardar estado:', error);
+    }
+  }
+
+  // ============================================================================
+  // LAZY LOADING (V3.0)
+  // ============================================================================
+
+  /**
+   * Event handler principal para Lazy Loading de PrimeNG
+   * Se ejecuta cuando:
+   * - El componente se inicializa
+   * - El usuario cambia de página
+   * - El usuario ordena una columna
+   * - El usuario aplica un filtro
+   */
+  onLazyLoad(event: LazyLoadEvent): void {
+    console.log('onLazyLoad evento:', event);
+
+    // Guardar evento para referencia futura
+    this.lastLazyLoadEvent = event;
+
+    // Actualizar propiedades de paginación
+    this.first = event.first || 0;
+    this.rows = event.rows || 50;
+    this.currentPage = Math.floor(this.first / this.rows) + 1;
+
+    // Actualizar ordenamiento (si existe)
+    if (event.sortField) {
+      this.sortField = event.sortField;
+      this.sortOrder = event.sortOrder || -1;
+    }
+
+    // Extraer filtros dinámicos (si existen)
+    if (event.filters) {
+      this.filters = {};
+      this.matchModes = {};
+
+      for (const field in event.filters) {
+        const filterMeta = event.filters[field];
+        if (Array.isArray(filterMeta) && filterMeta.length > 0) {
+          // PrimeNG devuelve un array de FilterMetadata
+          const firstFilter = filterMeta[0];
+          if (firstFilter.value !== null && firstFilter.value !== undefined && firstFilter.value !== '') {
+            this.filters[field] = firstFilter.value;
+            this.matchModes[field] = firstFilter.matchMode || 'contains';
+          }
+        }
+      }
+    }
+
+    // Guardar estado
+    this.saveState();
+
+    // Cargar datos con lazy loading
+    this.loadAltas();
+  }
+
+  /**
+   * Cargar altas con lazy loading (V3.0)
+   * Utiliza el nuevo método paginado del servicio
+   */
+  loadAltas(): void {
+    this.loading = true;
+    this.cargando = true; // Mantiene compatibilidad con template legacy
+
+    console.log('loadAltas - Parámetros:', {
+      sucursal: this.sucursalFiltro,
+      estado: this.estadoFiltro,
+      page: this.currentPage,
+      limit: this.rows,
+      sortField: this.sortField,
+      sortOrder: this.sortOrder === 1 ? 'ASC' : 'DESC',
+      filters: this.filters,
+      matchModes: this.matchModes
+    });
+
+    // Convertir sortOrder de PrimeNG (-1/1) a backend ('DESC'/'ASC')
+    const sortOrderStr = this.sortOrder === 1 ? 'ASC' : 'DESC';
+
+    this._cargardata.obtenerAltasConCostosPaginadas(
+      this.sucursalFiltro || undefined,
+      this.estadoFiltro !== 'Todas' ? this.estadoFiltro : undefined,
+      this.currentPage,
+      this.rows,
+      this.sortField,
+      sortOrderStr,
+      this.filters,
+      this.matchModes
+    )
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Respuesta del servidor:', response);
+          console.log('Respuesta del servidor (paginada):', response);
+          this.loading = false;
           this.cargando = false;
 
           if (response.error) {
@@ -115,15 +321,23 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
               confirmButtonText: 'Aceptar'
             });
             this.altas = [];
+            this.altasFiltradas = [];
+            this.totalRecords = 0;
           } else {
-            this.altas = response.mensaje || [];
+            // Nuevo formato: {data, total, page, limit, total_pages}
+            this.altas = response.data || [];
+            this.altasFiltradas = this.altas; // Para compatibilidad con métodos legacy
+            this.totalRecords = response.total || 0;
+
             // Inicializar campo de selección en false
             this.altas.forEach(alta => alta.seleccionado = false);
-            this.aplicarFiltros();
+
+            console.log(`Cargadas ${this.altas.length} altas de ${this.totalRecords} totales (Página ${response.page}/${response.total_pages})`);
           }
         },
         error: (error) => {
           console.error('Error al cargar altas:', error);
+          this.loading = false;
           this.cargando = false;
 
           Swal.fire({
@@ -134,6 +348,40 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
           });
         }
       });
+  }
+
+  /**
+   * Recargar datos (mantiene página actual)
+   */
+  recargarDatos(): void {
+    if (this.lastLazyLoadEvent) {
+      this.onLazyLoad(this.lastLazyLoadEvent);
+    } else {
+      this.loadAltas();
+    }
+  }
+
+  /**
+   * Refrescar datos (vuelve a la primera página)
+   */
+  refrescarDatos(): void {
+    this.first = 0;
+    this.currentPage = 1;
+    this.loadAltas();
+  }
+
+  // ============================================================================
+  // MÉTODO LEGACY (Mantiene compatibilidad con código existente)
+  // ============================================================================
+
+  /**
+   * @deprecated Usar loadAltas() o onLazyLoad() en su lugar
+   * Mantiene compatibilidad con botones y métodos que llaman a cargarAltas()
+   * Redirige al nuevo sistema de lazy loading
+   */
+  cargarAltas(): void {
+    console.log('cargarAltas (legacy) redirigiendo a refrescarDatos()');
+    this.refrescarDatos();
   }
 
   aplicarFiltros(): void {
@@ -150,20 +398,39 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
     console.log('Altas filtradas:', this.altasFiltradas.length);
   }
 
+  /**
+   * Manejar cambio de filtro de sucursal (V3.0)
+   */
   onFiltroChange(): void {
     if (this.sucursalFiltro === 0) {
       this.sucursalFiltro = null;
     }
-    this.cargarAltas();
+    // Guardar estado y refrescar datos (vuelve a primera página)
+    this.saveState();
+    this.refrescarDatos();
   }
 
+  /**
+   * Manejar cambio de filtro de estado (V3.0)
+   */
   onEstadoChange(): void {
-    this.aplicarFiltros();
+    // Guardar estado y refrescar datos (vuelve a primera página)
+    this.saveState();
+    this.refrescarDatos();
   }
 
   getNombreSucursal(id: number): string {
     const sucursal = this.sucursales.find(s => s.id === id);
     return sucursal ? sucursal.nombre : `Sucursal ${id}`;
+  }
+
+  /**
+   * Obtiene el usuario que procesó el alta, con fallback a valor por defecto
+   * Maneja strings vacíos o con solo espacios (problema del tipo CHAR de PostgreSQL)
+   */
+  getUsuario(alta: AltaExistencia): string {
+    const usuario = (alta.usuario_res || alta.usuario || '').trim();
+    return usuario || 'Sin usuario';
   }
 
   verDetalles(alta: AltaExistencia): void {
@@ -199,11 +466,11 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
 
           <hr>
           <h6><strong>Sucursal:</strong></h6>
-          <p><strong>Sucursal:</strong> ${this.getNombreSucursal(alta.sucursald)}</p>
+          <p><strong>Sucursal:</strong> ${this.sucursalPipe.transform(alta.sucursald)}</p>
 
           <hr>
           <h6><strong>Usuario y Observación:</strong></h6>
-          <p><strong>Usuario:</strong> ${alta.usuario_res || alta.usuario}</p>
+          <p><strong>Usuario:</strong> ${this.getUsuario(alta)}</p>
           <p><strong>Observación:</strong> ${alta.observacion}</p>
 
           ${cancelacionInfo}
@@ -574,8 +841,13 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
       });
 
-      import('file-saver').then((FileSaver) => {
-        FileSaver.saveAs(data, 'altas_existencias_' + new Date().getTime() + '.xlsx');
+      import('file-saver').then((module: any) => {
+        const saveAs = module.default || module.saveAs || module;
+        if (typeof saveAs === 'function') {
+          saveAs(data, 'altas_existencias_' + new Date().getTime() + '.xlsx');
+        } else if (typeof saveAs.saveAs === 'function') {
+          saveAs.saveAs(data, 'altas_existencias_' + new Date().getTime() + '.xlsx');
+        }
       });
     });
   }

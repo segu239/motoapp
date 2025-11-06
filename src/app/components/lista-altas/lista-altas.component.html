@@ -1,66 +1,73 @@
 <div class="card">
     <div class="card-body">
         <h4 class="card-title">Lista de Altas de Existencias</h4>
-        <p class="text-muted">Visualice y gestione las altas de existencias registradas</p>
+        <p class="text-muted">Visualice y gestione las altas de existencias registradas con paginación y filtros avanzados</p>
 
-        <!-- Filtros -->
+        <!-- ========================================================================== -->
+        <!-- FILTROS GLOBALES -->
+        <!-- ========================================================================== -->
         <div class="row mb-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="filtro-sucursal" class="form-label"><strong>Filtrar por Sucursal:</strong></label>
                 <select
                     id="filtro-sucursal"
                     class="form-control"
                     [(ngModel)]="sucursalFiltro"
                     (change)="onFiltroChange()"
-                    [disabled]="cargando">
+                    [disabled]="loading">
                     <option [value]="sucursal.id" *ngFor="let sucursal of sucursales">
                         {{ sucursal.nombre }}
                     </option>
                 </select>
             </div>
 
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="filtro-estado" class="form-label"><strong>Filtrar por Estado:</strong></label>
                 <select
                     id="filtro-estado"
                     class="form-control"
                     [(ngModel)]="estadoFiltro"
                     (change)="onEstadoChange()"
-                    [disabled]="cargando">
+                    [disabled]="loading">
                     <option [value]="estado" *ngFor="let estado of estados">
                         {{ estado }}
                     </option>
                 </select>
             </div>
 
-            <div class="col-md-4 d-flex align-items-end">
+            <div class="col-md-6 d-flex align-items-end justify-content-end">
                 <button
                     type="button"
                     class="btn btn-success me-2"
                     (click)="exportarExcel()"
-                    [disabled]="cargando || altasFiltradas.length === 0">
+                    [disabled]="loading || altas.length === 0"
+                    title="Exportar a Excel">
                     <i class="fa fa-file-excel mr-1"></i>
-                    Exportar Excel
+                    Excel
                 </button>
                 <button
                     type="button"
                     class="btn btn-primary"
-                    (click)="cargarAltas()"
-                    [disabled]="cargando">
-                    <i class="fa fa-refresh mr-1"></i>
-                    {{ cargando ? 'Cargando...' : 'Actualizar' }}
+                    (click)="refrescarDatos()"
+                    [disabled]="loading"
+                    title="Actualizar datos">
+                    <i class="fa fa-refresh mr-1" [class.fa-spin]="loading"></i>
+                    {{ loading ? 'Cargando...' : 'Actualizar' }}
                 </button>
             </div>
         </div>
 
-        <!-- Botón de cancelación múltiple -->
-        <div class="row mb-3" *ngIf="!cargando && altasFiltradas.length > 0">
+        <!-- ========================================================================== -->
+        <!-- BOTÓN DE CANCELACIÓN MÚLTIPLE -->
+        <!-- ========================================================================== -->
+        <div class="row mb-3" *ngIf="!loading && altas.length > 0">
             <div class="col-md-12">
                 <button
                     type="button"
                     class="btn btn-danger"
                     (click)="confirmarCancelacionMultiple()"
-                    [disabled]="altasSeleccionadas.length === 0 || cancelando">
+                    [disabled]="altasSeleccionadas.length === 0 || cancelando"
+                    title="Cancelar altas seleccionadas">
                     <i class="fa fa-times-circle mr-1"></i>
                     Cancelar Seleccionadas ({{ altasSeleccionadas.length }})
                 </button>
@@ -70,159 +77,400 @@
             </div>
         </div>
 
-        <!-- Loading indicator -->
-        <div class="alert alert-warning mb-3" *ngIf="cargando">
-            <i class="fa fa-spinner fa-spin mr-2"></i>
-            Cargando datos, por favor espere...
-        </div>
+        <!-- ========================================================================== -->
+        <!-- TABLA PRIMENG CON LAZY LOADING -->
+        <!-- ========================================================================== -->
+        <p-table
+            #dt
+            [value]="altas"
+            [lazy]="true"
+            (onLazyLoad)="onLazyLoad($event)"
+            [paginator]="true"
+            [rows]="rows"
+            [totalRecords]="totalRecords"
+            [loading]="loading"
+            [rowsPerPageOptions]="[10, 25, 50, 100, 200]"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} registros"
+            [filterDelay]="500"
+            [globalFilterFields]="['id_num', 'descripcion', 'estado', 'observacion']"
+            styleClass="p-datatable-sm p-datatable-striped p-datatable-gridlines"
+            [rowHover]="true"
+            [first]="first"
+            [sortField]="sortField"
+            [sortOrder]="sortOrder"
+            responsiveLayout="scroll">
 
-        <!-- Mensaje sin datos -->
-        <div class="alert alert-info mb-3" *ngIf="!cargando && altasFiltradas.length === 0">
-            <i class="fa fa-info-circle mr-2"></i>
-            No se encontraron altas de existencias con los filtros seleccionados
-        </div>
-
-        <!-- Tabla de altas -->
-        <div class="table-responsive" *ngIf="!cargando && altasFiltradas.length > 0">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
-                    <tr>
-                        <th class="checkbox-column">
+            <!-- ================================================================== -->
+            <!-- CAPTION / HEADER DE LA TABLA -->
+            <!-- ================================================================== -->
+            <ng-template pTemplate="caption">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <i class="fa fa-table mr-2"></i>
+                        <strong>Altas de Existencias</strong>
+                        <span class="badge bg-primary ms-2">{{ totalRecords }} registros</span>
+                    </div>
+                    <div>
+                        <span class="p-input-icon-left">
+                            <i class="pi pi-search"></i>
                             <input
-                                type="checkbox"
-                                class="form-check-input"
-                                (change)="toggleSeleccionarTodas($event)"
+                                pInputText
+                                type="text"
+                                (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                                placeholder="Buscar en todos los campos..."
+                                class="form-control form-control-sm"
+                                style="width: 300px;" />
+                        </span>
+                    </div>
+                </div>
+            </ng-template>
+
+            <!-- ================================================================== -->
+            <!-- HEADER DE LA TABLA -->
+            <!-- ================================================================== -->
+            <ng-template pTemplate="header">
+                <tr>
+                    <!-- Columna: Checkbox de selección -->
+                    <th style="width:50px; text-align:center;" pFrozenColumn>
+                        <input
+                            type="checkbox"
+                            class="form-check-input"
+                            (change)="toggleSeleccionarTodas($event)"
+                            [checked]="todasSeleccionadas"
+                            [disabled]="cancelando || loading"
+                            title="Seleccionar todas las altas activas">
+                    </th>
+
+                    <!-- Columna: ID -->
+                    <th *ngIf="columnasVisibles['id_num']" style="width:100px;" [pSortableColumn]="'id_num'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>ID</span>
+                                <p-sortIcon [field]="'id_num'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="numeric"
+                                field="id_num"
+                                display="menu"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Estado -->
+                    <th *ngIf="columnasVisibles['estado']" style="width:130px;" [pSortableColumn]="'estado'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Estado</span>
+                                <p-sortIcon [field]="'estado'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="text"
+                                field="estado"
+                                display="menu"
+                                matchMode="equals"
+                                [showMatchModes]="false"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Fecha -->
+                    <th *ngIf="columnasVisibles['fecha']" style="width:180px;" [pSortableColumn]="'fecha_resuelto'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Fecha</span>
+                                <p-sortIcon [field]="'fecha_resuelto'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="date"
+                                field="fecha_resuelto"
+                                display="menu"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Producto/Descripción -->
+                    <th *ngIf="columnasVisibles['descripcion']" style="min-width:300px;" [pSortableColumn]="'descripcion'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Producto</span>
+                                <p-sortIcon [field]="'descripcion'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="text"
+                                field="descripcion"
+                                display="menu"
+                                matchMode="contains"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Cantidad -->
+                    <th *ngIf="columnasVisibles['cantidad']" style="width:100px; text-align:center;" [pSortableColumn]="'cantidad'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Cantidad</span>
+                                <p-sortIcon [field]="'cantidad'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="numeric"
+                                field="cantidad"
+                                display="menu"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Costo Total 1 -->
+                    <th *ngIf="columnasVisibles['costo_total_1']" style="width:150px; text-align:right;" [pSortableColumn]="'costo_total_1'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Costo Total 1</span>
+                                <p-sortIcon [field]="'costo_total_1'"></p-sortIcon>
+                            </div>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Costo Total 2 -->
+                    <th *ngIf="columnasVisibles['costo_total_2']" style="width:150px; text-align:right;" [pSortableColumn]="'costo_total_2'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Costo Total 2</span>
+                                <p-sortIcon [field]="'costo_total_2'"></p-sortIcon>
+                            </div>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Tipo de Cálculo -->
+                    <th *ngIf="columnasVisibles['tipo_calculo']" style="width:130px; text-align:center;" [pSortableColumn]="'tipo_calculo'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Tipo Cálculo</span>
+                                <p-sortIcon [field]="'tipo_calculo'"></p-sortIcon>
+                            </div>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Sucursal -->
+                    <th *ngIf="columnasVisibles['sucursald']" style="width:150px;" [pSortableColumn]="'sucursald'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Sucursal</span>
+                                <p-sortIcon [field]="'sucursald'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="numeric"
+                                field="sucursald"
+                                display="menu"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Usuario -->
+                    <th *ngIf="columnasVisibles['usuario_res']" style="width:120px;" [pSortableColumn]="'usuario_res'">
+                        <div class="d-flex flex-column">
+                            <div class="d-flex align-items-center">
+                                <span>Usuario</span>
+                                <p-sortIcon [field]="'usuario_res'"></p-sortIcon>
+                            </div>
+                            <p-columnFilter
+                                type="text"
+                                field="usuario_res"
+                                display="menu"
+                                matchMode="contains"
+                                [showMatchModes]="true"
+                                [showOperator]="false"
+                                [showAddButton]="false">
+                            </p-columnFilter>
+                        </div>
+                    </th>
+
+                    <!-- Columna: Acciones -->
+                    <th *ngIf="columnasVisibles['acciones']" style="width:120px; text-align:center;" pFrozenColumn alignFrozen="right">
+                        Acciones
+                    </th>
+                </tr>
+            </ng-template>
+
+            <!-- ================================================================== -->
+            <!-- BODY DE LA TABLA -->
+            <!-- ================================================================== -->
+            <ng-template pTemplate="body" let-alta>
+                <tr>
+                    <!-- Columna: Checkbox de selección -->
+                    <td style="text-align:center;" pFrozenColumn>
+                        <input
+                            type="checkbox"
+                            class="form-check-input"
+                            [(ngModel)]="alta.seleccionado"
+                            (change)="toggleSeleccion(alta)"
+                            [disabled]="cancelando || alta.estado?.trim() !== 'ALTA'"
+                            *ngIf="alta.estado?.trim() === 'ALTA'">
+                    </td>
+
+                    <!-- Columna: ID -->
+                    <td *ngIf="columnasVisibles['id_num']">
+                        <strong>{{ alta.id_num }}</strong>
+                    </td>
+
+                    <!-- Columna: Estado -->
+                    <td *ngIf="columnasVisibles['estado']">
+                        <span class="badge"
+                            [class.badge-success]="alta.estado?.trim() === 'ALTA'"
+                            [class.badge-danger]="alta.estado?.trim() === 'Cancel-Alta'">
+                            {{ alta.estado }}
+                        </span>
+                    </td>
+
+                    <!-- Columna: Fecha -->
+                    <td *ngIf="columnasVisibles['fecha']">
+                        {{ alta.fecha_resuelto || alta.fecha || 'N/A' }}
+                    </td>
+
+                    <!-- Columna: Producto/Descripción -->
+                    <td *ngIf="columnasVisibles['descripcion']">
+                        <div class="text-truncate" style="max-width: 300px;" [title]="alta.descripcion">
+                            {{ alta.descripcion }}
+                        </div>
+                        <small class="text-muted">ID Art: {{ alta.id_art }}</small>
+                    </td>
+
+                    <!-- Columna: Cantidad -->
+                    <td *ngIf="columnasVisibles['cantidad']" style="text-align:center;">
+                        <strong>{{ alta.cantidad }}</strong>
+                    </td>
+
+                    <!-- Columna: Costo Total 1 -->
+                    <td *ngIf="columnasVisibles['costo_total_1']" style="text-align:right;">
+                        <span *ngIf="alta.costo_total_1 !== null && alta.costo_total_1 !== undefined">
+                            {{ alta.costo_total_1 | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                        </span>
+                        <span *ngIf="alta.costo_total_1 === null || alta.costo_total_1 === undefined" class="text-muted">
+                            N/A
+                        </span>
+                    </td>
+
+                    <!-- Columna: Costo Total 2 -->
+                    <td *ngIf="columnasVisibles['costo_total_2']" style="text-align:right;">
+                        <span *ngIf="alta.costo_total_2 !== null && alta.costo_total_2 !== undefined">
+                            {{ alta.costo_total_2 | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                        </span>
+                        <span *ngIf="alta.costo_total_2 === null || alta.costo_total_2 === undefined" class="text-muted">
+                            N/A
+                        </span>
+                    </td>
+
+                    <!-- Columna: Tipo de Cálculo -->
+                    <td *ngIf="columnasVisibles['tipo_calculo']" style="text-align:center;">
+                        <span class="badge badge-calculo"
+                            [class.badge-dinamico]="alta.tipo_calculo === 'dinamico'"
+                            [class.badge-fijo]="alta.tipo_calculo === 'fijo'"
+                            *ngIf="alta.tipo_calculo">
+                            <i class="fa"
+                                [class.fa-refresh]="alta.tipo_calculo === 'dinamico'"
+                                [class.fa-lock]="alta.tipo_calculo === 'fijo'"></i>
+                            {{ alta.tipo_calculo === 'dinamico' ? 'Dinámico' : 'Fijo' }}
+                        </span>
+                        <span *ngIf="!alta.tipo_calculo" class="text-muted">N/A</span>
+                    </td>
+
+                    <!-- Columna: Sucursal -->
+                    <td *ngIf="columnasVisibles['sucursald']">
+                        {{ alta.sucursald | sucursalNombre }}
+                    </td>
+
+                    <!-- Columna: Usuario -->
+                    <td *ngIf="columnasVisibles['usuario_res']">
+                        <small class="text-muted">{{ getUsuario(alta) }}</small>
+                    </td>
+
+                    <!-- Columna: Acciones -->
+                    <td *ngIf="columnasVisibles['acciones']" style="text-align:center;" pFrozenColumn alignFrozen="right">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button
+                                type="button"
+                                class="btn btn-info btn-sm"
+                                (click)="verDetalles(alta)"
                                 [disabled]="cancelando"
-                                title="Seleccionar todas las altas activas">
-                        </th>
-                        <th>ID</th>
-                        <th>Estado</th>
-                        <th>Fecha</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Costo Total 1</th>
-                        <th>Costo Total 2</th>
-                        <th>V. Cambio</th>
-                        <th>Tipo Cálculo</th>
-                        <th>Sucursal</th>
-                        <th>Usuario</th>
-                        <th>Observación</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr *ngFor="let alta of altasFiltradas"
-                        [class.table-success]="alta.estado?.trim() === 'ALTA'"
-                        [class.table-danger]="alta.estado?.trim() === 'Cancel-Alta'"
-                        [class.row-selected]="alta.seleccionado">
-                        <td class="checkbox-column">
-                            <input
-                                type="checkbox"
-                                class="form-check-input"
-                                [(ngModel)]="alta.seleccionado"
-                                (change)="toggleSeleccion(alta)"
+                                title="Ver detalles">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-danger btn-sm"
+                                (click)="confirmarCancelacion(alta)"
                                 [disabled]="cancelando || alta.estado?.trim() !== 'ALTA'"
+                                title="Cancelar alta"
                                 *ngIf="alta.estado?.trim() === 'ALTA'">
-                        </td>
-                        <td>{{ alta.id_num }}</td>
-                        <td>
-                            <span class="badge"
-                                [class.badge-success]="alta.estado?.trim() === 'ALTA'"
-                                [class.badge-danger]="alta.estado?.trim() === 'Cancel-Alta'">
-                                {{ alta.estado }}
-                            </span>
-                        </td>
-                        <td>{{ alta.fecha_resuelto || alta.fecha || 'N/A' }}</td>
-                        <td>
-                            <div class="text-truncate" style="max-width: 250px;" [title]="alta.descripcion">
-                                {{ alta.descripcion }}
-                            </div>
-                            <small class="text-muted">ID: {{ alta.id_art }}</small>
-                        </td>
-                        <td>
-                            <strong>{{ alta.cantidad }}</strong>
-                        </td>
-                        <td class="text-end">
-                            <span *ngIf="alta.costo_total_1 !== null && alta.costo_total_1 !== undefined">
-                                {{ alta.costo_total_1 | currency:'ARS':'symbol-narrow':'1.2-2' }}
-                            </span>
-                            <span *ngIf="alta.costo_total_1 === null || alta.costo_total_1 === undefined" class="text-muted">
-                                N/A
-                            </span>
-                        </td>
-                        <td class="text-end">
-                            <span *ngIf="alta.costo_total_2 !== null && alta.costo_total_2 !== undefined">
-                                {{ alta.costo_total_2 | currency:'ARS':'symbol-narrow':'1.2-2' }}
-                            </span>
-                            <span *ngIf="alta.costo_total_2 === null || alta.costo_total_2 === undefined" class="text-muted">
-                                N/A
-                            </span>
-                        </td>
-                        <td class="text-end">
-                            <span *ngIf="alta.vcambio !== null && alta.vcambio !== undefined">
-                                {{ alta.vcambio | number:'1.2-4' }}
-                            </span>
-                            <span *ngIf="alta.vcambio === null || alta.vcambio === undefined" class="text-muted">
-                                N/A
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge badge-calculo"
-                                [class.badge-dinamico]="alta.tipo_calculo === 'dinamico'"
-                                [class.badge-fijo]="alta.tipo_calculo === 'fijo'"
-                                *ngIf="alta.tipo_calculo">
-                                <i class="fa"
-                                    [class.fa-refresh]="alta.tipo_calculo === 'dinamico'"
-                                    [class.fa-lock]="alta.tipo_calculo === 'fijo'"></i>
-                                {{ alta.tipo_calculo === 'dinamico' ? 'Dinámico' : 'Fijo' }}
-                            </span>
-                            <span *ngIf="!alta.tipo_calculo" class="text-muted">N/A</span>
-                        </td>
-                        <td>{{ getNombreSucursal(alta.sucursald) }}</td>
-                        <td>
-                            <small>{{ alta.usuario_res || alta.usuario }}</small>
-                        </td>
-                        <td>
-                            <div class="text-truncate" style="max-width: 200px;" [title]="alta.observacion">
-                                {{ alta.observacion }}
-                            </div>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <button
-                                    type="button"
-                                    class="btn btn-info"
-                                    (click)="verDetalles(alta)"
-                                    [disabled]="cancelando"
-                                    title="Ver detalles">
-                                    <i class="fa fa-eye"></i>
-                                </button>
-                                <button
-                                    type="button"
-                                    class="btn btn-danger"
-                                    (click)="confirmarCancelacion(alta)"
-                                    [disabled]="cancelando || alta.estado?.trim() !== 'ALTA'"
-                                    title="Cancelar alta"
-                                    *ngIf="alta.estado?.trim() === 'ALTA'">
-                                    <i class="fa fa-times"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
 
-        <!-- Resumen -->
-        <div class="row mt-3" *ngIf="!cargando && altasFiltradas.length > 0">
+            <!-- ================================================================== -->
+            <!-- ESTADO VACÍO -->
+            <!-- ================================================================== -->
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td [attr.colspan]="12" class="text-center">
+                        <div class="alert alert-info mb-0">
+                            <i class="fa fa-info-circle mr-2"></i>
+                            No se encontraron altas de existencias con los filtros seleccionados
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <!-- ================================================================== -->
+            <!-- LOADING TEMPLATE -->
+            <!-- ================================================================== -->
+            <ng-template pTemplate="loadingbody">
+                <tr>
+                    <td [attr.colspan]="12" class="text-center">
+                        <div class="alert alert-warning mb-0">
+                            <i class="fa fa-spinner fa-spin mr-2"></i>
+                            Cargando datos, por favor espere...
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+        </p-table>
+
+        <!-- ========================================================================== -->
+        <!-- RESUMEN DE ESTADÍSTICAS -->
+        <!-- ========================================================================== -->
+        <div class="row mt-3" *ngIf="!loading && altas.length > 0">
             <div class="col-md-12">
-                <div class="alert alert-secondary">
-                    <strong>Total de registros:</strong> {{ altasFiltradas.length }}
+                <div class="alert alert-secondary mb-0">
+                    <i class="fa fa-info-circle mr-2"></i>
+                    <strong>Página actual:</strong> {{ altas.length }} registros
                     <span class="ms-3">
-                        <strong>Activas:</strong> {{ cantidadActivas }}
+                        <strong>Total (con filtros):</strong> {{ totalRecords }}
                     </span>
                     <span class="ms-3">
-                        <strong>Canceladas:</strong> {{ cantidadCanceladas }}
+                        <strong>Activas en página:</strong> {{ cantidadActivas }}
+                    </span>
+                    <span class="ms-3">
+                        <strong>Canceladas en página:</strong> {{ cantidadCanceladas }}
                     </span>
                 </div>
             </div>
