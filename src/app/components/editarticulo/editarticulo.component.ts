@@ -26,13 +26,13 @@ export class EditarticuloComponent implements OnInit {
   // Lista de campos editables e inmodificables
   private camposEditables = [
     'nomart', 'marca', 'cd_articulo', 'cod_deposito', 'rubro', 'cd_barra',
-    'exi1', 'exi2', 'exi3', 'exi4', 'exi5',
+    // Las existencias (exi1-exi5) NO son editables, solo visualización
     'stkmin1', 'stkmin2', 'stkmin3', 'stkmin4', 'stkmin5',
     'stkmax1', 'stkmax2', 'stkmax3', 'stkmax4', 'stkmax5',
     'stkprep1', 'stkprep2', 'stkprep3', 'stkprep4', 'stkprep5',
     'estado', 'idart', 'cd_proveedor', 'articulo',
     // Campos de precios editables
-    'precon', 'prefi1', 'prefi2', 'prefi3', 'prefi4', 
+    'precon', 'prefi1', 'prefi2', 'prefi3', 'prefi4',
     'cod_iva', 'prebsiva', 'precostosi', 'margen', 'descuento', 'tipo_moneda'
   ];
   
