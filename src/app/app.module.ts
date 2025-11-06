@@ -46,6 +46,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { InputSwitchModule } from 'primeng/inputswitch';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { InputTextModule } from 'primeng/inputtext';
 
 import { EditclienteComponent } from './components/editcliente/editcliente.component';
 import { NewclienteComponent } from './components/newcliente/newcliente.component';
@@ -234,6 +235,7 @@ import { ListaAltasComponent } from './components/lista-altas/lista-altas.compon
     InputSwitchModule,
     InputNumberModule,
     SelectButtonModule,
+    InputTextModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,
