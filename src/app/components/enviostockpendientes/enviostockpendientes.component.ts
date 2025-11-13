@@ -18,6 +18,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { PedidosComponent } from '../pedidos/pedidos.component';
 import { RecibosComponent } from '../recibos/recibos.component';
 import { CalendarModule } from 'primeng/calendar';
+import { TotalizadoresService } from '../../services/totalizadores.service';
 interface Column {
   field: string;
   header: string;
@@ -56,13 +57,26 @@ export class EnviostockpendientesComponent {
   private ultimaOperacionTimestamp: number = 0;
   private readonly TIEMPO_MINIMO_ENTRE_OPERACIONES = 2000; // 2 segundos
 
-  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  // NUEVAS PROPIEDADES: Totalizadores
+  public mostrarTotalizadores: boolean = true;
+  public totalGeneralCosto: number = 0;
+
+  constructor(
+    public dialogService: DialogService,
+    private filterService: FilterService,
+    private _crud: CrudService,
+    private activatedRoute: ActivatedRoute,
+    private _cargardata: CargardataService,
+    private _router: Router,
+    private totalizadoresService: TotalizadoresService // ← NUEVO
+  ) {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
+      { field: 'precio', header: 'Precio Unit.' },
+      { field: 'costo_total', header: 'Costo Total' },  // ← NUEVA COLUMNA
       { field: 'id_art', header: 'Articulo' },
       { field: 'descripcion', header: 'Descripcion' },
-      { field: 'precio', header: 'Precio' },
       { field: 'fecha_resuelto', header: 'Fecha' },
       { field: 'usuario_res', header: 'Usuario' },
       { field: 'observacion', header: 'Observacion' },
@@ -71,7 +85,7 @@ export class EnviostockpendientesComponent {
       { field: 'estado', header: 'Estado' },
       { field: 'id_num', header: 'Id num.' },
       { field: 'id_items', header: 'Id items' },
-      
+
     ];
     this._selectedColumns = this.cols;
     this.sucursal = Number(sessionStorage.getItem('sucursal'));
@@ -129,14 +143,18 @@ export class EnviostockpendientesComponent {
       this._cargardata.obtenerPedidoItemPorSucursalh(this.sucursal).subscribe((data: any) => {
         console.log(data);
         if (Array.isArray(data.mensaje)) {
-          this.pedidoItem = data.mensaje.filter((item: any) => 
-            item.estado.trim() === 'Solicitado' && 
+          this.pedidoItem = data.mensaje.filter((item: any) =>
+            item.estado.trim() === 'Solicitado' &&
             item.sucursalh.trim() === this.sucursal.toString()
           );
+
+          // NUEVO: Calcular costos totales
+          this.calcularCostosTotales();
+
           console.log(this.pedidoItem);
         } else {
           console.error('Unexpected data format:', data);
-         
+
         }
       });
     }
@@ -512,6 +530,98 @@ cancelarEnvio() {
       });
     }
   });
+}
+
+/**
+ * Calcula el costo total para cada item (cantidad * precio)
+ * Se ejecuta después de cargar los datos
+ * FIX: Convierte strings a números antes de calcular (PostgreSQL retorna NUMERIC como string)
+ */
+private calcularCostosTotales(): void {
+  try {
+    if (!this.pedidoItem) {
+      console.warn('pedidoItem es null o undefined');
+      return;
+    }
+
+    if (!Array.isArray(this.pedidoItem)) {
+      console.error('pedidoItem no es un array:', typeof this.pedidoItem);
+      return;
+    }
+
+    this.pedidoItem.forEach((item, index) => {
+      try {
+        // FIX: Convertir strings a números (PostgreSQL retorna NUMERIC como string)
+        let cantidad = item.cantidad;
+        let precio = item.precio;
+
+        // Convertir cantidad si es string
+        if (typeof cantidad === 'string') {
+          cantidad = parseFloat(cantidad.replace(',', '.'));
+        }
+
+        // Convertir precio si es string
+        if (typeof precio === 'string') {
+          precio = parseFloat(precio.replace(',', '.'));
+        }
+
+        // Validar que la conversión fue exitosa
+        if (isNaN(cantidad)) {
+          console.warn(`Item ${index}: cantidad no es un número válido:`, item.cantidad);
+          cantidad = 0;
+        }
+        if (isNaN(precio)) {
+          console.warn(`Item ${index}: precio no es un número válido:`, item.precio);
+          precio = 0;
+        }
+
+        item.costo_total = this.totalizadoresService.calcularCostoItem(
+          cantidad,
+          precio
+        );
+      } catch (error) {
+        console.error(`Error al calcular costo del item ${index}:`, error, item);
+        item.costo_total = 0;
+      }
+    });
+
+    this.actualizarTotalGeneral();
+
+  } catch (error) {
+    console.error('Error crítico en calcularCostosTotales:', error);
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Actualiza el total general de TODOS los items filtrados
+ */
+private actualizarTotalGeneral(): void {
+  try {
+    this.totalGeneralCosto = this.totalizadoresService.calcularTotalGeneral(
+      this.pedidoItem
+    );
+  } catch (error) {
+    console.error('Error al actualizar total general:', error);
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Handler para cuando el usuario filtra la tabla
+ */
+onFilter(event: any): void {
+  console.log('Tabla filtrada:', event);
+  this.actualizarTotalGeneral();
+}
+
+/**
+ * Obtiene el costo del item actualmente seleccionado
+ */
+get costoItemSeleccionado(): number {
+  return this.totalizadoresService.obtenerCostoItemSeleccionado(
+    this.selectedPedidoItem
+  );
 }
 
 }
