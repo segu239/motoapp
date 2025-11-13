@@ -98,7 +98,9 @@ selectedSucursal: number;
         usuario_res: this.usuario,
         observacion: this.comentario,
         estado: "Solicitado",
-        id_num: 456 //autogenerado
+        id_num: 456, //autogenerado
+        sucursald: Number(this.sucursal),
+        sucursalh: this.selectedSucursal
        /*  id: 123,
         producto: this.producto,
         cantidad: this.cantidad */
