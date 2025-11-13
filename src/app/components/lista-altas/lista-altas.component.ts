@@ -6,7 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { LazyLoadEvent } from 'primeng/api';
 import { SucursalNombrePipe } from '../../pipes/sucursal-nombre.pipe';
 
-// Interfaz para alta de existencias (V2.0 - Con costos)
+// Interfaz para alta de existencias (V2.0 - Con costos | V3.1 - Exportación Excel completa)
 interface AltaExistencia {
   id_num: number;
   id_items: number;
@@ -817,17 +817,33 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Exportar datos a Excel (V3.1 - Con campos de costos completos)
+   * Exporta todos los campos visibles en la tabla incluyendo costos, tipo de cálculo y valor de cambio
+   */
   exportarExcel(): void {
     import('xlsx').then((xlsx) => {
       const datosExportar = this.altasFiltradas.map(alta => ({
+        // Campos básicos (orden según tabla)
         'ID': alta.id_num,
         'Estado': alta.estado,
-        'Fecha': alta.fecha,
+        'Fecha': alta.fecha_resuelto || alta.fecha,
+        'ID Artículo': alta.id_art,
         'Producto': alta.descripcion,
         'Cantidad': alta.cantidad,
+
+        // Campos de costos (V3.1)
+        'Costo Total 1': this.formatearCosto(alta.costo_total_1),
+        'Costo Total 2': this.formatearCosto(alta.costo_total_2),
+        'Valor Cambio': this.formatearCosto(alta.vcambio),
+        'Tipo Cálculo': this.formatearTipoCalculo(alta.tipo_calculo),
+
+        // Campos de ubicación y usuario
         'Sucursal': this.getNombreSucursal(alta.sucursald),
-        'Usuario': alta.usuario_res || alta.usuario,
-        'Observación': alta.observacion,
+        'Usuario': this.getUsuario(alta),
+        'Observación': alta.observacion || '',
+
+        // Campos de cancelación (si aplica)
         'Motivo Cancelación': alta.motivo_cancelacion || '',
         'Fecha Cancelación': alta.fecha_cancelacion || '',
         'Usuario Cancelación': alta.usuario_cancelacion || ''
@@ -850,5 +866,26 @@ export class ListaAltasComponent implements OnInit, OnDestroy {
         }
       });
     });
+  }
+
+  /**
+   * Formatea un valor de costo para exportación a Excel
+   * Maneja valores nulos/undefined y retorna números directamente para que Excel los reconozca
+   */
+  private formatearCosto(valor: number | undefined | null): string | number {
+    if (valor === null || valor === undefined) {
+      return 'N/A';
+    }
+    // Retornar el número directamente para que Excel lo reconozca como número
+    return valor;
+  }
+
+  /**
+   * Formatea el tipo de cálculo para exportación
+   * Convierte 'dinamico'/'fijo' a formato legible
+   */
+  private formatearTipoCalculo(tipo: string | undefined): string {
+    if (!tipo) return 'N/A';
+    return tipo === 'dinamico' ? 'Dinámico' : 'Fijo';
   }
 }
