@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FilterService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { CalendarModule } from 'primeng/calendar';
+import { TotalizadoresService } from '../../services/totalizadores.service';
 
 interface Column {
     field: string;
@@ -29,14 +30,24 @@ export class EnviodestockrealizadosComponent implements OnInit {
     totalesSeleccionados: number = 0;
     dateRange: Date[];
 
+    // NUEVAS PROPIEDADES: Totalizadores
+    public mostrarTotalizadores: boolean = true;
+    public totalGeneralCosto: number = 0;
 
-    constructor(public dialogService: DialogService, private filterService: FilterService, private _cargardata: CargardataService, private _router: Router) {
+    constructor(
+      public dialogService: DialogService,
+      private filterService: FilterService,
+      private _cargardata: CargardataService,
+      private _router: Router,
+      private totalizadoresService: TotalizadoresService // ← NUEVO
+    ) {
         this.cols = [
             { field: 'tipo', header: 'Tipo' },
             { field: 'cantidad', header: 'Cantidad' },
+            { field: 'precio', header: 'Precio Unit.' },
+            { field: 'costo_total', header: 'Costo Total' },  // ← NUEVA COLUMNA
             { field: 'id_art', header: 'Articulo' },
             { field: 'descripcion', header: 'Descripcion' },
-            { field: 'precio', header: 'Precio' },
             { field: 'fecha_resuelto', header: 'Fecha' },
             { field: 'usuario_res', header: 'Usuario' },
             { field: 'observacion', header: 'Observacion' },
@@ -81,12 +92,16 @@ export class EnviodestockrealizadosComponent implements OnInit {
         this._cargardata.obtenerPedidoItemPorSucursal(this.sucursal).subscribe((data: any) => {
           console.log(data);
           if (Array.isArray(data.mensaje)) {
-            this.pedidoItem = data.mensaje.filter((item: any) => 
+            this.pedidoItem = data.mensaje.filter((item: any) =>
             item.estado.trim() === 'Enviado');
+
+            // NUEVO: Calcular costos totales
+            this.calcularCostosTotales();
+
             console.log(this.pedidoItem);
           } else {
             console.error('Unexpected data format:', data);
-           
+
           }
         });
       }
@@ -114,4 +129,120 @@ export class EnviodestockrealizadosComponent implements OnInit {
       this.totalesSeleccionados = this.selectedPedidoItem
         .reduce((sum, cabecera:any) => sum + cabecera.total, 0); // Suma los saldos
     }
+
+/**
+ * Calcula el costo total para cada item (cantidad * precio)
+ * Se ejecuta después de cargar los datos
+ */
+private calcularCostosTotales(): void {
+  try {
+    if (!this.pedidoItem) {
+      console.warn('pedidoItem es null o undefined');
+      return;
+    }
+
+    if (!Array.isArray(this.pedidoItem)) {
+      console.error('pedidoItem no es un array:', typeof this.pedidoItem);
+      return;
+    }
+
+    this.pedidoItem.forEach((item, index) => {
+      try {
+        // FIX: Convertir strings a números (PostgreSQL retorna NUMERIC como string)
+        let cantidad = item.cantidad;
+        let precio = item.precio;
+
+        // Convertir cantidad si es string
+        if (typeof cantidad === 'string') {
+          cantidad = parseFloat(cantidad.replace(',', '.'));
+        }
+
+        // Convertir precio si es string
+        if (typeof precio === 'string') {
+          precio = parseFloat(precio.replace(',', '.'));
+        }
+
+        // Validar que la conversión fue exitosa
+        if (isNaN(cantidad)) {
+          console.warn(`Item ${index}: cantidad no es un número válido:`, item.cantidad);
+          cantidad = 0;
+        }
+        if (isNaN(precio)) {
+          console.warn(`Item ${index}: precio no es un número válido:`, item.precio);
+          precio = 0;
+        }
+
+        item.costo_total = this.totalizadoresService.calcularCostoItem(
+          cantidad,
+          precio
+        );
+      } catch (error) {
+        console.error(`Error al calcular costo del item ${index}:`, error, item);
+        item.costo_total = 0;
+      }
+    });
+
+    this.actualizarTotalGeneral();
+
+  } catch (error) {
+    console.error('Error crítico en calcularCostosTotales:', error);
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Actualiza el total general de TODOS los items filtrados
+ */
+private actualizarTotalGeneral(): void {
+  try {
+    this.totalGeneralCosto = this.totalizadoresService.calcularTotalGeneral(
+      this.pedidoItem
+    );
+  } catch (error) {
+    console.error('Error al actualizar total general:', error);
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Handler para cuando el usuario filtra la tabla
+ */
+onFilter(event: any): void {
+  console.log('Tabla filtrada:', event);
+  this.actualizarTotalGeneral();
+}
+
+// ===========================================================================
+// GETTERS ESPECÍFICOS PARA SELECCIÓN MÚLTIPLE
+// ===========================================================================
+
+/**
+ * Obtiene el costo total de TODOS los items seleccionados
+ * (selección múltiple con checkboxes)
+ */
+get costoTotalSeleccionados(): number {
+  return this.totalizadoresService.calcularTotalSeleccionados(
+    this.selectedPedidoItem
+  );
+}
+
+/**
+ * Obtiene la cantidad de items seleccionados
+ */
+get cantidadItemsSeleccionados(): number {
+  return this.totalizadoresService.obtenerCantidadSeleccionados(
+    this.selectedPedidoItem
+  );
+}
+
+/**
+ * Obtiene el costo promedio de los items seleccionados
+ */
+get costoPromedioSeleccionados(): number {
+  const stats = this.totalizadoresService.obtenerEstadisticasSeleccionados(
+    this.selectedPedidoItem
+  );
+  return stats.promedio;
+}
+
 }

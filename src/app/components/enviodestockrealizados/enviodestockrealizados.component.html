@@ -6,7 +6,8 @@
                 <p-table #dtable [value]="pedidoItem" [columns]="selectedColumns" [tableStyle]="{ 'min-width': '50rem' }"
                     [paginator]="true" [rows]="10"
                     [globalFilterFields]="['tipo', 'cantidad', 'idart','descripcion','precio' ,'fecha_resuelto', 'usuario_res', 'observacion','sucursalh','sucursald', 'estado','id_num', 'id_items']"
-                    [(selection)]="selectedPedidoItem" (selectionChange)="onSelectionChange($event)" >
+                    [(selection)]="selectedPedidoItem" (selectionChange)="onSelectionChange($event)"
+                    (onFilter)="onFilter($event)">
                     <div>
                     </div>
                     <ng-template pTemplate="caption">
@@ -36,27 +37,149 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-pedido let-columns="columns">
                         <tr>
-                            <p-tableCheckbox [value]="pedido"></p-tableCheckbox>
+                            <td>
+                                <p-tableCheckbox [value]="pedido"></p-tableCheckbox>
+                            </td>
                             <td *ngFor="let col of columns">
-                                <ng-container *ngIf="col.field === 'fecha_resuelto'; else otherField">
+                                <!-- COSTO TOTAL: Nueva columna con formato de moneda -->
+                                <ng-container *ngIf="col.field === 'costo_total'">
+                                    <span *ngIf="pedido.costo_total != null"
+                                          style="text-align: right; display: block; font-weight: bold;">
+                                        {{ pedido.costo_total | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                    </span>
+                                    <span *ngIf="pedido.costo_total == null" class="text-muted">
+                                        N/A
+                                    </span>
+                                </ng-container>
+
+                                <!-- PRECIO UNITARIO: Con formato de moneda -->
+                                <ng-container *ngIf="col.field === 'precio'">
+                                    {{ pedido[col.field] | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                </ng-container>
+
+                                <!-- FECHA: Con formato de fecha -->
+                                <ng-container *ngIf="col.field === 'fecha_resuelto'">
                                     {{pedido[col.field] | dateFormat:'yyyy-MM-dd'}}
                                 </ng-container>
-                                <ng-template #otherField>
-                                    <ng-container *ngIf="col.field === 'sucursald' || col.field === 'sucursalh'; else normalField">
-                                        {{pedido[col.field] | sucursalNombre}}
-                                    </ng-container>
-                                    <ng-template #normalField>
-                                        {{pedido[col.field]}}
-                                    </ng-template>
-                                </ng-template>
+
+                                <!-- SUCURSALES: Mantener pipe sucursalNombre existente -->
+                                <ng-container *ngIf="col.field === 'sucursald' || col.field === 'sucursalh'">
+                                    {{pedido[col.field] | sucursalNombre}}
+                                </ng-container>
+
+                                <!-- OTROS CAMPOS: Renderizado normal -->
+                                <ng-container *ngIf="col.field !== 'costo_total' &&
+                                                      col.field !== 'precio' &&
+                                                      col.field !== 'fecha_resuelto' &&
+                                                      col.field !== 'sucursald' &&
+                                                      col.field !== 'sucursalh'">
+                                    {{pedido[col.field]}}
+                                </ng-container>
                             </td>
                         </tr>
                     </ng-template>
                 </p-table>
-                 <div style="display: flex; align-items: center;">
-                    <div style="margin-left: auto;">
-                       
-                        <h4>Total: {{ totalesSeleccionados }}</h4>
+
+                <!-- Panel de Totalizadores (SELECCIÓN MÚLTIPLE) -->
+                <div class="row mt-3" *ngIf="mostrarTotalizadores && pedidoItem && pedidoItem.length > 0">
+                    <div class="col-md-12">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0">
+                                    <i class="fa fa-calculator mr-2"></i>
+                                    Totalizadores de Costos
+                                    <span class="badge badge-success ml-2">
+                                        <i class="fa fa-refresh mr-1"></i>
+                                        Dinámico
+                                    </span>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <!-- Total General (Todos los Registros Filtrados) -->
+                                    <div class="col-md-6">
+                                        <div class="alert alert-secondary mb-0">
+                                            <h6 class="mb-1">
+                                                <i class="fa fa-list mr-2"></i>
+                                                Total General
+                                            </h6>
+                                            <p class="mb-1">
+                                                <small class="text-muted">
+                                                    Todos los registros filtrados
+                                                </small>
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Items:</strong> {{ pedidoItem.length }}
+                                            </p>
+                                            <p class="mb-0">
+                                                <strong>Costo Total:</strong>
+                                                <span class="text-primary" style="font-size: 1.2em; font-weight: bold;">
+                                                    {{ totalGeneralCosto | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Items Seleccionados (Selección Múltiple) -->
+                                    <div class="col-md-6">
+                                        <div class="alert mb-0"
+                                             [class.alert-warning]="cantidadItemsSeleccionados > 0"
+                                             [class.alert-light]="cantidadItemsSeleccionados === 0">
+                                            <h6 class="mb-1">
+                                                <i class="fa fa-check-square-o mr-2"></i>
+                                                Items Seleccionados
+                                            </h6>
+                                            <p class="mb-1">
+                                                <small class="text-muted">
+                                                    Selección múltiple con checkboxes
+                                                </small>
+                                            </p>
+                                            <div *ngIf="cantidadItemsSeleccionados > 0; else noSeleccionMultiple">
+                                                <p class="mb-0">
+                                                    <strong>Cantidad:</strong> {{ cantidadItemsSeleccionados }} item(s)
+                                                </p>
+                                                <p class="mb-0">
+                                                    <strong>Costo Total:</strong>
+                                                    <span class="text-warning" style="font-size: 1.2em; font-weight: bold;">
+                                                        {{ costoTotalSeleccionados | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                    </span>
+                                                </p>
+                                                <p class="mb-0">
+                                                    <strong>Costo Promedio:</strong>
+                                                    <span class="text-info">
+                                                        {{ costoPromedioSeleccionados | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                    </span>
+                                                    <small class="text-muted"> /item</small>
+                                                </p>
+                                            </div>
+                                            <ng-template #noSeleccionMultiple>
+                                                <p class="mb-0 text-muted">
+                                                    <em>Ningún item seleccionado</em>
+                                                </p>
+                                                <p class="mb-0">
+                                                    <small class="text-muted">
+                                                        <i class="fa fa-info-circle mr-1"></i>
+                                                        Usa los checkboxes para seleccionar múltiples items
+                                                    </small>
+                                                </p>
+                                            </ng-template>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Información Adicional -->
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <small class="text-muted">
+                                            <i class="fa fa-info-circle mr-1"></i>
+                                            Los costos se calculan automáticamente como:
+                                            <strong>Costo Total = Cantidad × Precio</strong>
+                                            (redondeado a 2 decimales)
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
