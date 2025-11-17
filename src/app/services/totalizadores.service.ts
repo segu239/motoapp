@@ -107,4 +107,57 @@ export class TotalizadoresService {
 
     return { total, cantidad, promedio };
   }
+
+  // ==========================================================================
+  // MÉTODOS FLEXIBLES POR CAMPO (v1.0 - agregado_preciocosto_movstock)
+  // ==========================================================================
+
+  /**
+   * Calcula el total general de un array de items basado en un campo específico
+   * Usado para sumar TODOS los items (filtrados) por un campo dado
+   *
+   * @param items Array de items
+   * @param fieldName Nombre del campo a sumar ('precio_total', 'costo_total', etc.)
+   * @returns Suma total del campo especificado
+   */
+  calcularTotalGeneralPorCampo(items: any[], fieldName: string): number {
+    if (!Array.isArray(items)) {
+      console.error('Items no es un array:', items);
+      return 0;
+    }
+
+    return items.reduce((sum, item) => {
+      const valor = item[fieldName] || 0;
+      return Math.round((sum + valor) * 100) / 100;
+    }, 0);
+  }
+
+  /**
+   * Obtiene el valor de un campo de un item seleccionado (selección única)
+   *
+   * @param item Item seleccionado
+   * @param fieldName Nombre del campo a obtener
+   * @returns Valor del campo o 0
+   */
+  obtenerCostoItemSeleccionadoPorCampo(item: any | null, fieldName: string): number {
+    return item?.[fieldName] || 0;
+  }
+
+  /**
+   * Calcula el total de items seleccionados basado en un campo específico (selección múltiple)
+   *
+   * @param items Array de items seleccionados
+   * @param fieldName Nombre del campo a sumar
+   * @returns Suma total del campo especificado
+   */
+  calcularTotalSeleccionadosPorCampo(items: any[], fieldName: string): number {
+    if (!Array.isArray(items) || items.length === 0) {
+      return 0;
+    }
+
+    return items.reduce((sum, item) => {
+      const valor = item[fieldName] || 0;
+      return Math.round((sum + valor) * 100) / 100;
+    }, 0);
+  }
 }
