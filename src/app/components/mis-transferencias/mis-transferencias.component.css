@@ -1,0 +1,44 @@
+/* Estilos para Mis Transferencias */
+
+.card-header {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.badge {
+  padding: 0.4em 0.65em;
+  font-size: 0.85em;
+}
+
+/* Tabla responsive */
+::ng-deep .p-datatable-sm .p-datatable-tbody > tr > td {
+  padding: 0.5rem !important;
+}
+
+::ng-deep .p-datatable-striped .p-datatable-tbody > tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+/* Toast personalizado */
+::ng-deep .p-toast {
+  z-index: 10000;
+}
+
+/* Modal */
+::ng-deep .p-dialog .p-dialog-header {
+  background: #4facfe;
+  color: white;
+}
+
+::ng-deep .p-dialog .p-dialog-content {
+  padding: 1.5rem;
+}
+
+/* Empty state */
+.pi-inbox {
+  opacity: 0.3;
+}
+
+/* Botones en acciones */
+.me-1 {
+  margin-right: 0.25rem;
+}
