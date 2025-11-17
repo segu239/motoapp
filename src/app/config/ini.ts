@@ -246,6 +246,12 @@ export const UrlPriceChangeHistory = "https://motoapp.loclx.io/APIAND/index.php/
 // URL para cancelación de pedidos de stock
 export const UrlCancelarPedidoStock = "https://motoapp.loclx.io/APIAND/index.php/Descarga/CancelarPedidoStock";
 
+// URLs para sistema de transferencias mejorado (V2.0 - 15-NOV-2025)
+export const UrlAceptarTransferencia = "https://motoapp.loclx.io/APIAND/index.php/Descarga/AceptarTransferencia";
+export const UrlRechazarTransferencia = "https://motoapp.loclx.io/APIAND/index.php/Descarga/RechazarTransferencia";
+export const UrlConfirmarRecepcion = "https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarRecepcion";
+export const UrlConfirmarEnvio = "https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarEnvio";
+
 // URLs para alta de existencias
 export const UrlAltaExistencias = "https://motoapp.loclx.io/APIAND/index.php/Descarga/AltaExistencias";
 export const UrlObtenerAltasConCostos = "https://motoapp.loclx.io/APIAND/index.php/Descarga/ObtenerAltasConCostos";
