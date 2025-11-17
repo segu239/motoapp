@@ -11,16 +11,35 @@
                     <div>
                     </div>
                     <ng-template pTemplate="caption">
-                        <div class="p-d-flex justify-content-between align-items-center">
-                            <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
-                                selectedItemsLabel="{0} Columnas Seleccionadas" [style]="{'min-width': '200px'}"
-                                placeholder="Elija Columnas">
-                            </p-multiSelect>
-                            <span class="p-input-icon-left ml-1">
-                                <input pInputText type="text"
-                                    (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
-                                    placeholder="Buscar.." />
-                            </span>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <!-- Selector de columnas y Botón Excel juntos -->
+                            <div class="d-flex align-items-center">
+                                <!-- Selector de columnas -->
+                                <p-multiSelect [options]="cols" [(ngModel)]="selectedColumns" optionLabel="header"
+                                    selectedItemsLabel="{0} Columnas Seleccionadas" [style]="{'min-width': '200px'}"
+                                    placeholder="Elija Columnas">
+                                </p-multiSelect>
+
+                                <!-- Botón Excel -->
+                                <button
+                                    type="button"
+                                    class="btn btn-success ms-3"
+                                    (click)="exportarExcel()"
+                                    [disabled]="!pedidoItem || pedidoItem.length === 0"
+                                    title="Exportar a Excel">
+                                    <i class="fa fa-file-excel mr-1"></i>
+                                    Excel
+                                </button>
+                            </div>
+
+                            <!-- Búsqueda Global (COMENTADO) -->
+                            <div>
+                                <!-- <span class="p-input-icon-left">
+                                    <input pInputText type="text"
+                                        (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                                        placeholder="Buscar.." />
+                                </span> -->
+                            </div>
                         </div>
                     </ng-template>
                     <ng-template pTemplate="header" let-columns>

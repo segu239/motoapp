@@ -6,6 +6,7 @@ import { FilterService } from 'primeng/api';
 import { DialogService } from 'primeng/dynamicdialog';
 import { CalendarModule } from 'primeng/calendar';
 import { TotalizadoresService } from '../../services/totalizadores.service';
+import { SucursalNombrePipe } from '../../pipes/sucursal-nombre.pipe';
 
 interface Column {
     field: string;
@@ -34,6 +35,9 @@ export class EnviodestockrealizadosComponent implements OnInit {
     public mostrarTotalizadores: boolean = true;
     public totalGeneralPrecio: number = 0;  // ← RENOMBRADO (antes totalGeneralCosto)
     public totalGeneralCosto: number = 0;   // ← NUEVO (para precio de costo)
+
+    // Pipe para conversión de nombres de sucursales
+    private sucursalPipe = new SucursalNombrePipe();
 
     constructor(
       public dialogService: DialogService,
@@ -310,6 +314,76 @@ get costoPromedioSeleccionados(): number {
     this.selectedPedidoItem
   );
   return stats.promedio;
+}
+
+/**
+ * Exporta los datos de envíos de stock realizados a Excel
+ * Incluye todos los campos con conversión de moneda
+ */
+exportarExcel(): void {
+  import('xlsx').then((xlsx) => {
+    const datosExportar = this.pedidoItem.map(item => ({
+      // Identificadores
+      'ID Num': item.id_num,
+      'ID Items': item.id_items,
+
+      // Tipo y Estado
+      'Tipo': item.tipo,
+      'Estado': item.estado,
+
+      // Producto
+      'ID Artículo': item.id_art,
+      'Descripción': item.descripcion,
+      'Cantidad': item.cantidad,
+
+      // Precios con conversión de moneda
+      'Precio Unit. Venta': this.formatearCosto(item.precio_convertido),
+      'Precio Total Venta': this.formatearCosto(item.precio_total_convertido),
+      'Precio Unit. Costo': this.formatearCosto(item.precostosi_convertido),
+      'Total Precio Costo': this.formatearCosto(item.costo_total_convertido),
+
+      // Conversión de moneda
+      'Valor Cambio': this.formatearCosto(item.vcambio),
+      'Tipo Moneda': item.tipo_moneda || 'N/A',
+
+      // Ubicación
+      'Sucursal Origen': this.sucursalPipe.transform(item.sucursald),
+      'Sucursal Destino': this.sucursalPipe.transform(item.sucursalh),
+
+      // Usuario y fechas
+      'Fecha': item.fecha_resuelto || 'N/A',
+      'Usuario': item.usuario_res || 'N/A',
+      'Observación': item.observacion || ''
+    }));
+
+    const worksheet = xlsx.utils.json_to_sheet(datosExportar);
+    const workbook = { Sheets: { data: worksheet }, SheetNames: ['data'] };
+    const excelBuffer: any = xlsx.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+    const data: Blob = new Blob([excelBuffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8'
+    });
+
+    import('file-saver').then((module: any) => {
+      const saveAs = module.default || module.saveAs || module;
+      if (typeof saveAs === 'function') {
+        saveAs(data, 'envios_stock_' + new Date().getTime() + '.xlsx');
+      } else if (typeof saveAs.saveAs === 'function') {
+        saveAs.saveAs(data, 'envios_stock_' + new Date().getTime() + '.xlsx');
+      }
+    });
+  });
+}
+
+/**
+ * Formatea un valor numérico para exportación a Excel
+ * Retorna 'N/A' para valores nulos/undefined, números para valores válidos
+ */
+private formatearCosto(valor: number | undefined | null): string | number {
+  if (valor === null || valor === undefined) {
+    return 'N/A';
+  }
+  return valor;
 }
 
 }
