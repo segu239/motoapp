@@ -4,10 +4,10 @@ export interface PedidoItem {
   // ============================================================================
   id_items: number;
   tipo: string;
-  cantidad: number;           // ← Para totalizadores
+  cantidad: number;
   id_art: number;
   descripcion: string;
-  precio: number;             // ← Para totalizadores
+  precio: number;             // ← Precio de VENTA unitario (SIN conversión)
   fecha_resuelto: Date | null;
   usuario_res: string | null;
   observacion: string | null;
@@ -17,11 +17,39 @@ export interface PedidoItem {
   // ============================================================================
   // CAMPOS QUE VIENEN DEL JOIN CON pedidoscb (via backend)
   // ============================================================================
-  sucursald: number;          // ⚠️ Agregado - viene de JOIN
-  sucursalh: number;          // ⚠️ Agregado - viene de JOIN
+  sucursald: number;
+  sucursalh: number;
 
   // ============================================================================
-  // NUEVOS CAMPOS PARA TOTALIZADORES (v2.1)
+  // CAMPOS PARA SISTEMA DE TRANSFERENCIAS BIDIRECCIONALES (v2.2)
   // ============================================================================
-  costo_total?: number;       // Calculado: cantidad * precio (redondeado a 2 decimales)
+  tipo_transferencia?: string;      // ← 'PULL' | 'PUSH' | 'LEGACY' | null
+  fecha_aceptacion?: Date | null;
+  usuario_aceptacion?: string | null;
+  fecha_rechazo?: Date | null;
+  usuario_rechazo?: string | null;
+  motivo_rechazo?: string | null;
+  fecha_confirmacion?: Date | null;
+  usuario_confirmacion?: string | null;
+
+  // ============================================================================
+  // CAMPOS PARA PRECIO DE COSTO Y MONEDA (v2.0 - Con conversión)
+  // ============================================================================
+  precostosi?: number;        // ← Precio de costo unitario ORIGINAL (SIN conversión)
+  tipo_moneda?: number;       // ← NUEVO: Código de moneda del artículo
+  vcambio?: number;           // ← NUEVO: Valor de cambio aplicado
+
+  // ============================================================================
+  // CAMPOS CALCULADOS CON CONVERSIÓN DE MONEDA (v2.0) - 4 CAMPOS
+  // ============================================================================
+  precio_convertido?: number;        // ← NUEVO: precio * vcambio (unitario convertido)
+  precio_total_convertido?: number;  // ← NUEVO: cantidad * precio * vcambio (total convertido)
+  precostosi_convertido?: number;    // ← NUEVO: precostosi * vcambio (unitario convertido)
+  costo_total_convertido?: number;   // ← NUEVO: cantidad * precostosi * vcambio (total convertido)
+
+  // ============================================================================
+  // CAMPOS LEGACY (Mantener para compatibilidad - DEPRECATED)
+  // ============================================================================
+  precio_total?: number;      // ← DEPRECATED: Usar precio_total_convertido
+  costo_total?: number;       // ← DEPRECATED: Usar costo_total_convertido
 }

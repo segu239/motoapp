@@ -449,4 +449,78 @@ export class CargardataService {
 
     return this.http.get(url);
   }
+
+  // ============================================================================
+  // MÉTODOS PARA SISTEMA DE TRANSFERENCIAS MEJORADO (V2.0 - 15-NOV-2025)
+  // ============================================================================
+
+  /**
+   * Aceptar Transferencia de Stock
+   * Acepta una solicitud (PULL) u oferta (PUSH) de transferencia.
+   * ESTE ES EL ÚNICO MOMENTO EN QUE SE MUEVE EL STOCK.
+   *
+   * @param id_num - ID del pedido a aceptar
+   * @param usuario - Usuario que acepta
+   * @returns Observable con la respuesta del backend
+   */
+  aceptarTransferencia(id_num: number, usuario: string): Observable<any> {
+    const payload = {
+      id_num: id_num,
+      usuario: usuario
+    };
+    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/AceptarTransferencia', payload);
+  }
+
+  /**
+   * Rechazar Transferencia de Stock
+   * Rechaza una solicitud (PULL) u oferta (PUSH) de transferencia.
+   * NO mueve stock, solo cambia el estado a "Rechazado".
+   *
+   * @param id_num - ID del pedido a rechazar
+   * @param usuario - Usuario que rechaza
+   * @param motivo_rechazo - Motivo del rechazo
+   * @returns Observable con la respuesta del backend
+   */
+  rechazarTransferencia(id_num: number, usuario: string, motivo_rechazo: string): Observable<any> {
+    const payload = {
+      id_num: id_num,
+      usuario: usuario,
+      motivo_rechazo: motivo_rechazo
+    };
+    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/RechazarTransferencia', payload);
+  }
+
+  /**
+   * Confirmar Recepción de Stock (Flujo PULL - Solicitud)
+   * Confirma la recepción de un stock solicitado.
+   * NO mueve stock (ya se movió al aceptar), solo actualiza estado a "Recibido".
+   *
+   * @param id_num - ID del pedido
+   * @param usuario - Usuario que confirma recepción
+   * @returns Observable con la respuesta del backend
+   */
+  confirmarRecepcion(id_num: number, usuario: string): Observable<any> {
+    const payload = {
+      id_num: id_num,
+      usuario: usuario
+    };
+    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarRecepcion', payload);
+  }
+
+  /**
+   * Confirmar Envío de Stock (Flujo PUSH - Oferta)
+   * Confirma el envío de un stock ofrecido.
+   * NO mueve stock (ya se movió al aceptar), solo actualiza estado a "Recibido".
+   *
+   * @param id_num - ID del pedido
+   * @param usuario - Usuario que confirma envío
+   * @returns Observable con la respuesta del backend
+   */
+  confirmarEnvio(id_num: number, usuario: string): Observable<any> {
+    const payload = {
+      id_num: id_num,
+      usuario: usuario
+    };
+    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarEnvio', payload);
+  }
 }

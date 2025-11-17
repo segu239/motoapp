@@ -11,6 +11,10 @@ registerLocaleData(localeEs);
 
 import { DynamicDialogModule } from 'primeng/dynamicdialog';
 import { DropdownModule } from 'primeng/dropdown';
+import { TagModule } from 'primeng/tag';
+import { DialogModule } from 'primeng/dialog';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 
 import { HttpClientModule } from '@angular/common/http';
 import {FormsModule,ReactiveFormsModule } from '@angular/forms';
@@ -134,6 +138,10 @@ import { TotalizadorModalComponent } from './components/historialventas2/totaliz
 import { CambioPreciosComponent } from './components/cambioprecios/cambioprecios.component';
 import { AltaExistenciasComponent } from './components/alta-existencias/alta-existencias.component';
 import { ListaAltasComponent } from './components/lista-altas/lista-altas.component';
+import { TransferenciasPendientesComponent } from './components/transferencias-pendientes/transferencias-pendientes.component';
+import { MisTransferenciasComponent } from './components/mis-transferencias/mis-transferencias.component';
+import { OfrecerStockComponent } from './components/ofrecer-stock/ofrecer-stock.component';
+import { StockproductoofertaComponent } from './components/stockproductooferta/stockproductooferta.component';
 
 @NgModule({
   declarations: [
@@ -222,6 +230,10 @@ import { ListaAltasComponent } from './components/lista-altas/lista-altas.compon
     CambioPreciosComponent,
     AltaExistenciasComponent,
     ListaAltasComponent,
+    TransferenciasPendientesComponent,
+    MisTransferenciasComponent,
+    OfrecerStockComponent,
+    StockproductoofertaComponent,
   ],
   imports: [
     ButtonModule,
@@ -236,6 +248,9 @@ import { ListaAltasComponent } from './components/lista-altas/lista-altas.compon
     InputNumberModule,
     SelectButtonModule,
     InputTextModule,
+    TagModule,
+    DialogModule,
+    ToastModule,
     FormsModule,
     ReactiveFormsModule,
     BrowserModule,
@@ -252,9 +267,10 @@ import { ListaAltasComponent } from './components/lista-altas/lista-altas.compon
     provideStorage(() => getStorage())
   ],
   providers: [
-    DialogService, 
-    DatePipe, 
-    AngularFireAuthGuard, 
+    DialogService,
+    MessageService,
+    DatePipe,
+    AngularFireAuthGuard,
     { provide: FIREBASE_OPTIONS, useValue: environment.firebase},
     { provide: LOCALE_ID, useValue: 'es' }
   ],
