@@ -1,3 +1,37 @@
+<!-- ====================================================================== -->
+<!-- AVISO DE DEPRECACIÓN: SISTEMA LEGACY                                 -->
+<!-- ====================================================================== -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert" style="border-left: 5px solid #ff9800; background-color: #fff3cd;">
+            <div class="d-flex align-items-center">
+                <i class="mdi mdi-alert-circle-outline" style="font-size: 2rem; margin-right: 15px; color: #ff9800;"></i>
+                <div>
+                    <h5 class="alert-heading mb-2">
+                        <strong>⚠️ Sistema Legacy (Deprecado)</strong>
+                    </h5>
+                    <p class="mb-2">
+                        Este componente usa el <strong>sistema antiguo</strong> de gestión de stock.
+                        Para nuevas operaciones, por favor usa el <strong>Sistema v2.2</strong> que ofrece:
+                    </p>
+                    <ul class="mb-2" style="padding-left: 20px;">
+                        <li>✅ Aprobación bidireccional antes de mover stock</li>
+                        <li>✅ Stock se mueve al ACEPTAR, no al ENVIAR</li>
+                        <li>✅ Trazabilidad completa (fechas, usuarios, motivos)</li>
+                        <li>✅ Rechazos con justificación</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Usa en su lugar:</strong>
+                        <a routerLink="/transferencias-pendientes" class="alert-link">
+                            <i class="mdi mdi-arrow-right-circle"></i> Transferencias Pendientes (Sistema v2.2)
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -37,18 +71,75 @@
                         <tr>
                             <td><p-tableRadioButton [value]="pedido"></p-tableRadioButton></td>
                             <td *ngFor="let col of columns">
-                                <!-- COSTO TOTAL: Nueva columna con formato de moneda -->
-                                <ng-container *ngIf="col.field === 'costo_total'">
-                                    <span *ngIf="pedido.costo_total != null"
-                                          style="text-align: right; display: block; font-weight: bold;">
-                                        {{ pedido.costo_total | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                <!-- PRECIO UNITARIO CONVERTIDO (NUEVO) -->
+                                <ng-container *ngIf="col.field === 'precio_convertido'">
+                                    <span *ngIf="pedido.precio_convertido != null"
+                                          style="text-align: right; display: block; color: #007bff;">
+                                        {{ pedido.precio_convertido | currency:'ARS':'symbol-narrow':'1.2-2' }}
                                     </span>
-                                    <span *ngIf="pedido.costo_total == null" class="text-muted">
+                                    <span *ngIf="pedido.precio_convertido == null" class="text-muted">
                                         N/A
                                     </span>
                                 </ng-container>
 
-                                <!-- PRECIO UNITARIO: Con formato de moneda -->
+                                <!-- PRECIO TOTAL CONVERTIDO -->
+                                <ng-container *ngIf="col.field === 'precio_total_convertido'">
+                                    <span *ngIf="pedido.precio_total_convertido != null"
+                                          style="text-align: right; display: block; font-weight: bold; color: #007bff;">
+                                        {{ pedido.precio_total_convertido | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                    </span>
+                                    <span *ngIf="pedido.precio_total_convertido == null" class="text-muted">
+                                        N/A
+                                    </span>
+                                </ng-container>
+
+                                <!-- PRECIO COSTO UNITARIO CONVERTIDO (NUEVO) -->
+                                <ng-container *ngIf="col.field === 'precostosi_convertido'">
+                                    <span *ngIf="pedido.precostosi_convertido != null"
+                                          style="text-align: right; display: block; color: #6c757d;">
+                                        {{ pedido.precostosi_convertido | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                    </span>
+                                    <span *ngIf="pedido.precostosi_convertido == null" class="text-muted">
+                                        Sin costo
+                                    </span>
+                                </ng-container>
+
+                                <!-- TOTAL PRECIO COSTO CONVERTIDO -->
+                                <ng-container *ngIf="col.field === 'costo_total_convertido'">
+                                    <span *ngIf="pedido.costo_total_convertido != null"
+                                          style="text-align: right; display: block; font-weight: bold; color: #28a745;">
+                                        {{ pedido.costo_total_convertido | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                    </span>
+                                    <span *ngIf="pedido.costo_total_convertido == null" class="text-muted">
+                                        Sin costo
+                                    </span>
+                                </ng-container>
+
+                                <!-- VALOR CAMBIO (NUEVO - OPCIONAL) -->
+                                <ng-container *ngIf="col.field === 'vcambio'">
+                                    <span *ngIf="pedido.vcambio != null && pedido.vcambio !== 1"
+                                          style="text-align: right; display: block; color: #6c757d;">
+                                        {{ pedido.vcambio | number:'1.2-4' }}
+                                    </span>
+                                    <span *ngIf="pedido.vcambio === 1" class="text-muted">
+                                        -
+                                    </span>
+                                    <span *ngIf="pedido.vcambio == null" class="text-muted">
+                                        N/A
+                                    </span>
+                                </ng-container>
+
+                                <!-- TIPO MONEDA (NUEVO - OPCIONAL) -->
+                                <ng-container *ngIf="col.field === 'tipo_moneda'">
+                                    <span *ngIf="pedido.tipo_moneda != null">
+                                        {{ pedido.tipo_moneda }}
+                                    </span>
+                                    <span *ngIf="pedido.tipo_moneda == null" class="text-muted">
+                                        N/A
+                                    </span>
+                                </ng-container>
+
+                                <!-- PRECIO UNITARIO DE VENTA: Con formato de moneda -->
                                 <ng-container *ngIf="col.field === 'precio'">
                                     {{ pedido[col.field] | currency:'ARS':'symbol-narrow':'1.2-2' }}
                                 </ng-container>
@@ -64,7 +155,12 @@
                                 </ng-container>
 
                                 <!-- OTROS CAMPOS: Renderizado normal -->
-                                <ng-container *ngIf="col.field !== 'costo_total' &&
+                                <ng-container *ngIf="col.field !== 'precio_convertido' &&
+                                                      col.field !== 'precio_total_convertido' &&
+                                                      col.field !== 'precostosi_convertido' &&
+                                                      col.field !== 'costo_total_convertido' &&
+                                                      col.field !== 'vcambio' &&
+                                                      col.field !== 'tipo_moneda' &&
                                                       col.field !== 'precio' &&
                                                       col.field !== 'fecha' &&
                                                       col.field !== 'fecha_resuelto' &&
@@ -84,10 +180,10 @@
                             <div class="card-header bg-info text-white">
                                 <h6 class="mb-0">
                                     <i class="fa fa-calculator mr-2"></i>
-                                    Totalizadores de Costos
+                                    Totalizadores
                                     <span class="badge badge-success ml-2">
                                         <i class="fa fa-refresh mr-1"></i>
-                                        Dinámico
+                                        Con Conversión de Moneda
                                     </span>
                                 </h6>
                             </div>
@@ -102,17 +198,30 @@
                                             </h6>
                                             <p class="mb-1">
                                                 <small class="text-muted">
-                                                    Todos los registros filtrados
+                                                    Todos los registros filtrados (con conversión de moneda)
                                                 </small>
                                             </p>
                                             <p class="mb-0">
                                                 <strong>Items:</strong> {{ pedidoItem.length }}
                                             </p>
+                                            <hr class="my-2">
+                                            <!-- PRECIO TOTAL (VENTA) -->
+                                            <p class="mb-1">
+                                                <strong>Precio Total (Venta):</strong>
+                                                <span class="text-primary" style="font-size: 1.1em; font-weight: bold;">
+                                                    {{ totalGeneralPrecio | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                </span>
+                                                <i class="fa fa-exchange ml-1 text-muted"
+                                                   title="Incluye conversión de moneda"></i>
+                                            </p>
+                                            <!-- TOTAL PRECIO COSTO -->
                                             <p class="mb-0">
-                                                <strong>Costo Total:</strong>
-                                                <span class="text-primary" style="font-size: 1.2em; font-weight: bold;">
+                                                <strong>Total Precio Costo:</strong>
+                                                <span class="text-success" style="font-size: 1.1em; font-weight: bold;">
                                                     {{ totalGeneralCosto | currency:'ARS':'symbol-narrow':'1.2-2' }}
                                                 </span>
+                                                <i class="fa fa-exchange ml-1 text-muted"
+                                                   title="Incluye conversión de moneda"></i>
                                             </p>
                                         </div>
                                     </div>
@@ -132,18 +241,44 @@
                                                 </small>
                                             </p>
                                             <div *ngIf="selectedPedidoItem; else noSeleccion">
-                                                <p class="mb-0">
+                                                <p class="mb-1">
                                                     <strong>Art:</strong> {{selectedPedidoItem.id_art}} -
                                                     {{selectedPedidoItem.descripcion}}
                                                 </p>
-                                                <p class="mb-0">
-                                                    <strong>Cantidad:</strong> {{selectedPedidoItem.cantidad}} ×
-                                                    <strong>Precio:</strong> {{selectedPedidoItem.precio | currency:'ARS':'symbol-narrow':'1.2-2'}}
+                                                <p class="mb-1">
+                                                    <strong>Cantidad:</strong> {{selectedPedidoItem.cantidad}}
+                                                </p>
+                                                <!-- NUEVO: Mostrar valor de cambio si aplica -->
+                                                <p class="mb-1" *ngIf="selectedPedidoItem.vcambio && selectedPedidoItem.vcambio !== 1">
+                                                    <strong>Valor Cambio:</strong>
+                                                    <span class="text-warning">{{ selectedPedidoItem.vcambio | number:'1.2-4' }}</span>
+                                                    <i class="fa fa-exchange ml-1" title="Conversión aplicada"></i>
+                                                </p>
+                                                <hr class="my-2">
+                                                <!-- PRECIO UNITARIO Y TOTAL (VENTA) -->
+                                                <p class="mb-1">
+                                                    <strong>Precio Unit.:</strong>
+                                                    {{selectedPedidoItem.precio | currency:'ARS':'symbol-narrow':'1.2-2'}}
+                                                </p>
+                                                <p class="mb-1">
+                                                    <strong>Precio Total:</strong>
+                                                    <span class="text-primary" style="font-size: 1.1em; font-weight: bold;">
+                                                        {{ precioTotalItemSeleccionado | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                    </span>
+                                                </p>
+                                                <hr class="my-2">
+                                                <!-- PRECIO COSTO Y TOTAL -->
+                                                <p class="mb-1">
+                                                    <strong>Precio Costo:</strong>
+                                                    <span *ngIf="selectedPedidoItem.precostosi">
+                                                        {{selectedPedidoItem.precostosi | currency:'ARS':'symbol-narrow':'1.2-2'}}
+                                                    </span>
+                                                    <span *ngIf="!selectedPedidoItem.precostosi" class="text-muted">Sin costo</span>
                                                 </p>
                                                 <p class="mb-0">
-                                                    <strong>Costo:</strong>
-                                                    <span class="text-warning" style="font-size: 1.2em; font-weight: bold;">
-                                                        {{ costoItemSeleccionado | currency:'ARS':'symbol-narrow':'1.2-2' }}
+                                                    <strong>Total Precio Costo:</strong>
+                                                    <span class="text-success" style="font-size: 1.1em; font-weight: bold;">
+                                                        {{ costoTotalItemSeleccionado | currency:'ARS':'symbol-narrow':'1.2-2' }}
                                                     </span>
                                                 </p>
                                             </div>
@@ -161,8 +296,8 @@
                                     <div class="col-md-12">
                                         <small class="text-muted">
                                             <i class="fa fa-info-circle mr-1"></i>
-                                            Los costos se calculan automáticamente como:
-                                            <strong>Costo Total = Cantidad × Precio</strong>
+                                            <strong>Precio Total:</strong> Cantidad × Precio Venta × Valor Cambio |
+                                            <strong>Total Precio Costo:</strong> Cantidad × Precio Costo × Valor Cambio
                                             (redondeado a 2 decimales)
                                         </small>
                                     </div>
@@ -173,10 +308,6 @@
                 </div>
 
                 <div style="display: flex; align-items: center; margin-top: 15px;">
-                    <!-- <div style="display: flex; align-items: center; margin-right: 10px;">
-                        <label for="cantidad" style="margin-right: 5px;">Cantidad:</label>
-                        <input id="cantidad" type="number" [(ngModel)]="cantidad" min="1" style="width: 100px;" />
-                    </div> -->
                     <div style="display: flex; align-items: center; margin-right: 10px;">
                         <label for="comentario" style="margin-right: 5px;">Comentario:</label>
                         <input id="comentario" type="text" [(ngModel)]="comentario" min="1" style="width: 300px;" />

@@ -48,11 +48,10 @@ export class StockreciboComponent {
   totalesSeleccionados: number = 0;
   dateRange: Date[];
 
-  public cantidad:number;
-
   // NUEVAS PROPIEDADES: Totalizadores
   public mostrarTotalizadores: boolean = true;
-  public totalGeneralCosto: number = 0;
+  public totalGeneralPrecio: number = 0;  // ← RENOMBRADO (antes totalGeneralCosto)
+  public totalGeneralCosto: number = 0;   // ← NUEVO (para precio de costo)
 
   constructor(
     public dialogService: DialogService,
@@ -66,8 +65,12 @@ export class StockreciboComponent {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
-      { field: 'precio', header: 'Precio Unit.' },
-      { field: 'costo_total', header: 'Costo Total' },  // ← NUEVA COLUMNA
+      { field: 'precio_convertido', header: 'Precio Unit.' },            // ← MODIFICADO: Ahora muestra precio convertido
+      { field: 'precio_total_convertido', header: 'Precio Total' },      // ← MODIFICADO
+      { field: 'precostosi_convertido', header: 'Precio Costo' },        // ← MODIFICADO: Ahora muestra precio costo convertido
+      { field: 'costo_total_convertido', header: 'Total Precio Costo' }, // ← MODIFICADO
+      { field: 'vcambio', header: 'Valor Cambio' },                      // ← NUEVO (opcional)
+      { field: 'tipo_moneda', header: 'Moneda' },                        // ← NUEVO (opcional)
       { field: 'id_art', header: 'Articulo' },
       { field: 'descripcion', header: 'Descripcion' },
       { field: 'fecha_resuelto', header: 'Fecha' },
@@ -131,16 +134,18 @@ export class StockreciboComponent {
       if (Array.isArray(data.mensaje)) {
         this.pedidoItem = data.mensaje.filter((item: any) => {
           const estado = item.estado.trim();
-          return estado === 'Enviado' || estado === 'Recibido';
+          // FIX 17-Nov-2025: 'Enviado' NO EXISTE en sistema V2
+          // Mostrar transferencias Aceptadas (pendientes confirmación) y Recibidas (completadas)
+          return estado === 'Aceptado' || estado === 'Recibido';
         });
 
-        // NUEVO: Calcular costos totales
-        this.calcularCostosTotales();
+        // NUEVO: Procesar items de pedido (convierte valores y aplica conversión de moneda)
+        this.procesarItemsPedido();
 
       } else {
         this.pedidoItem = [];
       }
-      console.log(this.pedidoItem);
+      console.log('StockRecibo - Items filtrados:', this.pedidoItem);
     });
   }
 /*   integrarNombreClienteaCabecera() {
@@ -252,94 +257,153 @@ this._cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe(
 } */
 
 /**
- * Calcula el costo total para cada item (cantidad * precio)
- * Se ejecuta después de cargar los datos
- * FIX: Convierte strings a números antes de calcular (PostgreSQL retorna NUMERIC como string)
+ * Procesa los items de pedido
+ * NOTA: Los totales convertidos YA vienen calculados del backend
+ * Este método solo valida y formatea para consistencia
  */
-private calcularCostosTotales(): void {
+private procesarItemsPedido(): void {
   try {
-    if (!this.pedidoItem) {
-      console.warn('pedidoItem es null o undefined');
-      return;
-    }
-
-    if (!Array.isArray(this.pedidoItem)) {
-      console.error('pedidoItem no es un array:', typeof this.pedidoItem);
+    if (!this.pedidoItem || !Array.isArray(this.pedidoItem)) {
+      console.warn('pedidoItem inválido');
       return;
     }
 
     this.pedidoItem.forEach((item, index) => {
       try {
-        // FIX: Convertir strings a números (PostgreSQL retorna NUMERIC como string)
-        let cantidad = item.cantidad;
-        let precio = item.precio;
+        // ========================================================================
+        // CONVERSIÓN DE TIPOS (PostgreSQL retorna NUMERIC como string)
+        // Procesar los 4 campos convertidos + vcambio
+        // ========================================================================
 
-        // Convertir cantidad si es string
-        if (typeof cantidad === 'string') {
-          cantidad = parseFloat(cantidad.replace(',', '.'));
+        // 1. Precio unitario convertido
+        if (typeof item.precio_convertido === 'string') {
+          item.precio_convertido = parseFloat(
+            item.precio_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.precio_convertido)) {
+          console.warn(`Item ${index}: precio_convertido inválido`);
+          item.precio_convertido = 0;
         }
 
-        // Convertir precio si es string
-        if (typeof precio === 'string') {
-          precio = parseFloat(precio.replace(',', '.'));
+        // 2. Precio total convertido
+        if (typeof item.precio_total_convertido === 'string') {
+          item.precio_total_convertido = parseFloat(
+            item.precio_total_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.precio_total_convertido)) {
+          console.warn(`Item ${index}: precio_total_convertido inválido`);
+          item.precio_total_convertido = 0;
         }
 
-        // Validar que la conversión fue exitosa
-        if (isNaN(cantidad)) {
-          console.warn(`Item ${index}: cantidad no es un número válido:`, item.cantidad);
-          cantidad = 0;
+        // 3. Precio costo unitario convertido
+        if (typeof item.precostosi_convertido === 'string') {
+          item.precostosi_convertido = parseFloat(
+            item.precostosi_convertido.replace(',', '.')
+          );
         }
-        if (isNaN(precio)) {
-          console.warn(`Item ${index}: precio no es un número válido:`, item.precio);
-          precio = 0;
+        if (isNaN(item.precostosi_convertido)) {
+          console.warn(`Item ${index}: precostosi_convertido inválido`);
+          item.precostosi_convertido = 0;
         }
 
-        item.costo_total = this.totalizadoresService.calcularCostoItem(
-          cantidad,
-          precio
-        );
+        // 4. Total precio costo convertido
+        if (typeof item.costo_total_convertido === 'string') {
+          item.costo_total_convertido = parseFloat(
+            item.costo_total_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.costo_total_convertido)) {
+          console.warn(`Item ${index}: costo_total_convertido inválido`);
+          item.costo_total_convertido = 0;
+        }
+
+        // 5. Valor de cambio
+        if (typeof item.vcambio === 'string') {
+          item.vcambio = parseFloat(item.vcambio.replace(',', '.'));
+        }
+
+        // Mantener campos legacy para compatibilidad (DEPRECATED)
+        item.precio_total = item.precio_total_convertido;
+        item.costo_total = item.costo_total_convertido;
+
       } catch (error) {
-        console.error(`Error al calcular costo del item ${index}:`, error, item);
+        console.error(`Error al procesar item ${index}:`, error, item);
+        item.precio_convertido = 0;
+        item.precio_total_convertido = 0;
+        item.precostosi_convertido = 0;
+        item.costo_total_convertido = 0;
+        item.precio_total = 0;
         item.costo_total = 0;
       }
     });
 
+    // Actualizar totales generales
     this.actualizarTotalGeneral();
 
   } catch (error) {
-    console.error('Error crítico en calcularCostosTotales:', error);
+    console.error('Error crítico en procesarItemsPedido:', error);
+    this.totalGeneralPrecio = 0;
     this.totalGeneralCosto = 0;
   }
 }
 
 /**
  * Actualiza el total general de TODOS los items filtrados
+ * NOTA: PrimeNG pagina en el cliente, por lo que pedidoItem
+ * contiene TODOS los registros, no solo los de la página visible
  */
 private actualizarTotalGeneral(): void {
   try {
-    this.totalGeneralCosto = this.totalizadoresService.calcularTotalGeneral(
-      this.pedidoItem
+    // Total general de PRECIO DE VENTA (con conversión de moneda)
+    this.totalGeneralPrecio = this.totalizadoresService.calcularTotalGeneralPorCampo(
+      this.pedidoItem,
+      'precio_total_convertido'  // ← MODIFICADO
+    );
+
+    // Total general de PRECIO DE COSTO (con conversión de moneda)
+    this.totalGeneralCosto = this.totalizadoresService.calcularTotalGeneralPorCampo(
+      this.pedidoItem,
+      'costo_total_convertido'  // ← MODIFICADO
     );
   } catch (error) {
     console.error('Error al actualizar total general:', error);
+    this.totalGeneralPrecio = 0;
     this.totalGeneralCosto = 0;
   }
 }
 
 /**
  * Handler para cuando el usuario filtra la tabla
+ * PrimeNG emite este evento, recalculamos los totales
  */
 onFilter(event: any): void {
   console.log('Tabla filtrada:', event);
+  // Los totales se recalculan automáticamente porque
+  // actualizarTotalGeneral() usa this.pedidoItem que ya está filtrado
   this.actualizarTotalGeneral();
 }
 
 /**
- * Obtiene el costo del item actualmente seleccionado
+ * Obtiene el precio total (venta) del item actualmente seleccionado
+ * (selección única con radio button)
  */
-get costoItemSeleccionado(): number {
-  return this.totalizadoresService.obtenerCostoItemSeleccionado(
-    this.selectedPedidoItem
+get precioTotalItemSeleccionado(): number {
+  return this.totalizadoresService.obtenerCostoItemSeleccionadoPorCampo(
+    this.selectedPedidoItem,
+    'precio_total_convertido'  // ← MODIFICADO
+  );
+}
+
+/**
+ * Obtiene el costo total del item actualmente seleccionado
+ * (selección única con radio button)
+ */
+get costoTotalItemSeleccionado(): number {
+  return this.totalizadoresService.obtenerCostoItemSeleccionadoPorCampo(
+    this.selectedPedidoItem,
+    'costo_total_convertido'  // ← MODIFICADO
   );
 }
 
