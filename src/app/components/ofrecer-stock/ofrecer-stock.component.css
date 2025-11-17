@@ -1,0 +1,19 @@
+/* Ofrecer Stock Component Styling */
+.card-title {
+    color: #0056b3;
+    font-weight: 600;
+}
+
+.columnas-container {
+    margin-right: 0.5rem;
+}
+
+::ng-deep .p-multiselect {
+    min-width: 200px;
+}
+
+.alert-info {
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+    color: #0c5460;
+}

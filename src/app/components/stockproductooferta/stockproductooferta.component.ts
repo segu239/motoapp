@@ -1,0 +1,153 @@
+import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { DialogService, DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
+import { PedidoItem } from 'src/app/interfaces/pedidoItem';
+import { Pedidoscb } from 'src/app/interfaces/pedidoscb';
+import { CargardataService } from 'src/app/services/cargardata.service';
+import { CrudService } from 'src/app/services/crud.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import Swal from 'sweetalert2';
+
+@Component({
+  selector: 'app-stockproductooferta',
+  templateUrl: './stockproductooferta.component.html',
+  styleUrls: ['./stockproductooferta.component.css']
+})
+export class StockproductoofertaComponent implements OnInit, OnDestroy {
+  sucursales = [];
+  tipos = ["PE","M-","M+"];
+  selectedSucursal: number;
+  public producto: any;
+  public cantidad: number;
+  public comentario: string;
+  public usuario: string;
+  public sucursal: string;
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private cargardata: CargardataService,
+    public ref: DynamicDialogRef,
+    private _crud: CrudService,
+    @Inject(DynamicDialogConfig) public config: DynamicDialogConfig
+  ) {
+    this.producto = this.config.data.producto;
+    console.log("producto:" + JSON.stringify(this.producto));
+    this.usuario = sessionStorage.getItem('usernameOp');
+    this.sucursal = sessionStorage.getItem('sucursal');
+  }
+
+  ngOnInit() {
+    this.cargarSucursales();
+  }
+
+  cargarSucursales() {
+    this._crud.getListSnap('sucursales').pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(
+      data => {
+        this.sucursales = data.map(item => {
+          const payload = item.payload.val() as any;
+          return {
+            label: payload.nombre,
+            value: parseInt(payload.value)
+          };
+        });
+      },
+      error => {
+        console.error('Error al cargar sucursales:', error);
+        // Valores por defecto en caso de error
+        this.sucursales = [
+          { label: 'Suc. Casa Central', value: 1 },
+          { label: 'Suc. Valle Viejo', value: 2 },
+          { label: 'Suc. Guemes', value: 3 },
+          { label: 'Deposito', value: 4 },
+          { label: 'Mayorista', value: 5 }
+        ];
+      }
+    );
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+
+    if (this.ref) {
+      this.ref.close();
+    }
+  }
+
+  ofrecer(event: Event) {
+    event.preventDefault();
+
+    let fecha = new Date();
+    let fechaFormateada = new Date(fecha.getFullYear(), fecha.getMonth(), fecha.getDate());
+
+    const pedidoItem: PedidoItem = {
+      id_items: 1,  //es autogenerado
+      tipo: "PE",
+      cantidad: this.cantidad,
+      id_art: this.producto.id_articulo,
+      descripcion: this.producto.nomart,
+      precio: this.producto.precon,
+      fecha_resuelto: fechaFormateada,
+      usuario_res: this.usuario,
+      observacion: this.comentario,
+      estado: "Ofrecido",  // ← Estado para ofertas PUSH
+      id_num: 456, //autogenerado
+      sucursald: Number(this.sucursal),
+      sucursalh: this.selectedSucursal,
+      tipo_transferencia: 'PUSH'  // ← Sistema bidireccional v2.2: Oferta (no mueve stock hasta aceptación)
+    };
+
+    const pedidoscb: Pedidoscb = {
+      id_num: 123,//auto generado
+      tipo: "PE",
+      numero: 456,//--autoincremental
+      sucursald: Number(this.sucursal),
+      sucursalh: this.selectedSucursal,
+      fecha: fechaFormateada,
+      usuario: this.usuario,
+      observacion: this.comentario,
+      estado: "Ofrecido",  // ← Estado para ofertas PUSH
+      id_aso: 222
+    };
+
+    console.log(event);
+
+    this.cargardata.crearPedidoStock(pedidoItem, pedidoscb).subscribe({
+      next: (response) => {
+        console.log('Oferta creada exitosamente', response);
+        // Cerrar el modal pasando datos de éxito
+        this.ref.close({ success: true, cantidad: this.cantidad, sucursal: this.selectedSucursal });
+        // Mostrar el mensaje después de cerrar el modal
+        setTimeout(() => {
+          Swal.fire({
+            icon: 'success',
+            title: 'Oferta Enviada',
+            text: `Se ofrecieron ${this.cantidad} unidades a ${this.getSucursalNombre(this.selectedSucursal)}. Pendiente de aceptación.`,
+            confirmButtonText: 'Aceptar'
+          });
+        }, 200);
+      },
+      error: (err) => {
+        console.error('Error al crear la oferta', err);
+        // Cerrar el modal pasando datos de error
+        this.ref.close({ success: false });
+        // Mostrar el mensaje de error después de cerrar el modal
+        setTimeout(() => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error al ofrecer',
+            text: err.error?.mensaje || 'No se pudo completar la oferta de stock',
+            confirmButtonText: 'Aceptar'
+          });
+        }, 200);
+      }
+    });
+  }
+
+  getSucursalNombre(value: number): string {
+    const sucursal = this.sucursales.find((s: any) => s.value === value);
+    return sucursal ? sucursal.label : 'Sucursal desconocida';
+  }
+}
