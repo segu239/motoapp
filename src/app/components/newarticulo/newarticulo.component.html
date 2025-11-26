@@ -177,8 +177,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Precio Costo sin IVA</label>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="precostosi" placeholder="" (change)="calcularDesdePrecoSinIva()">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                                <input type="number" step="0.0001" class="form-control" formControlName="precostosi" placeholder="" (change)="calcularDesdePrecoSinIva()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 4 decimales</small>
                                             </div>
                                         </div>
                                     </div>
@@ -186,7 +186,7 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Descuento (%)</label>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="descuento" placeholder="" (change)="calcularPrecioBase()">
+                                                <input type="number" step="0.0001" class="form-control" formControlName="descuento" placeholder="" (change)="calcularPrecioBase()">
                                                 <small class="form-control-feedback">Porcentaje de descuento</small>
                                             </div>
                                         </div>
@@ -198,8 +198,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Precio Base s/IVA</label>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="prebsiva" placeholder="" (change)="calcularMargen()">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                                <input type="number" step="0.0001" class="form-control" formControlName="prebsiva" placeholder="" (change)="calcularMargen()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 4 decimales</small>
                                             </div>
                                         </div>
                                     </div>
@@ -247,8 +247,8 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Precio Final *</label>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" formControlName="precon" placeholder="" (change)="calcularPreciosSinIva()">
-                                                <small class="form-control-feedback">Valor numérico con hasta 2 decimales</small>
+                                                <input type="number" step="0.0001" class="form-control" formControlName="precon" placeholder="" (change)="calcularPreciosSinIva()">
+                                                <small class="form-control-feedback">Valor numérico con hasta 4 decimales</small>
                                             </div>
                                         </div>
                                     </div>

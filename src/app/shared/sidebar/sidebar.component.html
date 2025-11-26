@@ -10,10 +10,10 @@
                     <li class="user-profile">
                         <a class="has-arrow waves-effect waves-dark" href="#" aria-expanded="false"><span class="hide-menu">{{this.nombreCliente | uppercase}} </span></a>
                         <ul aria-expanded="false" class="collapse">
-                           
+
                             <!-- <li><a routerLinkActive="active" (click)="salir()" [routerLink]="['login']">Logout</a></li> -->
                             <li><a routerLinkActive="active" (click)="salir()" [routerLink]="['login2']">Logout</a></li>
-                        
+
 
                         </ul>
                     </li>
@@ -36,36 +36,112 @@
 
                     <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-clipboard-outline"></i><span class="hide-menu">CUENTA CORRIENTE</span></a>
                         <ul aria-expanded="false" class="collapse">
-  
+
                             <li><a routerLinkActive="active" [routerLink]="['cuentacorriente']">Pagos</a></li>
-  
+
                         </ul>
                       </li>
 
                       <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-book-open-page-variant"></i><span class="hide-menu">MOV.STOCK</span></a>
                         <ul aria-expanded="false" class="collapse">
-                            <li><a routerLinkActive="active" [routerLink]="['pedir-stock']">Pedir Stock</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['stockenvio']">Enviar Stock</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['stockpedido']">Pedidos de Stk. pendientes</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['stockrecibo']">Pedidos de Stk. recibidos</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['enviostockpendientes']">Envios de Stk. pendientes</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['enviodestockrealizados']">Envios de Stk. realizados</a></li>
+                            <!-- ====================================================================== -->
+                            <!-- SISTEMA v2.2 - TRANSFERENCIAS BIDIRECCIONALES (RECOMENDADO)          -->
+                            <!-- ====================================================================== -->
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['pedir-stock']"
+                                   pTooltip="✅ SISTEMA v2.2 | Solicitar stock a otra sucursal (PULL). Requiere aceptación. Stock se mueve al aceptar."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Solicitar Stock
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['transferencias-pendientes']"
+                                   pTooltip="✅ SISTEMA v2.2 | Transferencias recibidas que requieren MI aceptación. Aceptar/Rechazar solicitudes y ofertas."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Transferencias Pendientes
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['mis-transferencias']"
+                                   pTooltip="✅ SISTEMA v2.2 | Transferencias que YO creé. Ver estados, cancelar o confirmar recepciones/envíos."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Mis Transferencias
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['ofrecer-stock']"
+                                   pTooltip="✅ SISTEMA v2.2 | Ofrecer stock a otras sucursales (PUSH). Requiere aceptación. Stock se mueve al aceptar."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Ofrecer Stock
+                                </a>
+                            </li>
+
+                            <!-- ====================================================================== -->
+                            <!-- VISUALIZACIÓN Y REPORTES                                               -->
+                            <!-- ====================================================================== -->
                             <li class="nav-devider"></li>
-                            <li><a routerLinkActive="active" [routerLink]="['alta-existencias']">Alta de Existencias</a></li>
-                            <li><a routerLinkActive="active" [routerLink]="['lista-altas']">Lista de Altas</a></li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['stockrecibo']"
+                                   pTooltip="Historial completo de stock recibido (todos los sistemas). Solo visualización."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Stock Recibido
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['enviodestockrealizados']"
+                                   pTooltip="Historial completo de stock enviado (todos los sistemas). Solo visualización."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Stock Enviado
+                                </a>
+                            </li>
+
+                            <!-- ====================================================================== -->
+                            <!-- ALTAS DE STOCK                                                         -->
+                            <!-- ====================================================================== -->
+                            <li class="nav-devider"></li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['alta-existencias']"
+                                   pTooltip="Dar de alta nuevas existencias en el inventario. Aumenta el stock disponible."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Alta de Existencias
+                                </a>
+                            </li>
+                            <li>
+                                <a routerLinkActive="active"
+                                   [routerLink]="['lista-altas']"
+                                   pTooltip="Ver historial de altas de existencias realizadas. Solo visualización."
+                                   tooltipPosition="right"
+                                   [showDelay]="500">
+                                    Lista de Altas
+                                </a>
+                            </li>
                         </ul>
-                      </li>  
+                      </li>
 
                       <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-face"></i><span class="hide-menu">PROVEEDORES</span></a>
                         <ul aria-expanded="false" class="collapse">
-  
+
                             <li><a routerLinkActive="active" [routerLink]="['proveedores']">Proveedores</a></li>
                         </ul>
                       </li>
 
                       <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-pot"></i><span class="hide-menu">ARTICULOS</span></a>
                         <ul aria-expanded="false" class="collapse">
-  
+
                             <li><a routerLinkActive="active" [routerLink]="['rubroprincipal']">Rubro Principal</a></li>
                             <li><a routerLinkActive="active" [routerLink]="['rubro']">Rubro</a></li>
                             <li><a routerLinkActive="active" [routerLink]="['marca']">Marca</a></li>
@@ -79,25 +155,25 @@
                       </li>
                       <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-calculator"></i><span class="hide-menu">CAJA</span></a>
                         <ul aria-expanded="false" class="collapse">
-  
+
                             <li><a routerLinkActive="active" [routerLink]="['cajalista']">Caja Lista</a></li>
                             <li><a routerLinkActive="active" [routerLink]="['cajaconcepto']">Caja Concepto</a></li>
                             <li><a routerLinkActive="active" [routerLink]="['cajamovi']">Caja Movimiento</a></li>
                             <!-- <li><a routerLinkActive="active" [routerLink]="['newcajalista']">Nuevo Cajalista</a></li>
                             <li><a routerLinkActive="active" [routerLink]="['editcajalista']">Editar Cajalista</a></li> -->
-                            
+
                         </ul>
                       </li>
                    <!--  <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-chart-areaspline"></i><span class="hide-menu">ANALISIS</span></a>
                       <ul aria-expanded="false" class="collapse">
 
                           <li><a routerLinkActive="active" [routerLink]="['analisiscaja']">Caja Fact.</a></li>
-                          <li><a routerLinkActive="active" [routerLink]="['analisiscajaprod']">Caja Prod.</a></li> 
+                          <li><a routerLinkActive="active" [routerLink]="['analisiscajaprod']">Caja Prod.</a></li>
                           <li><a routerLinkActive="active" [routerLink]="['dashboard']">Dashboard</a></li>
                       </ul>
                     </li> -->
 
-                    
+
 
                     <li > <a  class="has-arrow waves-effect waves-dark"   aria-expanded="false"><i class="mdi mdi-arrow-down-bold-circle"></i><span class="hide-menu">EXPORTAR</span></a>
                       <ul aria-expanded="false" class="collapse">

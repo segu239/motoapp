@@ -1,0 +1,200 @@
+<div class="container-fluid">
+  <div class="card">
+    <div class="card-header bg-info text-white">
+      <h4 class="mb-0">
+        <i class="pi pi-send"></i> Mis Transferencias
+      </h4>
+      <p class="mb-0 mt-2">
+        <small>Transferencias creadas por <strong>{{getNombreSucursal(sucursalActual)}}</strong></small>
+      </p>
+    </div>
+
+    <div class="card-body">
+      <!-- Barra de acciones -->
+      <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div>
+          <button pButton type="button" icon="pi pi-refresh"
+                  label="Actualizar"
+                  (click)="cargarMisTransferencias()"
+                  class="p-button-sm p-button-outlined"></button>
+        </div>
+        <div>
+          <span class="badge bg-info">
+            {{transferencias.length}} transferencias totales
+          </span>
+        </div>
+      </div>
+
+      <!-- Tabla de transferencias -->
+      <p-table
+        #dtable
+        [value]="transferencias"
+        [columns]="_selectedColumns"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[10, 25, 50]"
+        [loading]="loading"
+        [globalFilterFields]="['id_num', 'descripcion', 'observacion', 'usuario', 'estado']"
+        responsiveLayout="scroll"
+        styleClass="p-datatable-sm p-datatable-striped"
+        [tableStyle]="{ 'min-width': '80rem' }">
+
+        <!-- Caption -->
+        <ng-template pTemplate="caption">
+          <div class="flex align-items-center justify-content-between">
+            <h5 class="m-0">Historial de Transferencias</h5>
+            <span class="p-input-icon-left">
+              <i class="pi pi-search"></i>
+              <input pInputText type="text"
+                     (input)="dtable.filterGlobal($any($event.target).value, 'contains')"
+                     placeholder="Buscar..." />
+            </span>
+          </div>
+        </ng-template>
+
+        <!-- Header -->
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 80px;">ID</th>
+            <th style="width: 140px;">Tipo</th>
+            <th style="width: 130px;">Estado</th>
+            <th>Artículo</th>
+            <th style="width: 90px;">Cant.</th>
+            <th style="width: 130px;">Destino</th>
+            <th style="width: 110px;">F. Creación</th>
+            <th style="width: 110px;">F. Aceptación</th>
+            <th style="width: 110px;">F. Confirmación</th>
+            <th style="width: 200px;" class="text-center">Acciones</th>
+          </tr>
+        </ng-template>
+
+        <!-- Body -->
+        <ng-template pTemplate="body" let-trans>
+          <tr>
+            <td>{{trans.id_num}}</td>
+            <td>
+              <span class="badge"
+                    [ngClass]="{
+                      'bg-primary': trans.tipo_transferencia === 'PULL',
+                      'bg-info': trans.tipo_transferencia === 'PUSH',
+                      'bg-secondary': !trans.tipo_transferencia
+                    }">
+                {{trans.tipo_transferencia_display}}
+              </span>
+            </td>
+            <td>
+              <p-tag [value]="trans.estado_display"
+                     [severity]="getSeverity(trans.estado)"></p-tag>
+            </td>
+            <td>
+              <strong>{{trans.descripcion}}</strong>
+              <br>
+              <small class="text-muted">ID: {{trans.id_art}}</small>
+            </td>
+            <td class="text-end"><strong>{{trans.cantidad}}</strong></td>
+            <td>
+              <i class="pi pi-building"></i>
+              {{getNombreSucursal(trans.sucursalh)}}
+            </td>
+            <td>{{trans.fecha | date: 'dd/MM/yy'}}</td>
+            <td>
+              <span *ngIf="trans.fecha_aceptacion">{{trans.fecha_aceptacion | date: 'dd/MM/yy'}}</span>
+              <span *ngIf="!trans.fecha_aceptacion" class="text-muted">-</span>
+            </td>
+            <td>
+              <span *ngIf="trans.fecha_confirmacion">{{trans.fecha_confirmacion | date: 'dd/MM/yy'}}</span>
+              <span *ngIf="!trans.fecha_confirmacion" class="text-muted">-</span>
+            </td>
+            <td class="text-center">
+              <!-- Botón Cancelar (solo para Solicitado/Ofrecido) -->
+              <button *ngIf="puedeCancel(trans)"
+                      pButton
+                      icon="pi pi-times"
+                      label="Cancelar"
+                      (click)="cancelar(trans)"
+                      class="p-button-danger p-button-sm me-1"
+                      pTooltip="Cancelar transferencia"
+                      tooltipPosition="top"></button>
+
+              <!-- Botón Confirmar (solo para Aceptado) -->
+              <button *ngIf="puedeConfirmar(trans)"
+                      pButton
+                      icon="pi pi-check"
+                      [label]="getTextoConfirmacion(trans)"
+                      (click)="confirmar(trans)"
+                      class="p-button-success p-button-sm"
+                      [pTooltip]="getTextoConfirmacion(trans)"
+                      tooltipPosition="top"></button>
+
+              <!-- Estado final (Recibido/Rechazado/Cancelado) -->
+              <span *ngIf="!puedeCancel(trans) && !puedeConfirmar(trans)" class="text-muted">
+                <i class="pi pi-check-circle"></i> Finalizada
+              </span>
+            </td>
+          </tr>
+        </ng-template>
+
+        <!-- Empty message -->
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="10" class="text-center py-4">
+              <i class="pi pi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+              <p class="mt-3 text-muted">No hay transferencias registradas</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Cancelación -->
+<p-dialog
+  header="Cancelar Transferencia"
+  [(visible)]="displayModalCancelacion"
+  [modal]="true"
+  [closable]="true"
+  [responsive]="true"
+  [style]="{width: '500px'}">
+
+  <div class="p-fluid" *ngIf="transferenciaSeleccionada">
+    <div class="field mb-3">
+      <label class="font-bold">Transferencia #{{transferenciaSeleccionada.id_num}}</label>
+      <p>
+        <strong>Artículo:</strong> {{transferenciaSeleccionada.descripcion}}<br>
+        <strong>Cantidad:</strong> {{transferenciaSeleccionada.cantidad}}<br>
+        <strong>Destino:</strong> {{getNombreSucursal(transferenciaSeleccionada.sucursalh)}}
+      </p>
+    </div>
+
+    <div class="field">
+      <label for="motivo" class="font-bold">Motivo de Cancelación <span class="text-danger">*</span></label>
+      <textarea
+        id="motivo"
+        pInputTextarea
+        [(ngModel)]="motivoCancelacion"
+        rows="4"
+        placeholder="Ingrese el motivo de cancelación (mínimo 10 caracteres)"
+        [maxlength]="500"
+        required></textarea>
+      <small class="text-muted">{{motivoCancelacion.length}}/500 caracteres</small>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <button pButton
+            label="Volver"
+            icon="pi pi-times"
+            (click)="cancelarModalCancelacion()"
+            class="p-button-text"></button>
+    <button pButton
+            label="Confirmar Cancelación"
+            icon="pi pi-check"
+            (click)="confirmarCancelacion()"
+            class="p-button-danger"
+            [disabled]="!motivoCancelacion || motivoCancelacion.length < 10"></button>
+  </ng-template>
+</p-dialog>
+
+<!-- Toast para mensajes -->
+<p-toast></p-toast>

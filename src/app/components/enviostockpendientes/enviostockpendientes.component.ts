@@ -18,6 +18,7 @@ import { DialogService } from 'primeng/dynamicdialog';
 import { PedidosComponent } from '../pedidos/pedidos.component';
 import { RecibosComponent } from '../recibos/recibos.component';
 import { CalendarModule } from 'primeng/calendar';
+import { TotalizadoresService } from '../../services/totalizadores.service';
 interface Column {
   field: string;
   header: string;
@@ -48,7 +49,6 @@ export class EnviostockpendientesComponent {
   totalesSeleccionados: number = 0;
   dateRange: Date[];
 
-  public cantidad:number;
   public comentario: string ='sin comentario';
 
   // NUEVAS PROPIEDADES: Protección contra duplicados
@@ -56,13 +56,31 @@ export class EnviostockpendientesComponent {
   private ultimaOperacionTimestamp: number = 0;
   private readonly TIEMPO_MINIMO_ENTRE_OPERACIONES = 2000; // 2 segundos
 
-  constructor(public dialogService: DialogService, private filterService: FilterService, private _crud: CrudService, private activatedRoute: ActivatedRoute, private _cargardata: CargardataService, private _router: Router) {
+  // NUEVAS PROPIEDADES: Totalizadores
+  public mostrarTotalizadores: boolean = true;
+  public totalGeneralPrecio: number = 0;  // ← RENOMBRADO (antes totalGeneralCosto)
+  public totalGeneralCosto: number = 0;   // ← NUEVO (para precio de costo)
+
+  constructor(
+    public dialogService: DialogService,
+    private filterService: FilterService,
+    private _crud: CrudService,
+    private activatedRoute: ActivatedRoute,
+    private _cargardata: CargardataService,
+    private _router: Router,
+    private totalizadoresService: TotalizadoresService // ← NUEVO
+  ) {
     this.cols = [
       { field: 'tipo', header: 'Tipo' },
       { field: 'cantidad', header: 'Cantidad' },
+      { field: 'precio_convertido', header: 'Precio Unit.' },            // ← MODIFICADO: Ahora muestra precio convertido
+      { field: 'precio_total_convertido', header: 'Precio Total' },      // ← MODIFICADO
+      { field: 'precostosi_convertido', header: 'Precio Costo' },        // ← MODIFICADO: Ahora muestra precio costo convertido
+      { field: 'costo_total_convertido', header: 'Total Precio Costo' }, // ← MODIFICADO
+      { field: 'vcambio', header: 'Valor Cambio' },                      // ← NUEVO (opcional)
+      { field: 'tipo_moneda', header: 'Moneda' },                        // ← NUEVO (opcional)
       { field: 'id_art', header: 'Articulo' },
       { field: 'descripcion', header: 'Descripcion' },
-      { field: 'precio', header: 'Precio' },
       { field: 'fecha_resuelto', header: 'Fecha' },
       { field: 'usuario_res', header: 'Usuario' },
       { field: 'observacion', header: 'Observacion' },
@@ -71,7 +89,7 @@ export class EnviostockpendientesComponent {
       { field: 'estado', header: 'Estado' },
       { field: 'id_num', header: 'Id num.' },
       { field: 'id_items', header: 'Id items' },
-      
+
     ];
     this._selectedColumns = this.cols;
     this.sucursal = Number(sessionStorage.getItem('sucursal'));
@@ -129,14 +147,18 @@ export class EnviostockpendientesComponent {
       this._cargardata.obtenerPedidoItemPorSucursalh(this.sucursal).subscribe((data: any) => {
         console.log(data);
         if (Array.isArray(data.mensaje)) {
-          this.pedidoItem = data.mensaje.filter((item: any) => 
-            item.estado.trim() === 'Solicitado' && 
+          this.pedidoItem = data.mensaje.filter((item: any) =>
+            item.estado.trim() === 'Solicitado' &&
             item.sucursalh.trim() === this.sucursal.toString()
           );
+
+          // NUEVO: Procesar items de pedido (convierte valores y aplica conversión de moneda)
+          this.procesarItemsPedido();
+
           console.log(this.pedidoItem);
         } else {
           console.error('Unexpected data format:', data);
-         
+
         }
       });
     }
@@ -514,6 +536,151 @@ cancelarEnvio() {
   });
 }
 
+/**
+ * Procesa los items de pedido
+ * NOTA: Los totales convertidos YA vienen calculados del backend
+ * Este método solo valida y formatea para consistencia
+ */
+private procesarItemsPedido(): void {
+  try {
+    if (!this.pedidoItem || !Array.isArray(this.pedidoItem)) {
+      console.warn('pedidoItem inválido');
+      return;
+    }
+
+    this.pedidoItem.forEach((item, index) => {
+      try {
+        // ========================================================================
+        // CONVERSIÓN DE TIPOS (PostgreSQL retorna NUMERIC como string)
+        // Procesar los 4 campos convertidos + vcambio
+        // ========================================================================
+
+        // 1. Precio unitario convertido
+        if (typeof item.precio_convertido === 'string') {
+          item.precio_convertido = parseFloat(
+            item.precio_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.precio_convertido)) {
+          console.warn(`Item ${index}: precio_convertido inválido`);
+          item.precio_convertido = 0;
+        }
+
+        // 2. Precio total convertido
+        if (typeof item.precio_total_convertido === 'string') {
+          item.precio_total_convertido = parseFloat(
+            item.precio_total_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.precio_total_convertido)) {
+          console.warn(`Item ${index}: precio_total_convertido inválido`);
+          item.precio_total_convertido = 0;
+        }
+
+        // 3. Precio costo unitario convertido
+        if (typeof item.precostosi_convertido === 'string') {
+          item.precostosi_convertido = parseFloat(
+            item.precostosi_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.precostosi_convertido)) {
+          console.warn(`Item ${index}: precostosi_convertido inválido`);
+          item.precostosi_convertido = 0;
+        }
+
+        // 4. Total precio costo convertido
+        if (typeof item.costo_total_convertido === 'string') {
+          item.costo_total_convertido = parseFloat(
+            item.costo_total_convertido.replace(',', '.')
+          );
+        }
+        if (isNaN(item.costo_total_convertido)) {
+          console.warn(`Item ${index}: costo_total_convertido inválido`);
+          item.costo_total_convertido = 0;
+        }
+
+        // 5. Valor de cambio
+        if (typeof item.vcambio === 'string') {
+          item.vcambio = parseFloat(item.vcambio.replace(',', '.'));
+        }
+
+        // Mantener campos legacy para compatibilidad (DEPRECATED)
+        item.precio_total = item.precio_total_convertido;
+        item.costo_total = item.costo_total_convertido;
+
+      } catch (error) {
+        console.error(`Error al procesar item ${index}:`, error, item);
+        item.precio_convertido = 0;
+        item.precio_total_convertido = 0;
+        item.precostosi_convertido = 0;
+        item.costo_total_convertido = 0;
+        item.precio_total = 0;
+        item.costo_total = 0;
+      }
+    });
+
+    // Actualizar totales generales
+    this.actualizarTotalGeneral();
+
+  } catch (error) {
+    console.error('Error crítico en procesarItemsPedido:', error);
+    this.totalGeneralPrecio = 0;
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Actualiza el total general de TODOS los items filtrados
+ */
+private actualizarTotalGeneral(): void {
+  try {
+    // Total general de PRECIO DE VENTA (con conversión de moneda)
+    this.totalGeneralPrecio = this.totalizadoresService.calcularTotalGeneralPorCampo(
+      this.pedidoItem,
+      'precio_total_convertido'  // ← MODIFICADO
+    );
+
+    // Total general de PRECIO DE COSTO (con conversión de moneda)
+    this.totalGeneralCosto = this.totalizadoresService.calcularTotalGeneralPorCampo(
+      this.pedidoItem,
+      'costo_total_convertido'  // ← MODIFICADO
+    );
+  } catch (error) {
+    console.error('Error al actualizar total general:', error);
+    this.totalGeneralPrecio = 0;
+    this.totalGeneralCosto = 0;
+  }
+}
+
+/**
+ * Handler para cuando el usuario filtra la tabla
+ */
+onFilter(event: any): void {
+  console.log('Tabla filtrada:', event);
+  this.actualizarTotalGeneral();
+}
+
+/**
+ * Obtiene el precio total (venta) del item actualmente seleccionado
+ */
+get precioTotalItemSeleccionado(): number {
+  return this.totalizadoresService.obtenerCostoItemSeleccionadoPorCampo(
+    this.selectedPedidoItem,
+    'precio_total_convertido'  // ← MODIFICADO
+  );
+}
+
+/**
+ * Obtiene el costo total del item actualmente seleccionado
+ */
+get costoTotalItemSeleccionado(): number {
+  return this.totalizadoresService.obtenerCostoItemSeleccionadoPorCampo(
+    this.selectedPedidoItem,
+    'costo_total_convertido'  // ← MODIFICADO
+  );
+
 }
 
  
+
+}

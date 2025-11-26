@@ -31,6 +31,9 @@ import { PedirStockComponent } from './components/pedir-stock/pedir-stock.compon
 import { StockenvioComponent } from './components/stockenvio/stockenvio.component';
 import { EnviostockpendientesComponent } from './components/enviostockpendientes/enviostockpendientes.component';
 import { EnviodestockrealizadosComponent } from './components/enviodestockrealizados/enviodestockrealizados.component';
+import { TransferenciasPendientesComponent } from './components/transferencias-pendientes/transferencias-pendientes.component';
+import { MisTransferenciasComponent } from './components/mis-transferencias/mis-transferencias.component';
+import { OfrecerStockComponent } from './components/ofrecer-stock/ofrecer-stock.component';
 import { RubroprincipalComponent } from './components/rubroprincipal/rubroprincipal.component';
 import { NewrubroprincipalComponent } from './components/newrubroprincipal/newrubroprincipal.component';
 import { EditrubroprincipalComponent } from './components/editrubroprincipal/editrubroprincipal.component';
@@ -110,6 +113,9 @@ children:[
     {path: 'stockenvio', component: StockenvioComponent, data: {titulo: "Enviar Stock"} },
     {path: 'enviostockpendientes', component: EnviostockpendientesComponent, data: {titulo: "Envios Pendientes"} },
     { path: 'enviodestockrealizados', component: EnviodestockrealizadosComponent, data: { titulo: "Envios Realizados" } },
+    { path: 'transferencias-pendientes', component: TransferenciasPendientesComponent, data: { titulo: "Transferencias Pendientes" } },
+    { path: 'mis-transferencias', component: MisTransferenciasComponent, data: { titulo: "Mis Transferencias" } },
+    { path: 'ofrecer-stock', component: OfrecerStockComponent, data: { titulo: "Ofrecer Stock" } },
     { path: 'alta-existencias', component: AltaExistenciasComponent, data: { titulo: "Alta de Existencias" } },
     { path: 'lista-altas', component: ListaAltasComponent, data: { titulo: "Lista de Altas" } },
     { path: 'rubroprincipal', component: RubroprincipalComponent, data: { titulo: "Rubro Principal" } },

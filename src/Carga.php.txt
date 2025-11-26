@@ -931,16 +931,109 @@ public function PedidoItemsPorSucursal_post() {
     }
 
     try {
-        // ÚNICA CONSULTA:  Realizamos un JOIN para obtener datos de ambas tablas
-        $this->db->select('pi.*, pc.sucursalh, pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
+        // ========================================================================
+        // MODIFICADO: Agregar subconsulta para vcambio y cálculos convertidos
+        // IMPORTANTE: Se convierten TANTO unitarios como totales
+        // ========================================================================
+        $this->db->select('
+            pi.*,
+            pc.sucursalh,
+            pc.sucursald,
+            ar.precostosi,
+            ar.tipo_moneda,
+
+            -- Obtener vcambio actual
+            (SELECT COALESCE(vcambio, 1)
+             FROM valorcambio
+             WHERE codmone = ar.tipo_moneda
+             ORDER BY fecdesde DESC
+             LIMIT 1) AS vcambio,
+
+            -- PRECIO UNITARIO CONVERTIDO (precio * vcambio)
+            (pi.precio::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precio_convertido,
+
+            -- PRECIO TOTAL CONVERTIDO (precio * cantidad * vcambio)
+            (pi.precio::numeric * pi.cantidad::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precio_total_convertido,
+
+            -- PRECIO COSTO UNITARIO CONVERTIDO (precostosi * vcambio)
+            (ar.precostosi::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precostosi_convertido,
+
+            -- TOTAL PRECIO COSTO CONVERTIDO (precostosi * cantidad * vcambio)
+            (ar.precostosi::numeric * pi.cantidad::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS costo_total_convertido
+        ');
+
         $this->db->from('pedidoitem AS pi');
-        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner'); // INNER JOIN para asegurar que solo se devuelven filas con coincidencias en ambas tablas
-        $this->db->where('pc.sucursald', $sucursal); // Filtro por sucursal en pedidoscb
+        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner');
+        $this->db->join('artsucursal AS ar', 'pi.id_art = ar.id_articulo', 'left');
+        $this->db->where('pc.sucursald', $sucursal);
 
         $query = $this->db->get();
         $resp = $query->result_array();
 
         if (!empty($resp)) {
+            // Formatear valores numéricos convertidos
+            foreach ($resp as &$item) {
+                // Precio unitario convertido
+                if (isset($item['precio_convertido'])) {
+                    $item['precio_convertido'] = number_format(
+                        (float)$item['precio_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Precio total convertido
+                if (isset($item['precio_total_convertido'])) {
+                    $item['precio_total_convertido'] = number_format(
+                        (float)$item['precio_total_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Precio costo unitario convertido
+                if (isset($item['precostosi_convertido'])) {
+                    $item['precostosi_convertido'] = number_format(
+                        (float)$item['precostosi_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Total precio costo convertido
+                if (isset($item['costo_total_convertido'])) {
+                    $item['costo_total_convertido'] = number_format(
+                        (float)$item['costo_total_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Valor de cambio
+                if (isset($item['vcambio'])) {
+                    $item['vcambio'] = number_format(
+                        (float)$item['vcambio'],
+                        2, '.', ''
+                    );
+                }
+            }
+
             $respuesta = array(
                 "error" => false,
                 "mensaje" => $resp
@@ -976,16 +1069,109 @@ public function PedidoItemsPorSucursalh_post() {
     }
 
     try {
-        // ÚNICA CONSULTA:  Realizamos un JOIN para obtener datos de ambas tablas
-        $this->db->select('pi.*, pc.sucursalh, pc.sucursald'); // Seleccionamos todos los campos de pedidoitem y sucursalh de pedidoscb
+        // ========================================================================
+        // MODIFICADO: Agregar subconsulta para vcambio y cálculos convertidos
+        // IMPORTANTE: Se convierten TANTO unitarios como totales
+        // ========================================================================
+        $this->db->select('
+            pi.*,
+            pc.sucursalh,
+            pc.sucursald,
+            ar.precostosi,
+            ar.tipo_moneda,
+
+            -- Obtener vcambio actual
+            (SELECT COALESCE(vcambio, 1)
+             FROM valorcambio
+             WHERE codmone = ar.tipo_moneda
+             ORDER BY fecdesde DESC
+             LIMIT 1) AS vcambio,
+
+            -- PRECIO UNITARIO CONVERTIDO (precio * vcambio)
+            (pi.precio::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precio_convertido,
+
+            -- PRECIO TOTAL CONVERTIDO (precio * cantidad * vcambio)
+            (pi.precio::numeric * pi.cantidad::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precio_total_convertido,
+
+            -- PRECIO COSTO UNITARIO CONVERTIDO (precostosi * vcambio)
+            (ar.precostosi::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS precostosi_convertido,
+
+            -- TOTAL PRECIO COSTO CONVERTIDO (precostosi * cantidad * vcambio)
+            (ar.precostosi::numeric * pi.cantidad::numeric *
+             COALESCE((SELECT vcambio
+                       FROM valorcambio
+                       WHERE codmone = ar.tipo_moneda
+                       ORDER BY fecdesde DESC
+                       LIMIT 1), 1)
+            ) AS costo_total_convertido
+        ');
+
         $this->db->from('pedidoitem AS pi');
-        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner'); // INNER JOIN para asegurar que solo se devuelven filas con coincidencias en ambas tablas
-        $this->db->where('pc.sucursalh', $sucursal); // Filtro por sucursal en pedidoscb
+        $this->db->join('pedidoscb AS pc', 'pi.id_num = pc.id_num', 'inner');
+        $this->db->join('artsucursal AS ar', 'pi.id_art = ar.id_articulo', 'left');
+        $this->db->where('pc.sucursalh', $sucursal);
 
         $query = $this->db->get();
         $resp = $query->result_array();
 
         if (!empty($resp)) {
+            // Formatear valores numéricos convertidos
+            foreach ($resp as &$item) {
+                // Precio unitario convertido
+                if (isset($item['precio_convertido'])) {
+                    $item['precio_convertido'] = number_format(
+                        (float)$item['precio_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Precio total convertido
+                if (isset($item['precio_total_convertido'])) {
+                    $item['precio_total_convertido'] = number_format(
+                        (float)$item['precio_total_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Precio costo unitario convertido
+                if (isset($item['precostosi_convertido'])) {
+                    $item['precostosi_convertido'] = number_format(
+                        (float)$item['precostosi_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Total precio costo convertido
+                if (isset($item['costo_total_convertido'])) {
+                    $item['costo_total_convertido'] = number_format(
+                        (float)$item['costo_total_convertido'],
+                        2, '.', ''
+                    );
+                }
+                // Valor de cambio
+                if (isset($item['vcambio'])) {
+                    $item['vcambio'] = number_format(
+                        (float)$item['vcambio'],
+                        2, '.', ''
+                    );
+                }
+            }
+
             $respuesta = array(
                 "error" => false,
                 "mensaje" => $resp

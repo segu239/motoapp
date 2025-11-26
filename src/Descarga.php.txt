@@ -1588,8 +1588,17 @@ public function PedidoItemyCab_post() {
                 return;
             }
 
+            // ============================================================================
+            // OBTENER TIPO DE TRANSFERENCIA (NUEVA FUNCIONALIDAD 15-NOV-2025)
+            // ============================================================================
+            // Tipo de transferencia:
+            // - 'PULL': Solicitud de stock (sucursald solicita a sucursalh)
+            // - 'PUSH': Oferta de stock (sucursald ofrece a sucursalh)
+            // - NULL: Transferencias legacy (anterior a mejora 15-Nov-2025)
+            $tipo_transferencia = isset($pedidoItem['tipo_transferencia']) ? $pedidoItem['tipo_transferencia'] : null;
+
             // Insertar en la tabla pedidoitem y obtener el ID
-            $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
+            $sql_pedidoitem = "INSERT INTO pedidoitem (tipo, cantidad, id_art, descripcion, precio, fecha_resuelto, usuario_res, observacion, estado, tipo_transferencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_items";
             $query = $this->db->query($sql_pedidoitem, [
                 $pedidoItem['tipo'],
                 $pedidoItem['cantidad'],
@@ -1599,13 +1608,14 @@ public function PedidoItemyCab_post() {
                 $pedidoItem['fecha_resuelto'],
                 $pedidoItem['usuario_res'],
                 isset($pedidoItem['observacion']) ? $pedidoItem['observacion'] : '',
-                $pedidoItem['estado']
+                $pedidoItem['estado'],
+                $tipo_transferencia
             ]);
             $result = $query->row_array();
             $id_items = $result['id_items'];
 
             // Insertar en la tabla pedidoscb y obtener el ID
-            $sql_pedidoscb = "INSERT INTO pedidoscb (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso) VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_num";
+            $sql_pedidoscb = "INSERT INTO pedidoscb (tipo, sucursald, sucursalh, fecha, usuario, observacion, estado, id_aso, tipo_transferencia) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_num";
             $query = $this->db->query($sql_pedidoscb, [
                 $pedidoscb['tipo'],
                 //$pedidoscb['numero'],
@@ -1615,7 +1625,8 @@ public function PedidoItemyCab_post() {
                 $pedidoscb['usuario'],
                 isset($pedidoscb['observacion']) ? $pedidoscb['observacion'] : '',
                 $pedidoscb['estado'],
-                $id_items
+                $id_items,
+                $tipo_transferencia
             ]);
             $result = $query->row_array();
             $id_num = $result['id_num'];
@@ -1624,59 +1635,41 @@ public function PedidoItemyCab_post() {
             $this->db->query("UPDATE pedidoitem SET id_num = ? WHERE id_items = ?", [$id_num, $id_items]);
 
             // ============================================================================
-            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN ENVÍO DIRECTO
+            // ACTUALIZACIÓN DE STOCK - DESHABILITADA (CORRECCIÓN 15-NOV-2025)
             // ============================================================================
-            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
-            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
-            // directamente al número del campo exi. Este mapeo traduce correctamente:
-            $mapeo_sucursal_exi = [
-                1 => 'exi2', // Casa Central
-                2 => 'exi3', // Valle Viejo
-                3 => 'exi4', // Güemes
-                4 => 'exi1', // Deposito
-                5 => 'exi5'  // Mayorista
-            ];
-
-            // En este flujo (envío directo):
-            // - sucursald = ORIGEN (quien envía)
-            // - sucursalh = DESTINO (quien recibe)
-
-            // SUMA stock en sucursal DESTINO (la que recibe)
-            $sucursal_destino = $pedidoscb['sucursalh'];
-            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
-                ? $mapeo_sucursal_exi[$sucursal_destino]
-                : 'exi' . $sucursal_destino; // Fallback por seguridad
-
-            error_log("ENVIO DIRECTO - Actualizando stock DESTINO: Sucursal=$sucursal_destino, Campo=$campo_stock_destino, Cantidad=+" . $pedidoItem['cantidad'] . ", Artículo=" . $pedidoItem['id_art']);
-
-            $sql_update_destino = "UPDATE artsucursal
-                                   SET $campo_stock_destino = $campo_stock_destino + ?
-                                   WHERE id_articulo = ?";
-            $this->db->query($sql_update_destino, [
-                $pedidoItem['cantidad'],
-                $pedidoItem['id_art']
-            ]);
-
-            error_log("ENVIO DIRECTO - Stock DESTINO actualizado. Rows affected: " . $this->db->affected_rows());
-
-            // RESTA stock en sucursal ORIGEN (la que envía)
-            $sucursal_origen = $pedidoscb['sucursald'];
-            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
-                ? $mapeo_sucursal_exi[$sucursal_origen]
-                : 'exi' . $sucursal_origen; // Fallback por seguridad
-
-            error_log("ENVIO DIRECTO - Actualizando stock ORIGEN: Sucursal=$sucursal_origen, Campo=$campo_stock_origen, Cantidad=-" . $pedidoItem['cantidad'] . ", Artículo=" . $pedidoItem['id_art']);
-
-            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
-            $sql_update_origen = "UPDATE artsucursal
-                                  SET $campo_stock_origen = $campo_stock_origen - ?
-                                  WHERE id_articulo = ?";
-            $this->db->query($sql_update_origen, [
-                $pedidoItem['cantidad'],
-                $pedidoItem['id_art']
-            ]);
-
-            error_log("ENVIO DIRECTO - Stock ORIGEN actualizado. Rows affected: " . $this->db->affected_rows());
+            // ⚠️ IMPORTANTE: EL STOCK NO SE ACTUALIZA EN ESTA FUNCIÓN
+            //
+            // PROBLEMA ORIGINAL:
+            // Esta función se usaba tanto para SOLICITUDES como para ENVÍOS DIRECTOS,
+            // causando que el stock se moviera PREMATURAMENTE al crear solicitudes.
+            //
+            // FLUJO CORRECTO IMPLEMENTADO:
+            // 1. SOLICITUD (estado "Solicitado") - Esta función
+            //    └─> Stock: SIN CAMBIOS ✓ (solo se crea el registro)
+            //
+            // 2. ENVÍO (estado "Solicitado-E") - Función PedidoItemyCabIdEnvio_post()
+            //    └─> Stock: SE MUEVE AQUÍ ✓ (cuando el depósito envía)
+            //
+            // 3. RECEPCIÓN (estado "Recibido") - Función PedidoItemyCabId_post()
+            //    └─> Stock: SIN CAMBIOS ✓ (solo confirma recepción física)
+            //
+            // RAZÓN DE LA CORRECCIÓN:
+            // - Las solicitudes creadas con estado "Solicitado" NO deben mover stock
+            // - Solo deben registrar la solicitud para que el depósito la procese
+            // - El movimiento de stock debe ocurrir SOLO cuando el depósito ENVÍA
+            //
+            // CÓDIGO ELIMINADO:
+            // - Mapeo de sucursales (líneas 1632-1638)
+            // - Actualización de stock en destino (líneas 1644-1660)
+            // - Actualización de stock en origen (líneas 1662-1679)
+            //
+            // FUNCIONES QUE SÍ MUEVEN STOCK:
+            // - PedidoItemyCabIdEnvio_post(): Mueve stock al ENVIAR (correcto)
+            // - CancelarPedidoStock_post(): Revierte stock al CANCELAR enviados (correcto)
+            //
+            // DOCUMENTACIÓN:
+            // Ver: estado_actual_movstock.md
+            // Ver: REPARACIONES_STOCK_14NOV2025.md
             // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
@@ -1690,11 +1683,22 @@ public function PedidoItemyCab_post() {
                 $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
             } else {
                 // Si la transacción fue exitosa
+                // Mensaje dinámico según tipo de transferencia
+                $mensaje = "";
+                if ($tipo_transferencia === 'PULL') {
+                    $mensaje = "Solicitud creada exitosamente. Pendiente de aprobación.";
+                } elseif ($tipo_transferencia === 'PUSH') {
+                    $mensaje = "Oferta creada exitosamente. Pendiente de aceptación.";
+                } else {
+                    $mensaje = "Pedido creado exitosamente.";
+                }
+
                 $respuesta = array(
                     "error" => false,
-                    "mensaje" => "Pedido creado exitosamente",
+                    "mensaje" => $mensaje,
                     "id_items" => $id_items,
-                    "id_num" => $id_num
+                    "id_num" => $id_num,
+                    "tipo_transferencia" => $tipo_transferencia
                 );
                 $this->response($respuesta);
             }
@@ -1853,47 +1857,26 @@ public function PedidoItemyCab_post() {
             // ============================================================================
 
             // ============================================================================
-            // ACTUALIZACIÓN AUTOMÁTICA DE STOCK EN RECEPCIÓN
+            // ACTUALIZACIÓN DE STOCK EN RECEPCIÓN - DESHABILITADA
             // ============================================================================
-            // MAPEO DE FIREBASE VALUE A CAMPOS EXI
-            // Firebase almacena un campo 'value' para cada sucursal que NO corresponde
-            // directamente al número del campo exi. Este mapeo traduce correctamente:
-            $mapeo_sucursal_exi = [
-                1 => 'exi2', // Casa Central
-                2 => 'exi3', // Valle Viejo
-                3 => 'exi4', // Güemes
-                4 => 'exi1', // Deposito
-                5 => 'exi5'  // Mayorista
-            ];
-
-            // Actualizar stock en sucursal DESTINO (la que recibe - SUMA stock)
-            $sucursal_destino = $pedidoscb['sucursald'];
-            $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursal_destino])
-                ? $mapeo_sucursal_exi[$sucursal_destino]
-                : 'exi' . $sucursal_destino; // Fallback por seguridad
-
-            $sql_update_destino = "UPDATE artsucursal
-                                   SET $campo_stock_destino = $campo_stock_destino + ?
-                                   WHERE id_articulo = ?";
-            $this->db->query($sql_update_destino, [
-                $pedidoItem['cantidad'],
-                $pedidoItem['id_art']
-            ]);
-
-            // Actualizar stock en sucursal ORIGEN (la que envía - RESTA stock)
-            $sucursal_origen = $pedidoscb['sucursalh'];
-            $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursal_origen])
-                ? $mapeo_sucursal_exi[$sucursal_origen]
-                : 'exi' . $sucursal_origen; // Fallback por seguridad
-
-            // IMPORTANTE: Se permite stock negativo, NO validamos si hay suficiente
-            $sql_update_origen = "UPDATE artsucursal
-                                  SET $campo_stock_origen = $campo_stock_origen - ?
-                                  WHERE id_articulo = ?";
-            $this->db->query($sql_update_origen, [
-                $pedidoItem['cantidad'],
-                $pedidoItem['id_art']
-            ]);
+            // ⚠️ IMPORTANTE: NO SE ACTUALIZA EL STOCK AQUÍ
+            //
+            // RAZÓN: El stock YA fue actualizado en PedidoItemyCabIdEnvio_post cuando
+            // la sucursal origen realizó el envío (cambió estado a "Solicitado-E").
+            //
+            // Actualizar el stock nuevamente aquí causaría DUPLICACIÓN:
+            // - Al enviar: Sucursal B pierde stock, Sucursal A gana stock ✓
+            // - Al recibir: Si actualizáramos aquí, se restaría/sumaría NUEVAMENTE ✗
+            //
+            // FLUJO CORRECTO:
+            // 1. Sucursal A solicita (Solicitado) - SIN cambio de stock
+            // 2. Sucursal B envía (Solicitado-E) - CON cambio de stock ✓
+            // 3. Sucursal A recibe (Recibido) - SIN cambio de stock (solo confirma)
+            //
+            // La función de recepción solo cambia el estado a "Recibido" para confirmar
+            // que la mercadería llegó físicamente, pero el stock ya fue transferido.
+            //
+            // Modificado: 14/11/2025 - Corrección de duplicación de stock
             // ============================================================================
 
             $this->db->trans_complete(); // Completar transacción
@@ -2194,7 +2177,17 @@ public function PedidoItemyCab_post() {
     }
 
 /**
- * Cancela un pedido de stock en estado Solicitado o Solicitado-E
+ * Cancela un pedido de stock (ACTUALIZADO 15-NOV-2025)
+ *
+ * Estados permitidos para cancelación:
+ * - 'Solicitado': Solicitud no aceptada (PULL) - NO revierte stock
+ * - 'Ofrecido': Oferta no aceptada (PUSH) - NO revierte stock
+ * - 'Solicitado-E': Solicitud enviada (LEGACY) - SÍ revierte stock
+ *
+ * Estados NO permitidos:
+ * - 'Aceptado': Usar RechazarTransferencia_post() en su lugar
+ * - 'Recibido': Transferencia completada, no cancelable
+ * - 'Rechazado': Ya está cerrado
  *
  * @param int id_num - ID del pedido a cancelar
  * @param string usuario - Usuario que cancela
@@ -2232,16 +2225,127 @@ public function CancelarPedidoStock_post() {
 
     $this->db->trans_start(); // Iniciar transacción
 
+    // ============================================================================
+    // PASO 1: Obtener información del pedido ANTES de cancelar
+    // ============================================================================
+    // Necesitamos saber el estado actual para determinar si hay que revertir stock
+    $sql_get_pedido = "SELECT
+                        pi.estado,
+                        pi.id_art,
+                        pi.cantidad,
+                        pc.sucursald,
+                        pc.sucursalh
+                       FROM pedidoitem pi
+                       JOIN pedidoscb pc ON pi.id_num = pc.id_num
+                       WHERE pi.id_num = ?
+                       FOR UPDATE"; // Bloqueo para evitar race conditions
+
+    $query_pedido = $this->db->query($sql_get_pedido, [$id_num]);
+
+    if ($query_pedido->num_rows() === 0) {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "No se encontró el pedido especificado"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return;
+    }
+
+    $pedido_info = $query_pedido->row();
+    $estado_actual = trim($pedido_info->estado);
+    $id_art = $pedido_info->id_art;
+    $cantidad = $pedido_info->cantidad;
+    $sucursald = $pedido_info->sucursald;
+    $sucursalh = $pedido_info->sucursalh;
+
+    // ============================================================================
+    // VALIDAR ESTADO PERMITIDO PARA CANCELACIÓN (ACTUALIZADO 15-NOV-2025)
+    // ============================================================================
+    // Estados permitidos:
+    // - 'Solicitado': Solicitud no aceptada aún (PULL) - NO requiere reversión de stock
+    // - 'Ofrecido': Oferta no aceptada aún (PUSH) - NO requiere reversión de stock
+    // - 'Solicitado-E': Solicitud enviada (LEGACY) - SÍ requiere reversión de stock
+    //
+    // Estados NO permitidos:
+    // - 'Aceptado': Ya se movió el stock, usar RechazarTransferencia en su lugar
+    // - 'Recibido': Transferencia completada, no se puede cancelar
+    // - 'Rechazado': Ya está cerrado
+    // - 'Cancelado': Ya está cancelado
+    if (!in_array($estado_actual, ['Solicitado', 'Ofrecido', 'Solicitado-E'])) {
+        $this->db->trans_rollback();
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Solo se pueden cancelar pedidos en estado 'Solicitado', 'Ofrecido' o 'Solicitado-E'. Estado actual: " . $estado_actual
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    // ============================================================================
+    // PASO 2: REVERSIÓN DE STOCK (solo si estado = "Solicitado-E")
+    // ============================================================================
+    // Si el pedido está en "Solicitado-E", significa que YA FUE ENVIADO y el stock
+    // ya fue modificado en PedidoItemyCabIdEnvio_post. Debemos REVERTIR esos cambios.
+    //
+    // En PedidoItemyCabIdEnvio_post se hizo:
+    // - RESTA stock en sucursalh (quien envió)
+    // - SUMA stock en sucursald (quien iba a recibir)
+    //
+    // Para revertir, hacemos lo opuesto:
+    // - SUMA stock en sucursalh (recupera lo que envió)
+    // - RESTA stock en sucursald (pierde lo que iba a recibir)
+
+    if ($estado_actual === 'Solicitado-E') {
+        // Mapeo de sucursales a campos exi
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Deposito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        // REVERSIÓN 1: SUMAR stock a sucursalh (quien envió, ahora recupera)
+        $campo_stock_origen = isset($mapeo_sucursal_exi[$sucursalh])
+            ? $mapeo_sucursal_exi[$sucursalh]
+            : 'exi' . $sucursalh;
+
+        $sql_revertir_origen = "UPDATE artsucursal
+                                SET $campo_stock_origen = $campo_stock_origen + ?
+                                WHERE id_articulo = ?";
+        $this->db->query($sql_revertir_origen, [$cantidad, $id_art]);
+
+        // REVERSIÓN 2: RESTAR stock a sucursald (quien iba a recibir, ahora pierde)
+        $campo_stock_destino = isset($mapeo_sucursal_exi[$sucursald])
+            ? $mapeo_sucursal_exi[$sucursald]
+            : 'exi' . $sucursald;
+
+        $sql_revertir_destino = "UPDATE artsucursal
+                                 SET $campo_stock_destino = $campo_stock_destino - ?
+                                 WHERE id_articulo = ?";
+        $this->db->query($sql_revertir_destino, [$cantidad, $id_art]);
+
+        // Log para auditoría
+        error_log("REVERSIÓN DE STOCK - Pedido $id_num cancelado en estado Solicitado-E");
+        error_log("Artículo: $id_art, Cantidad: $cantidad");
+        error_log("Sucursal origen (recupera): $sucursalh (+$cantidad)");
+        error_log("Sucursal destino (pierde): $sucursald (-$cantidad)");
+    }
+    // Si estado = "Solicitado", NO se revierte stock porque nunca se modificó
+
+    // ============================================================================
+    // PASO 3: Actualizar estado a Cancelado
+    // ============================================================================
+
     // Actualizar estado en pedidoitem
-    // Solo permitir cancelar si estado es "Solicitado" o "Solicitado-E"
     $this->db->query(
         "UPDATE pedidoitem
          SET estado = 'Cancelado',
              motivo_cancelacion = ?,
              fecha_cancelacion = ?,
              usuario_cancelacion = ?
-         WHERE id_num = ?
-         AND estado IN ('Solicitado', 'Solicitado-E')",
+         WHERE id_num = ?",
         [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
     );
 
@@ -2254,8 +2358,7 @@ public function CancelarPedidoStock_post() {
              motivo_cancelacion = ?,
              fecha_cancelacion = ?,
              usuario_cancelacion = ?
-         WHERE id_num = ?
-         AND estado IN ('Solicitado', 'Solicitado-E')",
+         WHERE id_num = ?",
         [$motivo_cancelacion, $fecha_cancelacion, $usuario, $id_num]
     );
 
@@ -2266,20 +2369,28 @@ public function CancelarPedidoStock_post() {
     if ($this->db->trans_status() === FALSE) {
         $respuesta = array(
             "error" => true,
-            "mensaje" => "Error al cancelar el pedido"
+            "mensaje" => "Error al cancelar el pedido. La transacción ha sido revertida."
         );
         $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
     } else {
         if($affected_rows_item === 0) {
             $respuesta = array(
                 "error" => true,
-                "mensaje" => "No se encontró el pedido o ya fue procesado (solo se pueden cancelar pedidos en estado 'Solicitado' o 'Solicitado-E')"
+                "mensaje" => "No se pudo cancelar el pedido. Verifique que exista y esté en estado válido."
             );
             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
         } else {
+            // Mensaje personalizado según si se revirtió stock o no
+            $mensaje = "Pedido cancelado exitosamente";
+            if ($estado_actual === 'Solicitado-E') {
+                $mensaje .= ". El stock ha sido revertido automáticamente.";
+            }
+
             $respuesta = array(
                 "error" => false,
-                "mensaje" => "Pedido cancelado exitosamente",
+                "mensaje" => $mensaje,
+                "estado_original" => $estado_actual,
+                "stock_revertido" => ($estado_actual === 'Solicitado-E'),
                 "registros_actualizados" => $affected_rows_item
             );
             $this->response($respuesta, REST_Controller::HTTP_OK);
@@ -6864,6 +6975,810 @@ public function CancelarAltaExistencias_post() {
 
 // ============================================================================
 //                  FIN SISTEMA DE ALTA DE EXISTENCIAS
+// ============================================================================
+
+// ============================================================================
+//            SISTEMA DE TRANSFERENCIAS MEJORADO (V2.0 - 15-NOV-2025)
+// ============================================================================
+// Nuevas funciones para flujo bidireccional con confirmación
+// Flujos:
+//   - PULL: Solicitar stock (Solicitado → Aceptado → Recibido)
+//   - PUSH: Ofrecer stock (Ofrecido → Aceptado → Recibido)
+// ============================================================================
+
+/**
+ * Aceptar Transferencia de Stock
+ *
+ * Acepta una solicitud (PULL) u oferta (PUSH) de transferencia de stock.
+ * NO mueve stock, solo cambia el estado a "Aceptado".
+ * FIX 18-Nov-2025: Stock se mueve en confirmación, no en aceptación.
+ *
+ * Flujo PULL (Solicitud):
+ *   - Sucursal A solicita a Sucursal B (estado: "Solicitado")
+ *   - Sucursal B acepta → Estado cambia a: "Aceptado"
+ *   - Sucursal A confirma recepción → MUEVE STOCK: B -cantidad, A +cantidad
+ *
+ * Flujo PUSH (Oferta):
+ *   - Sucursal A ofrece a Sucursal B (estado: "Ofrecido")
+ *   - Sucursal B acepta → Estado cambia a: "Aceptado"
+ *   - Sucursal A confirma envío → MUEVE STOCK: A -cantidad, B +cantidad
+ *
+ * @method POST
+ * @param int id_num - ID del pedido a aceptar
+ * @param string usuario - Usuario que acepta
+ * @return JSON - Respuesta con resultado
+ */
+public function AceptarTransferencia_post() {
+    $data = $this->post();
+
+    // ========================================================================
+    // VALIDACIONES INICIALES
+    // ========================================================================
+
+    if (!isset($data['id_num']) || !isset($data['usuario'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requiere id_num y usuario."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+
+    log_message('info', "🔄 Iniciando aceptación de transferencia - ID: {$id_num}, Usuario: {$usuario}");
+
+    try {
+        // Iniciar transacción
+        $this->db->trans_start();
+
+        // ====================================================================
+        // OBTENER DATOS DEL PEDIDO CON BLOQUEO (FOR UPDATE)
+        // ====================================================================
+
+        $sql_pedido = "
+            SELECT
+                pi.id_items,
+                pi.id_num,
+                pi.id_art,
+                pi.cantidad,
+                pi.descripcion,
+                TRIM(pi.estado) as estado,
+                pi.tipo_transferencia,
+                pc.sucursald,
+                pc.sucursalh
+            FROM pedidoitem pi
+            INNER JOIN pedidoscb pc ON pi.id_num = pc.id_num
+            WHERE pi.id_num = ?
+              AND pi.tipo = 'PE'
+            FOR UPDATE
+        ";
+
+        $query = $this->db->query($sql_pedido, [$id_num]);
+
+        if ($query->num_rows() == 0) {
+            throw new Exception("Transferencia no encontrada (ID: {$id_num})");
+        }
+
+        $items = $query->result();
+
+        // Validar que todos los items tienen el mismo estado
+        $primer_estado = $items[0]->estado;
+        foreach ($items as $item) {
+            if ($item->estado !== $primer_estado) {
+                throw new Exception("Los items de la transferencia tienen estados inconsistentes");
+            }
+        }
+
+        // ====================================================================
+        // VALIDAR ESTADO PERMITIDO
+        // ====================================================================
+
+        if (!in_array($primer_estado, ['Solicitado', 'Ofrecido'])) {
+            throw new Exception("No se puede aceptar una transferencia en estado '{$primer_estado}'. Solo se permiten 'Solicitado' u 'Ofrecido'.");
+        }
+
+        // ====================================================================
+        // DETERMINAR DIRECCIÓN DEL MOVIMIENTO
+        // ====================================================================
+
+        $tipo_transferencia = $items[0]->tipo_transferencia;
+        $sucursald = $items[0]->sucursald;
+        $sucursalh = $items[0]->sucursalh;
+
+        // PULL (Solicitud): sucursald pide a sucursalh
+        // Stock se mueve: sucursalh → sucursald
+        // Origen: sucursalh, Destino: sucursald
+
+        // PUSH (Oferta): sucursald ofrece a sucursalh
+        // Stock se mueve: sucursald → sucursalh
+        // Origen: sucursald, Destino: sucursalh
+
+        if ($primer_estado === 'Solicitado' || $tipo_transferencia === 'PULL') {
+            $sucursal_origen = $sucursalh;  // Quien envía el stock
+            $sucursal_destino = $sucursald; // Quien recibe el stock
+            $tipo_flujo = 'PULL';
+        } else {
+            $sucursal_origen = $sucursald;  // Quien envía el stock
+            $sucursal_destino = $sucursalh; // Quien recibe el stock
+            $tipo_flujo = 'PUSH';
+        }
+
+        // Mapeo sucursal → campo stock
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Depósito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        $campo_origen = $mapeo_sucursal_exi[$sucursal_origen];
+        $campo_destino = $mapeo_sucursal_exi[$sucursal_destino];
+
+        log_message('info', "📦 Flujo {$tipo_flujo}: Origen (Suc {$sucursal_origen}, {$campo_origen}) → Destino (Suc {$sucursal_destino}, {$campo_destino})");
+
+        // ====================================================================
+        // ACTUALIZAR ESTADO A "Aceptado"
+        // ====================================================================
+        // NOTA: El stock se moverá cuando se confirme la transferencia (ConfirmarRecepcion/ConfirmarEnvio)
+        // FIX 18-Nov-2025: Stock se mueve en confirmación, no en aceptación
+
+        $fecha_actual = date('Y-m-d');
+
+        $sql_update_item = "
+            UPDATE pedidoitem
+            SET
+                estado = 'Aceptado',
+                fecha_aceptacion = ?,
+                usuario_aceptacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_item, [$fecha_actual, $usuario, $id_num]);
+
+        $sql_update_cab = "
+            UPDATE pedidoscb
+            SET
+                estado = 'Aceptado',
+                fecha_aceptacion = ?,
+                usuario_aceptacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_cab, [$fecha_actual, $usuario, $id_num]);
+
+        // ====================================================================
+        // COMMIT
+        // ====================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        log_message('info', "✅✅✅ Transferencia ACEPTADA exitosamente - ID: {$id_num}, Tipo: {$tipo_flujo}, Usuario: {$usuario}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Transferencia aceptada y stock movido correctamente",
+            "id_num" => $id_num,
+            "tipo_flujo" => $tipo_flujo,
+            "sucursal_origen" => $sucursal_origen,
+            "sucursal_destino" => $sucursal_destino,
+            "total_items" => count($items),
+            "fecha_aceptacion" => $fecha_actual,
+            "usuario_aceptacion" => $usuario
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error al aceptar transferencia: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al aceptar transferencia: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Rechazar Transferencia de Stock
+ *
+ * Rechaza una solicitud (PULL) u oferta (PUSH) de transferencia de stock.
+ * NO mueve stock, solo cambia el estado a "Rechazado" y registra el motivo.
+ *
+ * @method POST
+ * @param int id_num - ID del pedido a rechazar
+ * @param string usuario - Usuario que rechaza
+ * @param string motivo_rechazo - Motivo del rechazo
+ * @return JSON - Respuesta con resultado
+ */
+public function RechazarTransferencia_post() {
+    $data = $this->post();
+
+    // ========================================================================
+    // VALIDACIONES INICIALES
+    // ========================================================================
+
+    if (!isset($data['id_num']) || !isset($data['usuario']) || !isset($data['motivo_rechazo'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requiere id_num, usuario y motivo_rechazo."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+    $motivo_rechazo = trim($data['motivo_rechazo']);
+
+    // Validar motivo (mínimo 5 caracteres)
+    if (strlen($motivo_rechazo) < 5) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "El motivo de rechazo debe tener al menos 5 caracteres"
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    log_message('info', "🔄 Iniciando rechazo de transferencia - ID: {$id_num}, Usuario: {$usuario}");
+
+    try {
+        // Iniciar transacción
+        $this->db->trans_start();
+
+        // ====================================================================
+        // OBTENER Y VALIDAR ESTADO
+        // ====================================================================
+
+        $sql_estado = "
+            SELECT TRIM(estado) as estado
+            FROM pedidoitem
+            WHERE id_num = ?
+              AND tipo = 'PE'
+            LIMIT 1
+        ";
+
+        $query = $this->db->query($sql_estado, [$id_num]);
+
+        if ($query->num_rows() == 0) {
+            throw new Exception("Transferencia no encontrada (ID: {$id_num})");
+        }
+
+        $estado_actual = $query->row()->estado;
+
+        // Validar estado permitido
+        if (!in_array($estado_actual, ['Solicitado', 'Ofrecido'])) {
+            throw new Exception("No se puede rechazar una transferencia en estado '{$estado_actual}'. Solo se permiten 'Solicitado' u 'Ofrecido'.");
+        }
+
+        // ====================================================================
+        // ACTUALIZAR ESTADO A "Rechazado"
+        // ====================================================================
+
+        $fecha_actual = date('Y-m-d');
+
+        $sql_update_item = "
+            UPDATE pedidoitem
+            SET
+                estado = 'Rechazado',
+                fecha_rechazo = ?,
+                usuario_rechazo = ?,
+                motivo_rechazo = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_item, [$fecha_actual, $usuario, $motivo_rechazo, $id_num]);
+
+        $sql_update_cab = "
+            UPDATE pedidoscb
+            SET
+                estado = 'Rechazado',
+                fecha_rechazo = ?,
+                usuario_rechazo = ?,
+                motivo_rechazo = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_cab, [$fecha_actual, $usuario, $motivo_rechazo, $id_num]);
+
+        // ====================================================================
+        // COMMIT
+        // ====================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        log_message('info', "✅✅✅ Transferencia RECHAZADA exitosamente - ID: {$id_num}, Usuario: {$usuario}, Motivo: {$motivo_rechazo}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Transferencia rechazada correctamente",
+            "id_num" => $id_num,
+            "fecha_rechazo" => $fecha_actual,
+            "usuario_rechazo" => $usuario,
+            "motivo_rechazo" => $motivo_rechazo
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error al rechazar transferencia: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al rechazar transferencia: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Confirmar Recepción de Stock (Flujo PULL - Solicitud)
+ *
+ * Confirma la recepción de un stock solicitado.
+ * MUEVE el stock de origen a destino y actualiza estado a "Recibido".
+ * FIX 18-Nov-2025: Stock se mueve en confirmación, no en aceptación.
+ *
+ * @method POST
+ * @param int id_num - ID del pedido
+ * @param string usuario - Usuario que confirma recepción
+ * @return JSON - Respuesta con resultado
+ */
+public function ConfirmarRecepcion_post() {
+    $data = $this->post();
+
+    // ========================================================================
+    // VALIDACIONES INICIALES
+    // ========================================================================
+
+    if (!isset($data['id_num']) || !isset($data['usuario'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requiere id_num y usuario."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+
+    log_message('info', "🔄 Iniciando confirmación de recepción - ID: {$id_num}, Usuario: {$usuario}");
+
+    try {
+        // Iniciar transacción
+        $this->db->trans_start();
+
+        // ====================================================================
+        // VALIDAR ESTADO Y TIPO
+        // ====================================================================
+
+        $sql_validar = "
+            SELECT TRIM(pi.estado) as estado, pi.tipo_transferencia
+            FROM pedidoitem pi
+            WHERE pi.id_num = ?
+              AND pi.tipo = 'PE'
+            LIMIT 1
+        ";
+
+        $query = $this->db->query($sql_validar, [$id_num]);
+
+        if ($query->num_rows() == 0) {
+            throw new Exception("Transferencia no encontrada (ID: {$id_num})");
+        }
+
+        $datos = $query->row();
+        $estado_actual = $datos->estado;
+        $tipo_transferencia = $datos->tipo_transferencia;
+
+        // Validar estado
+        if ($estado_actual !== 'Aceptado') {
+            throw new Exception("Solo se pueden confirmar recepciones de transferencias en estado 'Aceptado'. Estado actual: '{$estado_actual}'");
+        }
+
+        // Validar que sea flujo PULL (opcional, para mayor seguridad)
+        if ($tipo_transferencia === 'PUSH') {
+            throw new Exception("Esta transferencia es tipo PUSH (oferta). Use ConfirmarEnvio en su lugar.");
+        }
+
+        // ====================================================================
+        // OBTENER DATOS DE LA TRANSFERENCIA
+        // ====================================================================
+        // FIX 18-Nov-2025: Mover stock en confirmación, no en aceptación
+
+        $sql_datos = "
+            SELECT pc.sucursald, pc.sucursalh
+            FROM pedidoscb pc
+            WHERE pc.id_num = ?
+            LIMIT 1
+        ";
+        $query_datos = $this->db->query($sql_datos, [$id_num]);
+
+        if ($query_datos->num_rows() == 0) {
+            throw new Exception("Datos de transferencia no encontrados (ID: {$id_num})");
+        }
+
+        $datos_transferencia = $query_datos->row();
+        $sucursald = $datos_transferencia->sucursald;
+        $sucursalh = $datos_transferencia->sucursalh;
+
+        // Obtener items
+        $sql_items = "
+            SELECT id_art, cantidad, descripcion
+            FROM pedidoitem
+            WHERE id_num = ?
+              AND tipo = 'PE'
+        ";
+        $query_items = $this->db->query($sql_items, [$id_num]);
+        $items = $query_items->result();
+
+        if (count($items) == 0) {
+            throw new Exception("No se encontraron items para esta transferencia");
+        }
+
+        // ====================================================================
+        // DETERMINAR DIRECCIÓN DEL FLUJO Y MOVER STOCK
+        // ====================================================================
+
+        // PULL: Destino solicita de Origen → Stock sale de Origen, entra a Destino
+        $sucursal_origen = $sucursalh;  // Quien envía el stock
+        $sucursal_destino = $sucursald; // Quien recibe el stock
+
+        // Mapeo sucursal → campo stock
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Depósito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        $campo_origen = $mapeo_sucursal_exi[$sucursal_origen];
+        $campo_destino = $mapeo_sucursal_exi[$sucursal_destino];
+
+        log_message('info', "📦 Flujo PULL - Confirmación Recepción: Origen (Suc {$sucursal_origen}, {$campo_origen}) → Destino (Suc {$sucursal_destino}, {$campo_destino})");
+
+        // Mover stock para cada artículo
+        foreach ($items as $item) {
+            $id_art = $item->id_art;
+            $cantidad = $item->cantidad;
+
+            // Obtener stock actual
+            $sql_stock = "SELECT {$campo_origen}, {$campo_destino} FROM artsucursal WHERE id_articulo = ?";
+            $query_stock = $this->db->query($sql_stock, [$id_art]);
+
+            if ($query_stock->num_rows() == 0) {
+                throw new Exception("Artículo {$id_art} no encontrado en artsucursal");
+            }
+
+            $stock_actual = $query_stock->row();
+            $stock_origen_actual = $stock_actual->$campo_origen;
+            $stock_destino_actual = $stock_actual->$campo_destino;
+
+            // NOTA: NO se valida stock suficiente - Se permiten stocks negativos
+            // FIX 18-Nov-2025: Eliminada restricción de stock mínimo
+
+            // Actualizar stock
+            $sql_update_stock = "
+                UPDATE artsucursal
+                SET
+                    {$campo_origen} = {$campo_origen} - ?,
+                    {$campo_destino} = {$campo_destino} + ?
+                WHERE id_articulo = ?
+            ";
+
+            $this->db->query($sql_update_stock, [$cantidad, $cantidad, $id_art]);
+
+            log_message('info', "✅ Stock movido (PULL): Art {$id_art}, Cantidad: {$cantidad}, Origen: {$stock_origen_actual} → " . ($stock_origen_actual - $cantidad) . ", Destino: {$stock_destino_actual} → " . ($stock_destino_actual + $cantidad));
+        }
+
+        // ====================================================================
+        // ACTUALIZAR ESTADO A "Recibido"
+        // ====================================================================
+
+        $fecha_actual = date('Y-m-d');
+
+        $sql_update_item = "
+            UPDATE pedidoitem
+            SET
+                estado = 'Recibido',
+                fecha_confirmacion = ?,
+                usuario_confirmacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_item, [$fecha_actual, $usuario, $id_num]);
+
+        $sql_update_cab = "
+            UPDATE pedidoscb
+            SET
+                estado = 'Recibido',
+                fecha_confirmacion = ?,
+                usuario_confirmacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_cab, [$fecha_actual, $usuario, $id_num]);
+
+        // ====================================================================
+        // COMMIT
+        // ====================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        log_message('info', "✅✅✅ Recepción CONFIRMADA exitosamente - ID: {$id_num}, Usuario: {$usuario}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Recepción confirmada. Transferencia completada.",
+            "id_num" => $id_num,
+            "fecha_confirmacion" => $fecha_actual,
+            "usuario_confirmacion" => $usuario
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error al confirmar recepción: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al confirmar recepción: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+/**
+ * Confirmar Envío de Stock (Flujo PUSH - Oferta)
+ *
+ * Confirma el envío de un stock ofrecido.
+ * MUEVE el stock de origen a destino y actualiza estado a "Recibido".
+ * FIX 18-Nov-2025: Stock se mueve en confirmación, no en aceptación.
+ *
+ * @method POST
+ * @param int id_num - ID del pedido
+ * @param string usuario - Usuario que confirma envío
+ * @return JSON - Respuesta con resultado
+ */
+public function ConfirmarEnvio_post() {
+    $data = $this->post();
+
+    // ========================================================================
+    // VALIDACIONES INICIALES
+    // ========================================================================
+
+    if (!isset($data['id_num']) || !isset($data['usuario'])) {
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Datos incompletos. Se requiere id_num y usuario."
+        );
+        $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_num = $data['id_num'];
+    $usuario = $data['usuario'];
+
+    log_message('info', "🔄 Iniciando confirmación de envío - ID: {$id_num}, Usuario: {$usuario}");
+
+    try {
+        // Iniciar transacción
+        $this->db->trans_start();
+
+        // ====================================================================
+        // VALIDAR ESTADO Y TIPO
+        // ====================================================================
+
+        $sql_validar = "
+            SELECT TRIM(pi.estado) as estado, pi.tipo_transferencia
+            FROM pedidoitem pi
+            WHERE pi.id_num = ?
+              AND pi.tipo = 'PE'
+            LIMIT 1
+        ";
+
+        $query = $this->db->query($sql_validar, [$id_num]);
+
+        if ($query->num_rows() == 0) {
+            throw new Exception("Transferencia no encontrada (ID: {$id_num})");
+        }
+
+        $datos = $query->row();
+        $estado_actual = $datos->estado;
+        $tipo_transferencia = $datos->tipo_transferencia;
+
+        // Validar estado
+        if ($estado_actual !== 'Aceptado') {
+            throw new Exception("Solo se pueden confirmar envíos de transferencias en estado 'Aceptado'. Estado actual: '{$estado_actual}'");
+        }
+
+        // Validar que sea flujo PUSH (opcional, para mayor seguridad)
+        if ($tipo_transferencia === 'PULL') {
+            throw new Exception("Esta transferencia es tipo PULL (solicitud). Use ConfirmarRecepcion en su lugar.");
+        }
+
+        // ====================================================================
+        // OBTENER DATOS DE LA TRANSFERENCIA
+        // ====================================================================
+        // FIX 18-Nov-2025: Mover stock en confirmación, no en aceptación
+
+        $sql_datos = "
+            SELECT pc.sucursald, pc.sucursalh
+            FROM pedidoscb pc
+            WHERE pc.id_num = ?
+            LIMIT 1
+        ";
+        $query_datos = $this->db->query($sql_datos, [$id_num]);
+
+        if ($query_datos->num_rows() == 0) {
+            throw new Exception("Datos de transferencia no encontrados (ID: {$id_num})");
+        }
+
+        $datos_transferencia = $query_datos->row();
+        $sucursald = $datos_transferencia->sucursald;
+        $sucursalh = $datos_transferencia->sucursalh;
+
+        // Obtener items
+        $sql_items = "
+            SELECT id_art, cantidad, descripcion
+            FROM pedidoitem
+            WHERE id_num = ?
+              AND tipo = 'PE'
+        ";
+        $query_items = $this->db->query($sql_items, [$id_num]);
+        $items = $query_items->result();
+
+        if (count($items) == 0) {
+            throw new Exception("No se encontraron items para esta transferencia");
+        }
+
+        // ====================================================================
+        // DETERMINAR DIRECCIÓN DEL FLUJO Y MOVER STOCK
+        // ====================================================================
+
+        // PUSH: Origen ofrece a Destino → Stock sale de Origen, entra a Destino
+        $sucursal_origen = $sucursald;  // Quien envía el stock
+        $sucursal_destino = $sucursalh; // Quien recibe el stock
+
+        // Mapeo sucursal → campo stock
+        $mapeo_sucursal_exi = [
+            1 => 'exi2', // Casa Central
+            2 => 'exi3', // Valle Viejo
+            3 => 'exi4', // Güemes
+            4 => 'exi1', // Depósito
+            5 => 'exi5'  // Mayorista
+        ];
+
+        $campo_origen = $mapeo_sucursal_exi[$sucursal_origen];
+        $campo_destino = $mapeo_sucursal_exi[$sucursal_destino];
+
+        log_message('info', "📦 Flujo PUSH - Confirmación Envío: Origen (Suc {$sucursal_origen}, {$campo_origen}) → Destino (Suc {$sucursal_destino}, {$campo_destino})");
+
+        // Mover stock para cada artículo
+        foreach ($items as $item) {
+            $id_art = $item->id_art;
+            $cantidad = $item->cantidad;
+
+            // Obtener stock actual
+            $sql_stock = "SELECT {$campo_origen}, {$campo_destino} FROM artsucursal WHERE id_articulo = ?";
+            $query_stock = $this->db->query($sql_stock, [$id_art]);
+
+            if ($query_stock->num_rows() == 0) {
+                throw new Exception("Artículo {$id_art} no encontrado en artsucursal");
+            }
+
+            $stock_actual = $query_stock->row();
+            $stock_origen_actual = $stock_actual->$campo_origen;
+            $stock_destino_actual = $stock_actual->$campo_destino;
+
+            // NOTA: NO se valida stock suficiente - Se permiten stocks negativos
+            // FIX 18-Nov-2025: Eliminada restricción de stock mínimo
+
+            // Actualizar stock
+            $sql_update_stock = "
+                UPDATE artsucursal
+                SET
+                    {$campo_origen} = {$campo_origen} - ?,
+                    {$campo_destino} = {$campo_destino} + ?
+                WHERE id_articulo = ?
+            ";
+
+            $this->db->query($sql_update_stock, [$cantidad, $cantidad, $id_art]);
+
+            log_message('info', "✅ Stock movido (PUSH): Art {$id_art}, Cantidad: {$cantidad}, Origen: {$stock_origen_actual} → " . ($stock_origen_actual - $cantidad) . ", Destino: {$stock_destino_actual} → " . ($stock_destino_actual + $cantidad));
+        }
+
+        // ====================================================================
+        // ACTUALIZAR ESTADO A "Recibido"
+        // ====================================================================
+
+        $fecha_actual = date('Y-m-d');
+
+        $sql_update_item = "
+            UPDATE pedidoitem
+            SET
+                estado = 'Recibido',
+                fecha_confirmacion = ?,
+                usuario_confirmacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_item, [$fecha_actual, $usuario, $id_num]);
+
+        $sql_update_cab = "
+            UPDATE pedidoscb
+            SET
+                estado = 'Recibido',
+                fecha_confirmacion = ?,
+                usuario_confirmacion = ?
+            WHERE id_num = ?
+        ";
+
+        $this->db->query($sql_update_cab, [$fecha_actual, $usuario, $id_num]);
+
+        // ====================================================================
+        // COMMIT
+        // ====================================================================
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception("Error en la transacción de base de datos");
+        }
+
+        log_message('info', "✅✅✅ Envío CONFIRMADO exitosamente - ID: {$id_num}, Usuario: {$usuario}");
+
+        $respuesta = array(
+            "error" => false,
+            "mensaje" => "Envío confirmado. Transferencia completada.",
+            "id_num" => $id_num,
+            "fecha_confirmacion" => $fecha_actual,
+            "usuario_confirmacion" => $usuario
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_OK);
+
+    } catch (Exception $e) {
+        $this->db->trans_rollback();
+
+        log_message('error', "❌ Error al confirmar envío: " . $e->getMessage());
+
+        $respuesta = array(
+            "error" => true,
+            "mensaje" => "Error al confirmar envío: " . $e->getMessage()
+        );
+
+        $this->response($respuesta, REST_Controller::HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+// ============================================================================
+//          FIN SISTEMA DE TRANSFERENCIAS MEJORADO (V2.0 - 15-NOV-2025)
 // ============================================================================
 
 }

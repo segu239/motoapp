@@ -90,7 +90,9 @@ selectedSucursal: number;
         usuario_res: this.usuario,
         observacion: this.comentario,
         estado: "Enviado",
-        id_num: 456
+        id_num: 456,
+        sucursald: Number(this.sucursal),
+        sucursalh: this.selectedSucursal
        /*  id: 123,
         producto: this.producto,
         cantidad: this.cantidad */

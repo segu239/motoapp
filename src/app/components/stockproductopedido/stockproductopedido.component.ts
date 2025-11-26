@@ -98,7 +98,10 @@ selectedSucursal: number;
         usuario_res: this.usuario,
         observacion: this.comentario,
         estado: "Solicitado",
-        id_num: 456 //autogenerado
+        id_num: 456, //autogenerado
+        sucursald: Number(this.sucursal),
+        sucursalh: this.selectedSucursal,
+        tipo_transferencia: 'PULL'  // ← Sistema bidireccional v2.2: Solicitud (no mueve stock hasta aceptación)
        /*  id: 123,
         producto: this.producto,
         cantidad: this.cantidad */
@@ -134,8 +137,8 @@ selectedSucursal: number;
           setTimeout(() => {
             Swal.fire({
               icon: 'success',
-              title: 'Solicitud exitosa',
-              text: `Se solicitaron ${this.cantidad} unidades a ${this.getSucursalNombre(this.selectedSucursal)}`,
+              title: 'Solicitud Enviada',
+              text: `Se solicitaron ${this.cantidad} unidades a ${this.getSucursalNombre(this.selectedSucursal)}. Pendiente de aceptación.`,
               confirmButtonText: 'Aceptar'
             });
           }, 200);
