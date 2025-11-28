@@ -445,13 +445,8 @@ export class EditarticuloComponent implements OnInit {
             }
           }).then((result) => {
             if (result.dismiss === Swal.DismissReason.timer) {
-              Swal.fire({
-                title: '¡Éxito!',
-                text: 'El artículo se actualizó correctamente',
-                icon: 'success',
-                confirmButtonText: 'Aceptar'
-              });
-              this.router.navigate(['components/articulo']);
+              // Mostrar modal con cambios de precios antes de navegar
+              this.mostrarModalCambios();
             }
           });
         },
@@ -1016,10 +1011,10 @@ export class EditarticuloComponent implements OnInit {
   // Método para manejar el cambio en el checkbox de precios manuales
   manejarCambioManual(isChecked: boolean): void {
     console.log('Precios lista manual:', isChecked ? 'Activado' : 'Desactivado');
-    
+
     // Actualizar el valor de idart según el estado del checkbox
     this.articuloForm.get('idart')?.setValue(isChecked ? 1 : 0);
-    
+
     if (isChecked) {
       // Si se activa el modo manual, mantener los valores actuales para edición manual
       console.log('Modo manual activado: se mantendrán los valores actuales para edición');
@@ -1028,5 +1023,172 @@ export class EditarticuloComponent implements OnInit {
       console.log('Modo manual desactivado: recalculando precios automáticamente');
       this.calcularPreciosLista();
     }
+  }
+
+  // ============================================================
+  // MÉTODOS PARA MODAL DE CAMBIOS DE PRECIOS
+  // ============================================================
+
+  /**
+   * Calcula las diferencias entre valores originales y nuevos
+   * @returns Array de objetos con los cambios detectados
+   */
+  private calcularCambios(): Array<{
+    campo: string;
+    label: string;
+    valorOriginal: number;
+    valorNuevo: number;
+    diferencia: number;
+    porcentaje: number;
+  }> {
+    const camposPrecios = [
+      { campo: 'precostosi', label: 'Precio Costo s/IVA' },
+      { campo: 'prebsiva', label: 'Precio Base s/IVA' },
+      { campo: 'precon', label: 'Precio Final' },
+      { campo: 'prefi1', label: 'Lista 1' },
+      { campo: 'prefi2', label: 'Lista 2' },
+      { campo: 'prefi3', label: 'Lista 3' },
+      { campo: 'prefi4', label: 'Lista 4' }
+    ];
+
+    const cambios: Array<{
+      campo: string;
+      label: string;
+      valorOriginal: number;
+      valorNuevo: number;
+      diferencia: number;
+      porcentaje: number;
+    }> = [];
+
+    camposPrecios.forEach(({ campo, label }) => {
+      const valorOriginal = parseFloat(this.currentArticulo[campo]) || 0;
+      const valorNuevo = parseFloat(this.articuloForm.get(campo)?.value) || 0;
+
+      // Solo incluir si hay diferencia significativa (más de 0.01)
+      if (Math.abs(valorNuevo - valorOriginal) > 0.01) {
+        const diferencia = valorNuevo - valorOriginal;
+        const porcentaje = valorOriginal !== 0
+          ? ((diferencia / valorOriginal) * 100)
+          : 0;
+
+        cambios.push({
+          campo,
+          label,
+          valorOriginal,
+          valorNuevo,
+          diferencia,
+          porcentaje
+        });
+      }
+    });
+
+    return cambios;
+  }
+
+  /**
+   * Construye el HTML de la tabla comparativa para el modal
+   * @param cambios Array de cambios calculados
+   * @returns String HTML
+   */
+  private construirTablaComparativa(cambios: Array<{
+    campo: string;
+    label: string;
+    valorOriginal: number;
+    valorNuevo: number;
+    diferencia: number;
+    porcentaje: number;
+  }>): string {
+    const formatearPrecio = (valor: number): string => {
+      return valor.toLocaleString('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    };
+
+    const formatearDiferencia = (diferencia: number, porcentaje: number): string => {
+      const signo = diferencia >= 0 ? '+' : '';
+      const color = diferencia >= 0 ? '#28a745' : '#dc3545';
+      const flecha = diferencia >= 0 ? '↑' : '↓';
+
+      return `<span style="color: ${color}; font-weight: bold;">
+        ${flecha} ${signo}${formatearPrecio(diferencia)} (${signo}${porcentaje.toFixed(2)}%)
+      </span>`;
+    };
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered" style="font-size: 0.9rem;">
+          <thead class="thead-light">
+            <tr>
+              <th>Campo</th>
+              <th class="text-right">Anterior</th>
+              <th class="text-right">Nuevo</th>
+              <th class="text-center">Cambio</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    cambios.forEach(cambio => {
+      html += `
+        <tr>
+          <td><strong>${cambio.label}</strong></td>
+          <td class="text-right">${formatearPrecio(cambio.valorOriginal)}</td>
+          <td class="text-right">${formatearPrecio(cambio.valorNuevo)}</td>
+          <td class="text-center">${formatearDiferencia(cambio.diferencia, cambio.porcentaje)}</td>
+        </tr>
+      `;
+    });
+
+    html += `
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted mt-2" style="font-size: 0.8rem;">
+        <i class="fa fa-info-circle"></i>
+        Se muestran solo los campos que fueron modificados.
+      </p>
+    `;
+
+    return html;
+  }
+
+  /**
+   * Muestra un modal comparativo con los cambios de precios realizados
+   * Solo muestra campos que realmente cambiaron
+   */
+  private mostrarModalCambios(): void {
+    const cambios = this.calcularCambios();
+
+    // Si no hay cambios en precios, mostrar mensaje simple
+    if (cambios.length === 0) {
+      Swal.fire({
+        title: '¡Éxito!',
+        text: 'El artículo se actualizó correctamente. No hubo cambios en precios.',
+        icon: 'success',
+        confirmButtonText: 'Aceptar'
+      }).then(() => {
+        this.router.navigate(['components/articulo']);
+      });
+      return;
+    }
+
+    // Construir HTML de la tabla comparativa
+    const htmlTabla = this.construirTablaComparativa(cambios);
+
+    Swal.fire({
+      title: '¡Artículo Actualizado!',
+      html: htmlTabla,
+      icon: 'success',
+      confirmButtonText: 'Aceptar',
+      width: '600px',
+      customClass: {
+        htmlContainer: 'text-left'
+      }
+    }).then(() => {
+      this.router.navigate(['components/articulo']);
+    });
   }
 }
