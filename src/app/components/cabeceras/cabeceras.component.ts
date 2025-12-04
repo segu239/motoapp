@@ -677,6 +677,7 @@ export class CabecerasComponent implements OnDestroy {
     return psucursal1;
   }
   async generacionRecibo(selectedCabecerasIniciales: any[]) {
+    this.recibos = [];  // Limpiar recibos anteriores para evitar acumulación entre pagos
     let remainingImporte = this.importe;
     selectedCabecerasIniciales.forEach((cabeceraInicial, index) => {
       let importe = 0;
@@ -751,7 +752,7 @@ export class CabecerasComponent implements OnDestroy {
   ajuste(selectedCabeceras: any[]) {
     this.currentSaldoArray = [];
     // Verificar si el importe es menor que el totalSum
-    if (this.importe < this.totalSum) {
+    if (this.importe <= this.totalSum) {
       let remainingImporte = this.importe;
       console.log("remainig importe:" + remainingImporte);
       // Iterar sobre las cabeceras seleccionadas y ajustar sus saldos
@@ -1507,6 +1508,9 @@ export class CabecerasComponent implements OnDestroy {
     const interesRecibo = primerRecibo.interes || 0;
     const interesTipo = primerRecibo.interes_tipo || 'P';
 
+    // Calcular el pago efectivo (lo que realmente paga el cliente después de bonificación/interés)
+    const pagoEfectivo = this.calcularTotalEfectivoEnPDF(totalImporte, bonificacionRecibo, bonificacionTipo, interesRecibo, interesTipo);
+
     // ✅ NUEVO: Crear estructura de subtotales por tipo de pago
     const tipoPago = pagoCC.tipoPago || 'Método de Pago';
     const subtotalesTipoPago = [{
@@ -1533,7 +1537,7 @@ export class CabecerasComponent implements OnDestroy {
     }
     console.log(cliente);
     console.log(pagoCC);
-    let numeroenPlabras = this.numeroAPalabras(totalImporte);
+    let numeroenPlabras = this.numeroAPalabras(pagoEfectivo);
     let fechaActual = new Date();
     let fechaFormateada = fechaActual.toISOString().split('T')[0];
     console.log(fechaFormateada);
@@ -1678,7 +1682,7 @@ export class CabecerasComponent implements OnDestroy {
                     { text: '\n' },
                     { text: 'Retenciones:          CERO CON CERO CENTAVOS' + '\n', },
                     { text: '\n' },
-                    { text: 'Neto a Cobrar:          ' + numeroenPlabras + '          $' + totalImporte + '\n', },
+                    { text: 'Neto a Cobrar:          ' + numeroenPlabras + '          $' + pagoEfectivo.toFixed(2) + '\n', },
                     { text: '\n' },
                   ],
                   style: 'total',
@@ -1779,7 +1783,7 @@ export class CabecerasComponent implements OnDestroy {
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL APLICADO: $' + this.calcularTotalEfectivoEnPDF(totalImporte, bonificacionRecibo, bonificacionTipo, interesRecibo, interesTipo).toFixed(2)],
+              ['TOTAL APLICADO: $' + totalImporte.toFixed(2)],
             ],
             bold: true,
             fontSize: 16,
@@ -1827,18 +1831,18 @@ export class CabecerasComponent implements OnDestroy {
     });
   }
 
-  // Calcular total efectivo para recibo de cabeceras (importe + intereses + bonificaciones)
+  // Calcular total efectivo para recibo de cabeceras (importe - bonificaciones + intereses)
   private calcularTotalEfectivoEnPDF(totalImporte: number, bonificacionRecibo: number, bonificacionTipo: string, interesRecibo: number, interesTipo: string): number {
     let totalEfectivo = totalImporte;
-    
-    // Sumar bonificaciones (descuentos que se aplican a favor del cliente)
+
+    // Restar bonificaciones (descuentos que REDUCEN el pago efectivo del cliente)
     if (bonificacionRecibo && bonificacionRecibo > 0) {
       if (bonificacionTipo === 'P') {
         // Si es porcentaje, calcular el valor monetario
-        totalEfectivo += (bonificacionRecibo * totalImporte) / 100;
+        totalEfectivo -= (bonificacionRecibo * totalImporte) / 100;
       } else {
         // Si es importe directo
-        totalEfectivo += bonificacionRecibo;
+        totalEfectivo -= bonificacionRecibo;
       }
     }
     
