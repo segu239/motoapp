@@ -1987,6 +1987,10 @@ try {
       return !isNaN(numValue) ? Math.min(numValue, limit) : null;
     };
 
+    // ✅ FIX: Determinar si es egreso (NC o NV) para usar idcp_egreso en lugar de idcp_ingreso
+    const esEgreso = this.tipoDoc === 'NC' || this.tipoDoc === 'NV';
+    console.log(`📋 Tipo de documento: ${this.tipoDoc} - Es egreso: ${esEgreso}`);
+
     // Crear promesas para cada movimiento
     const promesas = subtotales.map((subtotal, index) => {
       // Buscar información de la tarjeta para este método de pago
@@ -1997,25 +2001,27 @@ try {
         return Promise.resolve(null);
       }
 
-      console.log(`🔍 Método ${index + 1}/${subtotales.length}: ${subtotal.tipoPago} - $${subtotal.subtotal}`);
+      // ✅ FIX: Usar idcp_egreso para NC/NV, idcp_ingreso para el resto
+      const idConcepto = esEgreso ? tarjetaInfo.idcp_egreso : tarjetaInfo.idcp_ingreso;
+      console.log(`🔍 Método ${index + 1}/${subtotales.length}: ${subtotal.tipoPago} - $${subtotal.subtotal} (concepto: ${idConcepto}, egreso: ${esEgreso})`);
 
       // Obtener id_caja para este método de pago
-      return this._cargardata.getIdCajaFromConcepto(tarjetaInfo.idcp_ingreso)
+      return this._cargardata.getIdCajaFromConcepto(idConcepto)
         .pipe(take(1))
         .toPromise()
         .then((response: any) => {
           if (response && response.mensaje && response.mensaje.length > 0) {
             const idCaja = response.mensaje[0].id_caja;
 
-            console.log(`✅ Caja obtenida: ID ${idCaja} para ${subtotal.tipoPago} (concepto: ${tarjetaInfo.idcp_ingreso})`);
+            console.log(`✅ Caja obtenida: ID ${idCaja} para ${subtotal.tipoPago} (concepto: ${idConcepto})`);
 
             // Crear el movimiento para este método de pago
             return {
               sucursal: limitNumericValue(this.sucursal, 999999),
-              codigo_mov: limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999),
+              codigo_mov: limitNumericValue(idConcepto, 9999999999),
               num_operacion: 0, // Se asignará en el backend
               fecha_mov: fechaFormateada,
-              importe_mov: subtotal.subtotal, // ✅ Importe específico de este método
+              importe_mov: esEgreso ? -Math.abs(subtotal.subtotal) : subtotal.subtotal, // ✅ Negativo para NC/NV (egresos)
               descripcion_mov: '', // Se generará automáticamente en el backend
               fecha_emibco: primerItem.fechacheque || null,
               banco: limitNumericValue(primerItem.codigobanco, 9999999999),
@@ -2040,7 +2046,7 @@ try {
               fecha_proceso: fechaFormateada
             };
           } else {
-            console.error(`❌ No se pudo obtener id_caja para ${subtotal.tipoPago} (concepto: ${tarjetaInfo.idcp_ingreso})`);
+            console.error(`❌ No se pudo obtener id_caja para ${subtotal.tipoPago} (concepto: ${idConcepto})`);
             return null;
           }
         })
@@ -2085,9 +2091,14 @@ try {
       return !isNaN(numValue) ? Math.min(numValue, limit) : null;
     };
 
+    // ✅ FIX: Determinar si es egreso (NC o NV) para usar idcp_egreso en lugar de idcp_ingreso
+    const esEgreso = this.tipoDoc === 'NC' || this.tipoDoc === 'NV';
+    const idConcepto = tarjetaInfo ? (esEgreso ? tarjetaInfo.idcp_egreso : tarjetaInfo.idcp_ingreso) : null;
+    console.log(`📋 [Legacy] Tipo de documento: ${this.tipoDoc} - Es egreso: ${esEgreso} - Concepto: ${idConcepto}`);
+
     const obtenerIdCaja = new Promise<number | null>((resolve) => {
-      if (tarjetaInfo && tarjetaInfo.idcp_ingreso) {
-        this._cargardata.getIdCajaFromConcepto(tarjetaInfo.idcp_ingreso).pipe(take(1)).subscribe(
+      if (tarjetaInfo && idConcepto) {
+        this._cargardata.getIdCajaFromConcepto(idConcepto).pipe(take(1)).subscribe(
           (response: any) => {
             if (response && response.mensaje && response.mensaje.length > 0) {
               resolve(response.mensaje[0].id_caja);
@@ -2109,10 +2120,10 @@ try {
     return obtenerIdCaja.then(idCajaObtenido => {
       const cajaMovi = {
         sucursal: limitNumericValue(this.sucursal, 999999),
-        codigo_mov: tarjetaInfo ? limitNumericValue(tarjetaInfo.idcp_ingreso, 9999999999) : null,
+        codigo_mov: idConcepto ? limitNumericValue(idConcepto, 9999999999) : null,
         num_operacion: 0,
         fecha_mov: fechaFormateada,
-        importe_mov: this.suma,
+        importe_mov: esEgreso ? -Math.abs(this.suma) : this.suma, // ✅ Negativo para NC/NV (egresos)
         descripcion_mov: '',
         fecha_emibco: primerItem.fechacheque || null,
         banco: limitNumericValue(primerItem.codigobanco, 9999999999),
