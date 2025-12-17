@@ -6,6 +6,8 @@ import { PedidoItem } from 'src/app/interfaces/pedidoItem';
 import { Pedidoscb } from 'src/app/interfaces/pedidoscb';
 import { CargardataService } from 'src/app/services/cargardata.service';
 import { CrudService } from 'src/app/services/crud.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -13,15 +15,18 @@ import Swal from 'sweetalert2';
   templateUrl: './stockproductoenvio.component.html',
   styleUrls: ['./stockproductoenvio.component.css']
 })
-export class StockproductoenvioComponent implements OnInit {
+export class StockproductoenvioComponent implements OnInit, OnDestroy {
   sucursales = [];
 tipos = ["PE","M-","M+"];
 selectedSucursal: number;
   public producto: any;
+  public monedaNombre: string = '';
+  public monedaSimbolo: string = '';
   public cantidad: number;
   public comentario: string;
   public usuario: string;
   public sucursal: string;
+  private destroy$ = new Subject<void>();
   constructor(
     private cargardata: CargardataService, 
     private _carrito: CarritoService, 
@@ -38,6 +43,33 @@ selectedSucursal: number;
 
   ngOnInit() {
     this.cargarSucursales();
+    this.cargarTipoMoneda();
+  }
+
+  cargarTipoMoneda() {
+    const tipoMonedaId = this.producto?.tipo_moneda !== undefined && this.producto?.tipo_moneda !== null
+      ? Number(this.producto.tipo_moneda)
+      : 1;
+
+    this.cargardata.getTipoMoneda().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (resp: any) => {
+        const lista = resp?.mensaje ?? resp;
+        if (Array.isArray(lista)) {
+          const moneda = lista.find((m: any) => Number(m?.id_moneda ?? m?.cod_mone) === tipoMonedaId);
+          this.monedaNombre = (moneda?.moneda ?? '').toString().trim();
+          this.monedaSimbolo = (moneda?.simbolo ?? '').toString().trim();
+        }
+
+        if (!this.monedaNombre) this.monedaNombre = 'PESOS';
+        if (!this.monedaSimbolo) this.monedaSimbolo = '$';
+      },
+      error: () => {
+        this.monedaNombre = 'PESOS';
+        this.monedaSimbolo = '$';
+      }
+    });
   }
 
   cargarSucursales() {
@@ -63,6 +95,9 @@ selectedSucursal: number;
     );
   }
     ngOnDestroy() {
+      this.destroy$.next();
+      this.destroy$.complete();
+
       if (this.ref) {
         this.ref.close();
       }

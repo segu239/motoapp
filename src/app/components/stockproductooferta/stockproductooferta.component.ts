@@ -18,6 +18,8 @@ export class StockproductoofertaComponent implements OnInit, OnDestroy {
   tipos = ["PE","M-","M+"];
   selectedSucursal: number;
   public producto: any;
+  public monedaNombre: string = '';
+  public monedaSimbolo: string = '';
   public cantidad: number;
   public comentario: string;
   public usuario: string;
@@ -38,6 +40,33 @@ export class StockproductoofertaComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.cargarSucursales();
+    this.cargarTipoMoneda();
+  }
+
+  cargarTipoMoneda() {
+    const tipoMonedaId = this.producto?.tipo_moneda !== undefined && this.producto?.tipo_moneda !== null
+      ? Number(this.producto.tipo_moneda)
+      : 1;
+
+    this.cargardata.getTipoMoneda().pipe(
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (resp: any) => {
+        const lista = resp?.mensaje ?? resp;
+        if (Array.isArray(lista)) {
+          const moneda = lista.find((m: any) => Number(m?.id_moneda ?? m?.cod_mone) === tipoMonedaId);
+          this.monedaNombre = (moneda?.moneda ?? '').toString().trim();
+          this.monedaSimbolo = (moneda?.simbolo ?? '').toString().trim();
+        }
+
+        if (!this.monedaNombre) this.monedaNombre = 'PESOS';
+        if (!this.monedaSimbolo) this.monedaSimbolo = '$';
+      },
+      error: () => {
+        this.monedaNombre = 'PESOS';
+        this.monedaSimbolo = '$';
+      }
+    });
   }
 
   cargarSucursales() {
