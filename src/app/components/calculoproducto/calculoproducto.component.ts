@@ -2,6 +2,8 @@ import { Component, Inject, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DialogService, DynamicDialogRef, DynamicDialogConfig } from 'primeng/dynamicdialog';
 import { CarritoService } from 'src/app/services/carrito.service';
+import { CargardataService } from 'src/app/services/cargardata.service';
+import { Subject } from 'rxjs';
 @Component({
   selector: 'app-calculoproducto',
   templateUrl: './calculoproducto.component.html',
@@ -17,7 +19,7 @@ export class CalculoproductoComponent {
   public tipoVal: any;
   public codTarj: any
   public listaPrecio: any;
-  public tipoMoneda: string = '';
+  private destroy$ = new Subject<void>();
 
   public pedido: any = {
     'idart': 0,
@@ -51,7 +53,11 @@ export class CalculoproductoComponent {
   public cantidad: number;
   public datafromcondicionventa: any;
   public tipoPrecioString: string = '';
-  constructor(private _carrito: CarritoService, private router: Router, public ref: DynamicDialogRef,
+  constructor(
+    private _carrito: CarritoService,
+    private router: Router,
+    private cargardata: CargardataService,
+    public ref: DynamicDialogRef,
     @Inject(DynamicDialogConfig) public config: DynamicDialogConfig) {
     console.log("constructor");
     this.producto = this.config.data.producto;
@@ -69,10 +75,6 @@ export class CalculoproductoComponent {
     console.log("tipoVal:" + JSON.stringify(this.tipoVal));
     console.log("codTarj:" + JSON.stringify(this.codTarj));
     console.log("listaPrecio:" + JSON.stringify(this.listaPrecio));
-
-    if (this.producto.tipo_moneda) {
-      this.tipoMoneda = this.producto.tipo_moneda;
-    }
 
     // Inicializar cantidad con 1
     this.cantidad = 1;
@@ -106,6 +108,8 @@ export class CalculoproductoComponent {
   }
 
   ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
     if (this.ref) {
       this.ref.close();
     }
