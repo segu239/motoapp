@@ -17,8 +17,8 @@ export class HistorialVentasPaginadosService {
   private tamañoPagina = 50;
 
   // URLs del backend
-  private urlHistorialVentas = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventasxsucxcli";
-  private urlDatosRecibo = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosRecibo";
+  private urlHistorialVentas = "https://motomatch.segu239.com/APIAND/index.php/Descarga/historialventasxsucxcli";
+  private urlDatosRecibo = "https://motomatch.segu239.com/APIAND/index.php/Descarga/obtenerDatosRecibo";
 
   // Observables públicos
   public paginaActual$ = this.paginaActualSubject.asObservable();

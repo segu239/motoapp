@@ -18,10 +18,10 @@ export class HistorialVentas2PaginadosService {
   private tamañoPagina = 50;
 
   // URLs del backend
-  private urlHistorialVentas2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventas2xcli";
-  private urlHistorialVentas2Global = "https://motoapp.loclx.io/APIAND/index.php/Descarga/historialventas2global";
-  private urlDatosRecibo2 = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosRecibo2";
-  private urlDatosExpandidos = "https://motoapp.loclx.io/APIAND/index.php/Descarga/obtenerDatosExpandidos";
+  private urlHistorialVentas2 = "https://motomatch.segu239.com/APIAND/index.php/Descarga/historialventas2xcli";
+  private urlHistorialVentas2Global = "https://motomatch.segu239.com/APIAND/index.php/Descarga/historialventas2global";
+  private urlDatosRecibo2 = "https://motomatch.segu239.com/APIAND/index.php/Descarga/obtenerDatosRecibo2";
+  private urlDatosExpandidos = "https://motomatch.segu239.com/APIAND/index.php/Descarga/obtenerDatosExpandidos";
 
   // Observables públicos
   public paginaActual$ = this.paginaActualSubject.asObservable();

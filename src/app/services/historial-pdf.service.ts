@@ -47,7 +47,7 @@ interface DatosRecibo {
   providedIn: 'root'
 })
 export class HistorialPdfService {
-  private baseUrl = 'https://motoapp.loclx.io/APIAND/index.php/Carga';
+  private baseUrl = 'https://motomatch.segu239.com/APIAND/index.php/Carga';
 
   constructor(
     private http: HttpClient,

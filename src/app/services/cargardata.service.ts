@@ -468,7 +468,7 @@ export class CargardataService {
       id_num: id_num,
       usuario: usuario
     };
-    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/AceptarTransferencia', payload);
+    return this.http.post('https://motomatch.segu239.com/APIAND/index.php/Descarga/AceptarTransferencia', payload);
   }
 
   /**
@@ -487,7 +487,7 @@ export class CargardataService {
       usuario: usuario,
       motivo_rechazo: motivo_rechazo
     };
-    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/RechazarTransferencia', payload);
+    return this.http.post('https://motomatch.segu239.com/APIAND/index.php/Descarga/RechazarTransferencia', payload);
   }
 
   /**
@@ -504,7 +504,7 @@ export class CargardataService {
       id_num: id_num,
       usuario: usuario
     };
-    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarRecepcion', payload);
+    return this.http.post('https://motomatch.segu239.com/APIAND/index.php/Descarga/ConfirmarRecepcion', payload);
   }
 
   /**
@@ -521,6 +521,6 @@ export class CargardataService {
       id_num: id_num,
       usuario: usuario
     };
-    return this.http.post('https://motoapp.loclx.io/APIAND/index.php/Descarga/ConfirmarEnvio', payload);
+    return this.http.post('https://motomatch.segu239.com/APIAND/index.php/Descarga/ConfirmarEnvio', payload);
   }
 }
