@@ -36,6 +36,13 @@ export class NewarticuloComponent implements AfterViewInit {
   public infoTasaCambio: string = ''; // Información sobre la tasa de cambio para mostrar en la UI (solo informativo)
   public mensajeCambioMoneda: string = ''; // Mensaje para indicar que se reiniciaron los precios
   private enviandoFormulario: boolean = false; // Bandera para controlar envíos duplicados
+  // Propiedades para referencia de precio en moneda local
+  public tasaCambioActual: number = 0;
+  public esMonedaExtranjera: boolean = false;
+  public nombreMonedaSeleccionada: string = '';
+  public refPesosPrecostosi: number = 0;
+  public refPesosPrebsiva: number = 0;
+  public refPesosPrecon: number = 0;
 
   constructor(
     private subirdata: SubirdataService, 
@@ -395,6 +402,15 @@ export class NewarticuloComponent implements AfterViewInit {
         
         console.log('Campos de precios reiniciados por cambio de moneda');
       }
+    });
+
+    // Suscripciones para actualizar badges de referencia en pesos
+    ['precostosi', 'prebsiva', 'precon'].forEach(campo => {
+      this.nuevoarticuloForm.get(campo)?.valueChanges.subscribe(() => {
+        if (this.esMonedaExtranjera && this.tasaCambioActual) {
+          this.actualizarRefPesos();
+        }
+      });
     });
   }
 
@@ -854,51 +870,62 @@ export class NewarticuloComponent implements AfterViewInit {
     if (!this.valoresCambio || this.valoresCambio.length === 0) {
       console.log('No hay valores de cambio disponibles');
       this.infoTasaCambio = '';
+      this.tasaCambioActual = 0;
+      this.esMonedaExtranjera = false;
+      this.actualizarRefPesos();
       return;
     }
-    
+
     const codMone = parseInt(this.nuevoarticuloForm.get('tipo_moneda')?.value) || 1;
     this.monedaSeleccionada = codMone;
-    
+    this.esMonedaExtranjera = (codMone !== 1);
+
     // Si es peso argentino (usualmente código 1), no mostramos tasa
     if (codMone === 1) {
       console.log('Moneda seleccionada: Peso argentino');
       this.infoTasaCambio = '';
+      this.tasaCambioActual = 0;
+      this.actualizarRefPesos();
       return;
     }
-    
+
     // Buscar el valor de cambio más reciente para esta moneda (solo informativo)
     const fechaActual = new Date();
     let valorCambioEncontrado = null;
-    
+
     // Filtrar por código de moneda y verificar que la fecha actual esté dentro del rango de vigencia
     const valoresFiltrados = this.valoresCambio.filter((vc: any) => {
-      return parseInt(vc.codmone) === codMone && 
-             new Date(vc.fecdesde) <= fechaActual && 
+      return parseInt(vc.codmone) === codMone &&
+             new Date(vc.fecdesde) <= fechaActual &&
              new Date(vc.fechasta) >= fechaActual;
     });
-    
+
     if (valoresFiltrados.length > 0) {
       // Ordenar por fecha de inicio descendente para obtener el más reciente
       valoresFiltrados.sort((a: any, b: any) => {
         return new Date(b.fecdesde).getTime() - new Date(a.fecdesde).getTime();
       });
-      
+
       valorCambioEncontrado = valoresFiltrados[0];
     }
-    
+
     if (valorCambioEncontrado) {
       const tasaCambioInfo = parseFloat(valorCambioEncontrado.vcambio) || 1;
+      this.tasaCambioActual = tasaCambioInfo;
       // Encontrar la descripción de la moneda para mostrar información más amigable
       const monedaInfo = this.tiposMoneda?.find((m: any) => parseInt(m.cod_mone) === codMone);
       const nombreMoneda = monedaInfo ? monedaInfo.moneda : `Moneda ${codMone}`;
-      
+      this.nombreMonedaSeleccionada = nombreMoneda.trim();
+
       this.infoTasaCambio = `Referencia: 1 ${nombreMoneda} = ${tasaCambioInfo.toFixed(4)} pesos`;
       console.log(`Moneda seleccionada: ${codMone}, tasa de cambio referencial: ${tasaCambioInfo}`);
     } else {
       console.log(`No se encontró valor de cambio vigente para la moneda ${codMone}`);
       this.infoTasaCambio = 'Información: No hay una tasa de cambio referencial vigente para esta moneda';
+      this.tasaCambioActual = 0;
+      this.nombreMonedaSeleccionada = '';
     }
+    this.actualizarRefPesos();
   }
 
   convertirAPesos(valor: number): number {
@@ -911,6 +938,20 @@ export class NewarticuloComponent implements AfterViewInit {
     // Mantenemos este método pero lo dejamos como paso directo sin conversión
     // por si hay alguna parte del código que aún lo use
     return valorEnPesos;
+  }
+
+  // Actualiza las propiedades de referencia en pesos para los badges
+  actualizarRefPesos() {
+    if (!this.esMonedaExtranjera || !this.tasaCambioActual) {
+      this.refPesosPrecostosi = 0;
+      this.refPesosPrebsiva = 0;
+      this.refPesosPrecon = 0;
+      return;
+    }
+    const tasa = this.tasaCambioActual;
+    this.refPesosPrecostosi = (parseFloat(this.nuevoarticuloForm.get('precostosi')?.value) || 0) * tasa;
+    this.refPesosPrebsiva = (parseFloat(this.nuevoarticuloForm.get('prebsiva')?.value) || 0) * tasa;
+    this.refPesosPrecon = (parseFloat(this.nuevoarticuloForm.get('precon')?.value) || 0) * tasa;
   }
 
   // Método que maneja el cambio en el checkbox de Precios Lista Manual

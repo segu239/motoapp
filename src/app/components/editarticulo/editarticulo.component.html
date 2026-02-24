@@ -154,10 +154,21 @@
                                 <h4 class="mb-0"><i class="fa fa-money"></i> Información de Precios</h4>
                             </div>
                             <div class="card-body">
+                                <!-- Banner de cotización vigente -->
+                                <div *ngIf="esMonedaExtranjera && tasaCambioActual" class="alert alert-info py-1 px-2 mb-3 small">
+                                    <i class="fa fa-info-circle"></i>
+                                    Cotización: 1 {{ nombreMonedaSeleccionada }} = {{ tasaCambioActual | number:'1.2-2' }} ARS
+                                </div>
+                                <div *ngIf="esMonedaExtranjera && !tasaCambioActual && infoTasaCambio" class="alert alert-info py-1 px-2 mb-3 small">
+                                    {{ infoTasaCambio }}
+                                </div>
                                 <div class="form-row">
                                     <div class="form-group col-md-6">
                                         <label for="precostosi">Precio Costo s/IVA *</label>
                                         <input type="number" class="form-control" id="precostosi" formControlName="precostosi" required>
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrecostosi" class="ref-pesos">
+                                            Ref. $: {{ refPesosPrecostosi | number:'1.2-2' }} ARS
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label for="descuento">Descuento *</label>
@@ -168,6 +179,9 @@
                                     <div class="form-group col-md-6">
                                         <label for="prebsiva">Precio Base s/IVA *</label>
                                         <input type="number" class="form-control" id="prebsiva" formControlName="prebsiva" required>
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrebsiva" class="ref-pesos">
+                                            Ref. $: {{ refPesosPrebsiva | number:'1.2-2' }} ARS
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-6">
                                         <label for="margen">Margen *</label>
@@ -198,6 +212,9 @@
                                     <div class="form-group col-md-6">
                                         <label for="precon">Precio Final *</label>
                                         <input type="number" class="form-control" id="precon" formControlName="precon" required>
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrecon" class="ref-pesos">
+                                            Ref. $: {{ refPesosPrecon | number:'1.2-2' }} ARS
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-6 d-flex align-items-center">
                                         <div class="form-check mt-2">
@@ -216,23 +233,35 @@
                                 <div class="form-row">
                                     <div class="form-group col-md-3">
                                         <label for="prefi1">Precio 1</label>
-                                        <input type="number" class="form-control" id="prefi1" formControlName="prefi1" 
+                                        <input type="number" class="form-control" id="prefi1" formControlName="prefi1"
                                             [readonly]="articuloForm.get('idart')?.value !== 1">
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrefi1" class="ref-pesos">
+                                            ${{ refPesosPrefi1 | number:'1.2-2' }}
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi2">Precio 2</label>
-                                        <input type="number" class="form-control" id="prefi2" formControlName="prefi2" 
+                                        <input type="number" class="form-control" id="prefi2" formControlName="prefi2"
                                             [readonly]="articuloForm.get('idart')?.value !== 1">
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrefi2" class="ref-pesos">
+                                            ${{ refPesosPrefi2 | number:'1.2-2' }}
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi3">Precio 3</label>
-                                        <input type="number" class="form-control" id="prefi3" formControlName="prefi3" 
+                                        <input type="number" class="form-control" id="prefi3" formControlName="prefi3"
                                             [readonly]="articuloForm.get('idart')?.value !== 1">
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrefi3" class="ref-pesos">
+                                            ${{ refPesosPrefi3 | number:'1.2-2' }}
+                                        </small>
                                     </div>
                                     <div class="form-group col-md-3">
                                         <label for="prefi4">Precio 4</label>
-                                        <input type="number" class="form-control" id="prefi4" formControlName="prefi4" 
+                                        <input type="number" class="form-control" id="prefi4" formControlName="prefi4"
                                             [readonly]="articuloForm.get('idart')?.value !== 1">
+                                        <small *ngIf="esMonedaExtranjera && tasaCambioActual && refPesosPrefi4" class="ref-pesos">
+                                            ${{ refPesosPrefi4 | number:'1.2-2' }}
+                                        </small>
                                     </div>
                                 </div>
                             </div>

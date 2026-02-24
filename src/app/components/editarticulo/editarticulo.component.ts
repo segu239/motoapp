@@ -39,6 +39,19 @@ export class EditarticuloComponent implements OnInit {
   // Variables para control de cálculos
   private calculando: boolean = false;
   private ivaAnterior: string = '';
+  // Propiedades para referencia de precio en moneda local
+  public valoresCambio: any[] = [];
+  public tasaCambioActual: number = 0;
+  public esMonedaExtranjera: boolean = false;
+  public nombreMonedaSeleccionada: string = '';
+  public infoTasaCambio: string = '';
+  public refPesosPrecostosi: number = 0;
+  public refPesosPrebsiva: number = 0;
+  public refPesosPrecon: number = 0;
+  public refPesosPrefi1: number = 0;
+  public refPesosPrefi2: number = 0;
+  public refPesosPrefi3: number = 0;
+  public refPesosPrefi4: number = 0;
 
   constructor(
     private subirdata: SubirdataService,
@@ -63,6 +76,7 @@ export class EditarticuloComponent implements OnInit {
     this.cargarProveedores();
     this.cargarTiposMoneda();
     this.cargarConfLista();
+    this.cargarValoresCambio();
     this.setupFormListeners();
   }
 
@@ -201,6 +215,17 @@ export class EditarticuloComponent implements OnInit {
         // Solo recalcular los precios de lista ya que la moneda no afecta los otros cálculos
         this.calcularPreciosLista();
       }
+      // Actualizar tasa de cambio y badges de referencia
+      this.actualizarTasaCambio();
+    });
+
+    // Suscripciones para actualizar badges de referencia en pesos
+    ['precostosi', 'prebsiva', 'precon', 'prefi1', 'prefi2', 'prefi3', 'prefi4'].forEach(campo => {
+      this.articuloForm.get(campo)?.valueChanges.subscribe(() => {
+        if (this.esMonedaExtranjera && this.tasaCambioActual) {
+          this.actualizarRefPesos();
+        }
+      });
     });
 
     // Monitorear cambios en idart para habilitar/deshabilitar campos de precios lista
@@ -306,6 +331,96 @@ export class EditarticuloComponent implements OnInit {
         console.error('Error in API call:', error);
       }
     });
+  }
+
+  cargarValoresCambio() {
+    this.cargardata.getValorCambio().subscribe({
+      next: (response: any) => {
+        if (!response.error) {
+          this.valoresCambio = response.mensaje;
+          // Actualizar tasa de cambio con el valor actual del formulario
+          this.actualizarTasaCambio();
+        } else {
+          console.error('Error loading valores de cambio:', response.mensaje);
+        }
+      },
+      error: (error) => {
+        console.error('Error in API call:', error);
+      }
+    });
+  }
+
+  // Obtiene la tasa de cambio actual para la moneda seleccionada (misma lógica que newarticulo)
+  actualizarTasaCambio() {
+    if (!this.valoresCambio || this.valoresCambio.length === 0) {
+      this.infoTasaCambio = '';
+      this.tasaCambioActual = 0;
+      this.esMonedaExtranjera = false;
+      this.actualizarRefPesos();
+      return;
+    }
+
+    const codMone = parseInt(this.articuloForm.get('tipo_moneda')?.value) || 1;
+    this.esMonedaExtranjera = (codMone !== 1);
+
+    if (codMone === 1) {
+      this.infoTasaCambio = '';
+      this.tasaCambioActual = 0;
+      this.actualizarRefPesos();
+      return;
+    }
+
+    const fechaActual = new Date();
+    let valorCambioEncontrado = null;
+
+    const valoresFiltrados = this.valoresCambio.filter((vc: any) => {
+      return parseInt(vc.codmone) === codMone &&
+             new Date(vc.fecdesde) <= fechaActual &&
+             new Date(vc.fechasta) >= fechaActual;
+    });
+
+    if (valoresFiltrados.length > 0) {
+      valoresFiltrados.sort((a: any, b: any) => {
+        return new Date(b.fecdesde).getTime() - new Date(a.fecdesde).getTime();
+      });
+      valorCambioEncontrado = valoresFiltrados[0];
+    }
+
+    if (valorCambioEncontrado) {
+      const tasaCambioInfo = parseFloat(valorCambioEncontrado.vcambio) || 1;
+      this.tasaCambioActual = tasaCambioInfo;
+      const monedaInfo = this.tiposMoneda?.find((m: any) => parseInt(m.cod_mone) === codMone);
+      const nombreMoneda = monedaInfo ? monedaInfo.moneda : `Moneda ${codMone}`;
+      this.nombreMonedaSeleccionada = nombreMoneda.trim();
+      this.infoTasaCambio = `Referencia: 1 ${nombreMoneda} = ${tasaCambioInfo.toFixed(4)} pesos`;
+    } else {
+      this.infoTasaCambio = 'Información: No hay una tasa de cambio referencial vigente para esta moneda';
+      this.tasaCambioActual = 0;
+      this.nombreMonedaSeleccionada = '';
+    }
+    this.actualizarRefPesos();
+  }
+
+  // Actualiza las propiedades de referencia en pesos para los badges
+  actualizarRefPesos() {
+    if (!this.esMonedaExtranjera || !this.tasaCambioActual) {
+      this.refPesosPrecostosi = 0;
+      this.refPesosPrebsiva = 0;
+      this.refPesosPrecon = 0;
+      this.refPesosPrefi1 = 0;
+      this.refPesosPrefi2 = 0;
+      this.refPesosPrefi3 = 0;
+      this.refPesosPrefi4 = 0;
+      return;
+    }
+    const tasa = this.tasaCambioActual;
+    this.refPesosPrecostosi = (parseFloat(this.articuloForm.get('precostosi')?.value) || 0) * tasa;
+    this.refPesosPrebsiva = (parseFloat(this.articuloForm.get('prebsiva')?.value) || 0) * tasa;
+    this.refPesosPrecon = (parseFloat(this.articuloForm.get('precon')?.value) || 0) * tasa;
+    this.refPesosPrefi1 = (parseFloat(this.articuloForm.get('prefi1')?.value) || 0) * tasa;
+    this.refPesosPrefi2 = (parseFloat(this.articuloForm.get('prefi2')?.value) || 0) * tasa;
+    this.refPesosPrefi3 = (parseFloat(this.articuloForm.get('prefi3')?.value) || 0) * tasa;
+    this.refPesosPrefi4 = (parseFloat(this.articuloForm.get('prefi4')?.value) || 0) * tasa;
   }
 
   loadArticuloData(): void {
