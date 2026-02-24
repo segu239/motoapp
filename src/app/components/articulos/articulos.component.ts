@@ -259,7 +259,13 @@ export class ArticulosComponent implements OnInit, OnDestroy {
         if (results.confLista && !results.confLista['error']) {
           this.confLista = results.confLista['mensaje'];
         }
-        
+
+        // Re-procesar artículos ahora que los valores de cambio están disponibles
+        // Esto corrige la race condition donde los artículos llegan antes que los valores de cambio
+        if (this.articulosOriginal.length > 0) {
+          this.processArticulos();
+        }
+
         Swal.close();
       },
       error => {
