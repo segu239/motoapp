@@ -59,5 +59,9 @@ temp_*.txt
 *_backup.*
 .backups/
 
+# Cloud Functions
+functions/node_modules/
+functions/lib/
+
 # Herramientas de desarrollo
 .crush/
