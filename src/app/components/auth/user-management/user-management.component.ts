@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { AuthService } from '../../../services/auth.service';
 import { User, UserRole } from '../../../interfaces/user';
 import { CrudService } from '../../../services/crud.service';
+import { Functions, httpsCallable } from '@angular/fire/functions';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import Swal from 'sweetalert2';
@@ -26,7 +27,8 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private crudService: CrudService,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private functions: Functions
   ) {
     this.userForm = this.fb.group({
       nombre: ['', [Validators.required]],
@@ -127,7 +129,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         .catch(error => {
           this.loading = false;
           console.error('Error al actualizar usuario', error);
-          this.showError('Error al actualizar usuario');
+          this.handleOperationError(error, 'actualizar');
         });
     } else {
       // Crear nuevo usuario
@@ -141,7 +143,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
         .catch(error => {
           this.loading = false;
           console.error('Error al crear usuario', error);
-          this.showError('Error al crear usuario: ' + error.message);
+          this.handleOperationError(error, 'crear');
         });
     }
   }
@@ -197,7 +199,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
           .catch(error => {
             this.loading = false;
             console.error('Error al eliminar usuario', error);
-            this.showError('Error al eliminar usuario');
+            this.handleOperationError(error, 'eliminar');
           });
       }
     });
@@ -246,7 +248,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
             this.users.map(async (user) => {
               try {
                 if (user.email && user.password) {
-                  await this.authService.migrateUser(user.email, user.password);
+                  await this.authService.migrateUser(user.email, user.password, user.uid);
                   return { user: user.email, success: true };
                 }
                 return { user: user.email, success: false, reason: 'Sin email o password' };
@@ -290,6 +292,61 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     });
   }
   
+  runBackfill(): void {
+    Swal.fire({
+      title: '¿Ejecutar Backfill?',
+      text: 'Esto asignará authUid a todos los usuarios existentes. Solo ejecutar una vez.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, ejecutar',
+      cancelButtonText: 'Cancelar'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        this.loading = true;
+        try {
+          const fn = httpsCallable(this.functions, 'backfillAuthUids');
+          const res = await fn({});
+          const data = res.data as any;
+          this.loading = false;
+          this.loadUsers();
+          Swal.fire({
+            title: 'Backfill completado',
+            html: `
+              <p>Total: ${data.total}</p>
+              <p>Backfilled: ${data.backfilled}</p>
+              <p>No en Auth: ${data.notInAuth}</p>
+              <p>Errores: ${data.errors}</p>
+            `,
+            icon: 'info'
+          });
+        } catch (error: any) {
+          this.loading = false;
+          this.showError('Error en backfill: ' + (error.message || error));
+        }
+      }
+    });
+  }
+
+  handleOperationError(error: any, operation: string): void {
+    let msg = `Error al ${operation} usuario`;
+
+    if (error?.message?.includes('authUid')) {
+      msg = 'Este usuario no tiene identificador de Auth. Ejecute el backfill de usuarios primero.';
+    } else if (error?.code === 'functions/permission-denied') {
+      msg = 'No tiene permisos para realizar esta operación.';
+    } else if (error?.code === 'functions/already-exists') {
+      msg = 'El email ingresado ya está en uso por otra cuenta.';
+    } else if (error?.code === 'functions/not-found') {
+      msg = 'El usuario no existe en Firebase Auth.';
+    } else if (error?.code === 'functions/failed-precondition') {
+      msg = error.message || 'No se puede completar la operación.';
+    } else if (error?.message) {
+      msg = error.message;
+    }
+
+    this.showError(msg);
+  }
+
   showSuccess(message: string): void {
     Swal.fire({
       title: 'Éxito',

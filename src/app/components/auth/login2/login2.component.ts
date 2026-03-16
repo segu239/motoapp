@@ -161,6 +161,7 @@ export class Login2Component implements OnInit, OnDestroy {
       switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
+        case 'auth/invalid-login-credentials':
           errorMsg = 'Email o contraseña incorrectos';
           break;
         case 'auth/too-many-requests':
