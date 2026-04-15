@@ -1,10 +1,10 @@
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Cajamovi } from '../../interfaces/cajamovi';
 import { ReporteDataService } from '../../services/reporte-data.service';
 import * as FileSaver from 'file-saver';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import autoTable from 'jspdf-autotable';
 import { ChartConfiguration, ChartType } from 'chart.js';
 
 interface ReporteSummary {
@@ -24,8 +24,6 @@ interface ReporteSummary {
   styleUrls: ['./reporte.component.css']
 })
 export class ReporteComponent implements OnInit {
-  @ViewChild('reportContent') reportContent!: ElementRef;
-  
   public movimientos: Cajamovi[] = [];
   public summary: ReporteSummary = {
     totalIngresos: 0,
@@ -393,43 +391,256 @@ export class ReporteComponent implements OnInit {
   }
 
   exportPDF(): void {
-    const element = this.reportContent.nativeElement;
-    
-    html2canvas(element).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // Configuración de márgenes (en mm)
-      const marginTop = 20;
-      const marginBottom = 20;
-      const marginLeft = 15;
-      const marginRight = 15;
-      
-      // Dimensiones de la página A4 y área útil considerando márgenes
-      const pageWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgWidth = pageWidth - marginLeft - marginRight; // Ancho útil considerando márgenes
-      const usableHeight = pageHeight - marginTop - marginBottom; // Alto útil considerando márgenes
-      
-      // Calcular la altura de la imagen manteniendo las proporciones
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      let heightLeft = imgHeight;
-      let position = marginTop;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const marginX = 14;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const fechaGeneracion = this.fechaReporte.toLocaleString('es-AR');
+    const detalleMovimientos = this.movimientos.map((mov) => ([
+      this.formatDate(mov.fecha_mov),
+      mov.descripcion_concepto || '-',
+      mov.descripcion_caja || '-',
+      mov.tipo_movi || '-',
+      mov.descripcion_mov || '-',
+      this.formatCurrency(Number(mov.importe_mov) || 0)
+    ]));
+    const totalesPorCaja = this.getTotalesPorCaja().map((item) => ([
+      item.caja,
+      item.cantidad.toString(),
+      this.formatCurrency(item.importe)
+    ]));
+    const totalesPorConcepto = this.getTotalesPorConcepto().map((item) => ([
+      item.concepto,
+      item.cantidad.toString(),
+      this.formatCurrency(item.importe)
+    ]));
+    const tablasResumenVisible = this.mostrarGraficos && this.usarGraficosSimples;
 
-      // Primera página
-      pdf.addImage(imgData, 'PNG', marginLeft, position, imgWidth, imgHeight);
-      heightLeft -= usableHeight;
-
-      // Páginas adicionales si es necesario
-      while (heightLeft >= 0) {
-        position = marginTop + (heightLeft - imgHeight);
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', marginLeft, position, imgWidth, imgHeight);
-        heightLeft -= usableHeight;
-      }
-
-      pdf.save('reporte_movimientos_' + new Date().getTime() + '.pdf');
+    pdf.setProperties({
+      title: 'Reporte de Movimientos de Caja',
+      subject: 'Reporte completo de movimientos y totalizadores',
+      author: 'MotoApp'
     });
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(16);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text('Reporte de Movimientos de Caja', marginX, 16);
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Fecha de generacion: ${fechaGeneracion}`, marginX, 23);
+    pdf.text(`Total de movimientos analizados: ${this.summary.cantidadMovimientos}`, marginX, 29);
+
+    let currentY = 36;
+
+    currentY = this.renderResumenFinanciero(pdf, currentY, marginX, pageWidth);
+
+    currentY = this.renderSectionTitle(pdf, 'Detalle de Movimientos', currentY + 8, marginX, pageWidth);
+    autoTable(pdf, {
+      startY: currentY,
+      margin: { left: marginX, right: marginX, bottom: 18 },
+      head: [['Fecha', 'Concepto', 'Caja', 'Tipo', 'Descripcion', 'Importe']],
+      body: detalleMovimientos,
+      foot: [['', '', '', '', 'Total', this.formatCurrency(this.summary.balance)]],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, lineColor: [0, 0, 0], lineWidth: 0.1 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      styles: { font: 'helvetica', fontSize: 8, textColor: [0, 0, 0], cellPadding: 1.8, lineColor: [120, 120, 120], lineWidth: 0.1, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 34 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 16, halign: 'center' },
+        4: { cellWidth: 60 },
+        5: { cellWidth: 24, halign: 'right' }
+      },
+      showHead: 'everyPage',
+      rowPageBreak: 'auto'
+    });
+
+    currentY = this.getNextAutoTableY(pdf, 10);
+
+    if (tablasResumenVisible) {
+      currentY = this.renderSectionTitle(pdf, 'Estadisticas visibles en pantalla', currentY, marginX, pageWidth);
+      currentY = this.renderSimpleStatsTables(pdf, currentY, marginX, pageWidth);
+    }
+
+    currentY = this.renderSectionTitle(pdf, 'Totales por Caja', currentY, marginX, pageWidth);
+    autoTable(pdf, {
+      startY: currentY,
+      margin: { left: marginX, right: marginX, bottom: 18 },
+      head: [['Caja', 'Cantidad Movimientos', 'Total']],
+      body: totalesPorCaja,
+      foot: [['Total General', this.summary.cantidadMovimientos.toString(), this.formatCurrency(this.summary.balance)]],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, lineColor: [0, 0, 0], lineWidth: 0.1 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      styles: { font: 'helvetica', fontSize: 9, textColor: [0, 0, 0], cellPadding: 2, lineColor: [120, 120, 120], lineWidth: 0.1 },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 35, halign: 'center' },
+        2: { cellWidth: 41, halign: 'right' }
+      },
+      showHead: 'everyPage',
+      rowPageBreak: 'auto'
+    });
+
+    currentY = this.getNextAutoTableY(pdf, 10);
+    currentY = this.renderSectionTitle(pdf, 'Totales por Concepto', currentY, marginX, pageWidth);
+    autoTable(pdf, {
+      startY: currentY,
+      margin: { left: marginX, right: marginX, bottom: 18 },
+      head: [['Concepto', 'Cantidad Movimientos', 'Total']],
+      body: totalesPorConcepto,
+      foot: [['Total General', this.summary.cantidadMovimientos.toString(), this.formatCurrency(this.summary.balance)]],
+      theme: 'grid',
+      headStyles: { fillColor: [0, 0, 0], textColor: 255, lineColor: [0, 0, 0], lineWidth: 0.1 },
+      footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      styles: { font: 'helvetica', fontSize: 9, textColor: [0, 0, 0], cellPadding: 2, lineColor: [120, 120, 120], lineWidth: 0.1, overflow: 'linebreak' },
+      columnStyles: {
+        0: { cellWidth: 100 },
+        1: { cellWidth: 35, halign: 'center' },
+        2: { cellWidth: 41, halign: 'right' }
+      },
+      showHead: 'everyPage',
+      rowPageBreak: 'auto'
+    });
+
+    this.renderAllPageFooters(pdf, pageHeight, pageWidth);
+    pdf.save('reporte_movimientos_' + new Date().getTime() + '.pdf');
+  }
+
+  private renderResumenFinanciero(pdf: jsPDF, startY: number, marginX: number, pageWidth: number): number {
+    const boxGap = 4;
+    const boxWidth = (pageWidth - (marginX * 2) - (boxGap * 2)) / 3;
+    const boxHeight = 18;
+    const resumenes = [
+      { titulo: 'Total Ingresos', valor: this.formatCurrency(this.summary.totalIngresos) },
+      { titulo: 'Total Egresos', valor: this.formatCurrency(this.summary.totalEgresos) },
+      { titulo: 'Balance', valor: this.formatCurrency(this.summary.balance) }
+    ];
+
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setTextColor(0, 0, 0);
+
+    resumenes.forEach((item, index) => {
+      const x = marginX + ((boxWidth + boxGap) * index);
+      pdf.rect(x, startY, boxWidth, boxHeight);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.text(item.titulo, x + 2, startY + 6);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(11);
+      pdf.text(item.valor, x + 2, startY + 13);
+    });
+
+    return startY + boxHeight;
+  }
+
+  private renderSectionTitle(pdf: jsPDF, title: string, requestedY: number, marginX: number, pageWidth: number): number {
+    const safeY = this.ensureVerticalSpace(pdf, requestedY, 16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(title, marginX, safeY);
+    pdf.setDrawColor(0, 0, 0);
+    pdf.line(marginX, safeY + 1.5, pageWidth - marginX, safeY + 1.5);
+    return safeY + 4;
+  }
+
+  private renderSimpleStatsTables(pdf: jsPDF, startY: number, marginX: number, pageWidth: number): number {
+    const statsSections = [
+      {
+        title: 'Distribucion por Tipo de Movimiento',
+        head: [['Tipo', 'Cantidad', '%']],
+        body: this.getDistribucionTipo().map((item) => [item.tipo, item.cantidad.toString(), `${item.porcentaje}%`]),
+        columnStyles: {
+          0: { cellWidth: 95 },
+          1: { cellWidth: 35, halign: 'center' as const },
+          2: { cellWidth: 42, halign: 'right' as const }
+        }
+      },
+      {
+        title: 'Top 5 Cajas por Importe',
+        head: [['Caja', 'Importe']],
+        body: this.getTop5Cajas().map((item) => [item.caja, this.formatCurrency(item.importe)]),
+        columnStyles: {
+          0: { cellWidth: 130 },
+          1: { cellWidth: 42, halign: 'right' as const }
+        }
+      },
+      {
+        title: 'Top 5 Conceptos por Importe',
+        head: [['Concepto', 'Importe']],
+        body: this.getTop5Conceptos().map((item) => [item.concepto, this.formatCurrency(item.importe)]),
+        columnStyles: {
+          0: { cellWidth: 130 },
+          1: { cellWidth: 42, halign: 'right' as const }
+        }
+      },
+      {
+        title: 'Resumen Ultimos 7 Dias',
+        head: [['Fecha', 'Importe']],
+        body: this.getUltimos7Dias().map((item) => [item.fecha, this.formatCurrency(item.importe)]),
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 112, halign: 'right' as const }
+        }
+      }
+    ];
+
+    let currentY = startY;
+
+    statsSections.forEach((section) => {
+      currentY = this.renderSectionTitle(pdf, section.title, currentY, marginX, pageWidth);
+      autoTable(pdf, {
+        startY: currentY,
+        margin: { left: marginX, right: marginX, bottom: 18 },
+        head: section.head,
+        body: section.body,
+        theme: 'grid',
+        headStyles: { fillColor: [0, 0, 0], textColor: 255, lineColor: [0, 0, 0], lineWidth: 0.1 },
+        styles: { font: 'helvetica', fontSize: 9, textColor: [0, 0, 0], cellPadding: 2, lineColor: [120, 120, 120], lineWidth: 0.1, overflow: 'linebreak' },
+        columnStyles: section.columnStyles,
+        showHead: 'everyPage',
+        rowPageBreak: 'auto'
+      });
+      currentY = this.getNextAutoTableY(pdf, 8);
+    });
+
+    return currentY;
+  }
+
+  private getNextAutoTableY(pdf: jsPDF, gap: number): number {
+    const lastAutoTable = (pdf as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable;
+    return (lastAutoTable?.finalY || 20) + gap;
+  }
+
+  private ensureVerticalSpace(pdf: jsPDF, requestedY: number, neededHeight: number): number {
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    if (requestedY + neededHeight <= pageHeight - 18) {
+      return requestedY;
+    }
+
+    pdf.addPage();
+    return 18;
+  }
+
+  private renderAllPageFooters(pdf: jsPDF, pageHeight: number, pageWidth: number): void {
+    const totalPages = pdf.getNumberOfPages();
+
+    for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+      pdf.setPage(pageNumber);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(`Pagina ${pageNumber} de ${totalPages}`, pageWidth - 14, pageHeight - 8, { align: 'right' });
+    }
+  }
+
+  private formatCurrency(value: number): string {
+    return `$ ${value.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
   exportExcel(): void {
