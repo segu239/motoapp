@@ -292,40 +292,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
     });
   }
   
-  runBackfill(): void {
-    Swal.fire({
-      title: '¿Ejecutar Backfill?',
-      text: 'Esto asignará authUid a todos los usuarios existentes. Solo ejecutar una vez.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, ejecutar',
-      cancelButtonText: 'Cancelar'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        this.loading = true;
-        try {
-          const fn = httpsCallable(this.functions, 'backfillAuthUids');
-          const res = await fn({});
-          const data = res.data as any;
-          this.loading = false;
-          this.loadUsers();
-          Swal.fire({
-            title: 'Backfill completado',
-            html: `
-              <p>Total: ${data.total}</p>
-              <p>Backfilled: ${data.backfilled}</p>
-              <p>No en Auth: ${data.notInAuth}</p>
-              <p>Errores: ${data.errors}</p>
-            `,
-            icon: 'info'
-          });
-        } catch (error: any) {
-          this.loading = false;
-          this.showError('Error en backfill: ' + (error.message || error));
-        }
-      }
-    });
-  }
+
 
   handleOperationError(error: any, operation: string): void {
     let msg = `Error al ${operation} usuario`;
