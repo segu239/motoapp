@@ -1,0 +1,36 @@
+{
+  "project_name": "motoapp-descuento-carrito",
+  "package_version": "1.0.0",
+  "execution_mode": "parallel",
+  "degraded_mode": false,
+  "approval_decision": "approved_with_observations",
+  "gate_results": {
+    "core_requirement_coverage": true,
+    "overall_requirement_coverage": true,
+    "no_unresolved_blockers": true,
+    "data_model_covers_flows": true,
+    "delivery_plan_consistent": true
+  },
+  "artifacts": [
+    {"path": "progress.md", "status": "created"},
+    {"path": "brief.md", "status": "created"},
+    {"path": "requirements.md", "status": "created"},
+    {"path": "assumptions.md", "status": "created"},
+    {"path": "coverage-matrix.md", "status": "created"},
+    {"path": "plan-tecnico.md", "status": "created"},
+    {"path": "review-arquitectura.md", "status": "created"},
+    {"path": "review-viabilidad.md", "status": "created"},
+    {"path": "review-seguridad.md", "status": "created"},
+    {"path": "review-completitud.md", "status": "created"},
+    {"path": "review-operabilidad.md", "status": "created"},
+    {"path": "evaluacion.md", "status": "created"},
+    {"path": "spec-frontend.md", "status": "created"},
+    {"path": "spec-backend.md", "status": "created"},
+    {"path": "spec-db.md", "status": "created"},
+    {"path": "spec-qa.md", "status": "created"},
+    {"path": "spec-rollout.md", "status": "created"},
+    {"path": "especificaciones-finales.md", "status": "created"},
+    {"path": "RESULT.md", "status": "pending"},
+    {"path": "RESULT.json", "status": "pending"}
+  ]
+}
