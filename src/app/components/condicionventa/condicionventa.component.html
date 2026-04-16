@@ -1,6 +1,6 @@
 <div class="card">
     <div class="card-body">
-        <h4 class="card-title">{{clienteFrompuntoVenta.nombre}} 
+        <h4 class="card-title">{{clienteFrompuntoVenta?.nombre}} 
             <span class="badge badge-info" *ngIf="codTarj && !esMayorista">Lista de Precios: {{tipoVal}}</span>
             <span class="badge badge-warning" *ngIf="codTarj && esMayorista">
                 🏦 MAYORISTA - {{tipoVal}} (Precio 3)

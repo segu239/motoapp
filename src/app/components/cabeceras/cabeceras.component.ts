@@ -924,26 +924,29 @@ export class CabecerasComponent implements OnDestroy {
               <i class="fa fa-credit-card"></i> Información de la Tarjeta
             </div>
             <div class="tarjeta-section">
+              <p style="color:#6c757d;font-size:13px;margin:0 0 15px 10px;">
+                <i class="fa fa-info-circle"></i> Solo el <strong>DNI</strong> es obligatorio. El resto de los datos son opcionales.
+              </p>
               <h4 class="section-title">Datos del Titular</h4>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular</label>
+                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
                   <input type="text" id="titular" class="form-control" placeholder="Ingrese el nombre completo">
                 </div>
                 <div class="form-group">
-                  <label for="dni"><i class="fa fa-id-card"></i> DNI</label>
+                  <label for="dni"><i class="fa fa-id-card"></i> DNI <span style="color:#dc3545;">*</span></label>
                   <input type="number" id="dni" class="form-control" placeholder="Ingrese el DNI">
                 </div>
               </div>
-              
+
               <h4 class="section-title">Datos de la Tarjeta</h4>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta</label>
+                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
                   <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
                 </div>
                 <div class="form-group">
-                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización</label>
+                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
                   <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
                 </div>
               </div>
@@ -962,35 +965,36 @@ export class CabecerasComponent implements OnDestroy {
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
         const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
-        
-        if (!titular || !dni || !numero || !autorizacion) {
-          Swal.showValidationMessage(`Por favor complete todos los campos requeridos`);
+
+        // Único campo obligatorio: DNI
+        if (!dni) {
+          Swal.showValidationMessage(`El DNI es obligatorio`);
           return false;
         }
-        
+
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
         let reAutorizacion = new RegExp("^[0-9]{3}$");
-        
-        if (!reTitular.test(titular)) {
-          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
-          return false;
-        }
+
         if (!reDni.test(dni)) {
           Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
           return false;
         }
-        if (!reNumero.test(numero)) {
+        if (titular && !reTitular.test(titular)) {
+          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
+          return false;
+        }
+        if (numero && !reNumero.test(numero)) {
           Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
           return false;
         }
-        if (!reAutorizacion.test(autorizacion)) {
+        if (autorizacion && !reAutorizacion.test(autorizacion)) {
           Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
           return false;
         }
-        
-        return { titular, dni, numero, autorizacion };
+
+        return { titular: titular || '', dni, numero: numero || '', autorizacion: autorizacion || '' };
       }
     }).then((result) => {
       if (result.value) {
@@ -1004,7 +1008,7 @@ export class CabecerasComponent implements OnDestroy {
           icon: 'success',
           title: 'Datos guardados',
           text: 'Los datos de la tarjeta han sido registrados correctamente',
-          timer: 1500,
+          timer: 2500,
           showConfirmButton: false
         });
       }
@@ -1257,7 +1261,7 @@ export class CabecerasComponent implements OnDestroy {
           icon: 'success',
           title: 'Datos guardados',
           text: 'Los datos del cheque han sido registrados correctamente',
-          timer: 1500,
+          timer: 2500,
           showConfirmButton: false
         });
       }
