@@ -38,6 +38,7 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
   public cajas: any[] = [];
   public isClienteSelected: boolean = true;
   public conceptoSeleccionado: any = null;
+  public cajaSeleccionada: any = null;
   private clienteId: number | null = null;
   private proveedorId: number | null = null;
   public fechaMinima: string = ''; // Fecha mínima permitida para el input de fecha
@@ -178,6 +179,10 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
       // Buscar el concepto seleccionado en la lista de conceptos
       this.conceptoSeleccionado = this.conceptos.find(concepto => concepto.id_concepto == codigoMov);
       console.log('Concepto seleccionado:', this.conceptoSeleccionado);
+
+      if (this.conceptoSeleccionado) {
+        this.syncCajaFromConcepto(this.conceptoSeleccionado);
+      }
       
       // Si no se encuentra el concepto en la lista, cargarlo específicamente
       if (!this.conceptoSeleccionado && this.conceptos.length > 0) {
@@ -189,6 +194,7 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
             if (!response.error && response.mensaje && response.mensaje.length > 0) {
               this.conceptoSeleccionado = response.mensaje[0];
               console.log('Concepto cargado específicamente:', this.conceptoSeleccionado);
+              this.syncCajaFromConcepto(this.conceptoSeleccionado);
             } else {
               console.error('No se pudo obtener el concepto específico:', response);
             }
@@ -200,8 +206,30 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
       }
     } else {
       this.conceptoSeleccionado = null;
+      this.cajaSeleccionada = null;
+      this.cajamoviForm.get('caja')?.setValue(null);
       console.log('No hay concepto seleccionado');
     }
+  }
+
+  private syncCajaFromConcepto(concepto: any): void {
+    const idCaja = concepto?.id_caja ?? null;
+
+    this.cajamoviForm.get('caja')?.setValue(idCaja);
+    this.cajaSeleccionada = this.cajas.find((caja) => caja.id_caja == idCaja) || null;
+  }
+
+  getCajaDescripcion(): string {
+    if (this.cajaSeleccionada?.descripcion) {
+      return this.cajaSeleccionada.descripcion;
+    }
+
+    const idCaja = this.cajamoviForm.get('caja')?.value;
+    if (idCaja === null || idCaja === undefined || idCaja === '') {
+      return 'Se asigna automaticamente al elegir un concepto';
+    }
+
+    return `Caja ID: ${idCaja}`;
   }
 
   // Función mejorada para formatear fecha YYYY-MM-DD para input date
@@ -401,6 +429,10 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
 
           // Buscar el concepto seleccionado
           this.onConceptoChange();
+
+          if (formattedData.caja !== null && formattedData.caja !== undefined) {
+            this.cajaSeleccionada = this.cajas.find((caja) => caja.id_caja == formattedData.caja) || null;
+          }
 
       } catch (error) {
         console.error('Error parsing cajamovi data:', error);
@@ -645,6 +677,13 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         if (!response.error) {
           this.cajas = response.mensaje;
+          const idCajaActual = this.cajamoviForm.get('caja')?.value;
+          if (idCajaActual !== null && idCajaActual !== undefined) {
+            this.cajaSeleccionada = this.cajas.find((caja) => caja.id_caja == idCajaActual) || null;
+          }
+          if (this.conceptoSeleccionado) {
+            this.syncCajaFromConcepto(this.conceptoSeleccionado);
+          }
         } else {
           console.error('Error loading cajas:', response.mensaje);
           this.showErrorMessage('No se pudieron cargar las cajas');
@@ -672,6 +711,7 @@ export class EditCajamoviComponent implements OnInit, OnDestroy {
     // Limpiar referencias a objetos
     this.currentCajamovi = null;
     this.conceptoSeleccionado = null;
+    this.cajaSeleccionada = null;
     
     // Limpiar el formulario
     if (this.cajamoviForm) {

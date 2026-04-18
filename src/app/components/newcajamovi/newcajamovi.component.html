@@ -135,13 +135,9 @@
                                         <div class="form-group row">
                                             <label class="control-label text-right col-md-3">Caja</label>
                                             <div class="col-md-9">
-                                                <select class="form-control" formControlName="caja">
-                                                    <option [ngValue]="null">Seleccione una caja</option>
-                                                    <option *ngFor="let caja of cajas" [value]="caja.id_caja">
-                                                        {{ caja.descripcion }}
-                                                    </option>
-                                                </select>
-                                                <small class="form-control-feedback">Seleccione una caja</small>
+                                                <input type="text" class="form-control" [value]="getCajaDescripcion()" readonly>
+                                                <small class="form-control-feedback">La caja se determina segun el concepto seleccionado</small>
+                                                <input type="hidden" formControlName="caja">
                                             </div>
                                         </div>
                                     </div>
