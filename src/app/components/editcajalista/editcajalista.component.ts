@@ -6,6 +6,9 @@ import { CargardataService } from '../../services/cargardata.service'; // Asegú
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import {formatDate} from '@angular/common'; // Importar formatDate
+import { UserRole } from '../../interfaces/user';
+import { getAssignableRoleOptions, RoleOption } from '../../utils/role-visibility';
+import { UserContextService } from '../../services/user-context.service';
 
 @Component({
   selector: 'app-editcajalista',
@@ -18,6 +21,7 @@ export class EditCajaListaComponent implements OnInit {
   // Otras flags si son necesarias
   public currentCajaLista: any = null;
   private id_caja: number = 0;
+  public roleOptions: RoleOption[] = [];
 
   constructor(
     private subirdata: SubirdataService,
@@ -25,6 +29,7 @@ export class EditCajaListaComponent implements OnInit {
     private route: ActivatedRoute,
     private fb: FormBuilder,
     private cargardata: CargardataService, // Mantener por consistencia
+    private userContext: UserContextService,
   ) {}
 
   ngOnInit(): void {
@@ -46,8 +51,11 @@ export class EditCajaListaComponent implements OnInit {
       fija: new FormControl(0, Validators.compose([
         Validators.required,
         Validators.pattern(/^[01]$/)
-      ]))
+      ])),
+      rol_minimo: new FormControl(UserRole.USER, Validators.required)
     });
+
+    this.roleOptions = getAssignableRoleOptions(this.userContext.getRole());
 
     this.monitorFormChanges();
   }
@@ -70,7 +78,8 @@ export class EditCajaListaComponent implements OnInit {
             descripcion: this.currentCajaLista.descripcion.trim(),
             fecha_cierre: formattedDate, // Usar fecha formateada
             especial: this.currentCajaLista.especial, // Asumiendo que ya es número
-            fija: this.currentCajaLista.fija // Asumiendo que ya es número
+            fija: this.currentCajaLista.fija, // Asumiendo que ya es número
+            rol_minimo: this.currentCajaLista.rol_minimo || UserRole.USER
           });
         } catch (error) {
           console.error('Error parsing caja lista data:', error);
@@ -95,7 +104,8 @@ export class EditCajaListaComponent implements OnInit {
         descripcion: this.cajaListaForm.value.descripcion,
         fecha_cierre: this.cajaListaForm.value.fecha_cierre,
         especial: this.cajaListaForm.value.especial,
-        fija: this.cajaListaForm.value.fija
+        fija: this.cajaListaForm.value.fija,
+        rol_minimo: this.cajaListaForm.value.rol_minimo
       };
 
       this.subirdata.updateCajaLista(cajaListaData).subscribe((response: any) => {

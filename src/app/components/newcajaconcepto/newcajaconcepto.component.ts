@@ -5,6 +5,9 @@ import { SubirdataService } from '../../services/subirdata.service';
 import { CargardataService } from '../../services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { UserRole } from '../../interfaces/user';
+import { getAssignableRoleOptions, RoleOption } from '../../utils/role-visibility';
+import { UserContextService } from '../../services/user-context.service';
 
 @Component({
   selector: 'app-newcajaconcepto',
@@ -19,6 +22,7 @@ export class NewcajaconceptoComponent implements OnInit {
   public ingresoEgresoFlag: boolean = false;
   public idCajaFlag: boolean = false;
   public activoInactivoFlag: boolean = false;
+  public roleOptions: RoleOption[] = [];
   
   // Lista de cajas para el select
   public cajas: any[] = [];
@@ -27,8 +31,10 @@ export class NewcajaconceptoComponent implements OnInit {
     private subirdata: SubirdataService,
     private router: Router,
     private fb: FormBuilder,
-    private cargardata: CargardataService
+    private cargardata: CargardataService,
+    private userContext: UserContextService
   ) {
+    this.roleOptions = getAssignableRoleOptions(this.userContext.getRole());
     this.cargarForm();
     this.monitorFormChanges();
   }
@@ -78,7 +84,8 @@ export class NewcajaconceptoComponent implements OnInit {
       activo_inactivo: new FormControl(0, Validators.compose([ // Default a 0 (activo)
         Validators.required,
         Validators.pattern(/^[01]$/) // Solo 0 o 1
-      ]))
+      ])),
+      rol_minimo: new FormControl(UserRole.USER, Validators.required)
       // id_concepto es serial, no se incluye en el formulario de creación
     });
   }
@@ -92,6 +99,7 @@ export class NewcajaconceptoComponent implements OnInit {
           "ingreso_egreso": form.value.ingreso_egreso,
           "id_caja": form.value.id_caja,
           "activo_inactivo": form.value.activo_inactivo,
+          "rol_minimo": form.value.rol_minimo,
           // id_concepto es generado por la BD
         }
       console.log(nuevoCajaConcepto);

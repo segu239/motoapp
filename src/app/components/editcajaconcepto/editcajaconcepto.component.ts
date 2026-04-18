@@ -5,6 +5,9 @@ import { SubirdataService } from '../../services/subirdata.service';
 import { CargardataService } from '../../services/cargardata.service';
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { UserRole } from '../../interfaces/user';
+import { getAssignableRoleOptions, RoleOption } from '../../utils/role-visibility';
+import { UserContextService } from '../../services/user-context.service';
 
 @Component({
   selector: 'app-editcajaconcepto',
@@ -21,13 +24,15 @@ export class EditcajaconceptoComponent implements OnInit {
   public activoInactivoFlag: boolean = false;
   public currentCajaConcepto: any = null;
   private id_concepto: number = 0;
+  public roleOptions: RoleOption[] = [];
 
   constructor(
     private subirdata: SubirdataService,
     private router: Router,
     private route: ActivatedRoute,
     private fb: FormBuilder,
-    private cargardata: CargardataService
+    private cargardata: CargardataService,
+    private userContext: UserContextService
   ) {}
 
   ngOnInit(): void {
@@ -64,9 +69,12 @@ export class EditcajaconceptoComponent implements OnInit {
       activo_inactivo: new FormControl(0, Validators.compose([
         Validators.required,
         Validators.pattern(/^[01]$/) // Solo 0 o 1
-      ]))
+      ])),
+      rol_minimo: new FormControl(UserRole.USER, Validators.required)
       // id_concepto no se edita directamente en el formulario, se usa para la actualización
     });
+
+    this.roleOptions = getAssignableRoleOptions(this.userContext.getRole());
 
     this.monitorFormChanges();
   }
@@ -87,7 +95,8 @@ export class EditcajaconceptoComponent implements OnInit {
               fija: this.currentCajaConcepto.fija, // Asumiendo que ya es número
               ingreso_egreso: this.currentCajaConcepto.ingreso_egreso,
               id_caja: this.currentCajaConcepto.id_caja,
-              activo_inactivo: this.currentCajaConcepto.activo_inactivo || 0 // Default a 0 (activo) si no existe
+              activo_inactivo: this.currentCajaConcepto.activo_inactivo || 0, // Default a 0 (activo) si no existe
+              rol_minimo: this.currentCajaConcepto.rol_minimo || UserRole.USER
             });
           } catch (error) {
             console.error('Error parsing cajaconcepto data:', error);
@@ -134,7 +143,8 @@ export class EditcajaconceptoComponent implements OnInit {
         fija: this.currentCajaConcepto.fija,
         ingreso_egreso: this.currentCajaConcepto.ingreso_egreso,
         id_caja: this.currentCajaConcepto.id_caja,
-        activo_inactivo: this.cajaconceptoForm.value.activo_inactivo
+        activo_inactivo: this.cajaconceptoForm.value.activo_inactivo,
+        rol_minimo: this.cajaconceptoForm.value.rol_minimo
       };
       console.log("Updating with data:", cajaconceptoData);
 

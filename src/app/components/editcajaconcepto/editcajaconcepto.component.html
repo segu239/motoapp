@@ -59,6 +59,19 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <div class="form-group row">
+                                    <label class="control-label text-right col-md-3">Rol Mínimo</label>
+                                    <div class="col-md-9">
+                                        <select class="form-control" formControlName="rol_minimo">
+                                            <option *ngFor="let option of roleOptions" [value]="option.value">{{ option.label }}</option>
+                                        </select>
+                                        <small class="form-control-feedback">Visibilidad mínima del concepto</small>
+                                    </div>
+                                </div>
+                            </div>
+                         </div>
+                         <div class="row">
+                            <div class="col-md-6">
                                 <div [ngClass]="{'form-group row': true, 'has-danger': activoInactivoFlag}">
                                     <label class="control-label text-right col-md-3">Estado</label>
                                     <div class="col-md-9">

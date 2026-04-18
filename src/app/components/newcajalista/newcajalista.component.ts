@@ -5,6 +5,9 @@ import { SubirdataService } from '../../services/subirdata.service'; // Asegúra
 import { CargardataService } from '../../services/cargardata.service'; // Asegúrate que la ruta sea correcta
 import { debounceTime } from 'rxjs/operators';
 import Swal from 'sweetalert2';
+import { UserRole } from '../../interfaces/user';
+import { getAssignableRoleOptions, RoleOption } from '../../utils/role-visibility';
+import { UserContextService } from '../../services/user-context.service';
 
 @Component({
   selector: 'app-newcajalista',
@@ -14,14 +17,17 @@ import Swal from 'sweetalert2';
 export class NewCajaListaComponent {
   public nuevaCajaListaForm!: FormGroup;
   public descripcionFlag: boolean = false;
+  public roleOptions: RoleOption[] = [];
   // No se necesitan otras flags específicas como en el ejemplo de rubro
 
   constructor(
     private subirdata: SubirdataService,
     private router: Router,
     private fb: FormBuilder,
-    private cargardata: CargardataService // Aunque no se usa para cargar datos aquí, se mantiene por consistencia si es necesario en futuro
+    private cargardata: CargardataService, // Aunque no se usa para cargar datos aquí, se mantiene por consistencia si es necesario en futuro
+    private userContext: UserContextService
   ) {
+    this.roleOptions = getAssignableRoleOptions(this.userContext.getRole());
     this.cargarForm();
     this.monitorFormChanges();
   }
@@ -40,7 +46,8 @@ export class NewCajaListaComponent {
       fija: new FormControl(0, Validators.compose([
         Validators.required,
         Validators.pattern(/^[01]$/)
-      ]))
+      ])),
+      rol_minimo: new FormControl(UserRole.USER, Validators.required)
     });
   }
 
@@ -51,6 +58,7 @@ export class NewCajaListaComponent {
         "fecha_cierre": form.value.fecha_cierre,
         "especial": form.value.especial,
         "fija": form.value.fija,
+        "rol_minimo": form.value.rol_minimo,
       }
 
       this.subirdata.subirDatosCajaLista(nuevaCajaLista).subscribe((data: any) => {
