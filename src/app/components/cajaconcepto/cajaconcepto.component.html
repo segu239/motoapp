@@ -15,7 +15,7 @@
                             </span>
                             <p-button icon="pi pi-file-excel" (click)="exportExcel()"
                                 styleClass="p-button-sm p-button-success ml-4"></p-button>
-                            <p-button icon="pi pi-plus-circle" [routerLink]="['../newcajaconcepto']"
+                            <p-button *ngIf="canManage()" icon="pi pi-plus-circle" [routerLink]="['../newcajaconcepto']"
                                 styleClass="p-button-sm p-button-info ml-2"></p-button>
                         </div>
                     </ng-template>
@@ -23,6 +23,7 @@
                         <tr>
                             <th pSortableColumn="descripcion">Descripción<p-sortIcon field="descripcion"></p-sortIcon></th>
                             <th pSortableColumn="tipo_concepto">Tipo Concepto<p-sortIcon field="tipo_concepto"></p-sortIcon></th>
+                            <th pSortableColumn="rol_minimo">Rol Mínimo<p-sortIcon field="rol_minimo"></p-sortIcon></th>
                             <th pSortableColumn="fija">Fijo<p-sortIcon field="fija"></p-sortIcon></th>
                             <th pSortableColumn="ingreso_egreso">Ingreso/Egreso<p-sortIcon field="ingreso_egreso"></p-sortIcon></th>
                             <th pSortableColumn="id_caja">ID Caja<p-sortIcon field="id_caja"></p-sortIcon></th>
@@ -36,6 +37,7 @@
                         <tr>
                             <td>{{ cajaconcepto.descripcion }}</td>
                             <td>{{ cajaconcepto.tipo_concepto }}</td>
+                            <td>{{ getRoleLabel(cajaconcepto.rol_minimo) }}</td>
                             <td>{{ cajaconcepto.fija }}</td>
                             <td>{{ cajaconcepto.ingreso_egreso }}</td>
                             <td>{{ cajaconcepto.id_caja }}</td>
@@ -43,6 +45,7 @@
                             <td>{{ cajaconcepto.activo_inactivo == 0 ? 'Activo' : 'Inactivo' }}</td>
                             <td>
                                 <p-button icon="pi pi-pencil" styleClass="p-button-sm p-button-help"
+                                    [disabled]="!canManage()"
                                     (click)="editCajaconcepto(cajaconcepto)"></p-button>
                             </td>
                             <!-- <td>

@@ -8,6 +8,7 @@ import { User, UserRole } from '../../interfaces/user';
 import Swal from 'sweetalert2';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { canManageCashCatalogs, formatRoleLabel } from '../../utils/role-visibility';
 
 interface CajaLista {
   descripcion: string;
@@ -15,6 +16,7 @@ interface CajaLista {
   especial: number;
   fija: number;
   id_caja: number;
+  rol_minimo?: string;
 }
 
 @Component({
@@ -72,7 +74,15 @@ export class CajaListaComponent implements OnDestroy {
   }
 
   canEditOrDelete(cajaLista: CajaLista): boolean {
-    return this.isAdmin;
+    return canManageCashCatalogs(this.currentUser?.nivel);
+  }
+
+  canCreate(): boolean {
+    return canManageCashCatalogs(this.currentUser?.nivel);
+  }
+
+  getRoleLabel(role: string | undefined): string {
+    return formatRoleLabel(role);
   }
 
   editCajaLista(cajaLista: CajaLista) {

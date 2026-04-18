@@ -3,7 +3,12 @@ import { Router } from '@angular/router';
 import * as FileSaver from 'file-saver';
 import { CargardataService } from '../../services/cargardata.service';
 import { SubirdataService } from '../../services/subirdata.service';
+import { AuthService } from '../../services/auth.service';
+import { User, UserRole } from '../../interfaces/user';
 import Swal from 'sweetalert2';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { canManageCashCatalogs, formatRoleLabel } from '../../utils/role-visibility';
 
 interface CajaConcepto {
   descripcion: string;
@@ -13,6 +18,7 @@ interface CajaConcepto {
   id_caja: number;
   id_concepto: number;
   activo_inactivo: number;
+  rol_minimo?: string;
 }
 
 @Component({
@@ -23,13 +29,19 @@ interface CajaConcepto {
 export class CajaconceptoComponent {
 
   public cajaconceptos: CajaConcepto[] = [];
+  public currentUser: User | null = null;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private router: Router,
     private subirdataService: SubirdataService,
-    private cargardataService: CargardataService
+    private cargardataService: CargardataService,
+    private authService: AuthService
   ) {
     this.loadCajaconceptos();
+    this.authService.user$.pipe(takeUntil(this.destroy$)).subscribe((user) => {
+      this.currentUser = user;
+    });
   }
 
   loadCajaconceptos() {
@@ -166,5 +178,13 @@ export class CajaconceptoComponent {
       type: EXCEL_TYPE
     });
     FileSaver.saveAs(data, fileName + '_export_' + new Date().getTime() + EXCEL_EXTENSION);
+  }
+
+  canManage(): boolean {
+    return canManageCashCatalogs(this.currentUser?.nivel);
+  }
+
+  getRoleLabel(role: string | undefined): string {
+    return formatRoleLabel(role);
   }
 }
