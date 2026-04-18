@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { UrlCajamoviPaginado, UrlCajamoviPorIds } from '../config/ini';
+import { UserContextService } from './user-context.service';
 
 @Injectable({
   providedIn: 'root'
@@ -29,7 +30,7 @@ export class CajamoviPaginadosService {
   public cargando$ = this.cargandoSubject.asObservable();
   public totalItems$ = this.totalItemsSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private userContext: UserContextService) {}
 
   // Cargar una página específica con filtros
   cargarPagina(
@@ -51,13 +52,13 @@ export class CajamoviPaginadosService {
     const fechaDesdeStr = fechaDesde ? this.formatearFecha(fechaDesde) : null;
     const fechaHastaStr = fechaHasta ? this.formatearFecha(fechaHasta) : null;
     
-    const params = {
+    const params = this.userContext.withRolePayload({
       pagina: pagina,
       porPagina: this.tamañoPagina,
       sucursal: sucursal,
       fechaDesde: fechaDesdeStr,
       fechaHasta: fechaHastaStr
-    };
+    });
     
     return this.http.post<any>(UrlCajamoviPaginado, params).pipe(
       tap(respuesta => {
@@ -209,11 +210,11 @@ export class CajamoviPaginadosService {
     }
     
     // Crear el objeto de parámetros para enviar al servidor
-    const params = {
+    const params = this.userContext.withRolePayload({
       ids: ids,
       // Incluir la sucursal actual si es necesario para validación de permisos
       sucursal: this.filtrosActuales.sucursal
-    };
+    });
     
     // Usar el endpoint correcto para cargar por IDs
     return this.http.post(UrlCajamoviPorIds, params).pipe(

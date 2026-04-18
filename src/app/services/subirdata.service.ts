@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from "@angular/common/http";
 import { UrlUpdateCajamovi,UrlEliminarCajamovi,UrlSubirDatosCajamovi,UrlUpdateCajaconcepto, UrlSubirDatosCajaconcepto,UrlEliminarCajaconcepto,UrlUpdateCajaLista, UrlSubirDatosCajaLista, UrlEliminarCajaLista, UrlUpdateArticulo,UrlEliminarArticulo,UrlSubirDatosArticulo,UrlUpdateConflista, UrlSubirDatosConflista, UrlEliminarConflista,UrlUpdateValorCambio,UrlUpdateTipoMoneda,UrlSubirDatosValorCambio,UrlEliminarValorCambio, UrlSubirDatosTipoMoneda,UrlEliminarTipoMoneda,UrlEditProveedor,UrlSubirDatosProveedor,UrlEliminarProveedor, UrlSubirDatosArtIva,UrlUpdateMarca,UrlSubirDatosMarca,UrleliminarMarca,UrlUpdateRubro, UrleliminarRubro,UrlSubirDatosRubro,UrleliminarRubroPrincipal,UrlUpdateRubroPrincipal, UrlSubirDatosRubroPrincipal,UpdateArtsucxappWebManagedPHP, UpdateArtsucxappWeb, Urlclisucxapp, Urlpedidossucxapp, UrlpedidossucxappCompleto, Urlarticulossucxapp, Urlmixto, UpdateClisucxappWeb, UrlclisucxappWeb, UrleliminarCliente, UrlEliminarArtIva } from '../config/ini';
+import { UserContextService } from './user-context.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SubirdataService {
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private userContext: UserContextService) { }
   editarStockArtSucx(idart: number, suc: number, op: string) {
     return this.http.post(UpdateArtsucxappWeb,
       {
@@ -128,7 +129,7 @@ export class SubirdataService {
     } catch (e) {
       console.error('Error al convertir a JSON:', e);
     }
-    return this.http.post(UrlSubirDatosCajamovi, cajamovi);
+    return this.http.post(UrlSubirDatosCajamovi, this.userContext.withRolePayload(cajamovi));
   }
 
   eliminarCliente(data: any, id: any) {
@@ -217,24 +218,24 @@ export class SubirdataService {
 
   eliminarCajaLista(id: any) {
     return this.http.post(UrlEliminarCajaLista,
-      {
+      this.userContext.withRolePayload({
         "id_caja": id
-      });
+      }));
   }
 
   eliminarCajaconcepto(id: number) {
     console.log("Enviando a eliminar ID:", id);
    return this.http.post(UrlEliminarCajaconcepto,
-     {
+     this.userContext.withRolePayload({
        "id_concepto": id
-     });
+     }));
  }
 
  eliminarCajamovi(id: number) {
   // El backend espera un objeto con la clave "id_movimiento"
-  return this.http.post(UrlEliminarCajamovi, {
+  return this.http.post(UrlEliminarCajamovi, this.userContext.withRolePayload({
     "id_movimiento": id
-  });
+  }));
 }
 
   subirDatosRubroPrincipal(rubroprincipal: any){
@@ -281,21 +282,22 @@ export class SubirdataService {
   subirDatosCajaLista(cajaLista: any){
     console.log(cajaLista);
     // El backend espera directamente el objeto
-    return this.http.post(UrlSubirDatosCajaLista, cajaLista);
+    return this.http.post(UrlSubirDatosCajaLista, this.userContext.withRolePayload(cajaLista));
   }
 
   subirDatosCajaconcepto(cajaconcepto: any){
     console.log("Enviando a guardar:", cajaconcepto);
     return this.http.post(UrlSubirDatosCajaconcepto,
-      {
+      this.userContext.withRolePayload({
         "descripcion": cajaconcepto.descripcion,
         "tipo_concepto": cajaconcepto.tipo_concepto,
         "fija": cajaconcepto.fija,
         "ingreso_egreso": cajaconcepto.ingreso_egreso,
         "id_caja": cajaconcepto.id_caja,
-        "activo_inactivo": cajaconcepto.activo_inactivo
+        "activo_inactivo": cajaconcepto.activo_inactivo,
+        "rol_minimo": cajaconcepto.rol_minimo
         // id_concepto es autoincremental en la BD
-      });
+      }));
   }
   
   editarRubroPrincipal(id: any,rubro: any ) {
@@ -501,20 +503,21 @@ export class SubirdataService {
 
   updateCajaLista(cajaLista: any) {
     // El backend espera directamente el objeto con id_caja
-   return this.http.post(UrlUpdateCajaLista, cajaLista);
+   return this.http.post(UrlUpdateCajaLista, this.userContext.withRolePayload(cajaLista));
  }
 
  updateCajaconcepto(cajaconcepto: any) {
   console.log("Enviando a actualizar:", cajaconcepto);
-  return this.http.post(UrlUpdateCajaconcepto, {
+  return this.http.post(UrlUpdateCajaconcepto, this.userContext.withRolePayload({
     "id_concepto": cajaconcepto.id_concepto, // Necesario para identificar el registro
     "descripcion": cajaconcepto.descripcion,
     "tipo_concepto": cajaconcepto.tipo_concepto,
     "fija": cajaconcepto.fija,
     "ingreso_egreso": cajaconcepto.ingreso_egreso,
     "id_caja": cajaconcepto.id_caja,
-    "activo_inactivo": cajaconcepto.activo_inactivo
-  });
+    "activo_inactivo": cajaconcepto.activo_inactivo,
+    "rol_minimo": cajaconcepto.rol_minimo
+  }));
 }
 
 updateCajamovi(cajamovi: any) {
@@ -529,7 +532,7 @@ updateCajamovi(cajamovi: any) {
   } catch (e) {
     console.error('Error al convertir a JSON:', e);
   }
-  return this.http.post(UrlUpdateCajamovi, cajamovi);
+  return this.http.post(UrlUpdateCajamovi, this.userContext.withRolePayload(cajamovi));
 }
 
 }

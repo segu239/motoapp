@@ -1,16 +1,24 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {HttpClient,HttpHeaders} from "@angular/common/http";
-import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax,Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera, UrlCancelarPedidoStock, UrlAltaExistencias, UrlObtenerAltasConCostos, UrlCancelarAltaExistencias} from '../config/ini'
+import {UrlBancos, UrlCajamovi, UrlCajamoviPorSucursal, UrlCajaconcepto, UrlCajaConceptoPorIdConcepto, UrlCajaLista, UrlArticulos,UrlArticuloById,UrlConflista,UrlValorCambio, UrlTipoMoneda,UrlRubroCompleto,UrlProveedor, UrlArtIva,UrlMarcaPorId,UrlMarca,UrlRubro,UrlRubroPorId,UrlRubroPrincipalPorId, UrlRubroPrincipal, UrlPedidoItemyCabIdEnvio,UrlPedidoItemPorSucursalh,UrlPedidoItemPorSucursal,UrlStockPorSucursal,UrlPedidoItemyCab,UrlPedidoItemyCabId, UrlpedidosucNombreTarj, UrlcabecerasucNombreTarj, UrlreciboxComprobante, UrlpedidoxComprobante, Urlarconmov,Urlartsucursal,Urltarjcredito,Urlclisucx, Urlvendedores, Urlpedidox, Urlcabecerax, Urlcabecerasuc, UrlcabeceraLastId,UrlPagoCabecera, UrlCancelarPedidoStock, UrlAltaExistencias, UrlObtenerAltasConCostos, UrlCancelarAltaExistencias} from '../config/ini'
 import { map } from "rxjs/operators";
 import { TarjCredito } from '../interfaces/tarjcredito';
+import { UserContextService } from './user-context.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CargardataService {
 
-  constructor(private http:HttpClient) { }
+  constructor(private http:HttpClient, private userContext: UserContextService) { }
+
+  private withRoleQuery(url: string): string {
+    const role = encodeURIComponent(this.userContext.getRole());
+    const email = encodeURIComponent(this.userContext.getEmail());
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}rol_usuario=${role}&email_usuario=${email}`;
+  }
 
   arconmov()
   {
@@ -69,31 +77,31 @@ export class CargardataService {
   }
 
   getCajaLista() {
-    return this.http.get(UrlCajaLista);
+    return this.http.get(this.withRoleQuery(UrlCajaLista));
   }
   getCajaconcepto() {
-    return this.http.get(UrlCajaconcepto); // Asumiendo que esta URL devuelve todos los conceptos
+    return this.http.get(this.withRoleQuery(UrlCajaconcepto));
   }
   
   getCajaconceptoPorId(id_concepto: number) {
-    return this.http.post(UrlCajaConceptoPorIdConcepto, {
+    return this.http.post(UrlCajaConceptoPorIdConcepto, this.userContext.withRolePayload({
       "id_concepto": id_concepto
-    });
+    }));
   }
 
   getCajamovi() {
-    return this.http.get(UrlCajamovi);
+    return this.http.get(this.withRoleQuery(UrlCajamovi));
   }
   
   getCajamoviPorSucursal(sucursal: number | null) {
     if (sucursal === null) {
       // Si no se especifica sucursal, obtener todos los movimientos
-      return this.http.get(UrlCajamovi);
+      return this.http.get(this.withRoleQuery(UrlCajamovi));
     } else {
       // Si se especifica sucursal, filtrar por esa sucursal
-      return this.http.post(UrlCajamoviPorSucursal, {
+      return this.http.post(UrlCajamoviPorSucursal, this.userContext.withRolePayload({
         "sucursal": sucursal
-      });
+      }));
     }
   }
   getArticuloById(id_articulo: number) {
@@ -244,9 +252,9 @@ export class CargardataService {
   
   // Método para obtener el id_caja correspondiente a un id_concepto de la tabla caja_conceptos
   getIdCajaFromConcepto(id_concepto: number) {
-    return this.http.post(UrlCajaConceptoPorIdConcepto, {
+    return this.http.post(UrlCajaConceptoPorIdConcepto, this.userContext.withRolePayload({
       "id_concepto": id_concepto
-    });
+    }));
   }
 
   /**

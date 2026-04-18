@@ -10,7 +10,7 @@ public function __construct()
 
 header("Access-Control-Allow-Origin:*");
 header("Access-Control-Allow-Methods:PUT, GET, POST, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers:Content-Type, Content-Length, Accept-Encoding");
+header("Access-Control-Allow-Headers:Content-Type, Content-Length, Accept-Encoding, X-User-Role, X-User-Email");
 
 
 /* header("Access-Control-Allow-Origin: *");
@@ -19,6 +19,148 @@ header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Ac
 
   parent::__construct();
   $this->load->database();
+}
+
+private function normalizeDeclaredRole($role)
+{
+    $role = strtolower(trim((string)$role));
+
+    if ($role === 'super' || $role === 'admin' || $role === 'user') {
+        return $role;
+    }
+
+    return 'user';
+}
+
+private function getDeclaredUserRole($payload = null)
+{
+    $headerRole = $this->input->get_request_header('X-User-Role', true);
+    if (!empty($headerRole)) {
+        return $this->normalizeDeclaredRole($headerRole);
+    }
+
+    if (is_array($payload) && isset($payload['rol_usuario'])) {
+        return $this->normalizeDeclaredRole($payload['rol_usuario']);
+    }
+
+    $postRole = $this->post('rol_usuario');
+    if (!empty($postRole)) {
+        return $this->normalizeDeclaredRole($postRole);
+    }
+
+    return 'user';
+}
+
+private function getDeclaredUserEmail($payload = null)
+{
+    $headerEmail = $this->input->get_request_header('X-User-Email', true);
+    if (!empty($headerEmail)) {
+        return trim($headerEmail);
+    }
+
+    if (is_array($payload) && isset($payload['email_usuario'])) {
+        return trim((string)$payload['email_usuario']);
+    }
+
+    $postEmail = $this->post('email_usuario');
+    if (!empty($postEmail)) {
+        return trim((string)$postEmail);
+    }
+
+    return '';
+}
+
+private function canManageCashCatalogs($role)
+{
+    $role = $this->normalizeDeclaredRole($role);
+    return $role === 'super' || $role === 'admin';
+}
+
+private function sanitizeRolMinimo($role)
+{
+    return $this->normalizeDeclaredRole($role);
+}
+
+private function validateAssignableRolMinimo($actingRole, $rolMinimo)
+{
+    $actingRole = $this->normalizeDeclaredRole($actingRole);
+    $rolMinimo = $this->sanitizeRolMinimo($rolMinimo);
+
+    if ($actingRole === 'super') {
+        return array(true, $rolMinimo);
+    }
+
+    if ($actingRole === 'admin') {
+        if ($rolMinimo === 'super') {
+            return array(false, 'Los usuarios ADMIN no pueden asignar rol_minimo SUPER');
+        }
+
+        return array(true, $rolMinimo);
+    }
+
+    return array(false, 'El rol actual no puede administrar cajas o conceptos');
+}
+
+private function canAccessCatalogRow($actingRole, $rowRole)
+{
+    $actingRole = $this->normalizeDeclaredRole($actingRole);
+    $rowRole = $this->sanitizeRolMinimo($rowRole);
+
+    if ($actingRole === 'super') {
+        return true;
+    }
+
+    if ($actingRole === 'admin') {
+        return $rowRole !== 'super';
+    }
+
+    return false;
+}
+
+private function assertCatalogRowAccessible($table, $idField, $id, $actingRole)
+{
+    $this->db->select('rol_minimo');
+    $this->db->where($idField, $id);
+    $query = $this->db->get($table);
+
+    if (!$query || $query->num_rows() === 0) {
+        $respuesta = array(
+            'error' => true,
+            'mensaje' => 'No se encontro el registro solicitado'
+        );
+        $this->response($respuesta, REST_Controller::HTTP_NOT_FOUND);
+        return false;
+    }
+
+    $row = $query->row_array();
+    $rowRole = isset($row['rol_minimo']) ? $row['rol_minimo'] : 'user';
+
+    if (!$this->canAccessCatalogRow($actingRole, $rowRole)) {
+        $respuesta = array(
+            'error' => true,
+            'mensaje' => 'No tiene permisos para operar sobre este registro'
+        );
+        $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+        return false;
+    }
+
+    return true;
+}
+
+private function assertCashCatalogManager($data)
+{
+    $role = $this->getDeclaredUserRole($data);
+
+    if (!$this->canManageCashCatalogs($role)) {
+        $respuesta = array(
+            'error' => true,
+            'mensaje' => 'No tiene permisos para administrar cajas o conceptos de caja'
+        );
+        $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+        return array(false, $role);
+    }
+
+    return array(true, $role);
 }
 
 /**
@@ -762,6 +904,11 @@ public function EliminarCajaLista_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         // Validación
         if(!isset($data['id_caja'])) {
             $respuesta = array(
@@ -773,6 +920,10 @@ public function EliminarCajaLista_post()
         }
 
         $id = (int)$data['id_caja'];
+
+        if (!$this->assertCatalogRowAccessible('caja_lista', 'id_caja', $id, $actingRole)) {
+            return;
+        }
 
         $this->db->trans_start();
         $this->db->where('id_caja', $id);
@@ -814,6 +965,11 @@ public function EliminarCajaconcepto_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         if(!isset($data['id_concepto'])) {
             $respuesta = array(
                 "error" => true,
@@ -824,6 +980,10 @@ public function EliminarCajaconcepto_post()
         }
 
         $id = $data['id_concepto'];
+
+        if (!$this->assertCatalogRowAccessible('caja_conceptos', 'id_concepto', $id, $actingRole)) {
+            return;
+        }
 
         $this->db->trans_start();
         $this->db->where('id_concepto', $id);
@@ -2762,13 +2922,28 @@ public function SubirDatosCajaconcepto_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         // Validación básica de campos requeridos (se pueden añadir más)
-        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo'])) {
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo']) || !isset($data['rol_minimo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos para el concepto de caja"
             );
             $this->response($respuesta, REST_Controller::HTTP_BAD_REQUEST);
+            return;
+        }
+
+        list($rolValido, $rolMinimo) = $this->validateAssignableRolMinimo($actingRole, $data['rol_minimo']);
+        if (!$rolValido) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => $rolMinimo
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
             return;
         }
 
@@ -2781,7 +2956,8 @@ public function SubirDatosCajaconcepto_post()
             'fija' => $data['fija'],
             'ingreso_egreso' => $data['ingreso_egreso'],
             'id_caja' => $data['id_caja'],
-            'activo_inactivo' => $data['activo_inactivo']
+            'activo_inactivo' => $data['activo_inactivo'],
+            'rol_minimo' => $rolMinimo
             // 'id_concepto' es serial y se genera automáticamente
         ));
 
@@ -2814,6 +2990,8 @@ public function SubirDatosCajamovi_post()
 {
     $data = $this->post(); // Recibe el objeto JSON directamente del servicio Angular
     if(isset($data) && count($data) > 0) {
+
+        unset($data['rol_usuario'], $data['email_usuario']);
 
         // Validación básica (puedes añadir más validaciones según necesidad)
         if(!isset($data['sucursal']) || !isset($data['codigo_mov']) || !isset($data['fecha_mov']) || !isset($data['importe_mov']) || !isset($data['descripcion_mov']) || !isset($data['marca_cerrado']) || !isset($data['tipo_movi']) || !isset($data['caja'])) {
@@ -2893,8 +3071,13 @@ public function SubirDatosCajaLista_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         // Validación básica (puedes añadir más según necesidad)
-        if(!isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija'])) {
+        if(!isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija']) || !isset($data['rol_minimo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos (descripcion, fecha_cierre, especial, fija)"
@@ -2903,12 +3086,23 @@ public function SubirDatosCajaLista_post()
             return;
         }
 
+        list($rolValido, $rolMinimo) = $this->validateAssignableRolMinimo($actingRole, $data['rol_minimo']);
+        if (!$rolValido) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => $rolMinimo
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
         // Preparar datos para insertar
         $insert_data = array(
             'descripcion' => trim($data['descripcion']),
             'fecha_cierre' => $data['fecha_cierre'], // Asume que el formato es compatible con 'date' de PGSQL
             'especial' => (int)$data['especial'], // Asegurar que sea entero (0 o 1)
-            'fija' => (int)$data['fija']          // Asegurar que sea entero (0 o 1)
+            'fija' => (int)$data['fija'],         // Asegurar que sea entero (0 o 1)
+            'rol_minimo' => $rolMinimo
         );
 
         $this->db->trans_start();
@@ -3180,8 +3374,13 @@ public function UpdateCajaLista_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         // Validación básica
-        if(!isset($data['id_caja']) || !isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija'])) {
+        if(!isset($data['id_caja']) || !isset($data['descripcion']) || !isset($data['fecha_cierre']) || !isset($data['especial']) || !isset($data['fija']) || !isset($data['rol_minimo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos (id_caja, descripcion, fecha_cierre, especial, fija)"
@@ -3190,14 +3389,29 @@ public function UpdateCajaLista_post()
             return;
         }
 
+        list($rolValido, $rolMinimo) = $this->validateAssignableRolMinimo($actingRole, $data['rol_minimo']);
+        if (!$rolValido) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => $rolMinimo
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
         $id = (int)$data['id_caja'];
+
+        if (!$this->assertCatalogRowAccessible('caja_lista', 'id_caja', $id, $actingRole)) {
+            return;
+        }
 
         // Preparar datos para actualizar
         $update_data = array(
             'descripcion' => trim($data['descripcion']),
             'fecha_cierre' => $data['fecha_cierre'],
             'especial' => (int)$data['especial'],
-            'fija' => (int)$data['fija']
+            'fija' => (int)$data['fija'],
+            'rol_minimo' => $rolMinimo
         );
 
         $this->db->trans_start();
@@ -3575,6 +3789,8 @@ public function UpdateCajamovi_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        unset($data['rol_usuario'], $data['email_usuario']);
+
         // Validar que el ID esté presente
         if(!isset($data['id_movimiento'])) {
             $respuesta = array(
@@ -3593,20 +3809,22 @@ public function UpdateCajamovi_post()
         // Si tiene desglose de métodos de pago, denegar la edición para mantener
         // la integridad de los datos históricos
         // ===========================================================================
-        $sql_verificar = "SELECT COUNT(*) as tiene_desglose FROM caja_movi_detalle WHERE id_movimiento = ?";
-        $query_verificar = $this->db->query($sql_verificar, array($id));
+        if ($this->db->table_exists('caja_movi_detalle')) {
+            $sql_verificar = "SELECT COUNT(*) as tiene_desglose FROM caja_movi_detalle WHERE id_movimiento = ?";
+            $query_verificar = $this->db->query($sql_verificar, array($id));
 
-        if ($query_verificar && $query_verificar->num_rows() > 0) {
-            $resultado = $query_verificar->row();
-            if ($resultado->tiene_desglose > 0) {
-                // El movimiento tiene desglose, denegar edición
-                $respuesta = array(
-                    "error" => true,
-                    "mensaje" => "No se puede editar este movimiento porque tiene desglose de métodos de pago registrado. Los movimientos con desglose son de solo lectura para mantener la integridad de los datos históricos.",
-                    "codigo" => "MOVIMIENTO_CON_DESGLOSE_NO_EDITABLE"
-                );
-                $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
-                return;
+            if ($query_verificar && $query_verificar->num_rows() > 0) {
+                $resultado = $query_verificar->row();
+                if ((int)$resultado->tiene_desglose > 0) {
+                    // El movimiento tiene desglose, denegar edición
+                    $respuesta = array(
+                        "error" => true,
+                        "mensaje" => "No se puede editar este movimiento porque tiene desglose de métodos de pago registrado. Los movimientos con desglose son de solo lectura para mantener la integridad de los datos históricos.",
+                        "codigo" => "MOVIMIENTO_CON_DESGLOSE_NO_EDITABLE"
+                    );
+                    $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+                    return;
+                }
             }
         }
         // ===========================================================================
@@ -3902,6 +4120,11 @@ public function UpdateCajaconcepto_post()
 {
     $data = $this->post();
     if(isset($data) && count($data) > 0) {
+        list($allowed, $actingRole) = $this->assertCashCatalogManager($data);
+        if (!$allowed) {
+            return;
+        }
+
         // Validar ID requerido
         if(!isset($data['id_concepto'])) {
             $respuesta = array(
@@ -3912,7 +4135,7 @@ public function UpdateCajaconcepto_post()
             return;
         }
          // Validación básica de otros campos (se pueden añadir más)
-        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo'])) {
+        if(!isset($data['descripcion']) || !isset($data['tipo_concepto']) || !isset($data['fija']) || !isset($data['ingreso_egreso']) || !isset($data['id_caja']) || !isset($data['activo_inactivo']) || !isset($data['rol_minimo'])) {
             $respuesta = array(
                 "error" => true,
                 "mensaje" => "Faltan campos requeridos para actualizar el concepto de caja"
@@ -3921,7 +4144,21 @@ public function UpdateCajaconcepto_post()
             return;
         }
 
+        list($rolValido, $rolMinimo) = $this->validateAssignableRolMinimo($actingRole, $data['rol_minimo']);
+        if (!$rolValido) {
+            $respuesta = array(
+                "error" => true,
+                "mensaje" => $rolMinimo
+            );
+            $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+            return;
+        }
+
         $id = $data['id_concepto'];
+
+        if (!$this->assertCatalogRowAccessible('caja_conceptos', 'id_concepto', $id, $actingRole)) {
+            return;
+        }
 
         $this->db->trans_start();
 
@@ -3933,7 +4170,8 @@ public function UpdateCajaconcepto_post()
             'fija' => $data['fija'],
             'ingreso_egreso' => $data['ingreso_egreso'],
             'id_caja' => $data['id_caja'],
-            'activo_inactivo' => $data['activo_inactivo']
+            'activo_inactivo' => $data['activo_inactivo'],
+            'rol_minimo' => $rolMinimo
         ));
 
         $rows = $this->db->affected_rows();
