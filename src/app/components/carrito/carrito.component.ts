@@ -92,6 +92,37 @@ export class CarritoComponent implements OnDestroy {
   // ════════════════════════════════════════════════════════════
   private destroy$ = new Subject<void>();
 
+  private esItemConTarjetaCredito(item: any): boolean {
+    const tarjeta = this.tarjetas.find(t => String(t.cod_tarj) === String(item.cod_tar));
+    return !!tarjeta && Number(tarjeta.activadatos) === 1;
+  }
+
+  private async pedirCupon(): Promise<string | null> {
+    const result = await Swal.fire({
+      title: 'Numero de Cupon',
+      html: `
+        <p>Ingrese el numero de cupon de la operacion con tarjeta (4 a 6 digitos).</p>
+        <input type="number" id="cupon" class="swal2-input" placeholder="Nro de cupon" min="1000" max="999999">
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+      focusConfirm: false,
+      preConfirm: () => {
+        const value = (<HTMLInputElement>document.getElementById('cupon')).value;
+        if (!/^[1-9][0-9]{3,5}$/.test(value)) {
+          Swal.showValidationMessage('El cupon debe tener entre 4 y 6 digitos.');
+          return false;
+        }
+        return value;
+      }
+    });
+
+    return result.isConfirmed ? result.value : null;
+  }
+
   constructor(
     private _cargardata: CargardataService,
     private bot: MotomatchBotService,
@@ -1148,6 +1179,15 @@ export class CarritoComponent implements OnDestroy {
             this.numerocomprobante = numero.toString();
           }
           let emailOp = sessionStorage.getItem('emailOp');
+          const tieneTarjetaCredito = this.itemsEnCarrito.some(item => this.esItemConTarjetaCredito(item));
+          let cupon: string | null = null;
+          if (tieneTarjetaCredito) {
+            cupon = await this.pedirCupon();
+            if (!cupon) {
+              Swal.close();
+              return;
+            }
+          }
           // Crear datos para descuento de stock (con id_articulo)
           let stockData = this.itemsEnCarrito.map(obj => {
             return {
@@ -1168,7 +1208,7 @@ export class CarritoComponent implements OnDestroy {
                 cod_tar: obj.cod_tar,
                 titulartar: obj.titulartar || null,
                 numerotar: obj.numerotar || null,
-                nautotar: obj.nautotar || null,
+                nautotar: this.esItemConTarjetaCredito(obj) ? Number(cupon) : null,
                 dni_tar: obj.dni_tar || null,
                 banco: obj.banco || null,
                 ncuenta: obj.ncuenta || null,

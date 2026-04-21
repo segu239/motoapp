@@ -512,6 +512,31 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
 
     console.log('✅ Datos de pago limpiados correctamente');
   }
+
+  private limpiarTarjeta(): void {
+    this.tarjeta = {
+      Titular: '',
+      Dni: '',
+      Numero: '',
+      Autorizacion: ''
+    };
+    this.tarjetaFlag = false;
+  }
+
+  private limpiarCheque(): void {
+    this.cheque = {
+      Banco: '',
+      CodigoBanco: '',
+      Ncuenta: '',
+      Ncheque: '',
+      Nombre: '',
+      Plaza: '',
+      ImporteImputar: '',
+      ImporteCheque: '',
+      FechaCheque: ''
+    };
+    this.chequeFlag = false;
+  }
   
   // OBSOLETO: Configurar búsqueda con debounce (reemplazado por lazy loading)
   // Los filtros ahora se manejan automáticamente por PrimeNG
@@ -942,6 +967,13 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     this.codTarj = item.cod_tarj;
     this.listaPrecio = item.listaprecio;
     this.activaDatos = item.activadatos;
+
+    if (this.activaDatos !== 1) {
+      this.limpiarTarjeta();
+    }
+    if (this.activaDatos !== 2) {
+      this.limpiarCheque();
+    }
     
     // Si es mayorista, forzar lista de precio 3
     if (this.esMayorista) {
@@ -1141,12 +1173,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
                 </div>
               </div>
 
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
-                  <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -1161,8 +1187,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         const titular = (<HTMLInputElement>document.getElementById('titular')).value;
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
-        const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
-
         // Único campo obligatorio: DNI
         if (!dni) {
           Swal.showValidationMessage(`El DNI es obligatorio`);
@@ -1173,8 +1197,6 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
-        let reAutorizacion = new RegExp("^[0-9]{3}$");
-
         if (!reDni.test(dni)) {
           Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
           return false;
@@ -1187,19 +1209,13 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
           Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
           return false;
         }
-        if (autorizacion && !reAutorizacion.test(autorizacion)) {
-          Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
-          return false;
-        }
-
-        return { titular: titular || '', dni, numero: numero || '', autorizacion: autorizacion || '' };
+        return { titular: titular || '', dni, numero: numero || '' };
       }
     }).then((result) => {
       if (result.value) {
         this.tarjeta.Titular = result.value.titular;
         this.tarjeta.Dni = result.value.dni;
         this.tarjeta.Numero = result.value.numero;
-        this.tarjeta.Autorizacion = result.value.autorizacion;
         console.log('Tarjeta guardada:', this.tarjeta);
         
         // Confirmación visual

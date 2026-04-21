@@ -114,6 +114,55 @@ export class CabecerasComponent implements OnDestroy {
   ) {
     this.getNombreSucursal();
   }
+
+  private limpiarTarjeta(): void {
+    this.tarjeta = {
+      Titular: '',
+      Dni: 0,
+      Numero: 0,
+      Autorizacion: 0
+    };
+  }
+
+  private limpiarCheque(): void {
+    this.cheque = {
+      Banco: '',
+      Ncuenta: 0,
+      Ncheque: 0,
+      Nombre: '',
+      Plaza: '',
+      ImporteImputar: 0,
+      ImporteCheque: 0,
+      FechaCheque: null
+    };
+  }
+
+  private async pedirCupon(): Promise<string | null> {
+    const result = await Swal.fire({
+      title: 'Numero de Cupon',
+      html: `
+        <p>Ingrese el numero de cupon de la operacion con tarjeta (4 a 6 digitos).</p>
+        <input type="number" id="cupon" class="swal2-input" placeholder="Nro de cupon" min="1000" max="999999">
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Confirmar',
+      cancelButtonText: 'Cancelar',
+      allowOutsideClick: false,
+      allowEscapeKey: true,
+      focusConfirm: false,
+      preConfirm: () => {
+        const value = (<HTMLInputElement>document.getElementById('cupon')).value;
+        if (!/^[1-9][0-9]{3,5}$/.test(value)) {
+          Swal.showValidationMessage('El cupon debe tener entre 4 y 6 digitos.');
+          return false;
+        }
+        return value;
+      }
+    });
+
+    return result.isConfirmed ? result.value : null;
+  }
+
   ngOnInit(): void {
     this.clienteFromCuentaCorriente = this.activatedRoute.snapshot.queryParamMap.get('cliente');
     this.clienteFromCuentaCorriente = JSON.parse(this.clienteFromCuentaCorriente);
@@ -441,6 +490,14 @@ export class CabecerasComponent implements OnDestroy {
 
         await this.getNumeroComprobanteCabecera();
         await this.getNumeroComprobanteRecibo();
+        if (this.activaDatos === 1) {
+          const cupon = await this.pedirCupon();
+          if (!cupon) {
+            Swal.close();
+            return;
+          }
+          this.tarjeta.Autorizacion = Number(cupon);
+        }
         const cabeceras = await this.ajuste(this.selectedCabeceras);
         // Extracted filtering logic into a separate function
         await this.filterCabeceras(cabeceras);
@@ -501,6 +558,11 @@ export class CabecerasComponent implements OnDestroy {
         this.interes = 0;
         this.bonificacionType = 'P';
         this.interesType = 'P';
+        this.limpiarTarjeta();
+        this.limpiarCheque();
+        this.tipoVal = 'Condicion de Venta';
+        this.codTarj = '';
+        this.activaDatos = 0;
         
         // ✅ LIMPIAR SELECCIÓN DE CABECERAS
         this.selectedCabeceras = [];
@@ -795,7 +857,13 @@ export class CabecerasComponent implements OnDestroy {
     this.tipoVal = item.tarjeta; // Almacena el centro seleccionado
     this.codTarj = item.cod_tarj;
     this.listaPrecio = item.listaprecio;
-    this.activaDatos = item.activadatos;
+    this.activaDatos = Number(item.activadatos || 0);
+    if (this.activaDatos !== 1) {
+      this.limpiarTarjeta();
+    }
+    if (this.activaDatos !== 2) {
+      this.limpiarCheque();
+    }
     if (this.activaDatos == 1) {
       this.abrirFormularioTarj();
       // aca se llama a la funcion que muestra los prefijos
@@ -945,10 +1013,6 @@ export class CabecerasComponent implements OnDestroy {
                   <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
                   <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
                 </div>
-                <div class="form-group">
-                  <label for="autorizacion"><i class="fa fa-key"></i> Código de Autorización <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
-                  <input type="number" id="autorizacion" class="form-control card-input" placeholder="Ingrese el código de 3 dígitos">
-                </div>
               </div>
             </div>
           </div>
@@ -964,8 +1028,6 @@ export class CabecerasComponent implements OnDestroy {
         const titular = (<HTMLInputElement>document.getElementById('titular')).value;
         const dni = (<HTMLInputElement>document.getElementById('dni')).value;
         const numero = (<HTMLInputElement>document.getElementById('numero')).value;
-        const autorizacion = (<HTMLInputElement>document.getElementById('autorizacion')).value;
-
         // Único campo obligatorio: DNI
         if (!dni) {
           Swal.showValidationMessage(`El DNI es obligatorio`);
@@ -975,8 +1037,6 @@ export class CabecerasComponent implements OnDestroy {
         let reNumero = new RegExp("^[0-9]{16}$");
         let reDni = new RegExp("^[0-9]{8}$");
         let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
-        let reAutorizacion = new RegExp("^[0-9]{3}$");
-
         if (!reDni.test(dni)) {
           Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
           return false;
@@ -989,19 +1049,13 @@ export class CabecerasComponent implements OnDestroy {
           Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
           return false;
         }
-        if (autorizacion && !reAutorizacion.test(autorizacion)) {
-          Swal.showValidationMessage(`El código de autorización no es válido. Debe contener exactamente 3 dígitos.`);
-          return false;
-        }
-
-        return { titular: titular || '', dni, numero: numero || '', autorizacion: autorizacion || '' };
+        return { titular: titular || '', dni, numero: numero || '' };
       }
     }).then((result) => {
       if (result.value) {
         this.tarjeta.Titular = result.value.titular;
         this.tarjeta.Dni = result.value.dni;
         this.tarjeta.Numero = result.value.numero;
-        this.tarjeta.Autorizacion = result.value.autorizacion;
         
         // Confirmación visual
         Swal.fire({

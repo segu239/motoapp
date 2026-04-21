@@ -221,9 +221,6 @@ export class CalculoproductoComponent {
     if (this.tarjeta.Numero != undefined) {
       this.pedido.numerotar = parseInt(this.tarjeta.Numero);
     }
-    if (this.tarjeta.Autorizacion != undefined) {
-      this.pedido.nautotar = parseInt(this.tarjeta.Autorizacion);
-    }
     if (this.tarjeta.Dni != undefined) {
       this.pedido.dni_tar = parseInt(this.tarjeta.Dni);
     }
