@@ -329,6 +329,7 @@
                                                                         <th>Precio Unitario</th>
                                                                         <th>Subtotal</th>
                                                                         <th>Método de Pago</th>
+                                                                        <th>Cupón</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -340,6 +341,14 @@
                                                                         <td><strong>{{ (item.cantidad * item.precio) | currency:'$':'symbol':'1.2-2' }}</strong></td>
                                                                         <td>
                                                                             <span class="badge bg-info">{{ item.tarjeta || 'CUENTA CORRIENTE' }}</span>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span *ngIf="item.nautotar && item.nautotar > 0; else sinCuponVenta" class="badge bg-secondary">
+                                                                                {{ item.nautotar }}
+                                                                            </span>
+                                                                            <ng-template #sinCuponVenta>
+                                                                                <span class="text-muted">-</span>
+                                                                            </ng-template>
                                                                         </td>
                                                                     </tr>
                                                                 </tbody>
@@ -367,6 +376,7 @@
                                                                     <th>Fecha</th>
                                                                     <th>Recibo N°</th>
                                                                     <th>Importe</th>
+                                                                    <th>Cupón</th>
                                                                     <th>Bonificación</th>
                                                                     <th>Interés</th>
                                                                     <th>Usuario</th>
@@ -379,6 +389,14 @@
                                                                     <td>{{ pago.fecha | date:'dd/MM/yyyy' }}</td>
                                                                     <td><span class="badge bg-info">{{ pago.recibo }}</span></td>
                                                                     <td><strong>{{ pago.importe | currency:'$':'symbol':'1.2-2' }}</strong></td>
+                                                                    <td>
+                                                                        <span *ngIf="pago.productos && pago.productos.length > 0 && pago.productos[0].nautotar > 0; else sinCuponPago" class="badge bg-secondary">
+                                                                            {{ pago.productos[0].nautotar }}
+                                                                        </span>
+                                                                        <ng-template #sinCuponPago>
+                                                                            <span class="text-muted">-</span>
+                                                                        </ng-template>
+                                                                    </td>
                                                                     <td>
                                                                         <span *ngIf="pago.bonifica > 0" class="badge bg-warning">
                                                                             <ng-container *ngIf="pago.bonifica_tipo === 'P'; else pagoBonificaMonetaria">
