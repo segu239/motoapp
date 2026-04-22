@@ -65,3 +65,6 @@ functions/lib/
 
 # Herramientas de desarrollo
 .crush/
+
+# Specs transitorios de workflows multiagente
+specs-motoapp-*/
