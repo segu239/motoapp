@@ -15,6 +15,7 @@ import { CalculoproductoComponent } from '../calculoproducto/calculoproducto.com
 import { DialogService, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { LazyLoadEvent } from 'primeng/api';
+import { TarjetaModalService } from '../../services/tarjeta-modal.service';
 
 // Método auxiliar para PrimeNG
 function $any(val: any): any {
@@ -127,7 +128,8 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
     private router: Router,
     private activatedRoute: ActivatedRoute,
     private _cargardata: CargardataService,
-    private articulosPaginadosService: ArticulosPaginadosService
+    private articulosPaginadosService: ArticulosPaginadosService,
+    private tarjetaModal: TarjetaModalService
   ) {
     console.log('🏗️ CONSTRUCTOR EJECUTADO - Nueva instancia del componente');
     this.clienteFrompuntoVenta = this.activatedRoute.snapshot.queryParamMap.get('cliente');
@@ -1032,226 +1034,43 @@ export class CondicionventaComponent implements OnInit, OnDestroy {
   }
   
   abrirFormularioTarj() {
-    // Estilos CSS para el modal
-    const styles = `
-      <style>
-        /* Container styling */
-        .tarjeta-form {
-          padding: 0 15px;
-          max-width: 800px;
-          margin: 0 auto;
-        }
-        
-        /* Card styling */
-        .tarjeta-card {
-          background-color: #fcfcfc;
-          border-radius: 8px;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-          overflow: hidden;
-          margin-bottom: 20px;
-        }
-        
-        /* Header styling */
-        .tarjeta-header {
-          background-color: #d1ecf1;
-          color: #0c5460;
-          padding: 15px;
-          font-weight: 600;
-          border-bottom: 1px solid #bee5eb;
-          display: flex;
-          align-items: center;
-        }
-        
-        .tarjeta-header i {
-          margin-right: 10px;
-        }
-        
-        /* Form section styling */
-        .tarjeta-section {
-          padding: 20px;
-        }
-        
-        .form-row {
-          display: flex;
-          flex-wrap: wrap;
-          margin-bottom: 15px;
-        }
-        
-        .form-group {
-          flex: 1;
-          min-width: 250px;
-          padding: 0 10px;
-          margin-bottom: 15px;
-        }
-        
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: 600;
-          color: #555;
-          font-size: 14px;
-        }
-        
-        .form-control {
-          width: 100%;
-          padding: 10px;
-          border: 1px solid #ced4da;
-          border-radius: 4px;
-          font-size: 14px;
-          transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .form-control:focus {
-          border-color: #80bdff;
-          outline: 0;
-          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-        
-        /* Input styling by type */
-        input[type="number"].form-control {
-          border-left: 3px solid #28a745;
-        }
-        
-        input[type="text"].form-control {
-          border-left: 3px solid #007bff;
-        }
-        
-        /* Credit card input styling */
-        .card-input {
-          border-left: 3px solid #17a2b8 !important;
-          font-weight: 600;
-        }
-        
-        /* Subtitle styling */
-        .section-title {
-          font-size: 16px;
-          color: #343a40;
-          margin: 15px 0;
-          padding-left: 10px;
-          border-left: 4px solid #17a2b8;
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-          .form-group {
-            flex: 100%;
-          }
-        }
-      </style>
-    `;
-
-    Swal.fire({
-      title: 'Datos de la Tarjeta',
-      width: 800,
-      html: styles + `
-        <div class="tarjeta-form">
-          <div class="tarjeta-card">
-            <div class="tarjeta-header">
-              <i class="fa fa-credit-card"></i> Información de la Tarjeta
-            </div>
-            <div class="tarjeta-section">
-              <p style="color:#6c757d;font-size:13px;margin:0 0 15px 10px;">
-                <i class="fa fa-info-circle"></i> Solo el <strong>DNI</strong> es obligatorio. El resto de los datos son opcionales.
-              </p>
-              <h4 class="section-title">Datos del Titular</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="titular"><i class="fa fa-user"></i> Nombre del Titular <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
-                  <input type="text" id="titular" class="form-control" placeholder="Ingrese el nombre completo">
-                </div>
-                <div class="form-group">
-                  <label for="dni"><i class="fa fa-id-card"></i> DNI <span style="color:#dc3545;">*</span></label>
-                  <input type="number" id="dni" class="form-control" placeholder="Ingrese el DNI">
-                </div>
-              </div>
-
-              <h4 class="section-title">Datos de la Tarjeta</h4>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="numero"><i class="fa fa-credit-card"></i> Número de Tarjeta <span style="color:#6c757d;font-weight:400;">(opcional)</span></label>
-                  <input type="number" id="numero" class="form-control card-input" placeholder="Ingrese los 16 dígitos">
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      `,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      confirmButtonColor: '#17a2b8',
-      cancelButtonText: 'Cancelar',
-      cancelButtonColor: '#dc3545',
-      focusConfirm: false,
-      preConfirm: () => {
-        const titular = (<HTMLInputElement>document.getElementById('titular')).value;
-        const dni = (<HTMLInputElement>document.getElementById('dni')).value;
-        const numero = (<HTMLInputElement>document.getElementById('numero')).value;
-        // Único campo obligatorio: DNI
-        if (!dni) {
-          Swal.showValidationMessage(`El DNI es obligatorio`);
-          return false;
-        }
-
-        // Validaciones específicas (solo se aplican si el campo fue completado)
-        let reNumero = new RegExp("^[0-9]{16}$");
-        let reDni = new RegExp("^[0-9]{8}$");
-        let reTitular = new RegExp("^[a-zA-Z ]{1,40}$");
-        if (!reDni.test(dni)) {
-          Swal.showValidationMessage(`El DNI no es válido. Debe contener exactamente 8 dígitos.`);
-          return false;
-        }
-        if (titular && !reTitular.test(titular)) {
-          Swal.showValidationMessage(`El titular no es válido. Debe contener solo letras y espacios.`);
-          return false;
-        }
-        if (numero && !reNumero.test(numero)) {
-          Swal.showValidationMessage(`El número de tarjeta no es válido. Debe contener exactamente 16 dígitos.`);
-          return false;
-        }
-        return { titular: titular || '', dni, numero: numero || '' };
+    this.tarjetaModal.abrirFormularioTarjeta({ titulo: 'Datos de la Tarjeta' }).then((datos) => {
+      if (!datos) {
+        return;
       }
-    }).then((result) => {
-      if (result.value) {
-        this.tarjeta.Titular = result.value.titular;
-        this.tarjeta.Dni = result.value.dni;
-        this.tarjeta.Numero = result.value.numero;
-        console.log('Tarjeta guardada:', this.tarjeta);
-        
-        // Confirmación visual
-        Swal.fire({
-          icon: 'success',
-          title: 'Datos guardados correctamente',
-          text: 'Los datos de la tarjeta han sido registrados',
-          timer: 2500,
-          showConfirmButton: false
+
+      this.tarjeta.Titular = datos.titular;
+      this.tarjeta.Dni = datos.dni;
+      this.tarjeta.Numero = datos.numero;
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Datos guardados correctamente',
+        text: 'Los datos de la tarjeta han sido registrados',
+        timer: 2500,
+        showConfirmButton: false
+      }).then(() => {
+        this.mostrarProductos = true;
+        this.mostrarLoading();
+
+        this.loadDataLazy({
+          first: 0,
+          rows: this.rows,
+          sortField: this.sortField,
+          sortOrder: this.sortOrder,
+          filters: this.filters
         }).then(() => {
-          // Activar la visualización de productos
-          this.mostrarProductos = true;
-          
-          // Mostrar loading antes de cargar los productos
-          this.mostrarLoading();
-          
-          // NUEVO: Cargar con lazy loading
-          this.loadDataLazy({
-            first: 0,
-            rows: this.rows,
-            sortField: this.sortField,
-            sortOrder: this.sortOrder,
-            filters: this.filters
-          }).then(() => {
-            Swal.close();
-          }).catch(error => {
-            console.error('Error al cargar productos:', error);
-            Swal.close();
-            Swal.fire({
-              icon: 'error',
-              title: 'Error',
-              text: 'No se pudieron cargar los productos'
-            });
+          Swal.close();
+        }).catch(error => {
+          console.error('Error al cargar productos:', error);
+          Swal.close();
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar los productos'
           });
         });
-      }
+      });
     });
   }
 

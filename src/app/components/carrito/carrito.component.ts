@@ -102,7 +102,7 @@ export class CarritoComponent implements OnDestroy {
       title: 'Numero de Cupon',
       html: `
         <p>Ingrese el numero de cupon de la operacion con tarjeta (4 a 6 digitos).</p>
-        <input type="number" id="cupon" class="swal2-input" placeholder="Nro de cupon" min="1000" max="999999">
+        <input type="text" id="cupon" class="swal2-input" placeholder="Nro de cupon" inputmode="numeric" pattern="[0-9]*" maxlength="6">
       `,
       showCancelButton: true,
       confirmButtonText: 'Confirmar',
@@ -112,7 +112,7 @@ export class CarritoComponent implements OnDestroy {
       focusConfirm: false,
       preConfirm: () => {
         const value = (<HTMLInputElement>document.getElementById('cupon')).value;
-        if (!/^[1-9][0-9]{3,5}$/.test(value)) {
+        if (!/^[0-9]{4,6}$/.test(value)) {
           Swal.showValidationMessage('El cupon debe tener entre 4 y 6 digitos.');
           return false;
         }

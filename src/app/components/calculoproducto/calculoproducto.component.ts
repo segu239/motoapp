@@ -33,7 +33,7 @@ export class CalculoproductoComponent {
     'tipoprecio': "",
     'cod_tar': 0,
     'titulartar': "",
-    'numerotar': 0,
+    'numerotar': null,
     'cod_mov': 0,
     'suc_destino': 0,
     'nomart': "",
@@ -218,8 +218,8 @@ export class CalculoproductoComponent {
     if (this.tarjeta.Titular != undefined) {
       this.pedido.titulartar = this.tarjeta.Titular;
     }
-    if (this.tarjeta.Numero != undefined) {
-      this.pedido.numerotar = parseInt(this.tarjeta.Numero);
+    if (this.tarjeta.Numero != undefined && this.tarjeta.Numero !== '') {
+      this.pedido.numerotar = this.tarjeta.Numero;
     }
     if (this.tarjeta.Dni != undefined) {
       this.pedido.dni_tar = parseInt(this.tarjeta.Dni);

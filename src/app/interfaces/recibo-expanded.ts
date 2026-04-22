@@ -35,7 +35,7 @@ export interface PsucursalExpanded {
   cod_tar: number;
   tarjeta?: string;
   titulartar: string;
-  numerotar: number;
+  numerotar: number | string | null;
   cod_mov: number;
   suc_destino: number;
   nomart: string;
