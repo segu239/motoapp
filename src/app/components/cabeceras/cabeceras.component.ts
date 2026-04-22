@@ -47,8 +47,8 @@ export class CabecerasComponent implements OnDestroy {
   public bonificacionType: string = 'P'; // P = Porcentaje, I = Importe
   public tarjeta = {
     Titular: '',
-    Dni: 0,
-    Numero: '' as string,
+    Dni: '',
+    Numero: '',
     Autorizacion: 0
   };
   public cheque = {
@@ -120,8 +120,8 @@ export class CabecerasComponent implements OnDestroy {
   private limpiarTarjeta(): void {
     this.tarjeta = {
       Titular: '',
-      Dni: 0,
-      Numero: 0,
+      Dni: '',
+      Numero: '',
       Autorizacion: 0
     };
   }
