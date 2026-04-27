@@ -93,6 +93,39 @@
                     </div>
                 </div>
 
+                <div class="descuento-global-section">
+                    <div class="descuento-input-row">
+                        <label>Descuento global</label>
+                        <input type="number"
+                               class="form-control"
+                               min="0"
+                               step="0.01"
+                               [(ngModel)]="descuentoGlobal"
+                               (ngModelChange)="calcularResumenDescuentoGlobal()"
+                               [disabled]="hayItemsSoloConsulta()">
+                    </div>
+                    <div class="descuento-lines">
+                        <div>
+                            <span>Subtotal bruto</span>
+                            <strong>${{subtotalBruto | currencyFormat}}</strong>
+                        </div>
+                        <div>
+                            <span>Descuento</span>
+                            <strong>${{descuentoGlobal | currencyFormat}}</strong>
+                        </div>
+                        <div class="total-neto">
+                            <span>Total neto</span>
+                            <strong>${{totalNeto | currencyFormat}}</strong>
+                        </div>
+                    </div>
+                    <div *ngIf="tieneCuentaCorrienteEnCarrito() && descuentoGlobal > 0" class="alert alert-warning mt-2 mb-0">
+                        No se permite descuento global cuando interviene cuenta corriente.
+                    </div>
+                    <div *ngIf="(tipoDoc === 'PR' || tipoDoc === 'CS') && descuentoGlobal > 0" class="alert alert-warning mt-2 mb-0">
+                        El descuento global no esta habilitado para PR ni CS.
+                    </div>
+                </div>
+
                 <!-- NUEVO: Total Temporal cuando hay items en consulta -->
                 <div class="total-summary-temporal" *ngIf="hayItemsEnConsulta">
                     <div class="total-temporal-header">

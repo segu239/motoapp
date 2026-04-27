@@ -2272,7 +2272,7 @@ public function CabeceraCompletaPDF_post()
     }
     
     // Construir consulta
-    $this->db->select('tipo, numero_int, numero_fac, cliente, emitido, puntoventa, letra, usuario, cod_sucursal, bonifica, bonifica_tipo, interes, interes_tipo');
+    $this->db->select('id_num, tipo, numero_int, numero_fac, cliente, emitido, puntoventa, letra, usuario, cod_sucursal, bonifica, bonifica_tipo, interes, interes_tipo');
     $this->db->from($tabla);
     $this->db->where('tipo', $tipo);
     $this->db->where('numero_int', $numero_int);
@@ -2283,9 +2283,30 @@ public function CabeceraCompletaPDF_post()
     $result = $query->result_array();
     
     if (count($result) > 0) {
+        $cabecera = $result[0];
+        $descuentoGlobal = null;
+
+        if ($this->db->table_exists('fact_descuento_global')) {
+            $this->db->select('cod_sucursal, cabecera_id_num, tipo_comprobante, numero_int, numero_fac, puntoventa, subtotal_bruto, descuento_monto, total_neto, origen, usuario');
+            $this->db->from('fact_descuento_global');
+            $this->db->where('cod_sucursal', $sucursal);
+            $this->db->where('cabecera_id_num', $cabecera['id_num']);
+            $this->db->where('tipo_comprobante', $tipo);
+            $this->db->limit(1);
+
+            $descuentoQuery = $this->db->get();
+            $descuentoResult = $descuentoQuery->result_array();
+
+            if (count($descuentoResult) > 0) {
+                $descuentoGlobal = $descuentoResult[0];
+            }
+        }
+
+        $cabecera['descuento_global'] = $descuentoGlobal;
+
         $this->response([
             'error' => false,
-            'data' => $result[0]
+            'data' => $cabecera
         ]);
     } else {
         $this->response([

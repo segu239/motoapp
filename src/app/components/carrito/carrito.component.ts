@@ -55,6 +55,10 @@ export class CarritoComponent implements OnDestroy {
   public usuario: any;
   itemsConTipoPago: any[] = [];
   public subtotalesPorTipoPago: Array<{tipoPago: string, subtotal: number}> = [];
+  public descuentoGlobal: number = 0;
+  public subtotalBruto: number = 0;
+  public totalNeto: number = 0;
+  public subtotalesPorTipoPagoNetos: Array<{tipoPago: string, subtotal: number}> = [];
 
   // ════════════════════════════════════════════════════════════
   // Totales Temporales para Modo Consulta
@@ -638,11 +642,13 @@ export class CarritoComponent implements OnDestroy {
       this.suma += parseFloat((precioAUsar * item.cantidad).toFixed(2));
     }
     this.suma = parseFloat(this.suma.toFixed(2));
+    this.subtotalBruto = this.suma;
 
     // Recalcular subtotales por tipo de pago si las tarjetas ya están cargadas
     if (this.tarjetas && this.tarjetas.length > 0) {
       this.subtotalesPorTipoPago = this.calcularSubtotalesPorTipoPago();
     }
+    this.calcularResumenDescuentoGlobal();
   }
 
   /**
@@ -781,6 +787,118 @@ export class CarritoComponent implements OnDestroy {
     }
 
     return resultado;
+  }
+
+  private redondearImporte(valor: number): number {
+    return parseFloat((Number(valor || 0)).toFixed(2));
+  }
+
+  calcularResumenDescuentoGlobal(): void {
+    const descuento = this.redondearImporte(this.descuentoGlobal);
+    this.descuentoGlobal = descuento < 0 ? 0 : descuento;
+    this.totalNeto = this.redondearImporte(Math.max(this.subtotalBruto - this.descuentoGlobal, 0));
+    this.subtotalesPorTipoPagoNetos = this.calcularSubtotalesNetosPorTipoPago(this.subtotalesPorTipoPago);
+  }
+
+  tieneCuentaCorrienteEnCarrito(): boolean {
+    return this.itemsEnCarrito.some(item => String(item.cod_tar) === '111');
+  }
+
+  private tieneDescuentoGlobalActivo(): boolean {
+    return this.redondearImporte(this.descuentoGlobal) > 0;
+  }
+
+  validarDescuentoGlobal(mostrarAlerta: boolean = true): boolean {
+    this.calcularResumenDescuentoGlobal();
+
+    if (!this.tieneDescuentoGlobalActivo()) {
+      return true;
+    }
+
+    let mensaje = '';
+    if (this.descuentoGlobal < 0) {
+      mensaje = 'El descuento no puede ser menor a cero.';
+    } else if (this.descuentoGlobal > this.subtotalBruto) {
+      mensaje = 'El descuento no puede superar el subtotal bruto.';
+    } else if (this.tieneCuentaCorrienteEnCarrito()) {
+      mensaje = 'No se permite descuento global cuando interviene cuenta corriente.';
+    } else if (this.tipoDoc === 'PR' || this.tipoDoc === 'CS') {
+      mensaje = 'El descuento global no esta habilitado para PR ni CS.';
+    } else if (this.hayItemsSoloConsulta()) {
+      mensaje = 'No se puede aplicar descuento global con items en modo consulta.';
+    }
+
+    if (mensaje) {
+      if (mostrarAlerta) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Descuento global invalido',
+          text: mensaje
+        });
+      }
+      return false;
+    }
+
+    return true;
+  }
+
+  calcularSubtotalesNetosPorTipoPago(subtotales: Array<{tipoPago: string, subtotal: number}>): Array<{tipoPago: string, subtotal: number}> {
+    if (!subtotales || subtotales.length === 0) {
+      return [];
+    }
+
+    const descuento = this.redondearImporte(this.descuentoGlobal);
+    if (descuento <= 0 || this.subtotalBruto <= 0) {
+      return subtotales.map(item => ({
+        tipoPago: item.tipoPago,
+        subtotal: this.redondearImporte(item.subtotal)
+      }));
+    }
+
+    let acumulado = 0;
+    return subtotales.map((item, index) => {
+      let neto: number;
+      if (index === subtotales.length - 1) {
+        neto = this.redondearImporte(this.totalNeto - acumulado);
+      } else {
+        const proporcion = item.subtotal / this.subtotalBruto;
+        const descuentoItem = this.redondearImporte(descuento * proporcion);
+        neto = this.redondearImporte(item.subtotal - descuentoItem);
+        acumulado = this.redondearImporte(acumulado + neto);
+      }
+
+      return {
+        tipoPago: item.tipoPago,
+        subtotal: neto
+      };
+    });
+  }
+
+  buildDescuentoGlobalPayload(cabecera: any): any {
+    if (!this.tieneDescuentoGlobalActivo()) {
+      return null;
+    }
+
+    return {
+      subtotal_bruto: this.subtotalBruto,
+      descuento_monto: this.descuentoGlobal,
+      total_neto: this.totalNeto,
+      tipo_comprobante: this.tipoDoc,
+      puntoventa: Number(this.puntoventa),
+      numero_int: Number(this.numerocomprobante),
+      numero_fac: cabecera && cabecera.numero_fac ? Number(cabecera.numero_fac) : undefined,
+      origen: 'carrito',
+      usuario: cabecera && cabecera.usuario ? cabecera.usuario : ''
+    };
+  }
+
+  buildStockMovimientosPayload(): Array<{id_articulo: number, cantidad: number, sucursal: number}> {
+    const sucursal = Number(sessionStorage.getItem('sucursal') || this.sucursal || 0);
+    return this.itemsEnCarrito.map(item => ({
+      id_articulo: Number(item.id_articulo),
+      cantidad: Number(item.cantidad),
+      sucursal
+    }));
   }
 
   // ════════════════════════════════════════════════════════════
@@ -1069,6 +1187,10 @@ export class CarritoComponent implements OnDestroy {
       console.log('✅ Validación de items en consulta: OK');
       // ════════════════════════════════════════════════════════════
 
+      if (!this.validarDescuentoGlobal(true)) {
+        return;
+      }
+
       // ✅ VALIDACIÓN CAPA 3 (FINAL): Presupuestos solo con métodos permitidos
       console.log('🔍 DEBUG - Verificando si es PR. tipoDoc === "PR"?', this.tipoDoc === "PR");
 
@@ -1254,6 +1376,12 @@ export class CarritoComponent implements OnDestroy {
           
           // Usamos el objeto de mapeo, con fallback a 0 si no existe
           exi = mappedValues[sucursal] || 0;
+          if (this.tieneDescuentoGlobalActivo()) {
+            const stockMovimientos = this.buildStockMovimientosPayload();
+            this.agregarPedido(result, sucursal, stockMovimientos);
+            return;
+          }
+
           this._subirdata.editarStockArtSucxManagedPHP(stockData, exi).pipe(take(1)).subscribe({
             next: (data: any) => {
               console.log('Stock actualizado:', data);
@@ -1313,7 +1441,7 @@ export class CarritoComponent implements OnDestroy {
     };
     
     let codvent = this.getCodVta();
-    let saldo = this.sumarCuentaCorriente();
+    let saldo = this.tieneDescuentoGlobalActivo() ? 0 : this.sumarCuentaCorriente();
     
     // Asegurarse de que cliente.idcli no exceda el límite
     let clienteId;
@@ -1350,7 +1478,10 @@ export class CarritoComponent implements OnDestroy {
     }
 
     // MODIFICACIÓN CRÍTICA: Redondear suma ANTES de calcular IVA
-    const totalRedondeado = parseFloat(this.suma.toFixed(2));
+    this.calcularResumenDescuentoGlobal();
+    const totalRedondeado = this.tieneDescuentoGlobalActivo()
+      ? parseFloat(this.totalNeto.toFixed(2))
+      : parseFloat(this.suma.toFixed(2));
 
     let cabecera = {
       tipo: this.tipoDoc,
@@ -1460,7 +1591,7 @@ export class CarritoComponent implements OnDestroy {
   validateValue(value: string): boolean {
     return this.myRegex.test(value);
   }
-  agregarPedido(pedido: any, sucursal: any) {
+  agregarPedido(pedido: any, sucursal: any, stockMovimientos?: any[]) {
     let fecha = new Date();
     let fechaFormateada = fecha.toLocaleDateString('es-ES', {
       day: '2-digit',
@@ -1484,7 +1615,11 @@ export class CarritoComponent implements OnDestroy {
     // ====================================================================
     // SOLUCIÓN MÚLTIPLES CAJAS: Crear array de movimientos (uno por método)
     // ====================================================================
-    const cajaMoviPromise = this.crearCajasMovi(pedido, cabecera, fecha, subtotalesActualizados);
+    const subtotalesParaCaja = this.tieneDescuentoGlobalActivo()
+      ? this.calcularSubtotalesNetosPorTipoPago(subtotalesActualizados)
+      : subtotalesActualizados;
+    const descuentoGlobalPayload = this.buildDescuentoGlobalPayload(cabecera);
+    const cajaMoviPromise = this.crearCajasMovi(pedido, cabecera, fecha, subtotalesParaCaja);
 
     // Manejar la promesa para obtener el array de caja_movi
     if (cajaMoviPromise && cajaMoviPromise.then) {
@@ -1542,15 +1677,25 @@ export class CarritoComponent implements OnDestroy {
         */
 
         // Enviar array de movimientos al backend (sin subtotales)
-        this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, movimientos_caja).pipe(take(1)).subscribe((data: any) => {
+        this._subirdata.subirDatosPedidos(pedido, cabecera, sucursal, movimientos_caja, descuentoGlobalPayload, stockMovimientos).pipe(take(1)).subscribe({
+        next: (data: any) => {
+          if (data && data.error) {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.mensaje || 'No se pudo guardar el pedido'
+            });
+            return;
+          }
           console.log(data.mensaje);
           // ✅ LLAMADA ACTUALIZADA (pasar subtotales recalculados):
           this.imprimir(
             this.itemsEnCarrito,
             this.numerocomprobante,
             fechaFormateada,
-            this.suma,
-            subtotalesActualizados
+            this.tieneDescuentoGlobalActivo() ? this.totalNeto : this.suma,
+            subtotalesParaCaja,
+            descuentoGlobalPayload
           );
           //actualizar indices
           if (this.indiceTipoDoc != "") {
@@ -1567,9 +1712,19 @@ export class CarritoComponent implements OnDestroy {
           })
           this.itemsEnCarrito = [];
           this.itemsConTipoPago = [];
+          this.descuentoGlobal = 0;
           sessionStorage.setItem('carrito', JSON.stringify(this.itemsEnCarrito));
           this._carrito.actualizarCarrito(); // es para refrescar el numero del carrito del header
           this.calculoTotal();
+        },
+        error: (error) => {
+          console.error('Error al enviar pedido:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error?.error?.mensaje || 'No se pudo guardar el pedido'
+          });
+        }
         });
       }).catch(error => {
         console.error('❌ Error al crear los movimientos de caja:', error);
@@ -1720,7 +1875,8 @@ export class CarritoComponent implements OnDestroy {
     numerocomprobante: string,
     fecha: any,
     total: any,
-    subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>
+    subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>,
+    descuentoGlobalPayload?: any
   ) {
     //let cliente = JSON.parse(sessionStorage.getItem('datoscliente'));
 let cliente: Cliente;
@@ -1929,6 +2085,19 @@ try {
           },
           margin: [0, 0, 0, 10]
         }] : []),
+        ...(descuentoGlobalPayload && Number(descuentoGlobalPayload.descuento_monto) > 0 ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Subtotal bruto', '$' + Number(descuentoGlobalPayload.subtotal_bruto).toFixed(2)],
+              ['Descuento global', '$' + Number(descuentoGlobalPayload.descuento_monto).toFixed(2)],
+              ['Total neto', '$' + Number(descuentoGlobalPayload.total_neto).toFixed(2)]
+            ],
+            bold: false,
+          },
+          margin: [0, 0, 0, 10]
+        }] : []),
         // Tabla de TOTAL
         {
           style: 'tableExample',
@@ -2040,6 +2209,7 @@ try {
         console.error(`❌ No se encontró tarjeta para: ${subtotal.tipoPago}`);
         return Promise.resolve(null);
       }
+      const itemMetodo = pedido.find(item => String(item.cod_tar) === String(tarjetaInfo.cod_tarj)) || primerItem;
 
       // ✅ FIX: Usar idcp_egreso para NC/NV, idcp_ingreso para el resto
       const idConcepto = esEgreso ? tarjetaInfo.idcp_egreso : tarjetaInfo.idcp_ingreso;
@@ -2063,13 +2233,13 @@ try {
               fecha_mov: fechaFormateada,
               importe_mov: esEgreso ? -Math.abs(subtotal.subtotal) : subtotal.subtotal, // ✅ Negativo para NC/NV (egresos)
               descripcion_mov: '', // Se generará automáticamente en el backend
-              fecha_emibco: primerItem.fechacheque || null,
-              banco: limitNumericValue(primerItem.codigobanco, 9999999999),
-              num_cheque: limitNumericValue(primerItem.ncheque, 9999999999),
-              cuenta_mov: limitNumericValue(primerItem.ncuenta, 999999),
-              cliente: limitNumericValue(primerItem.idcli || cabecera.cliente, 9999999999),
+              fecha_emibco: itemMetodo.fechacheque || null,
+              banco: limitNumericValue(itemMetodo.codigobanco || itemMetodo.banco, 9999999999),
+              num_cheque: limitNumericValue(itemMetodo.ncheque, 9999999999),
+              cuenta_mov: limitNumericValue(itemMetodo.ncuenta, 999999),
+              cliente: limitNumericValue(itemMetodo.idcli || cabecera.cliente, 9999999999),
               proveedor: null,
-              plaza_cheque: primerItem.plaza || '',
+              plaza_cheque: itemMetodo.plaza || '',
               codigo_mbco: null,
               desc_bancaria: null,
               filler: null,
@@ -2082,7 +2252,7 @@ try {
               tipo_comprobante: primerItem.tipodoc || this.tipoDoc,
               numero_comprobante: limitNumericValue(this.numerocomprobante, 99999999),
               marca_cerrado: null,
-              usuario: primerItem.emailop || sessionStorage.getItem('emailOp') || '',
+              usuario: itemMetodo.emailop || sessionStorage.getItem('emailOp') || '',
               fecha_proceso: fechaFormateada
             };
           } else {
@@ -2163,7 +2333,7 @@ try {
         codigo_mov: idConcepto ? limitNumericValue(idConcepto, 9999999999) : null,
         num_operacion: 0,
         fecha_mov: fechaFormateada,
-        importe_mov: esEgreso ? -Math.abs(this.suma) : this.suma, // ✅ Negativo para NC/NV (egresos)
+        importe_mov: esEgreso ? -Math.abs(this.tieneDescuentoGlobalActivo() ? this.totalNeto : this.suma) : (this.tieneDescuentoGlobalActivo() ? this.totalNeto : this.suma), // ✅ Negativo para NC/NV (egresos)
         descripcion_mov: '',
         fecha_emibco: primerItem.fechacheque || null,
         banco: limitNumericValue(primerItem.codigobanco, 9999999999),

@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 import { LazyLoadEvent } from 'primeng/api';
 import { Table } from 'primeng/table';
 import { HistorialVenta2 } from '../../interfaces/historial-venta2';
-import { VentaExpandida } from '../../interfaces/recibo-expanded';
+import { DescuentoGlobalHistorico, VentaExpandida } from '../../interfaces/recibo-expanded';
 import { TotalizadorGeneral, TotalizadorTipoPago, TotalizadorPorTipo, TotalizadorPorSucursal } from '../../interfaces/totalizador-historial';
 import { PdfGeneratorService } from '../../services/pdf-generator.service';
 import { HistorialPdfService } from '../../services/historial-pdf.service';
@@ -610,13 +610,15 @@ export class Historialventas2Component implements OnInit, OnDestroy {
           this.expandedRows[key] = {
             recibos: response.data.recibos || [],
             historialPagos: response.data.historialPagos || [],
-            totalPagado: response.data.totalPagado || 0
+            totalPagado: response.data.totalPagado || 0,
+            descuento_global: response.data.descuento_global || null
           };
         } else {
           this.expandedRows[key] = {
             recibos: [],
             historialPagos: [],
-            totalPagado: 0
+            totalPagado: 0,
+            descuento_global: null
           };
         }
         
@@ -628,7 +630,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         this.expandedRows[key] = {
           recibos: [],
           historialPagos: [],
-          totalPagado: 0
+          totalPagado: 0,
+          descuento_global: null
         };
         this.loadingExpanded[key] = false;
       }
@@ -665,6 +668,36 @@ export class Historialventas2Component implements OnInit, OnDestroy {
     );
     
     return facturaOriginal || expandedData.recibos[0];
+  }
+
+  public toMoneyNumber(value: unknown): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  public getDescuentoGlobalHistorico(expandedData: VentaExpandida | null, facturaOriginal?: any): DescuentoGlobalHistorico | null {
+    const descuento = facturaOriginal?.descuento_global || expandedData?.descuento_global || null;
+
+    if (!descuento || this.toMoneyNumber(descuento.descuento_monto) <= 0) {
+      return null;
+    }
+
+    return descuento;
+  }
+
+  public getSubtotalBrutoHistorico(expandedData: VentaExpandida | null, facturaOriginal?: any): number {
+    const descuento = this.getDescuentoGlobalHistorico(expandedData, facturaOriginal);
+    return descuento ? this.toMoneyNumber(descuento.subtotal_bruto) : this.toMoneyNumber(facturaOriginal?.importe);
+  }
+
+  public getDescuentoMontoHistorico(expandedData: VentaExpandida | null, facturaOriginal?: any): number {
+    const descuento = this.getDescuentoGlobalHistorico(expandedData, facturaOriginal);
+    return descuento ? this.toMoneyNumber(descuento.descuento_monto) : 0;
+  }
+
+  public getTotalNetoHistorico(expandedData: VentaExpandida | null, facturaOriginal?: any): number {
+    const descuento = this.getDescuentoGlobalHistorico(expandedData, facturaOriginal);
+    return descuento ? this.toMoneyNumber(descuento.total_neto) : this.toMoneyNumber(facturaOriginal?.importe);
   }
 
   // Obtener solo los pagos realizados (excluyendo la factura original)
@@ -741,6 +774,21 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         return total + parseFloat(pago.interes);
       }
     }, 0);
+  }
+
+  // Calcular resumen final usando los pagos visibles en el detalle expandido.
+  public calcularTotalCobradoNeto(expandedData: VentaExpandida): number {
+    const pagosReales = this.getPagosRealizados(expandedData);
+    if (!pagosReales || pagosReales.length === 0) {
+      return this.toMoneyNumber(expandedData?.totalPagado);
+    }
+
+    return pagosReales.reduce((total, pago) => total + this.toMoneyNumber(pago.importe), 0);
+  }
+
+  public calcularSaldoPendienteResumen(venta: HistorialVenta2, expandedData: VentaExpandida): number {
+    const saldo = this.toMoneyNumber(venta.importe) - this.calcularTotalCobradoNeto(expandedData);
+    return Math.abs(saldo) < 0.01 ? 0 : saldo;
   }
 
   // Generar PDF específico de la factura original
@@ -1366,6 +1414,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
       
       // Obtener datos expandidos para calcular saldo
       const ventaExpandida = this.getExpandedData(venta);
+      const facturaOriginal = ventaExpandida ? this.getFacturaOriginal(ventaExpandida) : null;
+      const descuentoGlobal = this.getDescuentoGlobalHistorico(ventaExpandida, facturaOriginal);
       let saldoPendiente = venta.saldo || 0;
 
       if (ventaExpandida && ventaExpandida.historialPagos && ventaExpandida.historialPagos.length > 0) {
@@ -1381,7 +1431,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         importe: pago.importe,
         recibo_saldo: pago.recibo_saldo,
         saldoPendiente: saldoPendiente,
-        importeOriginal: venta.importe
+        importeOriginal: descuentoGlobal ? this.toMoneyNumber(descuentoGlobal.total_neto) : venta.importe,
+        descuentoGlobal: descuentoGlobal
       });
 
       // Preparar datos para el recibo
@@ -1396,7 +1447,8 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         tipoDocumento: pago.c_tipo,
         numeroFactura: pago.c_numero,
         saldoPendiente: saldoPendiente,
-        importeOriginal: venta.importe,
+        importeOriginal: descuentoGlobal ? this.toMoneyNumber(descuentoGlobal.total_neto) : venta.importe,
+        descuentoGlobal: descuentoGlobal,
         // Agregar bonificaciones e intereses del pago
         bonifica: pago.bonifica || 0,
         bonifica_tipo: pago.bonifica_tipo || 'P',
@@ -1601,6 +1653,26 @@ export class Historialventas2Component implements OnInit, OnDestroy {
         },
         
         // Información Financiera Adicional - BONIFICACIONES E INTERESES
+        ...(datos.descuentoGlobal && this.toMoneyNumber(datos.descuentoGlobal.descuento_monto) > 0 ? [
+          {
+            text: 'Resumen de venta con descuento global',
+            fontSize: 10,
+            bold: true,
+            margin: [0, 10, 0, 2]
+          },
+          {
+            style: 'tableExample',
+            table: {
+              widths: ['70%', '30%'],
+              body: [
+                ['Subtotal bruto de venta', '$ ' + this.toMoneyNumber(datos.descuentoGlobal.subtotal_bruto).toFixed(2)],
+                ['Descuento global aplicado', '$ ' + this.toMoneyNumber(datos.descuentoGlobal.descuento_monto).toFixed(2)],
+                ['Total neto de venta', '$ ' + this.toMoneyNumber(datos.descuentoGlobal.total_neto).toFixed(2)]
+              ]
+            },
+            margin: [0, 0, 0, 5]
+          }
+        ] : []),
         ...(datos.bonifica && datos.bonifica > 0 ? [{
           style: 'tableExample',
           table: {

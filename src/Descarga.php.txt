@@ -1088,6 +1088,23 @@ public function PedidossucxappCompleto_post() {
         $id_vend = isset($data["id_vend"]) ? $data["id_vend"] : null;
         $caja_movi = isset($data["caja_movi"]) ? $data["caja_movi"] : null;
         $subtotales_metodos_pago = isset($data["subtotales_metodos_pago"]) ? $data["subtotales_metodos_pago"] : null;
+        $descuento_global = isset($data["descuento_global"]) ? $data["descuento_global"] : null;
+        $stock_movimientos = isset($data["stock_movimientos"]) ? $data["stock_movimientos"] : null;
+        $descuento_monto = $this->obtenerMontoDescuentoGlobal($descuento_global);
+
+        if ($descuento_monto > 0 || !empty($stock_movimientos)) {
+            if ($descuento_monto > 0 && !$this->isFeatureFlagEnabled('descuento_global_activo')) {
+                $respuesta = array(
+                    "error" => true,
+                    "mensaje" => "El descuento global de carrito no esta habilitado"
+                );
+                $this->response($respuesta, REST_Controller::HTTP_FORBIDDEN);
+                return;
+            }
+
+            $this->procesarPedidoAtomicoDescuentoGlobal($pedidos, $cabecera, $id_vend, $caja_movi, $descuento_global, $stock_movimientos);
+            return;
+        }
 
         // Verificar que los datos necesarios no sean nulos
         if ($pedidos && $cabecera && $id_vend) {
@@ -1354,6 +1371,15 @@ $data=$this->post();
 if(isset($data) AND count($data)>0){ // TIENE QUE IR PUESTO ACA PR QUE SINO ME DA ERROR POR UNDEFINED INDEX CLIENTES
 // para array como en el caso de $data se usa count en lugar de strlen ya que este es para strings
 
+if (isset($data["descuento_global"]) || isset($data["stock_movimientos"])) {
+  $respuesta=array(
+    "error"=>true,
+    "mensaje"=>"El endpoint legacy no soporta descuento_global ni stock_movimientos"
+  );
+   $this->response($respuesta,REST_Controller::HTTP_BAD_REQUEST);
+   return;
+}
+
 $datos=$data["pedidos"];
 $id_vend=$data["id_vend"]; //ESTO ES PARA DIRECCIONAR EL NOMBRE DE LA TABLA
 $tabla='psucursal'.$id_vend;
@@ -1391,13 +1417,15 @@ else // ESTE ELSE ES POR SI NO SE ENVIAN DATOS EN EL POST
  * Función auxiliar para generar recibo automáticamente
  * Se ejecuta para todas las operaciones sin importar el saldo
  */
-private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
+private function generarReciboAutomatico($cabecera, $id_num, $id_vend, $strict = false, $limpiar_bonificaciones = false) {
     try {
         // Generar número de recibo único
         $numero_recibo = $this->getNextReciboNumber($id_vend);
         
         // Calcular importe total
-        $importe_total = floatval($cabecera['basico']) + floatval($cabecera['iva1']);
+        $importe_total = $strict
+            ? $this->calcularTotalCabeceraCanonico($cabecera)
+            : floatval($cabecera['basico']) + floatval($cabecera['iva1']);
         
         // Determinar el saldo del recibo (0 para operaciones al contado)
         $recibo_saldo = isset($cabecera['saldo']) ? floatval($cabecera['saldo']) : 0;
@@ -1420,16 +1448,19 @@ private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
             'recibo_saldo' => $recibo_saldo,
             'cod_sucursal' => $id_vend,
             'fec_proceso' => date('Y-m-d'),
-            'bonifica' => isset($cabecera['bonifica']) ? $cabecera['bonifica'] : 0,
-            'bonifica_tipo' => isset($cabecera['bonifica_tipo']) ? $cabecera['bonifica_tipo'] : 'P',
-            'interes' => isset($cabecera['interes']) ? $cabecera['interes'] : 0,
-            'interes_tipo' => isset($cabecera['interes_tipo']) ? $cabecera['interes_tipo'] : 'P',
+            'bonifica' => $limpiar_bonificaciones ? 0 : (isset($cabecera['bonifica']) ? $cabecera['bonifica'] : 0),
+            'bonifica_tipo' => $limpiar_bonificaciones ? 'P' : (isset($cabecera['bonifica_tipo']) ? $cabecera['bonifica_tipo'] : 'P'),
+            'interes' => $limpiar_bonificaciones ? 0 : (isset($cabecera['interes']) ? $cabecera['interes'] : 0),
+            'interes_tipo' => $limpiar_bonificaciones ? 'P' : (isset($cabecera['interes_tipo']) ? $cabecera['interes_tipo'] : 'P'),
             'id_fac' => $id_num
         );
         
         // Insertar recibo en la tabla correspondiente
         $tabla_recibos = 'recibos' . $id_vend;
         $this->db->insert($tabla_recibos, $recibo);
+        if ($strict && $this->db->affected_rows() <= 0) {
+            throw new Exception('Error al insertar recibo automatico');
+        }
         
         // Log del recibo generado
         log_message('info', 'Recibo generado automáticamente: ' . $numero_recibo . ' para operación: ' . $id_num);
@@ -1437,7 +1468,419 @@ private function generarReciboAutomatico($cabecera, $id_num, $id_vend) {
     } catch (Exception $e) {
         // Log del error pero no interrumpir la transacción principal
         log_message('error', 'Error al generar recibo automático: ' . $e->getMessage());
+        if ($strict) {
+            throw $e;
+        }
     }
+}
+
+private function procesarPedidoAtomicoDescuentoGlobal($pedidos, $cabecera, $id_vend, $caja_movi, $descuento_global, $stock_movimientos) {
+    if (!$pedidos || !$cabecera || !$id_vend) {
+        $this->response(array(
+            "error" => true,
+            "mensaje" => "Datos incompletos en el POST"
+        ), REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    if (!is_array($pedidos) || count($pedidos) === 0) {
+        $this->response(array(
+            "error" => true,
+            "mensaje" => "El pedido no contiene productos"
+        ), REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    if (!is_numeric($id_vend) || intval($id_vend) < 1 || intval($id_vend) > 5) {
+        $this->response(array(
+            "error" => true,
+            "mensaje" => "Sucursal invalida"
+        ), REST_Controller::HTTP_BAD_REQUEST);
+        return;
+    }
+
+    $id_vend = intval($id_vend);
+    $tabla = 'psucursal' . $id_vend;
+    $tabla_cabecera = 'factcab' . $id_vend;
+    $tipo = isset($cabecera['tipo']) ? trim($cabecera['tipo']) : '';
+    $descuento_monto = $this->obtenerMontoDescuentoGlobal($descuento_global);
+    $transaccion_abierta = false;
+
+    try {
+        if (!$this->db->table_exists($tabla) || !$this->db->table_exists($tabla_cabecera)) {
+            throw new Exception('Tablas de sucursal inexistentes');
+        }
+
+        if (!$this->db->table_exists('fact_descuento_global')) {
+            throw new Exception('No existe la tabla fact_descuento_global');
+        }
+
+        if ($descuento_monto > 0 && !in_array($tipo, array('FC', 'ND', 'NC', 'NV'))) {
+            throw new Exception('Tipo de comprobante no habilitado para descuento global');
+        }
+
+        if ($descuento_monto > 0 && empty($stock_movimientos)) {
+            throw new Exception('Faltan movimientos de stock para operar con descuento global');
+        }
+
+        $subtotal_bruto = $this->calcularSubtotalBrutoPedidos($pedidos);
+        if ($descuento_monto < 0 || $descuento_monto > $subtotal_bruto) {
+            throw new Exception('Descuento global fuera de rango');
+        }
+
+        if ($descuento_monto > 0 && $this->pedidosContienenCuentaCorriente($pedidos)) {
+            throw new Exception('No se permite descuento global con cuenta corriente');
+        }
+
+        if ($descuento_global && is_array($descuento_global)) {
+            if (isset($descuento_global['subtotal_bruto']) && abs(floatval($descuento_global['subtotal_bruto']) - $subtotal_bruto) > 0.01) {
+                throw new Exception('El subtotal bruto enviado no coincide con el recalculado');
+            }
+        }
+
+        $total_neto = round($subtotal_bruto - $descuento_monto, 2);
+        if ($descuento_global && is_array($descuento_global) && isset($descuento_global['total_neto'])) {
+            if (abs(floatval($descuento_global['total_neto']) - $total_neto) > 0.01) {
+                throw new Exception('El total neto enviado no coincide con el recalculado');
+            }
+        }
+
+        $cabecera_total = $this->calcularTotalCabeceraCanonico($cabecera);
+        if (abs($cabecera_total - $total_neto) > 0.01) {
+            throw new Exception('La cabecera no cierra contra el total neto');
+        }
+
+        $movimientos_caja = $this->normalizarMovimientosCaja($caja_movi);
+        $this->validarCierreCajaContraTotal($movimientos_caja, $tipo, $total_neto);
+        $this->validarConceptosCajaContraTarjetas($movimientos_caja, $pedidos, $tipo);
+
+        $this->db->trans_begin();
+        $transaccion_abierta = true;
+
+        $this->db->set($cabecera);
+        $this->db->insert($tabla_cabecera);
+        if ($this->db->affected_rows() <= 0) {
+            throw new Exception('Error al insertar cabecera');
+        }
+
+        $id_num = $this->db->insert_id();
+        if (!is_numeric($id_num) || intval($id_num) <= 0) {
+            throw new Exception('No se obtuvo id_num valido para la cabecera');
+        }
+        $id_num = intval($id_num);
+        $contador_exitosas = 1;
+
+        foreach ($pedidos as $valor) {
+            $valor['id_num'] = $id_num;
+            $this->db->insert($tabla, $valor);
+            if ($this->db->affected_rows() <= 0) {
+                throw new Exception('Error al insertar producto en ' . $tabla);
+            }
+            $contador_exitosas += $this->db->affected_rows();
+        }
+
+        if (!empty($stock_movimientos)) {
+            $this->aplicarStockMovimientosAtomico($stock_movimientos, $tipo, $id_vend);
+        }
+
+        if ($descuento_monto > 0) {
+            $this->insertarDescuentoGlobalAtomico($descuento_global, $cabecera, $id_num, $id_vend, $subtotal_bruto, $descuento_monto, $total_neto);
+            $contador_exitosas++;
+        }
+
+        $this->generarReciboAutomatico($cabecera, $id_num, $id_vend, true, $descuento_monto > 0);
+        $contador_exitosas++;
+
+        $contador_exitosas += $this->insertarMovimientosCajaAtomicos($movimientos_caja, $id_num);
+
+        if ($this->db->trans_status() === FALSE) {
+            throw new Exception('Error transaccional al guardar la operacion');
+        }
+
+        $this->db->trans_commit();
+
+        $this->response(array(
+            "error" => false,
+            "mensaje" => $contador_exitosas,
+            "id_num" => $id_num
+        ));
+    } catch (Exception $e) {
+        if ($transaccion_abierta) {
+            $this->db->trans_rollback();
+        }
+
+        log_message('error', 'Error en descuento global atomico: ' . $e->getMessage());
+        $this->response(array(
+            "error" => true,
+            "mensaje" => $e->getMessage()
+        ), REST_Controller::HTTP_BAD_REQUEST);
+    }
+}
+
+private function obtenerMontoDescuentoGlobal($descuento_global) {
+    if (!$descuento_global || !is_array($descuento_global)) {
+        return 0;
+    }
+
+    if (!isset($descuento_global['descuento_monto']) || !is_numeric($descuento_global['descuento_monto'])) {
+        return 0;
+    }
+
+    return round(floatval($descuento_global['descuento_monto']), 2);
+}
+
+private function isFeatureFlagEnabled($flag_name) {
+    if (!$this->db->table_exists('app_feature_flags')) {
+        return false;
+    }
+
+    $query = $this->db
+        ->select('enabled')
+        ->from('app_feature_flags')
+        ->where('flag_name', $flag_name)
+        ->limit(1)
+        ->get();
+
+    if (!$query || $query->num_rows() === 0) {
+        return false;
+    }
+
+    $enabled = $query->row()->enabled;
+    return $enabled === true || $enabled === 't' || $enabled === '1' || intval($enabled) === 1;
+}
+
+private function calcularSubtotalBrutoPedidos($pedidos) {
+    $subtotal = 0;
+    foreach ($pedidos as $pedido) {
+        $precio = isset($pedido['precio']) && is_numeric($pedido['precio']) ? floatval($pedido['precio']) : 0;
+        $cantidad = isset($pedido['cantidad']) && is_numeric($pedido['cantidad']) ? floatval($pedido['cantidad']) : 0;
+        $subtotal += round($precio * $cantidad, 2);
+    }
+    return round($subtotal, 2);
+}
+
+private function calcularTotalCabeceraCanonico($cabecera) {
+    $campos = array('exento', 'basico', 'iva1', 'iva2', 'iva3');
+    $total = 0;
+    foreach ($campos as $campo) {
+        $total += isset($cabecera[$campo]) && is_numeric($cabecera[$campo]) ? floatval($cabecera[$campo]) : 0;
+    }
+    return round($total, 2);
+}
+
+private function pedidosContienenCuentaCorriente($pedidos) {
+    foreach ($pedidos as $pedido) {
+        if (isset($pedido['cod_tar']) && intval($pedido['cod_tar']) === 111) {
+            return true;
+        }
+    }
+    return false;
+}
+
+private function normalizarMovimientosCaja($caja_movi) {
+    if (!$caja_movi) {
+        return array();
+    }
+
+    if (isset($caja_movi[0]) && is_array($caja_movi[0])) {
+        return $caja_movi;
+    }
+
+    if (is_array($caja_movi)) {
+        return array($caja_movi);
+    }
+
+    return array();
+}
+
+private function validarCierreCajaContraTotal($movimientos_caja, $tipo, $total_neto) {
+    if (!$movimientos_caja || count($movimientos_caja) === 0) {
+        throw new Exception('Faltan movimientos de caja');
+    }
+
+    $suma_caja = 0;
+    foreach ($movimientos_caja as $movimiento) {
+        if (!isset($movimiento['importe_mov']) || !is_numeric($movimiento['importe_mov'])) {
+            throw new Exception('Movimiento de caja sin importe valido');
+        }
+        $suma_caja += floatval($movimiento['importe_mov']);
+    }
+
+    $esperado = ($tipo === 'NC' || $tipo === 'NV') ? -abs($total_neto) : abs($total_neto);
+    if (abs(round($suma_caja, 2) - round($esperado, 2)) > 0.01) {
+        throw new Exception('La caja no cierra contra el total neto');
+    }
+}
+
+private function validarConceptosCajaContraTarjetas($movimientos_caja, $pedidos, $tipo) {
+    $codigos_tarjeta = array();
+    foreach ($pedidos as $pedido) {
+        if (isset($pedido['cod_tar'])) {
+            $codigos_tarjeta[] = intval($pedido['cod_tar']);
+        }
+    }
+    $codigos_tarjeta = array_values(array_unique($codigos_tarjeta));
+
+    if (count($codigos_tarjeta) === 0) {
+        throw new Exception('No se pudo determinar el medio de pago');
+    }
+
+    $campo_concepto = ($tipo === 'NC' || $tipo === 'NV') ? 'idcp_egreso' : 'idcp_ingreso';
+    $conceptos_validos = array();
+
+    foreach ($codigos_tarjeta as $cod_tarj) {
+        $query = $this->db
+            ->select($campo_concepto)
+            ->from('tarjcredito')
+            ->where('cod_tarj', $cod_tarj)
+            ->limit(1)
+            ->get();
+
+        if (!$query || $query->num_rows() === 0) {
+            throw new Exception('No existe tarjcredito para cod_tar ' . $cod_tarj);
+        }
+
+        $row = $query->row();
+        $concepto = intval($row->$campo_concepto);
+        if ($concepto <= 0) {
+            throw new Exception('La tarjeta ' . $cod_tarj . ' no tiene concepto de caja configurado');
+        }
+        $conceptos_validos[] = $concepto;
+    }
+
+    foreach ($movimientos_caja as $movimiento) {
+        $codigo_mov = isset($movimiento['codigo_mov']) ? intval($movimiento['codigo_mov']) : 0;
+        if (!in_array($codigo_mov, $conceptos_validos)) {
+            throw new Exception('codigo_mov no corresponde al sentido del comprobante o medio de pago');
+        }
+    }
+}
+
+private function aplicarStockMovimientosAtomico($stock_movimientos, $tipo, $id_vend) {
+    $sucursal_exi = array(
+        1 => 'exi2',
+        2 => 'exi3',
+        3 => 'exi4',
+        4 => 'exi1',
+        5 => 'exi5'
+    );
+
+    if (!isset($sucursal_exi[$id_vend])) {
+        throw new Exception('Sucursal sin mapeo de stock');
+    }
+
+    $campo_exi = $sucursal_exi[$id_vend];
+    $signo = ($tipo === 'NC' || $tipo === 'NV') ? 1 : -1;
+
+    foreach ($stock_movimientos as $movimiento) {
+        $id_articulo = isset($movimiento['id_articulo']) ? intval($movimiento['id_articulo']) : 0;
+        $cantidad = isset($movimiento['cantidad']) && is_numeric($movimiento['cantidad']) ? floatval($movimiento['cantidad']) : 0;
+
+        if ($id_articulo <= 0 || $cantidad <= 0) {
+            throw new Exception('Movimiento de stock invalido');
+        }
+
+        $delta = $signo * $cantidad;
+        $this->db->set($campo_exi, $campo_exi . ' + (' . $this->db->escape($delta) . ')', false);
+        $this->db->where('id_articulo', $id_articulo);
+        $this->db->update('artsucursal');
+
+        if ($this->db->affected_rows() <= 0) {
+            throw new Exception('No se pudo actualizar stock del articulo ' . $id_articulo);
+        }
+    }
+}
+
+private function insertarDescuentoGlobalAtomico($descuento_global, $cabecera, $id_num, $id_vend, $subtotal_bruto, $descuento_monto, $total_neto) {
+    $numero_int = isset($cabecera['numero_int']) ? $cabecera['numero_int'] : null;
+    $puntoventa = isset($cabecera['puntoventa']) ? $cabecera['puntoventa'] : null;
+    $tipo = isset($cabecera['tipo']) ? $cabecera['tipo'] : null;
+
+    if ($numero_int === null || $puntoventa === null || !$tipo) {
+        throw new Exception('Cabecera incompleta para sidecar de descuento');
+    }
+
+    if ($descuento_global && is_array($descuento_global) && isset($descuento_global['origen']) && $descuento_global['origen'] !== 'carrito') {
+        throw new Exception('Origen de descuento invalido');
+    }
+
+    $sidecar = array(
+        'cod_sucursal' => $id_vend,
+        'cabecera_id_num' => $id_num,
+        'tipo_comprobante' => $tipo,
+        'numero_int' => $numero_int,
+        'numero_fac' => isset($cabecera['numero_fac']) ? $cabecera['numero_fac'] : null,
+        'puntoventa' => $puntoventa,
+        'subtotal_bruto' => $subtotal_bruto,
+        'descuento_monto' => $descuento_monto,
+        'total_neto' => $total_neto,
+        'usuario' => isset($cabecera['usuario']) ? substr($cabecera['usuario'], 0, 12) : null,
+        'origen' => 'carrito'
+    );
+
+    $this->db->insert('fact_descuento_global', $sidecar);
+    if ($this->db->affected_rows() <= 0) {
+        throw new Exception('Error al insertar fact_descuento_global');
+    }
+}
+
+private function limpiarMovimientoCaja($movimiento, $id_num) {
+    $movimiento['num_operacion'] = $id_num;
+
+    foreach(array('fecha_mov', 'fecha_emibco', 'fecha_cobro_bco', 'fecha_vto_bco', 'fecha_proceso') as $dateField) {
+        if (isset($movimiento[$dateField]) && empty($movimiento[$dateField])) {
+            $movimiento[$dateField] = null;
+        }
+    }
+
+    $numeric_limit_fields = array(
+        'sucursal' => 999999,
+        'codigo_mov' => 9999999999,
+        'num_operacion' => 9999999999,
+        'banco' => 9999999999,
+        'num_cheque' => 9999999999,
+        'cuenta_mov' => 999999,
+        'cliente' => 9999999999,
+        'proveedor' => 9999999999,
+        'codigo_mbco' => 9999999999,
+        'punto_venta' => 9999,
+        'numero_comprobante' => 99999999
+    );
+
+    foreach ($numeric_limit_fields as $field => $limit) {
+        if (isset($movimiento[$field]) && $movimiento[$field] !== '' && $movimiento[$field] !== null) {
+            if (is_numeric($movimiento[$field]) && $movimiento[$field] > $limit) {
+                $movimiento[$field] = $limit;
+            }
+        } else {
+            $movimiento[$field] = null;
+        }
+    }
+
+    foreach(array('plaza_cheque', 'desc_bancaria', 'letra', 'tipo_comprobante') as $strField) {
+        if (isset($movimiento[$strField]) && $movimiento[$strField] === '') {
+            $movimiento[$strField] = null;
+        }
+    }
+
+    if (isset($movimiento['tipo_movi']) && $movimiento['tipo_movi'] === 'A') {
+        $movimiento['descripcion_mov'] = $this->generarDescripcionAutomatica($movimiento);
+    }
+
+    return $movimiento;
+}
+
+private function insertarMovimientosCajaAtomicos($movimientos_caja, $id_num) {
+    $insertados = 0;
+    foreach ($movimientos_caja as $index => $movimiento) {
+        $movimiento = $this->limpiarMovimientoCaja($movimiento, $id_num);
+        $this->db->insert('caja_movi', $movimiento);
+        if ($this->db->affected_rows() <= 0) {
+            throw new Exception('Error al insertar movimiento de caja #' . $index);
+        }
+        $insertados += $this->db->affected_rows();
+    }
+    return $insertados;
 }
 
 /**
@@ -5380,7 +5823,7 @@ public function obtenerDatosExpandidos_get()
         // CORREGIDO: Usar cliente en lugar de numero_fac para evitar mezcla de datos
         
         // Primero obtener la factura para conseguir cliente y numero_fac
-        $this->db->select('numero_fac, cliente');
+        $this->db->select('id_num, tipo, numero_int, numero_fac, puntoventa, cliente');
         $this->db->from($tablaFactcab);
         $this->db->where('id_num', $id_factura);
         $queryFactura = $this->db->get();
@@ -5392,6 +5835,21 @@ public function obtenerDatosExpandidos_get()
         
         $numero_fac = $factura['numero_fac'];
         $cliente_id = $factura['cliente'];
+        $descuentoGlobal = null;
+
+        if ($this->db->table_exists('fact_descuento_global')) {
+            $this->db->select('cod_sucursal, cabecera_id_num, tipo_comprobante, numero_int, numero_fac, puntoventa, subtotal_bruto, descuento_monto, total_neto, origen, usuario');
+            $this->db->from('fact_descuento_global');
+            $this->db->where('cod_sucursal', $sucursal);
+            $this->db->where('cabecera_id_num', $id_factura);
+            $this->db->limit(1);
+            $queryDescuentoGlobal = $this->db->get();
+            $descuentoResult = $queryDescuentoGlobal->result_array();
+
+            if (count($descuentoResult) > 0) {
+                $descuentoGlobal = $descuentoResult[0];
+            }
+        }
         
         // Consulta UNION CORREGIDA para obtener recibos directos + recibos RC relacionados
         // CAMBIO CRÍTICO: Agregado filtro por cliente para evitar mezcla de datos entre clientes
@@ -5512,13 +5970,25 @@ public function obtenerDatosExpandidos_get()
             
             // Agregar productos al recibo
             $recibos[$index]['productos'] = $productos;
+            $recibos[$index]['descuento_global'] = null;
+
+            if (
+                $descuentoGlobal &&
+                isset($recibos[$index]['c_tipo']) &&
+                trim($recibos[$index]['c_tipo']) === trim($factura['tipo']) &&
+                isset($recibos[$index]['recibo_asoc']) &&
+                intval($recibos[$index]['recibo_asoc']) === intval($id_factura)
+            ) {
+                $recibos[$index]['descuento_global'] = $descuentoGlobal;
+            }
         }
 
         // Preparar respuesta con datos expandidos incluyendo historial de pagos
         $datosExpandidos = array(
             'recibos' => $recibos,
             'historialPagos' => $pagos,
-            'totalPagado' => $total_pagado
+            'totalPagado' => $total_pagado,
+            'descuento_global' => $descuentoGlobal
         );
 
         $respuesta = array(

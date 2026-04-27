@@ -174,6 +174,64 @@
     font-weight: 700;
 }
 
+.descuento-global-section {
+    border: 1px solid #dfe4ea;
+    border-radius: 6px;
+    padding: 14px;
+    margin: 10px 0 18px;
+    background-color: #ffffff;
+}
+
+.descuento-input-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 220px) minmax(160px, 260px);
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.descuento-input-row label {
+    margin: 0;
+    font-weight: 600;
+    color: #495057;
+}
+
+.descuento-lines {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.descuento-lines div {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #edf0f2;
+    border-radius: 4px;
+    background-color: #f8fafc;
+}
+
+.descuento-lines span {
+    color: #5e6e82;
+}
+
+.descuento-lines strong {
+    color: #3a3f51;
+}
+
+.descuento-lines .total-neto {
+    border-color: #b7d7f6;
+    background-color: #eef7ff;
+}
+
+@media (max-width: 767px) {
+    .descuento-input-row,
+    .descuento-lines {
+        grid-template-columns: 1fr;
+    }
+}
+
 .form-group-row {
     margin-bottom: 15px;
 }

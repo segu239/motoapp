@@ -41,6 +41,11 @@ interface DatosRecibo {
   letraValue: string;
   sucursalNombre: string;
   subtotalesTipoPago?: Array<{tipoPago: string, subtotal: number}>; // ✅ NUEVO
+  descuentoGlobalPayload?: {
+    subtotal_bruto: number;
+    descuento_monto: number;
+    total_neto: number;
+  };
 }
 
 @Injectable({
@@ -318,6 +323,8 @@ export class HistorialPdfService {
         console.log('📊 Subtotales calculados desde historial:', subtotalesTipoPago);
       }
 
+      const descuentoGlobalPayload = this.normalizarDescuentoGlobal(cabecera.descuento_global);
+
       // Preparar datos en el formato que espera generarPDFRecibo
       const datosRecibo: DatosRecibo = {
         items: productos.map((item: any) => ({
@@ -327,11 +334,13 @@ export class HistorialPdfService {
         })),
         numerocomprobante: datosCompletos.numeroSecuencial || numeroComprobante.numero_completo || ventaData.numero_fac?.toString() || ventaData.numero_int.toString(),
         fecha: ventaData.emitido,
-        total: parseFloat(
-          productos.reduce((sum: number, item: any) =>
-            sum + (item.cantidad * item.precio), 0
-          ).toFixed(2)
-        ),
+        total: descuentoGlobalPayload
+          ? descuentoGlobalPayload.total_neto
+          : parseFloat(
+            productos.reduce((sum: number, item: any) =>
+              sum + (item.cantidad * item.precio), 0
+            ).toFixed(2)
+          ),
         bonifica: ventaData.bonifica || cabecera.bonifica || 0,
         bonifica_tipo: ventaData.bonifica_tipo || cabecera.bonifica_tipo || 'P',
         interes: ventaData.interes || cabecera.interes || 0,
@@ -347,7 +356,8 @@ export class HistorialPdfService {
         puntoventa: ventaData.puntoventa,
         letraValue: ventaData.letra || 'B',
         sucursalNombre: nombreSucursalReal, // Usar el nombre obtenido desde Firebase
-        subtotalesTipoPago: subtotalesTipoPago // ✅ NUEVO
+        subtotalesTipoPago: subtotalesTipoPago,
+        descuentoGlobalPayload
       };
 
       // Generar el PDF usando el mismo método que el carrito
@@ -370,6 +380,7 @@ export class HistorialPdfService {
 
     // ✅ NUEVO: Validar si hay subtotales por tipo de pago
     const mostrarDesgloseTipoPago = datos.subtotalesTipoPago && datos.subtotalesTipoPago.length > 0;
+    const mostrarDescuentoGlobal = !!datos.descuentoGlobalPayload && Number(datos.descuentoGlobalPayload.descuento_monto) > 0;
     console.log('📊 Historial PDF - Desglose por tipo de pago:', mostrarDesgloseTipoPago);
 
     const tableBody = datos.items.map(item => [
@@ -528,6 +539,20 @@ export class HistorialPdfService {
           },
           margin: [0, 0, 0, 10]
         }] : []),
+        ...(mostrarDescuentoGlobal ? [{
+          style: 'tableExample',
+          table: {
+            widths: ['70%', '30%'],
+            body: [
+              ['Subtotal bruto', '$' + Number(datos.descuentoGlobalPayload.subtotal_bruto).toFixed(2)],
+              ['Descuento global', '$' + Number(datos.descuentoGlobalPayload.descuento_monto).toFixed(2)],
+              ['Total neto', '$' + Number(datos.descuentoGlobalPayload.total_neto).toFixed(2)]
+            ],
+            bold: false,
+            fontSize: 10,
+          },
+          margin: [0, 5, 0, 10]
+        }] : []),
         // Información Financiera Adicional - SOLO PARA RECIBOS (RC)
         ...(datos.tipoDoc === 'RC' && datos.bonifica && datos.bonifica > 0 ? [{
           style: 'tableExample',
@@ -558,7 +583,7 @@ export class HistorialPdfService {
           table: {
             widths: ['*'],
             body: [
-              ['TOTAL $' + datos.total],
+              ['TOTAL $' + Number(datos.total).toFixed(2)],
             ],
             bold: true,
             fontSize: 16,
@@ -594,6 +619,26 @@ export class HistorialPdfService {
     // Crear el PDF
     const nombreArchivo = `${datos.sucursalNombre || 'Sucursal'}_${titulo}_${fechaFormateada}.pdf`;
     pdfMake.createPdf(documentDefinition).download(nombreArchivo);
+  }
+
+  private normalizarDescuentoGlobal(descuentoGlobal: any): DatosRecibo['descuentoGlobalPayload'] {
+    if (!descuentoGlobal) {
+      return null;
+    }
+
+    const subtotalBruto = Number(descuentoGlobal.subtotal_bruto || 0);
+    const descuentoMonto = Number(descuentoGlobal.descuento_monto || 0);
+    const totalNeto = Number(descuentoGlobal.total_neto || 0);
+
+    if (!isFinite(subtotalBruto) || !isFinite(descuentoMonto) || !isFinite(totalNeto) || descuentoMonto <= 0) {
+      return null;
+    }
+
+    return {
+      subtotal_bruto: parseFloat(subtotalBruto.toFixed(2)),
+      descuento_monto: parseFloat(descuentoMonto.toFixed(2)),
+      total_neto: parseFloat(totalNeto.toFixed(2))
+    };
   }
 
   private obtenerTituloDocumento(tipoDoc: string): string {

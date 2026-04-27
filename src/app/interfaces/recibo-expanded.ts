@@ -21,6 +21,7 @@ export interface ReciboExpanded {
   interes_tipo: string;
   id_fac: number;
   productos?: PsucursalExpanded[];
+  descuento_global?: DescuentoGlobalHistorico | null;
 }
 
 export interface PsucursalExpanded {
@@ -61,6 +62,7 @@ export interface VentaExpandida {
   recibos: ReciboExpanded[];
   historialPagos: PagoHistorial[];
   totalPagado: number;
+  descuento_global?: DescuentoGlobalHistorico | null;
 }
 
 export interface PagoHistorial {
@@ -71,4 +73,18 @@ export interface PagoHistorial {
   importe: number;
   usuario: string;
   c_puntoventa: number;
+}
+
+export interface DescuentoGlobalHistorico {
+  cod_sucursal: number | string;
+  cabecera_id_num: number | string;
+  tipo_comprobante: string;
+  numero_int: number | string;
+  numero_fac?: number | string | null;
+  puntoventa?: number | string | null;
+  subtotal_bruto: number | string;
+  descuento_monto: number | string;
+  total_neto: number | string;
+  origen?: string | null;
+  usuario?: string | null;
 }

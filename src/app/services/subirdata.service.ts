@@ -40,7 +40,7 @@ export class SubirdataService {
         "id_vend": id
       });
   }
-  subirDatosPedidos(data: any, cabecera: any, id: any, caja_movi?: any) {
+  subirDatosPedidos(data: any, cabecera: any, id: any, caja_movi?: any, descuento_global?: any, stock_movimientos?: any) {
     console.log(data);
     console.log(id);
 
@@ -51,6 +51,14 @@ export class SubirdataService {
       "id_vend": id,
       "caja_movi": caja_movi
     };
+
+    if (descuento_global && Number(descuento_global.descuento_monto) > 0) {
+      payload.descuento_global = descuento_global;
+    }
+
+    if (stock_movimientos && stock_movimientos.length > 0) {
+      payload.stock_movimientos = stock_movimientos;
+    }
 
     // ====================================================================
     // ⚠️ FASE 3: Parámetro subtotales_metodos_pago eliminado
