@@ -121,8 +121,8 @@
                     <div *ngIf="tieneCuentaCorrienteEnCarrito() && descuentoGlobal > 0" class="alert alert-warning mt-2 mb-0">
                         No se permite descuento global cuando interviene cuenta corriente.
                     </div>
-                    <div *ngIf="(tipoDoc === 'PR' || tipoDoc === 'CS') && descuentoGlobal > 0" class="alert alert-warning mt-2 mb-0">
-                        El descuento global no esta habilitado para PR ni CS.
+                    <div *ngIf="tipoDoc === 'CS' && descuentoGlobal > 0" class="alert alert-warning mt-2 mb-0">
+                        El descuento global no esta habilitado para CS.
                     </div>
                 </div>
 

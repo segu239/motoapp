@@ -822,8 +822,8 @@ export class CarritoComponent implements OnDestroy {
       mensaje = 'El descuento no puede superar el subtotal bruto.';
     } else if (this.tieneCuentaCorrienteEnCarrito()) {
       mensaje = 'No se permite descuento global cuando interviene cuenta corriente.';
-    } else if (this.tipoDoc === 'PR' || this.tipoDoc === 'CS') {
-      mensaje = 'El descuento global no esta habilitado para PR ni CS.';
+    } else if (this.tipoDoc === 'CS') {
+      mensaje = 'El descuento global no esta habilitado para CS.';
     } else if (this.hayItemsSoloConsulta()) {
       mensaje = 'No se puede aplicar descuento global con items en modo consulta.';
     }

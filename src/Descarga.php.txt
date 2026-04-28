@@ -1515,7 +1515,7 @@ private function procesarPedidoAtomicoDescuentoGlobal($pedidos, $cabecera, $id_v
             throw new Exception('No existe la tabla fact_descuento_global');
         }
 
-        if ($descuento_monto > 0 && !in_array($tipo, array('FC', 'ND', 'NC', 'NV'))) {
+        if ($descuento_monto > 0 && !in_array($tipo, array('FC', 'ND', 'NC', 'NV', 'PR'))) {
             throw new Exception('Tipo de comprobante no habilitado para descuento global');
         }
 

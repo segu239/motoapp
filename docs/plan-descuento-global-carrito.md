@@ -219,7 +219,7 @@ La tabla sidecar se inserta solo cuando `descuento_monto > 0`. Para operaciones 
 
 La constraint unique propuesta esta pensada para operaciones nuevas generadas por el flujo de carrito. `puntoventa` y `numero_int` quedan `not null` porque PostgreSQL permite multiples `NULL` en columnas unique; si en el futuro se hace backfill historico, se debe validar primero que la tupla compuesta no tenga colisiones en los datos migrados.
 
-Para `tipo_comprobante = 'FC'`, `numero_fac` debe venir informado y ser mayor a cero. Para `PR` y otros tipos fuera de fase 1 no se inserta sidecar.
+Para `tipo_comprobante = 'FC'`, `numero_fac` debe venir informado y ser mayor a cero. Para `CS` y otros tipos fuera del alcance habilitado no se inserta sidecar.
 
 Tipos contables:
 
@@ -295,7 +295,7 @@ descuento_global: {
   subtotal_bruto: number;
   descuento_monto: number;
   total_neto: number;
-  tipo_comprobante: 'FC' | 'ND' | 'NC' | 'NV';
+  tipo_comprobante: 'FC' | 'ND' | 'NC' | 'NV' | 'PR';
   puntoventa: number;
   numero_int: number;
   numero_fac?: number;
