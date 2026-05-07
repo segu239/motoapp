@@ -29,7 +29,7 @@
           <!-- Resumen de totales -->
           <div class="row mb-4">
             <div class="col-md-4">
-              <div class="card bg-success text-white">
+              <div class="card summary-card bg-success text-white">
                 <div class="card-body">
                   <h5 class="card-title">Total Ingresos</h5>
                   <h3>$ {{ summary.totalIngresos | number:'1.2-2' }}</h3>
@@ -37,7 +37,7 @@
               </div>
             </div>
             <div class="col-md-4">
-              <div class="card bg-danger text-white">
+              <div class="card summary-card bg-danger text-white">
                 <div class="card-body">
                   <h5 class="card-title">Total Egresos</h5>
                   <h3>$ {{ summary.totalEgresos | number:'1.2-2' }}</h3>
@@ -45,7 +45,7 @@
               </div>
             </div>
             <div class="col-md-4">
-              <div class="card" [ngClass]="{'bg-info text-white': summary.balance >= 0, 'bg-warning': summary.balance < 0}">
+              <div class="card summary-card" [ngClass]="{'bg-info text-white': summary.balance >= 0, 'bg-warning text-white': summary.balance < 0}">
                 <div class="card-body">
                   <h5 class="card-title">Balance</h5>
                   <h3>$ {{ summary.balance | number:'1.2-2' }}</h3>

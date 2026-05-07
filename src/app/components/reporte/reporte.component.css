@@ -12,6 +12,13 @@
   border: none;
 }
 
+.summary-card,
+.summary-card .card-title,
+.summary-card h3 {
+  color: #fff !important;
+  font-weight: 700;
+}
+
 .table-responsive {
   max-height: 500px;
   overflow-y: auto;
@@ -170,4 +177,9 @@ h2.text-primary {
   th {
     page-break-inside: auto;
   }
+}
+
+.table th,
+.table td {
+  font-weight: 700;
 }
